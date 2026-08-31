@@ -133,7 +133,7 @@ async function processarEntradaIa(texto) {
         try {
             resultado = await Promise.race([
                 window.kingGemini.send(comando, contextoGeminiIa()),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('O Gemini demorou mais que 25 segundos para responder.')), 25000))
+                new Promise((_, reject) => setTimeout(() => reject(new Error('O Gemini demorou mais que 60 segundos para responder.')), 60000))
             ]);
             estadoIaQg.geminiAtivo = true;
         } catch (error) {

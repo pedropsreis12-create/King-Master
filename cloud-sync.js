@@ -56,6 +56,13 @@ if (!firebaseConfigured) {
     ]);
 
     const firebaseApp = initializeApp(firebaseConfig);
+    const appCheckDebugKey = 'kingMasterAppCheckDebug';
+    if (new URLSearchParams(window.location.search).get('appcheckDebug') === '1') {
+        localStorage.setItem(appCheckDebugKey, 'enabled');
+    }
+    if (localStorage.getItem(appCheckDebugKey) === 'enabled') {
+        self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+    }
     appCheckSdk.initializeAppCheck(firebaseApp, {
         provider: new appCheckSdk.ReCaptchaEnterpriseProvider('6LcR-KEtAAAAAERFmCqsT_x3d7kNkigMaM2uyLbP'),
         isTokenAutoRefreshEnabled: true

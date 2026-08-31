@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260831-frames">
+    <link rel="stylesheet" href="style.css?v=20260831-profile-cloud">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -51,32 +51,32 @@
     <nav>
         <h2>King Master</h2>
         <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-expanded="false" aria-label="Abrir menu de navegação" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><strong>Menu</strong></button>
-        <button type="button" class="nav-xp-badge" onclick="showSection('perfil')" aria-label="Abrir Meu Perfil">
-            <span class="nav-xp-top"><strong id="nav-xp-level">Nível 1</strong><span id="nav-xp-streak">🔥 0</span></span>
-            <span class="nav-xp-track"><span id="nav-xp-progress"></span></span>
-        </button>
-        
-        <button class="menu-btn active" onclick="showSection('dashboard')">Painel Diário</button>
-        
-        <div class="section-title">Gestão de Estudo</div>
-        <button class="menu-btn" onclick="showSection('planejamento')">Hub de Matérias</button>
-        <button class="menu-btn" onclick="showSection('agendamento')">Agendamento Diário</button>
-        <button class="menu-btn" onclick="showSection('revisoes')">Revisões</button>
-        <button class="menu-btn" onclick="showSection('simulados')">Simulados ENEM</button>
-        <button class="menu-btn" onclick="showSection('redacao')">Lab. de Redação</button>
-        <button class="menu-btn" onclick="showSection('historico')">Histórico de Sessões</button>
-        <button class="menu-btn" onclick="showSection('perfil')">Meu Perfil</button>
-        
-        <div class="bottom-actions">
-            <div class="visual-mode-control">
-                <span class="visual-mode-copy"><strong id="visualModeLabel">Visual futurista</strong><small>Alternar aparência</small></span>
-                <button class="visual-switch" id="visualModeSwitch" type="button" role="switch" aria-checked="true" aria-label="Alternar entre o visual futurista e o visual clássico" onclick="toggleVisualMode()">
-                    <span class="visual-switch-text visual-switch-on">ON</span>
-                    <span class="visual-switch-text visual-switch-off">OFF</span>
-                    <span class="visual-switch-knob"></span>
-                </button>
+        <div class="nav-tabs" aria-label="Áreas do King Master">
+            <button class="menu-btn active" onclick="showSection('dashboard')">Painel Diário</button>
+            <button class="menu-btn" onclick="showSection('planejamento')">Hub de Matérias</button>
+            <button class="menu-btn" onclick="showSection('agendamento')">Agendamento Diário</button>
+            <button class="menu-btn" onclick="showSection('revisoes')">Revisões</button>
+            <button class="menu-btn" onclick="showSection('simulados')">Simulados ENEM</button>
+            <button class="menu-btn" onclick="showSection('redacao')">Lab. de Redação</button>
+            <button class="menu-btn" onclick="showSection('historico')">Histórico de Sessões</button>
+            <button class="menu-btn" onclick="showSection('perfil')">Meu Perfil</button>
+        </div>
+        <div class="nav-tools">
+            <button type="button" class="nav-xp-badge" onclick="showSection('perfil')" aria-label="Abrir Meu Perfil">
+                <span class="nav-xp-top"><strong id="nav-xp-level">Nível 1</strong><span id="nav-xp-streak">🔥 0</span></span>
+                <span class="nav-xp-track"><span id="nav-xp-progress"></span></span>
+            </button>
+            <div class="bottom-actions">
+                <div class="visual-mode-control">
+                    <span class="visual-mode-copy"><strong id="visualModeLabel">Visual futurista</strong><small>Alternar aparência</small></span>
+                    <button class="visual-switch" id="visualModeSwitch" type="button" role="switch" aria-checked="true" aria-label="Alternar entre o visual futurista e o visual clássico" onclick="toggleVisualMode()">
+                        <span class="visual-switch-text visual-switch-on">ON</span>
+                        <span class="visual-switch-text visual-switch-off">OFF</span>
+                        <span class="visual-switch-knob"></span>
+                    </button>
+                </div>
+                <button class="menu-btn settings-toggle-btn" id="settingsToggleBtn" type="button" aria-expanded="false" onclick="toggleSettings()"><span>⚙ Ajustes</span><span>›</span></button>
             </div>
-            <button class="menu-btn settings-toggle-btn" id="settingsToggleBtn" type="button" aria-expanded="false" onclick="toggleSettings()"><span>⚙ Ajustes</span><span>›</span></button>
         </div>
     </nav>
 
@@ -101,6 +101,18 @@
                     <span><strong>Cor personalizada</strong><small>Escolha qualquer tonalidade</small></span>
                     <input type="color" id="colorPicker" value="#007aff" oninput="previewTheme(this.value)" onchange="handleColorPicker(this.value)">
                 </label>
+            </div>
+            <div class="settings-group cloud-account-group">
+                <h3><span>☁</span> Conta e Nuvem</h3>
+                <div class="cloud-account-card" id="cloudAccountCard" data-state="loading">
+                    <span class="cloud-account-avatar" id="cloudAccountAvatar" aria-hidden="true">PR</span>
+                    <span class="cloud-account-copy"><strong id="cloudAccountTitle">Preparando a nuvem</strong><small id="cloudAccountStatus">Verificando sua conta…</small></span>
+                </div>
+                <div class="cloud-account-actions">
+                    <button type="button" class="cycle-btn primary" id="cloudSignInBtn" onclick="window.kingCloud?.signIn()">Entrar com Google</button>
+                    <button type="button" class="cycle-btn" id="cloudSignOutBtn" onclick="window.kingCloud?.signOut()" hidden>Sair</button>
+                </div>
+                <p class="cloud-account-note">Depois de entrar, cada alteração é salva automaticamente e acompanha você em qualquer dispositivo.</p>
             </div>
         </div>
 
@@ -341,19 +353,47 @@
             <div class="profile-heading">
                 <div>
                     <h1>Meu Perfil</h1>
-                    <p>Seu progresso no caminho até a Entidade Absoluta do ENEM.</p>
+                    <p>Sua ascensão da formação básica ao mais alto comando do conhecimento.</p>
                 </div>
-                <span class="profile-multiplier-badge" id="profileMultiplierBadge">1.0x • XP Base</span>
+                <div class="profile-heading-actions">
+                    <button type="button" class="rank-mode-toggle" id="rankVisualModeToggle" aria-pressed="false" onclick="alternarModoPatente()"><span aria-hidden="true">▣</span> Modo Militar</button>
+                    <span class="profile-multiplier-badge" id="profileMultiplierBadge">1.0x • XP Base</span>
+                </div>
+            </div>
+
+            <div class="profile-identity-card widget">
+                <div class="profile-identity-cover" aria-hidden="true"></div>
+                <div class="profile-identity-main">
+                    <div class="profile-identity-avatar-wrap">
+                        <div class="profile-identity-avatar" aria-label="Foto do perfil">
+                            <img id="profileIdentityAvatarImage" alt="Foto do perfil">
+                            <span id="profileIdentityAvatarFallback">PR</span>
+                        </div>
+                        <label class="profile-avatar-edit" for="profilePhotoInput" aria-label="Alterar foto do perfil"><span aria-hidden="true">📷</span></label>
+                        <input class="profile-photo-input" type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp,image/gif" onchange="alterarFotoPerfil(event)">
+                    </div>
+                    <div class="profile-identity-copy">
+                        <span class="profile-online"><i></i> Perfil sincronizado</span>
+                        <h2 id="profileDisplayName">Pedro Reis</h2>
+                        <p id="profileDisplayBio">Construindo meu caminho até o ENEM, um foco de cada vez.</p>
+                    </div>
+                    <button type="button" class="cycle-btn profile-edit-toggle" id="profileEditToggle" aria-expanded="false" onclick="toggleEditorPerfil()">Editar perfil</button>
+                </div>
+                <form class="profile-identity-form" id="profileIdentityForm" hidden onsubmit="salvarIdentidadePerfil(event)">
+                    <label><span>Nome de usuário</span><input class="cycle-input" id="profileNameInput" maxlength="32" autocomplete="nickname" required></label>
+                    <label><span>Bio</span><textarea class="cycle-input" id="profileBioInput" maxlength="190" rows="3" placeholder="Conte um pouco sobre você e sua missão." oninput="atualizarContadorBio()"></textarea><small><b id="profileBioCount">0</b>/190</small></label>
+                    <div class="profile-identity-form-actions"><button type="button" class="cycle-btn" onclick="toggleEditorPerfil(false)">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar perfil</button></div>
+                </form>
             </div>
 
             <div class="profile-hero widget">
                 <div class="profile-rank-scene" aria-hidden="true">
-                    <strong id="profileRankEmblem">忍</strong>
+                    <strong id="profileRankEmblem">⌃</strong>
                     <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
                 </div>
                 <div class="profile-league-name" id="profileLeagueName">Liga Bronze</div>
                 <div class="avatar-stage">
-                    <span class="rank-frame-emblem" id="profileFrameEmblem" aria-hidden="true">忍</span>
+                    <span class="rank-frame-emblem" id="profileFrameEmblem" aria-hidden="true">⌃</span>
                     <div class="league-frame league-bronze" id="profileLeagueFrame">
                         <span class="league-orb orb-one"></span><span class="league-orb orb-two"></span><span class="league-orb orb-three"></span>
                         <span class="rank-frame-detail detail-one" aria-hidden="true"></span>
@@ -366,42 +406,53 @@
                     </div>
                     <span class="rank-frame-tag" id="profileFrameTag">NÍVEL 1</span>
                 </div>
-                <label class="profile-photo-button" for="profilePhotoInput">
-                    <span aria-hidden="true">📷</span> Alterar foto
-                    <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp,image/gif" onchange="alterarFotoPerfil(event)">
-                </label>
-                <span class="profile-photo-hint">Escolha uma imagem JPG, PNG, WebP ou GIF</span>
-                <div class="profile-level-title" id="profileLevelTitle">Lvl 1 • Genin do Foco</div>
-                <div class="profile-next-level" id="profileNextLevel">Próximo nível: 1.500 XP</div>
-                <div class="profile-xp-line"><span id="profileXpText">0 / 520.000 XP</span><span id="profileXpPercent">0%</span></div>
+                <div class="profile-level-title" id="profileLevelTitle">Lvl 1 • Soldado do Foco</div>
+                <div class="profile-next-level" id="profileNextLevel">Próximo nível: 2.250 XP</div>
+                <div class="profile-xp-line"><span id="profileXpText">0 / 1.000.000 XP</span><span id="profileXpPercent">0%</span></div>
                 <div class="profile-xp-track"><span id="profileXpBar"></span></div>
                 <p class="profile-xp-note">Progresso total até o nível máximo</p>
-                <div class="profile-evolution-caption" id="profileEvolutionCaption">Despertar Genin • Disciplina em formação</div>
+                <div class="profile-evolution-caption" id="profileEvolutionCaption">Soldado do Foco • A base da tropa nasce da disciplina diária</div>
                 <div class="profile-reference-strip" id="profileReferenceStrip" aria-label="Referências visuais deste título"></div>
             </div>
 
             <div class="xp-test-panel widget" aria-labelledby="xpTestTitle">
                 <div class="xp-test-heading">
                     <div>
-                        <span class="xp-test-kicker">Laboratório local</span>
+                        <span class="xp-test-kicker">Campo de provas local</span>
                         <h3 id="xpTestTitle">Controle total de XP</h3>
-                        <p>Teste títulos, níveis, ligas e animações sem salvar nada no seu progresso.</p>
+                        <p>Teste patentes, insígnias, divisões e animações sem salvar nada no seu progresso.</p>
                     </div>
-                    <span class="xp-test-status" id="xpTestStatus">XP real</span>
+                    <div class="xp-test-heading-actions">
+                        <span class="xp-test-status" id="xpTestStatus">XP real</span>
+                    </div>
                 </div>
                 <div class="xp-test-controls">
                     <label class="xp-test-range-wrap" for="xpTestRange">
                         <span>Arraste para escolher o XP</span>
-                        <input type="range" id="xpTestRange" min="0" max="520000" step="1" value="0" oninput="sincronizarXpTeste(this.value)">
+                        <input type="range" id="xpTestRange" min="0" max="1000000" step="1" value="0" oninput="sincronizarXpTeste(this.value)">
                     </label>
                     <label class="xp-test-number-wrap" for="xpTestInput">
                         <span>XP exato</span>
-                        <input type="number" id="xpTestInput" min="0" max="520000" step="1" value="0" oninput="sincronizarXpTeste(this.value)">
+                        <input type="number" id="xpTestInput" min="0" max="1000000" step="1" value="0" oninput="sincronizarXpTeste(this.value)">
                     </label>
                     <button type="button" class="cycle-btn primary xp-test-apply" onclick="visualizarXpTeste()">Aplicar e animar</button>
                     <button type="button" class="cycle-btn xp-test-reset" onclick="sairDoModoTesteXp()">Voltar ao XP real</button>
                 </div>
                 <div class="xp-test-milestones" id="xpTestMilestones" aria-label="Atalhos de títulos e níveis"></div>
+            </div>
+
+            <div class="frame-vault widget" aria-labelledby="frameVaultTitle">
+                <div class="frame-vault-heading">
+                    <div><span class="xp-test-kicker">Arsenal visual</span><h3 id="frameVaultTitle">Molduras desbloqueadas</h3><p>Equipe qualquer moldura conquistada sem alterar seu nível ou título atual.</p></div>
+                    <div class="frame-vault-actions">
+                        <button type="button" class="cycle-btn" onclick="usarMolduraAutomatica()">Usar a atual</button>
+                        <button type="button" class="frame-vault-toggle" id="frameVaultToggle" aria-expanded="false" aria-controls="frameVaultBody" onclick="toggleFrameVault()"><span class="frame-vault-toggle-copy">Abrir molduras</span><span class="frame-vault-arrow" aria-hidden="true">⌄</span></button>
+                    </div>
+                </div>
+                <div class="frame-vault-body" id="frameVaultBody" hidden>
+                    <div class="frame-vault-progress"><span id="frameVaultCount">1 de 17 liberadas</span><small id="frameVaultMode">Carreira Militar</small></div>
+                    <div class="frame-vault-grid" id="frameVaultGrid" aria-live="polite"></div>
+                </div>
             </div>
 
             <h3 class="profile-section-title">Estatísticas do Império</h3>
@@ -601,6 +652,8 @@
 
     <div id="toastNotification" class="toast-notification"></div>
     <audio id="alarmAudio"></audio>
-    <script src="script.js?v=20260831-xp"></script>
+    <script src="script.js?v=20260831-profile-cloud"></script>
+    <script src="firebase-config.js?v=20260831-firebase"></script>
+    <script type="module" src="cloud-sync.js?v=20260831-profile-cloud"></script>
 </body>
 </html>

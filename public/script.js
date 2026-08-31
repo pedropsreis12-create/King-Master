@@ -1,6 +1,3 @@
-const XP_LAB_ATIVO = ['localhost', '127.0.0.1'].includes(window.location.hostname) && new URLSearchParams(window.location.search).has('version');
-document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
-
 const defaultAppData = {
     totalStudySeconds: 0, 
     weeklyChart: [0, 0, 0, 0, 0, 0, 0], 
@@ -18,18 +15,11 @@ const defaultAppData = {
     themeColorRgb: '', 
     darkMode: false,
     visualMode: 'futuristic',
-    rankVisualMode: 'militar',
     piorAreaGargalo: null,
     xpLoginDates: [],
     frasesMotivacionaisFila: [],
     ultimaFraseMotivacional: null,
-    profileName: 'Pedro Reis',
-    profileBio: 'Construindo meu caminho até o ENEM, um foco de cada vez.',
-    profilePhoto: '',
-    xpResetOffset: 0,
-    selectedFrames: { militar: '', aura: '' },
-    frameVaultOpen: false,
-    lastModifiedAt: 0
+    profilePhoto: ''
 };
 
 let appData;
@@ -56,45 +46,22 @@ if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!appData.revisoesItems) appData.revisoesItems = [];
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!appData.xpLoginDates) appData.xpLoginDates = [];
-if (!Number.isFinite(Number(appData.xpResetOffset))) appData.xpResetOffset = 0;
 if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
 if (!Number.isInteger(appData.ultimaFraseMotivacional)) appData.ultimaFraseMotivacional = null;
-if (typeof appData.profileName !== 'string' || !appData.profileName.trim()) appData.profileName = 'Pedro Reis';
-if (typeof appData.profileBio !== 'string') appData.profileBio = '';
-appData.profileName = appData.profileName.trim().slice(0, 32);
-appData.profileBio = appData.profileBio.trim().slice(0, 190);
 if (typeof appData.profilePhoto !== 'string') appData.profilePhoto = '';
 if (!appData.visualMode) appData.visualMode = 'futuristic';
-if (!['militar', 'aura'].includes(appData.rankVisualMode)) appData.rankVisualMode = 'militar';
-if (!appData.selectedFrames || typeof appData.selectedFrames !== 'object') appData.selectedFrames = { militar: '', aura: '' };
-if (typeof appData.selectedFrames.militar !== 'string') appData.selectedFrames.militar = '';
-if (typeof appData.selectedFrames.aura !== 'string') appData.selectedFrames.aura = '';
-if (typeof appData.frameVaultOpen !== 'boolean') appData.frameVaultOpen = false;
-if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
 
 if(appData.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
 document.documentElement.setAttribute('data-visual', appData.visualMode === 'classic' ? 'classic' : 'futuristic');
-document.documentElement.setAttribute('data-rank-mode', appData.rankVisualMode);
 if(appData.themeColor) { 
     document.documentElement.style.setProperty('--accent-color', appData.themeColor); 
     document.documentElement.style.setProperty('--accent-rgb', appData.themeColorRgb); 
 }
 
 function saveAppData() { 
-    appData.lastModifiedAt = Date.now();
     localStorage.setItem('qg_pedro_data', JSON.stringify(appData)); 
-    window.dispatchEvent(new CustomEvent('king-master-data-changed', { detail: { updatedAt: appData.lastModifiedAt } }));
     updateDashboardStats(); 
 }
-
-window.kingMasterCloudBridge = {
-    exportData: () => JSON.parse(JSON.stringify(appData)),
-    importData: dados => {
-        if (!dados || typeof dados !== 'object') return;
-        localStorage.setItem('qg_pedro_data', JSON.stringify({ ...defaultAppData, ...dados }));
-        window.location.reload();
-    }
-};
 
 function fecharMenuMovel() {
     const menu = document.querySelector('nav');
@@ -243,15 +210,10 @@ function showSection(sectionId) {
     document.getElementById('settingsPanel')?.classList.remove('active');
     document.getElementById('settingsToggleBtn')?.setAttribute('aria-expanded', 'false');
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-    let abaAtiva = null;
     document.querySelectorAll('.menu-btn:not(.toggle-btn)').forEach(b => { 
         b.classList.remove('active'); 
-        if(b.getAttribute('onclick')?.includes(sectionId)) {
-            b.classList.add('active');
-            if (b.closest('.nav-tabs')) abaAtiva = b;
-        }
+        if(b.getAttribute('onclick')?.includes(sectionId)) b.classList.add('active'); 
     });
-    if (abaAtiva && window.innerWidth > 1100) requestAnimationFrame(() => abaAtiva.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }));
     document.getElementById(sectionId).classList.add('active');
     
     if(sectionId === 'historico') renderizarHistorico();
@@ -536,60 +498,32 @@ function multiplicadorPorSequencia(dias) {
 }
 
 function nomeDoMultiplicador(dias) {
-    if (dias >= 30) return 'Comando Supremo';
-    if (dias >= 15) return 'Operação Total';
-    if (dias >= 7) return 'Bônus Estratégico';
-    if (dias >= 3) return 'Bônus de Campanha';
+    if (dias >= 30) return 'Poder Absoluto';
+    if (dias >= 15) return 'Modo Berserk';
+    if (dias >= 7) return 'Bônus de 25%';
+    if (dias >= 3) return 'Bônus de 10%';
     return 'XP Base';
 }
 
-const PATENTES_MILITARES = [
-    { nivel: 1, xp: 0, titulo: 'Soldado do Foco', tema: 'soldado', simbolo: '⌃', legenda: 'A base da tropa nasce da disciplina diária', referencias: ['Uma Divisa', 'Boina Verde', 'Ordem Unida'] },
-    { nivel: 3, xp: 4500, titulo: 'Cabo da Constância', tema: 'cabo', simbolo: '⌃⌃', legenda: 'O primeiro comando nasce do exemplo', referencias: ['Duas Divisas', 'Braçal', 'Esquadrão'] },
-    { nivel: 6, xp: 9000, titulo: 'Terceiro-Sargento da Rotina', tema: 'terceiro-sargento', simbolo: '⌃⌃⌃', legenda: 'A rotina agora obedece ao seu comando', referencias: ['Três Divisas', 'Pelotão', 'Instrução'] },
-    { nivel: 9, xp: 15000, titulo: 'Segundo-Sargento da Tática', tema: 'segundo-sargento', simbolo: '⌃⌃⌃⌃', legenda: 'Tática e constância avançam em formação', referencias: ['Quatro Divisas', 'Quadro Tático', 'Coordenação'] },
-    { nivel: 12, xp: 25000, titulo: 'Primeiro-Sargento da Estratégia', tema: 'primeiro-sargento', simbolo: '≋⌃', legenda: 'Liderança transforma esforço em formação', referencias: ['Divisas de 1º Sargento', 'Liderança', 'Formação'] },
-    { nivel: 16, xp: 40000, titulo: 'Subtenente da Persistência', tema: 'subtenente', simbolo: '◇', legenda: 'Experiência, firmeza e presença em campo', referencias: ['Losango', 'Sabre', 'Companhia'] },
-    { nivel: 20, xp: 60000, titulo: 'Aspirante-a-Oficial', tema: 'aspirante', simbolo: '★', legenda: 'A estrela do oficialato começa a surgir', referencias: ['Estrela Singela', 'Academia Militar', 'Espadim'] },
-    { nivel: 24, xp: 85000, titulo: 'Segundo-Tenente da Execução', tema: 'segundo-tenente', simbolo: '★', legenda: 'Planejamento e ação marcham juntos', referencias: ['Uma Estrela', 'Mapa Tático', 'Pelotão'] },
-    { nivel: 28, xp: 115000, titulo: 'Primeiro-Tenente da Precisão', tema: 'primeiro-tenente', simbolo: '★★', legenda: 'Nenhum objetivo fica sem coordenadas', referencias: ['Duas Estrelas', 'Bússola', 'Operação'] },
-    { nivel: 32, xp: 155000, titulo: 'Capitão do Cronograma', tema: 'capitao', simbolo: '★★★', legenda: 'O tempo inteiro responde ao seu plano', referencias: ['Três Estrelas', 'Companhia', 'Carta de Comando'] },
-    { nivel: 37, xp: 210000, titulo: 'Major da Evolução', tema: 'major', simbolo: '★★✹', legenda: 'Visão de estado-maior sobre cada avanço', referencias: ['Duas Estrelas', 'Roseta', 'Estado-Maior'] },
-    { nivel: 42, xp: 280000, titulo: 'Tenente-Coronel da Operação', tema: 'tenente-coronel', simbolo: '★✹✹', legenda: 'Coordena grandes objetivos sem perder precisão', referencias: ['Estrela e Rosetas', 'Batalhão', 'Operações'] },
-    { nivel: 47, xp: 370000, titulo: 'Coronel da Excelência', tema: 'coronel', simbolo: '✹✹✹', legenda: 'Excelência deixa de ser meta e vira padrão', referencias: ['Três Rosetas', 'Regimento', 'Comando'] },
-    { nivel: 52, xp: 480000, titulo: 'General de Brigada do Saber', tema: 'general-brigada', simbolo: '✺★★', legenda: 'O generalato abre uma nova dimensão de comando', referencias: ['Brasão do Generalato', 'Duas Estrelas', 'Brigada'] },
-    { nivel: 58, xp: 610000, titulo: 'General de Divisão da Mestria', tema: 'general-divisao', simbolo: '✺★★★', legenda: 'Três estrelas dominam o campo inteiro', referencias: ['Brasão do Generalato', 'Três Estrelas', 'Divisão'] },
-    { nivel: 64, xp: 750000, titulo: 'General de Exército do Saber', tema: 'general-exercito', simbolo: '✺★★★★', legenda: 'Toda a estratégia converge para a vitória', referencias: ['Brasão do Generalato', 'Quatro Estrelas', 'Exército'] },
-    { nivel: 70, xp: 1000000, titulo: 'Marechal Supremo do ENEM', tema: 'marechal', simbolo: '✺★★★★★', legenda: 'O mais alto comando do conhecimento', referencias: ['Brasão do Generalato', 'Cinco Estrelas', 'Comando Supremo'] }
+const MARCOS_NIVEL = [
+    { nivel: 1, xp: 0, titulo: 'Genin do Foco' },
+    { nivel: 2, xp: 1500, titulo: 'Chunin' },
+    { nivel: 4, xp: 4500, titulo: 'Caçador de Oni' },
+    { nivel: 6, xp: 9000, titulo: 'Gear Second' },
+    { nivel: 8, xp: 15000, titulo: 'Kaioken' },
+    { nivel: 12, xp: 30000, titulo: 'Super Saiyajin' },
+    { nivel: 16, xp: 50000, titulo: 'Bankai' },
+    { nivel: 20, xp: 75000, titulo: 'Expansão de Domínio' },
+    { nivel: 25, xp: 115000, titulo: 'Modo Sábio' },
+    { nivel: 30, xp: 165000, titulo: 'Oito Portões Internos' },
+    { nivel: 35, xp: 225000, titulo: 'Gear 5 / Sol da Libertação' },
+    { nivel: 40, xp: 300000, titulo: 'Monarca das Sombras' },
+    { nivel: 45, xp: 400000, titulo: 'Instinto Superior' },
+    { nivel: 50, xp: 520000, titulo: 'Entidade Absoluta do ENEM' }
 ];
-
-const TITULOS_AURA = [
-    { nivel: 1, xp: 0, titulo: 'Genin do Foco', tema: 'genin', simbolo: '忍', legenda: 'Disciplina em formação', referencias: ['Folha Oculta', 'Kunai', 'Missão D'] },
-    { nivel: 3, xp: 4500, titulo: 'Chunin', tema: 'chunin', simbolo: '中', legenda: 'Estratégia e constância', referencias: ['Pergaminho', 'Exame Chunin', 'Estratégia'] },
-    { nivel: 6, xp: 9000, titulo: 'Caçador de Oni', tema: 'oni', simbolo: '滅', legenda: 'A lâmina corta a procrastinação', referencias: ['Nichirin', 'Respiração', 'Lua Carmesim'] },
-    { nivel: 9, xp: 15000, titulo: 'Gear Second', tema: 'gear2', simbolo: 'Ⅱ', legenda: 'O ritmo entra em sobrecarga', referencias: ['Vapor', 'Batimento', 'Velocidade'] },
-    { nivel: 12, xp: 25000, titulo: 'Kaioken', tema: 'kaioken', simbolo: '界', legenda: 'Poder elevado além do limite', referencias: ['Aura Rubra', 'Multiplicador', 'Limite'] },
-    { nivel: 16, xp: 40000, titulo: 'Super Saiyajin', tema: 'saiyajin', simbolo: '超', legenda: 'A determinação vira eletricidade', referencias: ['Ki Dourado', 'Relâmpago', 'Ascensão'] },
-    { nivel: 20, xp: 60000, titulo: 'Bankai', tema: 'bankai', simbolo: '卍', legenda: 'Liberação total do potencial', referencias: ['Zangetsu', 'Pétalas', 'Liberação'] },
-    { nivel: 24, xp: 85000, titulo: 'Expansão de Domínio', tema: 'dominio', simbolo: '領', legenda: 'Seu foco domina todo o espaço', referencias: ['Infinito', 'Vazio', 'Barreira'] },
-    { nivel: 28, xp: 115000, titulo: 'Modo Sábio', tema: 'sabio', simbolo: '仙', legenda: 'Conhecimento em equilíbrio perfeito', referencias: ['Monte Myōboku', 'Senjutsu', 'Equilíbrio'] },
-    { nivel: 32, xp: 155000, titulo: 'Oito Portões Internos', tema: 'portoes', simbolo: '八', legenda: 'Os limites começam a se romper', referencias: ['Lótus', 'Oito Portões', 'Juventude'] },
-    { nivel: 37, xp: 210000, titulo: 'Gear 5 / Sol da Libertação', tema: 'gear5', simbolo: '☀', legenda: 'Liberdade, criatividade e poder', referencias: ['Nika', 'Tambores', 'Liberdade'] },
-    { nivel: 42, xp: 280000, titulo: 'Monarca das Sombras', tema: 'monarca', simbolo: '♛', legenda: 'O exército do conhecimento desperta', referencias: ['Erga-se', 'Exército Sombrio', 'Coroa'] },
-    { nivel: 47, xp: 370000, titulo: 'Instinto Superior', tema: 'instinto', simbolo: '身', legenda: 'A resposta surge antes da dúvida', referencias: ['Aura Prateada', 'Mente Vazia', 'Movimento'] },
-    { nivel: 52, xp: 480000, titulo: 'Titã Fundador', tema: 'tita', simbolo: '巨', legenda: 'Memórias e vontade atravessam gerações', referencias: ['Caminhos', 'Muralhas', 'Coordenada'] },
-    { nivel: 58, xp: 610000, titulo: 'Deus da Destruição', tema: 'destruicao', simbolo: '破', legenda: 'O obstáculo desaparece diante da sua energia', referencias: ['Hakai', 'Energia Violeta', 'Equilíbrio Cósmico'] },
-    { nivel: 64, xp: 750000, titulo: 'Haki do Rei Supremo', tema: 'haki-rei', simbolo: '覇', legenda: 'A presença vence antes mesmo do confronto', referencias: ['Haki do Rei', 'Raios Negros', 'Vontade Suprema'] },
-    { nivel: 70, xp: 1000000, titulo: 'Entidade Absoluta do ENEM', tema: 'entidade', simbolo: '∞', legenda: 'O conhecimento não possui mais fronteiras', referencias: ['Coroa ENEM', 'Constelações', 'Infinito'] }
-];
-
-const MARCOS_NIVEL = PATENTES_MILITARES;
-
-const NIVEL_MAXIMO = MARCOS_NIVEL[MARCOS_NIVEL.length - 1].nivel;
-const XP_MAXIMO = MARCOS_NIVEL[MARCOS_NIVEL.length - 1].xp;
 
 function criarLimitesDeNivel() {
-    const limites = Array(NIVEL_MAXIMO + 1).fill(0);
+    const limites = Array(51).fill(0);
     for (let indice = 0; indice < MARCOS_NIVEL.length - 1; indice++) {
         const atual = MARCOS_NIVEL[indice];
         const proximo = MARCOS_NIVEL[indice + 1];
@@ -603,11 +537,10 @@ function criarLimitesDeNivel() {
 
 const LIMITES_NIVEL = criarLimitesDeNivel();
 const formatarNumero = valor => Math.round(valor).toLocaleString('pt-BR');
-let xpTesteLocal = null;
 
 function obterNivelAtual(xp) {
     let nivel = 1;
-    for (let candidato = 2; candidato <= NIVEL_MAXIMO; candidato++) {
+    for (let candidato = 2; candidato <= 50; candidato++) {
         if (xp >= LIMITES_NIVEL[candidato]) nivel = candidato;
         else break;
     }
@@ -615,97 +548,16 @@ function obterNivelAtual(xp) {
 }
 
 function obterTituloAtual(nivel) {
-    const trilha = obterTrilhaVisualAtual();
-    return [...trilha].reverse().find(marco => nivel >= marco.nivel)?.titulo || trilha[0].titulo;
-}
-
-function obterTemaVisualAtual(nivel) {
-    const trilha = obterTrilhaVisualAtual();
-    return [...trilha].reverse().find(marco => nivel >= marco.nivel) || trilha[0];
-}
-
-function obterTrilhaVisualAtual() {
-    return appData.rankVisualMode === 'aura' ? TITULOS_AURA : PATENTES_MILITARES;
-}
-
-function obterMolduraEquipada(dados, temaAtual) {
-    const trilha = obterTrilhaVisualAtual();
-    const temaSelecionado = appData.selectedFrames?.[appData.rankVisualMode] || '';
-    const moldura = trilha.find(item => item.tema === temaSelecionado);
-    return moldura && dados.nivel >= moldura.nivel ? moldura : temaAtual;
-}
-
-function equiparMoldura(tema) {
-    const dados = xpTesteLocal === null ? calcularGamificacao() : criarDadosGamificacaoDeTeste(xpTesteLocal);
-    const moldura = obterTrilhaVisualAtual().find(item => item.tema === tema);
-    if (!moldura || dados.nivel < moldura.nivel) {
-        showToast('🔒 Essa moldura ainda não foi desbloqueada.', true);
-        return;
-    }
-    appData.selectedFrames[appData.rankVisualMode] = tema;
-    saveAppData();
-    renderGamificacao(true);
-    showToast(`✓ Moldura ${moldura.titulo} equipada`);
-}
-
-function usarMolduraAutomatica() {
-    appData.selectedFrames[appData.rankVisualMode] = '';
-    saveAppData();
-    renderGamificacao(true);
-    showToast('✓ A moldura voltou a acompanhar seu nível');
-}
-
-function sincronizarEstadoCofre() {
-    const cofre = document.querySelector('.frame-vault');
-    const corpo = document.getElementById('frameVaultBody');
-    const botao = document.getElementById('frameVaultToggle');
-    if (!corpo || !botao) return;
-    const aberto = appData.frameVaultOpen === true;
-    corpo.hidden = !aberto;
-    cofre?.classList.toggle('is-open', aberto);
-    botao.setAttribute('aria-expanded', String(aberto));
-    const texto = botao.querySelector('.frame-vault-toggle-copy');
-    if (texto) texto.textContent = aberto ? 'Fechar molduras' : 'Abrir molduras';
-}
-
-function toggleFrameVault() {
-    appData.frameVaultOpen = !appData.frameVaultOpen;
-    sincronizarEstadoCofre();
-    saveAppData();
-}
-
-function renderizarGaleriaMolduras(dados, molduraEquipada) {
-    const grid = document.getElementById('frameVaultGrid');
-    if (!grid) return;
-    const trilha = obterTrilhaVisualAtual();
-    const liberadas = trilha.filter(item => dados.nivel >= item.nivel);
-    const modo = appData.rankVisualMode;
-    const selecionada = appData.selectedFrames?.[modo] || '';
-    const count = document.getElementById('frameVaultCount');
-    const mode = document.getElementById('frameVaultMode');
-    if (count) count.textContent = `${liberadas.length} de ${trilha.length} liberadas`;
-    if (mode) mode.textContent = modo === 'aura' ? 'Carreira Aura' : 'Carreira Militar';
-    sincronizarEstadoCofre();
-    grid.innerHTML = trilha.map(item => {
-        const desbloqueada = dados.nivel >= item.nivel;
-        const equipada = selecionada ? selecionada === item.tema && desbloqueada : molduraEquipada.tema === item.tema;
-        return `<button type="button" class="frame-vault-card${desbloqueada ? ' unlocked' : ' locked'}${equipada ? ' equipped' : ''}" onclick="equiparMoldura('${item.tema}')" ${desbloqueada ? '' : 'aria-disabled="true"'}>
-            <span class="frame-vault-mini league-frame rank-frame-${item.tema}" aria-hidden="true"><b>${item.simbolo}</b></span>
-            <span class="frame-vault-card-copy"><strong>${item.titulo}</strong><small>${desbloqueada ? (equipada ? 'Equipada agora' : `Liberada no nível ${item.nivel}`) : `Desbloqueia no nível ${item.nivel}`}</small></span>
-            <span class="frame-vault-state" aria-hidden="true">${equipada ? '✓' : desbloqueada ? 'Usar' : '🔒'}</span>
-        </button>`;
-    }).join('');
+    return [...MARCOS_NIVEL].reverse().find(marco => nivel >= marco.nivel)?.titulo || MARCOS_NIVEL[0].titulo;
 }
 
 function obterLigaAtual(nivel) {
-    if (nivel >= 70) return { nome: 'Liga Einstein', classe: 'league-einstein' };
-    if (nivel >= 64) return { nome: 'Estrela do Fim', classe: 'league-endstar' };
-    if (nivel >= 40) return { nome: 'Liga Esmeralda', classe: 'league-emerald' };
-    if (nivel >= 30) return { nome: 'Liga Rubi', classe: 'league-ruby' };
-    if (nivel >= 22) return { nome: 'Liga Diamante', classe: 'league-diamond' };
-    if (nivel >= 14) return { nome: 'Liga Ouro', classe: 'league-gold' };
-    if (nivel >= 8) return { nome: 'Liga Prata', classe: 'league-silver' };
-    if (nivel >= 4) return { nome: 'Liga Cobre', classe: 'league-copper' };
+    if (nivel >= 50) return { nome: 'Liga Entidade', classe: 'league-entity' };
+    if (nivel >= 45) return { nome: 'Mestres do Conhecimento', classe: 'league-master' };
+    if (nivel >= 40) return { nome: 'Liga Diamante', classe: 'league-diamond' };
+    if (nivel >= 30) return { nome: 'Liga Esmeralda', classe: 'league-emerald' };
+    if (nivel >= 20) return { nome: 'Liga Ouro', classe: 'league-gold' };
+    if (nivel >= 10) return { nome: 'Liga Prata', classe: 'league-silver' };
     return { nome: 'Liga Bronze', classe: 'league-bronze' };
 }
 
@@ -713,7 +565,6 @@ function registrarBonusLoginDiario() {
     const hoje = dataLocalISO();
     if (!appData.xpLoginDates.includes(hoje)) {
         appData.xpLoginDates.push(hoje);
-        appData.lastModifiedAt = Date.now();
         localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
     }
 }
@@ -730,10 +581,9 @@ function calcularGamificacao() {
     appData.xpLoginDates.forEach(data => adicionar(data, 150));
 
     const mapaSequencias = criarMapaSequencias();
-    const xpBruto = Math.round(Object.entries(xpBasePorDia).reduce((total, [data, base]) => {
+    const xpTotal = Math.min(520000, Math.round(Object.entries(xpBasePorDia).reduce((total, [data, base]) => {
         return total + Math.round(base * multiplicadorPorSequencia(mapaSequencias[data] || 0));
-    }, 0));
-    const xpTotal = Math.min(XP_MAXIMO, Math.max(0, xpBruto - Number(appData.xpResetOffset || 0)));
+    }, 0)));
     const nivel = obterNivelAtual(xpTotal);
     const sequencia = calcularSequenciaAtual();
     const liga = obterLigaAtual(nivel);
@@ -754,80 +604,16 @@ function calcularEstatisticasGlobais() {
     return { topicos, taxa: total ? Math.round((acertos / total) * 100) : 0 };
 }
 
-function obterIniciaisPerfil() {
-    return appData.profileName.split(/\s+/).filter(Boolean).slice(0, 2).map(parte => parte[0]).join('').toUpperCase() || 'PR';
-}
-
 function aplicarFotoPerfil() {
-    const iniciais = obterIniciaisPerfil();
-    ['profileAvatarFallback', 'profileIdentityAvatarFallback'].forEach(id => {
-        const fallback = document.getElementById(id);
-        if (fallback) fallback.textContent = iniciais;
-    });
-    ['profileAvatarImage', 'profileIdentityAvatarImage'].forEach(id => {
-        const imagem = document.getElementById(id);
-        if (!imagem) return;
-        imagem.alt = `Foto de perfil de ${appData.profileName}`;
-        if (appData.profilePhoto) {
-            imagem.src = appData.profilePhoto;
-            imagem.classList.add('has-photo');
-        } else {
-            imagem.removeAttribute('src');
-            imagem.classList.remove('has-photo');
-        }
-    });
-    document.querySelectorAll('.avatar-core, .profile-identity-avatar').forEach(el => el.setAttribute('aria-label', `Foto de perfil de ${appData.profileName}`));
-}
-
-function aplicarIdentidadePerfil() {
-    const nome = appData.profileName || 'Pedro Reis';
-    const bio = appData.profileBio || 'Sem bio por enquanto.';
-    const nomeExibido = document.getElementById('profileDisplayName');
-    const bioExibida = document.getElementById('profileDisplayBio');
-    const nomeInput = document.getElementById('profileNameInput');
-    const bioInput = document.getElementById('profileBioInput');
-    if (nomeExibido) nomeExibido.textContent = nome;
-    if (bioExibida) bioExibida.textContent = bio;
-    if (nomeInput && document.activeElement !== nomeInput) nomeInput.value = nome;
-    if (bioInput && document.activeElement !== bioInput) bioInput.value = appData.profileBio || '';
-    atualizarContadorBio();
-    aplicarFotoPerfil();
-}
-
-function atualizarContadorBio() {
-    const input = document.getElementById('profileBioInput');
-    const contador = document.getElementById('profileBioCount');
-    if (input && contador) contador.textContent = String(input.value.length);
-}
-
-function toggleEditorPerfil(forcar) {
-    const form = document.getElementById('profileIdentityForm');
-    const botao = document.getElementById('profileEditToggle');
-    if (!form || !botao) return;
-    const abrir = typeof forcar === 'boolean' ? forcar : form.hidden;
-    form.hidden = !abrir;
-    botao.setAttribute('aria-expanded', String(abrir));
-    botao.textContent = abrir ? 'Fechar edição' : 'Editar perfil';
-    if (abrir) {
-        aplicarIdentidadePerfil();
-        document.getElementById('profileNameInput')?.focus();
+    const imagem = document.getElementById('profileAvatarImage');
+    if (!imagem) return;
+    if (appData.profilePhoto) {
+        imagem.src = appData.profilePhoto;
+        imagem.classList.add('has-photo');
+    } else {
+        imagem.removeAttribute('src');
+        imagem.classList.remove('has-photo');
     }
-}
-
-function salvarIdentidadePerfil(event) {
-    event.preventDefault();
-    const nome = document.getElementById('profileNameInput')?.value.trim().replace(/\s+/g, ' ') || '';
-    const bio = document.getElementById('profileBioInput')?.value.trim() || '';
-    if (nome.length < 2) {
-        showToast('O nome precisa ter pelo menos 2 caracteres.', true);
-        return;
-    }
-    appData.profileName = nome.slice(0, 32);
-    appData.profileBio = bio.slice(0, 190);
-    saveAppData();
-    aplicarIdentidadePerfil();
-    toggleEditorPerfil(false);
-    showToast('✓ Perfil atualizado e salvo automaticamente');
 }
 
 function alterarFotoPerfil(event) {
@@ -856,10 +642,10 @@ function alterarFotoPerfil(event) {
         canvas.height = 512;
         const contexto = canvas.getContext('2d');
         contexto.drawImage(imagemOriginal, origemX, origemY, lado, lado, 0, 0, 512, 512);
-        appData.profilePhoto = canvas.toDataURL('image/jpeg', 0.82);
-        saveAppData();
-        aplicarIdentidadePerfil();
-        showToast('✓ Foto atualizada e salva automaticamente');
+        appData.profilePhoto = canvas.toDataURL('image/jpeg', 0.86);
+        localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
+        aplicarFotoPerfil();
+        showToast('Foto de perfil atualizada!');
         URL.revokeObjectURL(enderecoTemporario);
         input.value = '';
     };
@@ -871,22 +657,13 @@ function alterarFotoPerfil(event) {
     imagemOriginal.src = enderecoTemporario;
 }
 
-function criarDadosGamificacaoDeTeste(xp) {
-    const dadosReais = calcularGamificacao();
-    const xpTotal = Math.max(0, Math.min(XP_MAXIMO, Math.round(Number(xp) || 0)));
-    const nivel = obterNivelAtual(xpTotal);
-    return { ...dadosReais, xpTotal, nivel, liga: obterLigaAtual(nivel), titulo: obterTituloAtual(nivel) };
-}
-
-function renderGamificacao(animar = false) {
-    const dados = xpTesteLocal === null ? calcularGamificacao() : criarDadosGamificacaoDeTeste(xpTesteLocal);
-    const temaVisual = obterTemaVisualAtual(dados.nivel);
-    const molduraVisual = obterMolduraEquipada(dados, temaVisual);
+function renderGamificacao() {
+    const dados = calcularGamificacao();
     const estatisticas = calcularEstatisticasGlobais();
-    const proximoNivelXp = dados.nivel < NIVEL_MAXIMO ? LIMITES_NIVEL[dados.nivel + 1] : XP_MAXIMO;
+    const proximoNivelXp = dados.nivel < 50 ? LIMITES_NIVEL[dados.nivel + 1] : 520000;
     const inicioNivelXp = LIMITES_NIVEL[dados.nivel];
-    const progressoNivel = dados.nivel >= NIVEL_MAXIMO ? 100 : Math.max(0, Math.min(100, ((dados.xpTotal - inicioNivelXp) / (proximoNivelXp - inicioNivelXp)) * 100));
-    const progressoTotal = Math.min(100, (dados.xpTotal / XP_MAXIMO) * 100);
+    const progressoNivel = dados.nivel >= 50 ? 100 : Math.max(0, Math.min(100, ((dados.xpTotal - inicioNivelXp) / (proximoNivelXp - inicioNivelXp)) * 100));
+    const progressoTotal = Math.min(100, (dados.xpTotal / 520000) * 100);
     const colocarTexto = (id, texto) => { const el = document.getElementById(id); if (el) el.textContent = texto; };
     const colocarLargura = (id, valor) => { const el = document.getElementById(id); if (el) el.style.width = `${valor}%`; };
 
@@ -894,9 +671,9 @@ function renderGamificacao(animar = false) {
     colocarTexto('nav-xp-streak', `🔥 ${dados.sequencia}`);
     colocarLargura('nav-xp-progress', progressoNivel);
     colocarTexto('profileLeagueName', dados.liga.nome);
-    colocarTexto('profileLevelTitle', `Lvl ${dados.nivel} • ${temaVisual.titulo}`);
-    colocarTexto('profileNextLevel', dados.nivel >= NIVEL_MAXIMO ? 'Nível máximo alcançado' : `Próximo nível: ${formatarNumero(proximoNivelXp)} XP`);
-    colocarTexto('profileXpText', `${formatarNumero(dados.xpTotal)} / ${formatarNumero(XP_MAXIMO)} XP`);
+    colocarTexto('profileLevelTitle', `Lvl ${dados.nivel} • ${dados.titulo}`);
+    colocarTexto('profileNextLevel', dados.nivel >= 50 ? 'Nível máximo alcançado' : `Próximo nível: ${formatarNumero(proximoNivelXp)} XP`);
+    colocarTexto('profileXpText', `${formatarNumero(dados.xpTotal)} / 520.000 XP`);
     colocarTexto('profileXpPercent', `${progressoTotal.toFixed(1).replace('.', ',')}%`);
     colocarLargura('profileXpBar', progressoTotal);
     colocarTexto('profileMultiplierBadge', `${dados.multiplicador.toFixed(2).replace(/0$/, '').replace('.', ',')}x • ${nomeDoMultiplicador(dados.sequencia)}`);
@@ -905,89 +682,10 @@ function renderGamificacao(animar = false) {
     colocarTexto('profileTopics', estatisticas.topicos);
     colocarTexto('profileAccuracy', `${estatisticas.taxa}%`);
     const frame = document.getElementById('profileLeagueFrame');
-    const ligaDaMoldura = obterLigaAtual(molduraVisual.nivel);
-    if (frame) frame.className = `league-frame ${ligaDaMoldura.classe} rank-frame-${molduraVisual.tema}`;
-    aplicarIdentidadePerfil();
+    if (frame) frame.className = `league-frame ${dados.liga.classe}`;
+    aplicarFotoPerfil();
     const perfil = document.getElementById('perfil');
-    if (perfil) {
-        perfil.dataset.league = dados.liga.classe;
-        perfil.dataset.rank = molduraVisual.tema;
-    }
-    document.documentElement.dataset.xpRank = molduraVisual.tema;
-    colocarTexto('profileRankEmblem', molduraVisual.simbolo);
-    colocarTexto('profileFrameEmblem', molduraVisual.simbolo);
-    colocarTexto('profileFrameTag', `NÍVEL ${dados.nivel}`);
-    colocarTexto('profileEvolutionCaption', `${molduraVisual.titulo} • ${molduraVisual.legenda}`);
-    const referencias = document.getElementById('profileReferenceStrip');
-    if (referencias) referencias.innerHTML = molduraVisual.referencias.map((referencia, indice) => `<span><b>${String(indice + 1).padStart(2, '0')}</b>${referencia}</span>`).join('');
-    renderizarGaleriaMolduras(dados, molduraVisual);
-    const status = document.getElementById('xpTestStatus');
-    if (status) {
-        status.textContent = xpTesteLocal === null ? 'XP real' : `Teste: ${formatarNumero(dados.xpTotal)} XP`;
-        status.classList.toggle('is-testing', xpTesteLocal !== null);
-    }
-    document.querySelectorAll('.xp-test-milestone').forEach(botao => botao.classList.toggle('active', Number(botao.dataset.xp) === dados.xpTotal && xpTesteLocal !== null));
-    if (animar) {
-        const hero = document.querySelector('.profile-hero');
-        if (hero) {
-            hero.classList.remove('xp-test-flash');
-            void hero.offsetWidth;
-            hero.classList.add('xp-test-flash');
-        }
-    }
-}
-
-function sincronizarXpTeste(valor) {
-    const xp = Math.max(0, Math.min(XP_MAXIMO, Math.round(Number(valor) || 0)));
-    const range = document.getElementById('xpTestRange');
-    const input = document.getElementById('xpTestInput');
-    if (range && document.activeElement !== range) range.value = xp;
-    if (input && document.activeElement !== input) input.value = xp;
-}
-
-function visualizarXpTeste(valor) {
-    if (valor !== undefined) sincronizarXpTeste(valor);
-    const input = document.getElementById('xpTestInput');
-    xpTesteLocal = Math.max(0, Math.min(XP_MAXIMO, Math.round(Number(input?.value) || 0)));
-    sincronizarXpTeste(xpTesteLocal);
-    renderGamificacao(true);
-}
-
-function sairDoModoTesteXp() {
-    xpTesteLocal = null;
-    const dados = calcularGamificacao();
-    sincronizarXpTeste(dados.xpTotal);
-    renderGamificacao(true);
-}
-
-function renderizarAtalhosXpTeste() {
-    const container = document.getElementById('xpTestMilestones');
-    if (!container) return;
-    const range = document.getElementById('xpTestRange');
-    const input = document.getElementById('xpTestInput');
-    if (range) range.max = XP_MAXIMO;
-    if (input) input.max = XP_MAXIMO;
-    container.innerHTML = obterTrilhaVisualAtual().map(marco => `<button type="button" class="xp-test-milestone" data-xp="${marco.xp}" onclick="visualizarXpTeste(${marco.xp})">Lvl ${marco.nivel} · ${marco.titulo}</button>`).join('');
-    sincronizarXpTeste(xpTesteLocal === null ? calcularGamificacao().xpTotal : xpTesteLocal);
-}
-
-function sincronizarModoPatente() {
-    const modoAura = appData.rankVisualMode === 'aura';
-    document.documentElement.dataset.rankMode = modoAura ? 'aura' : 'militar';
-    const botao = document.getElementById('rankVisualModeToggle');
-    if (!botao) return;
-    botao.classList.toggle('is-aura', modoAura);
-    botao.setAttribute('aria-pressed', String(modoAura));
-    botao.innerHTML = modoAura ? '<span aria-hidden="true">✦</span> Modo Aura' : '<span aria-hidden="true">▣</span> Modo Militar';
-}
-
-function alternarModoPatente() {
-    appData.rankVisualMode = appData.rankVisualMode === 'aura' ? 'militar' : 'aura';
-    sincronizarModoPatente();
-    saveAppData();
-    renderizarAtalhosXpTeste();
-    renderGamificacao(true);
-    showToast(appData.rankVisualMode === 'aura' ? '✦ Modo Aura ativado' : '▣ Modo Militar ativado');
+    if (perfil) perfil.dataset.league = dados.liga.classe;
 }
 
 function updateDashboardStats() {
@@ -1015,24 +713,14 @@ function updateDashboardStats() {
     if(document.getElementById('top-acertos')) document.getElementById('top-acertos').textContent = `${totalAcertos} Acertos`;
     if(document.getElementById('top-erros')) document.getElementById('top-erros').textContent = `${totalErros} Erros`;
     if(document.getElementById('top-perc')) document.getElementById('top-perc').textContent = totalQuestoes > 0 ? `${Math.round((totalAcertos/totalQuestoes)*100)}%` : '0%';
-    const chart = document.getElementById('weeklyChart');
+    const chart = document.getElementById('weeklyChart'); 
     if(chart) {
-        const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
-        const maxSec = Math.max(...appData.weeklyChart, 3600);
-        const media = tempoSemana / 7;
-        const hoje = (new Date().getDay() + 6) % 7;
-        const colunas = dias.map((lbl, i) => {
-            const segundos = Number(appData.weeklyChart[i]) || 0;
-            const pct = segundos ? Math.max(8, Math.min(100, (segundos / maxSec) * 100)) : 3;
-            const estado = segundos ? 'com-estudo' : 'sem-estudo';
-            return `<button type="button" class="chart-day ${estado} ${i === hoje ? 'hoje' : ''}" aria-label="${lbl}: ${formatShortTime(segundos)} estudados">
-                <span class="chart-day-value">${formatShortTime(segundos)}</span>
-                <span class="chart-bar-track"><span class="chart-bar-fill" style="--bar-height:${pct}%"></span></span>
-                <span class="chart-day-label">${lbl}${i === hoje ? '<small>hoje</small>' : ''}</span>
-                <span class="chart-day-popover"><strong>${lbl}</strong><small>${segundos ? `${formatShortTime(segundos)} de foco` : 'Nenhum estudo registrado'}</small></span>
-            </button>`;
-        }).join('');
-        chart.innerHTML = `<div class="chart-summary"><span><small>Total semanal</small><strong>${formatShortTime(tempoSemana)}</strong></span><span><small>Média diária</small><strong>${formatShortTime(Math.round(media))}</strong></span></div><div class="chart-plot" style="--average-pct:${Math.min(100, (media / maxSec) * 100)}%"><span class="chart-average-line"><i>Média</i></span>${colunas}</div>`;
+        chart.innerHTML = '';
+        const maxSec = Math.max(...appData.weeklyChart, 3600); 
+        ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'].forEach((lbl, i) => {
+            let pct = Math.max(appData.weeklyChart[i] > 0 ? 2 : 0, Math.min(100, (appData.weeklyChart[i] / maxSec) * 100));
+            chart.innerHTML += `<div class="chart-col"><div class="chart-tooltip">${formatShortTime(appData.weeklyChart[i])}</div><div class="bar-wrapper"><div class="bar" style="height: ${pct}%;"></div></div><div class="chart-label">${lbl}</div></div>`;
+        });
     }
     renderStreak();
     atualizarLinhaMediaSedilhadDynamica();
@@ -1052,59 +740,22 @@ function renderStreak() {
         d.setDate(d.getDate() - i);
         const iso = dataLocalISO(d);
         const estudou = diasEstudados.has(iso);
-        const rotulo = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-        let classe = 'fail', marca = '×', situacao = 'Não houve estudo';
+        const rotulo = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
         if (d.getDay() === 0) {
-            classe = 'ignored'; marca = '•'; situacao = 'Domingo — descanso da sequência';
+            html += `<div class="streak-dot ignored" title="${rotulo}: domingo não conta">•</div>`;
         } else if (d.getDay() === 6 && !estudou) {
-            classe = 'optional'; marca = '○'; situacao = 'Sábado opcional — não quebra a sequência';
+            html += `<div class="streak-dot optional" title="${rotulo}: sábado opcional">○</div>`;
         } else if (estudou) {
-            classe = 'ok'; marca = '✓'; situacao = 'Estudo concluído';
+            html += `<div class="streak-dot ok" title="${rotulo}: estudou">✓</div>`;
         } else if (iso === hojeISO) {
-            classe = 'pending'; marca = '·'; situacao = 'Hoje — ainda dá tempo de estudar';
+            html += `<div class="streak-dot pending" title="${rotulo}: hoje ainda está em aberto">·</div>`;
+        } else {
+            html += `<div class="streak-dot fail" title="${rotulo}: sem estudo">×</div>`;
         }
-        html += `<button type="button" class="streak-dot ${classe}" aria-label="${rotulo}: ${situacao}" data-streak-date="${rotulo}" data-streak-status="${situacao}"><span class="streak-mark">${marca}</span></button>`;
     }
     streakRow.innerHTML = html;
-    configurarTooltipsConstancia(streakRow);
     const sequencia = calcularSequenciaAtual();
     document.getElementById('constancia-texto').innerHTML = `Constância atual: <b>${sequencia} ${sequencia === 1 ? 'dia' : 'dias'}</b>. Domingo não conta e sábado é opcional.`;
-}
-
-function configurarTooltipsConstancia(streakRow) {
-    let tooltip = document.getElementById('streakTooltip');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'streakTooltip';
-        tooltip.className = 'streak-tooltip-fixed';
-        tooltip.setAttribute('role', 'status');
-        document.body.appendChild(tooltip);
-    }
-    let temporizador;
-    const ocultar = () => {
-        clearTimeout(temporizador);
-        tooltip.classList.remove('show');
-    };
-    const mostrar = botao => {
-        clearTimeout(temporizador);
-        tooltip.innerHTML = `<strong>${botao.dataset.streakDate}</strong><small>${botao.dataset.streakStatus}</small>`;
-        tooltip.classList.add('show');
-        const area = botao.getBoundingClientRect();
-        const largura = tooltip.offsetWidth;
-        const esquerda = Math.max(12, Math.min(window.innerWidth - largura - 12, area.left + (area.width / 2) - (largura / 2)));
-        tooltip.style.left = `${esquerda}px`;
-        tooltip.style.top = `${Math.max(12, area.top - tooltip.offsetHeight - 12)}px`;
-    };
-    streakRow.querySelectorAll('.streak-dot').forEach(botao => {
-        botao.addEventListener('pointerenter', () => mostrar(botao));
-        botao.addEventListener('pointerleave', () => { if (document.activeElement !== botao) ocultar(); });
-        botao.addEventListener('focus', () => mostrar(botao));
-        botao.addEventListener('blur', ocultar);
-        botao.addEventListener('click', () => {
-            mostrar(botao);
-            temporizador = setTimeout(ocultar, 2600);
-        });
-    });
 }
 
 function atualizarLinhaMediaSedilhadDynamica() {
@@ -1116,7 +767,15 @@ function atualizarLinhaMediaSedilhadDynamica() {
     const maxSec = Math.max(...appData.weeklyChart, 3600);
     const pct = maxSec > 0 ? (media / maxSec) * 100 : 0;
 
-    container.style.setProperty('--average-pct', `${Math.min(100, pct)}%`);
+    const heightTrilhoBarra = 120; 
+    const marginRotuloGap = 25; 
+    const heightContiner = 180; 
+
+    const centroTrilho = heightContiner - marginRotuloGap - (heightTrilhoBarra / 2);
+    const variacao = (pct / 100) * (heightTrilhoBarra / 2);
+    const topDinamico = centroTrilho - variacao;
+
+    container.style.setProperty('--dinamico-top-sedilhado', `${topDinamico}px`);
 }
 
 let timerInterval, isRunning = false, currentMode = 'estudo', currentSeconds = 0, descansoTempoAtual = 5;
@@ -2392,8 +2051,6 @@ syncVisualModeControl();
 syncSettingsUI();
 registrarBonusLoginDiario();
 updateDashboardStats(); 
-sincronizarModoPatente();
-renderizarAtalhosXpTeste();
 mostrarFraseMotivacional();
 executarResetTimer(); 
 renderizarCiclo();

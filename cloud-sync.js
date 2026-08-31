@@ -201,7 +201,7 @@ Se faltar um dado indispensável, faça uma pergunta curta. Para orientação de
             let result = await geminiChat.sendMessage(prompt);
             const actions = [];
             for (let round = 0; round < 6; round += 1) {
-                const calls = result.response.functionCalls();
+                const calls = result.response.functionCalls() || [];
                 if (!calls.length) return { text: result.response.text() || 'Concluído.', actions };
                 const responses = [];
                 for (const call of calls) {

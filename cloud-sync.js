@@ -47,13 +47,19 @@ if (!firebaseConfigured) {
     };
 } else {
     try {
-    const [{ initializeApp }, authSdk, firestoreSdk] = await Promise.all([
+    const [{ initializeApp }, authSdk, firestoreSdk, appCheckSdk, aiSdk] = await Promise.all([
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js'),
-        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js')
+        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js'),
+        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js'),
+        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-ai.js')
     ]);
 
     const firebaseApp = initializeApp(firebaseConfig);
+    appCheckSdk.initializeAppCheck(firebaseApp, {
+        provider: new appCheckSdk.ReCaptchaEnterpriseProvider('6LcR-KEtAAAAAERFmCqsT_x3d7kNkigMaM2uyLbP'),
+        isTokenAutoRefreshEnabled: true
+    });
     const auth = authSdk.getAuth(firebaseApp);
     const db = firestoreSdk.getFirestore(firebaseApp);
     const provider = new authSdk.GoogleAuthProvider();
@@ -62,6 +68,145 @@ if (!firebaseConfigured) {
     let applyingRemote = false;
 
     authSdk.setPersistence(auth, authSdk.browserLocalPersistence).catch(() => {});
+
+    const S = aiSdk.Schema;
+    const ferramentasGemini = {
+        functionDeclarations: [
+            {
+                name: 'consultar_progresso',
+                description: 'Consulta um resumo completo do progresso e uma recomendação de estudo do usuário.',
+                parameters: S.object({ properties: {} })
+            },
+            {
+                name: 'listar_materias',
+                description: 'Lista as matérias, tópicos e desempenho cadastrados no King Master.',
+                parameters: S.object({ properties: {} })
+            },
+            {
+                name: 'adicionar_materia',
+                description: 'Adiciona uma matéria nova ao hub de estudos.',
+                parameters: S.object({
+                    properties: {
+                        nome: S.string({ description: 'Nome curto da matéria, por exemplo Física.' }),
+                        tipo: S.string({ description: 'Um de: Teórica, Prática, Teórica e Prática, Revisão ou Livre.' }),
+                        cor: S.string({ description: 'Cor hexadecimal, por exemplo #007aff.' })
+                    },
+                    optionalProperties: ['tipo', 'cor']
+                })
+            },
+            {
+                name: 'adicionar_topico',
+                description: 'Adiciona um tópico ou assunto a uma matéria já existente.',
+                parameters: S.object({ properties: { materia: S.string({ description: 'Matéria existente.' }), topico: S.string({ description: 'Nome do tópico.' }) } })
+            },
+            {
+                name: 'concluir_topico',
+                description: 'Marca um tópico de uma matéria como concluído.',
+                parameters: S.object({ properties: { materia: S.string({ description: 'Matéria existente.' }), topico: S.string({ description: 'Tópico existente.' }) } })
+            },
+            {
+                name: 'agendar_estudo',
+                description: 'Cria um compromisso de estudo no agendamento do King Master.',
+                parameters: S.object({
+                    properties: {
+                        materia: S.string({ description: 'Matéria ou atividade que será estudada.' }),
+                        data: S.string({ description: 'Data exata no formato YYYY-MM-DD.' }),
+                        hora: S.string({ description: 'Hora no formato HH:MM.' }),
+                        titulo: S.string({ description: 'Título opcional do compromisso.' }),
+                        descricao: S.string({ description: 'Descrição breve opcional.' })
+                    },
+                    optionalProperties: ['titulo', 'descricao']
+                })
+            },
+            {
+                name: 'criar_revisao',
+                description: 'Cria uma revisão pendente vinculada a uma matéria.',
+                parameters: S.object({ properties: { materia: S.string({ description: 'Matéria existente.' }), assunto: S.string({ description: 'Assunto da revisão.' }), data: S.string({ description: 'Data alvo no formato YYYY-MM-DD.' }) } })
+            },
+            {
+                name: 'preparar_cronometro',
+                description: 'Prepara o cronômetro de estudos para uma matéria. Não inicia sozinho.',
+                parameters: S.object({ properties: { materia: S.string({ description: 'Matéria existente.' }), minutos: S.number({ description: 'Duração entre 1 e 600 minutos.' }) } })
+            },
+            {
+                name: 'definir_meta_diaria',
+                description: 'Altera a meta diária de estudos.',
+                parameters: S.object({ properties: { minutos: S.number({ description: 'Meta entre 5 e 1440 minutos.' }) } })
+            },
+            {
+                name: 'atualizar_perfil',
+                description: 'Atualiza o nome de usuário e/ou a bio do perfil.',
+                parameters: S.object({
+                    properties: { nome: S.string({ description: 'Nome de usuário com até 32 caracteres.' }), bio: S.string({ description: 'Bio com até 190 caracteres.' }) },
+                    optionalProperties: ['nome', 'bio']
+                })
+            },
+            {
+                name: 'alterar_visual',
+                description: 'Altera o estilo visual, carreira de títulos ou cor principal do site.',
+                parameters: S.object({
+                    properties: {
+                        visual: S.string({ description: 'classic ou futuristic.' }),
+                        carreira: S.string({ description: 'aura ou militar.' }),
+                        cor: S.string({ description: 'azul, verde, laranja, roxo, vermelho, amarelo, rosa ou ciano.' })
+                    },
+                    optionalProperties: ['visual', 'carreira', 'cor']
+                })
+            },
+            {
+                name: 'abrir_area',
+                description: 'Abre uma área do site: painel, matérias, agenda, revisões, simulados, redações, histórico ou perfil.',
+                parameters: S.object({ properties: { area: S.string({ description: 'Nome da área solicitada.' }) } })
+            },
+            {
+                name: 'solicitar_exclusao_materia',
+                description: 'Prepara a exclusão de uma matéria. A ação nunca exclui imediatamente e sempre exige confirmação explícita do usuário.',
+                parameters: S.object({ properties: { materia: S.string({ description: 'Matéria existente a excluir.' }) } })
+            }
+        ]
+    };
+
+    const firebaseAI = aiSdk.getAI(firebaseApp, { backend: new aiSdk.GoogleAIBackend() });
+    const geminiModel = aiSdk.getGenerativeModel(firebaseAI, {
+        model: 'gemini-3.7-flash',
+        tools: ferramentasGemini,
+        systemInstruction: `Você é a IA do QG do King Master, assistente pessoal de estudos de Pedro, em português do Brasil.
+Converse de forma inteligente, calorosa, objetiva e natural. Analise os dados fornecidos em CONTEXTO ATUAL antes de responder.
+Quando o usuário pedir qualquer alteração no site, obrigatoriamente use as ferramentas disponíveis. Você pode combinar várias ferramentas no mesmo pedido.
+Nunca diga que executou algo sem receber uma resposta de ferramenta confirmando. Nunca invente matérias, dados ou resultados.
+Para datas relativas, use o campo agora do contexto e envie datas exatas no formato YYYY-MM-DD.
+Para exclusões, use apenas solicitar_exclusao_materia e informe que falta a confirmação do usuário.
+Se faltar um dado indispensável, faça uma pergunta curta. Para orientação de estudos, adapte a resposta ao progresso real do usuário.`
+    });
+    let geminiChat = geminiModel.startChat();
+
+    window.kingGemini = {
+        available: true,
+        async send(message, context) {
+            if (!window.KingMasterAI?.executeTool) throw new Error('As ferramentas do King Master ainda não estão prontas.');
+            const prompt = `CONTEXTO ATUAL DO KING MASTER:\n${JSON.stringify(context)}\n\nPEDIDO DO USUÁRIO:\n${message}`;
+            let result = await geminiChat.sendMessage(prompt);
+            const actions = [];
+            for (let round = 0; round < 6; round += 1) {
+                const calls = result.response.functionCalls();
+                if (!calls.length) return { text: result.response.text() || 'Concluído.', actions };
+                const responses = [];
+                for (const call of calls) {
+                    let response;
+                    try {
+                        response = await window.KingMasterAI.executeTool(call.name, call.args || {});
+                    } catch (error) {
+                        response = { ok: false, message: error?.message || 'A ação falhou.' };
+                    }
+                    actions.push(response);
+                    responses.push({ functionResponse: { name: call.name, response } });
+                }
+                result = await geminiChat.sendMessage(responses);
+            }
+            return { text: 'Executei as ações possíveis, mas o pedido ficou grande demais para uma única rodada. Confira o resultado e continue comigo.', actions };
+        },
+        reset() { geminiChat = geminiModel.startChat(); }
+    };
 
     function describeAuthError(error) {
         const code = error?.code || '';

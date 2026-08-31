@@ -1,5 +1,5 @@
-/* IA do QG: interpreta comandos em português e os converte em ações seguras do King Master. */
-const estadoIaQg = { pendente: null, ouvindo: false };
+/* IA do QG: Gemini interpreta a conversa e estas funções executam ações seguras no King Master. */
+const estadoIaQg = { pendente: null, ouvindo: false, geminiAtivo: false };
 
 const CORES_IA = {
     azul: ['#007aff', '0, 122, 255'], verde: ['#34c759', '52, 199, 89'],
@@ -61,7 +61,7 @@ function renderizarConversaIa() {
     container.innerHTML = '';
     const mensagens = appData.aiConversation.length ? appData.aiConversation : [{
         role: 'assistant',
-        text: `Olá, ${appData.profileName || 'comandante'}. Posso agir no King Master por você. Tente: “Adicione a matéria Matemática”, “Agende Física amanhã às 15:00” ou “O que devo estudar agora?”.`,
+        text: `Olá, ${appData.profileName || 'comandante'}. Sou a inteligência do seu QG. Posso conversar, analisar seus estudos e executar várias ações em um único pedido.`,
         timestamp: Date.now()
     }];
     mensagens.forEach((mensagem, indice) => {
@@ -127,14 +127,167 @@ async function processarEntradaIa(texto) {
     if (!comando) return;
     registrarMensagemIa('user', comando);
     mostrarPensamentoIa(true);
-    await new Promise(resolve => setTimeout(resolve, 280));
-    const resultado = interpretarComandoIa(comando);
+    await new Promise(resolve => setTimeout(resolve, 180));
+    let resultado;
+    if (window.kingGemini?.available) {
+        try {
+            resultado = await window.kingGemini.send(comando, contextoGeminiIa());
+            estadoIaQg.geminiAtivo = true;
+        } catch (error) {
+            console.warn('Gemini indisponível; usando o modo local seguro.', error);
+            resultado = interpretarComandoIa(comando);
+            resultado.text = `${resultado.text}\n\nO Gemini está temporariamente indisponível; concluí pelo modo local do QG.`;
+        }
+    } else {
+        resultado = interpretarComandoIa(comando);
+    }
     mostrarPensamentoIa(false);
     registrarMensagemIa('assistant', resultado.text);
-    if (resultado.section) showSection(resultado.section);
+    const ultimaAcao = Array.isArray(resultado.actions) ? [...resultado.actions].reverse().find(item => item?.section || item?.toast) : null;
+    if (resultado.section || ultimaAcao?.section) showSection(resultado.section || ultimaAcao.section);
     saveAppData();
-    if (resultado.toast) showToast(resultado.toast, resultado.error === true);
+    if (resultado.toast || ultimaAcao?.toast) showToast(resultado.toast || ultimaAcao.toast, resultado.error === true);
 }
+
+function contextoGeminiIa() {
+    const gamificacao = calcularGamificacao();
+    return {
+        agora: new Date().toISOString(),
+        usuario: { nome: appData.profileName || 'Pedro', bio: appData.profileBio || '' },
+        progresso: {
+            nivel: gamificacao.nivel,
+            xp: gamificacao.xpTotal,
+            sequenciaDias: gamificacao.sequencia,
+            minutosEstudados: Math.round((appData.totalStudySeconds || 0) / 60),
+            metaDiariaMinutos: appData.dailyGoalMinutes || 60
+        },
+        materias: appData.cycleItems.map(item => ({
+            nome: item.subject,
+            tipo: item.type,
+            minutos: item.executedMin || 0,
+            acertos: item.acertos || 0,
+            erros: item.erros || 0,
+            topicos: (item.topicos || []).map(topico => ({ nome: topico.nome, concluido: Boolean(topico.concluido) }))
+        })),
+        revisoesPendentes: appData.revisoesItems.filter(item => item.status !== 'revisado').slice(0, 20).map(item => ({ assunto: item.assunto, data: item.dataAlvo })),
+        agendamentos: appData.agendamentoItems.filter(item => !item.completed).slice(0, 20).map(item => ({ titulo: item.title, data: item.date, hora: item.time })),
+        visual: { modo: appData.visualMode || 'classic', carreira: appData.rankVisualMode || 'aura' }
+    };
+}
+
+function resultadoFerramentaIa(message, extra = {}) {
+    return { ok: true, message, ...extra };
+}
+
+function executarFerramentaGeminiIa(nome, args = {}) {
+    const texto = chave => limparTextoIa(args?.[chave] ?? '', chave === 'bio' ? 190 : 100);
+    if (nome === 'consultar_progresso') return resultadoFerramentaIa(resumoProgressoIa(), { summary: resumoProgressoIa(), recommendation: recomendacaoEstudoIa(), section: 'perfil' });
+    if (nome === 'listar_materias') return resultadoFerramentaIa(appData.cycleItems.length ? `Matérias: ${appData.cycleItems.map(item => item.subject).join(', ')}.` : 'Nenhuma matéria cadastrada.', { subjects: contextoGeminiIa().materias });
+
+    if (nome === 'adicionar_materia') {
+        const subject = texto('nome');
+        if (subject.length < 2) return { ok: false, message: 'O nome da matéria é inválido.' };
+        const existente = encontrarMateriaIa(subject);
+        if (existente && normalizarIa(existente.subject) === normalizarIa(subject)) return { ok: false, message: `A matéria ${existente.subject} já existe.` };
+        const tipo = ['Teórica', 'Prática', 'Teórica e Prática', 'Revisão', 'Livre'].includes(args.tipo) ? args.tipo : 'Teórica';
+        appData.cycleItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), color: /^#[0-9a-f]{6}$/i.test(args.cor || '') ? args.cor : '#007aff', subject, type: tipo, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 });
+        renderizarCiclo(); renderizarRevisoes();
+        return resultadoFerramentaIa(`Matéria ${subject} adicionada.`, { section: 'planejamento', toast: '✓ Matéria criada pelo Gemini' });
+    }
+
+    if (nome === 'adicionar_topico') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        const topicoNome = texto('topico');
+        if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
+        if (!topicoNome) return { ok: false, message: 'Tópico inválido.' };
+        if ((materia.topicos || []).some(item => normalizarIa(item.nome) === normalizarIa(topicoNome))) return { ok: false, message: `O tópico ${topicoNome} já existe em ${materia.subject}.` };
+        if (!Array.isArray(materia.topicos)) materia.topicos = [];
+        materia.topicos.push({ nome: topicoNome, concluido: false }); renderizarCiclo();
+        return resultadoFerramentaIa(`Tópico ${topicoNome} adicionado em ${materia.subject}.`, { section: 'planejamento', toast: '✓ Tópico criado pelo Gemini' });
+    }
+
+    if (nome === 'concluir_topico') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
+        const alvo = normalizarIa(texto('topico'));
+        const topico = (materia.topicos || []).find(item => normalizarIa(item.nome) === alvo || normalizarIa(item.nome).includes(alvo));
+        if (!topico) return { ok: false, message: 'Tópico não encontrado.' };
+        topico.concluido = true; renderizarCiclo();
+        return resultadoFerramentaIa(`Tópico ${topico.nome} concluído em ${materia.subject}.`, { section: 'planejamento', toast: '✓ Tópico concluído' });
+    }
+
+    if (nome === 'agendar_estudo') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        const subject = materia?.subject || texto('materia');
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(args.data || '') ? args.data : dataDoComandoIa(args.data || 'amanhã');
+        const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(args.hora || '') ? args.hora : '18:00';
+        appData.agendamentoItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), title: texto('titulo') || `Estudar ${subject}`, date, time, type: 'Estudo', description: texto('descricao') || 'Planejado pelo Gemini do QG', completed: false });
+        renderizarAgendamento();
+        return resultadoFerramentaIa(`${subject} agendada para ${dataBonitaIa(date)} às ${time}.`, { section: 'agendamento', toast: '✓ Estudo agendado pelo Gemini' });
+    }
+
+    if (nome === 'criar_revisao') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
+        const assunto = texto('assunto');
+        const dataAlvo = /^\d{4}-\d{2}-\d{2}$/.test(args.data || '') ? args.data : dataDoComandoIa(args.data || 'amanhã');
+        appData.revisoesItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), materia: String(materia.id), assunto, dataEstudo: '', dataAlvo, origem: 'gemini-qg', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
+        renderizarRevisoes();
+        return resultadoFerramentaIa(`Revisão de ${assunto} criada em ${materia.subject} para ${dataBonitaIa(dataAlvo)}.`, { section: 'revisoes', toast: '✓ Revisão criada pelo Gemini' });
+    }
+
+    if (nome === 'preparar_cronometro') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
+        const minutos = Math.max(1, Math.min(600, Number(args.minutos) || 25));
+        setMode('estudo');
+        document.getElementById('inputHours').value = Math.floor(minutos / 60);
+        document.getElementById('inputMinutes').value = minutos % 60;
+        document.getElementById('inputSeconds').value = 0;
+        atualizarSeletorDeMaterias(); document.getElementById('activeSubjectSelect').value = materia.id; sincronizarTempo();
+        return resultadoFerramentaIa(`Cronômetro de ${minutos} minutos preparado para ${materia.subject}.`, { section: 'dashboard', toast: '▶ Sessão preparada pelo Gemini' });
+    }
+
+    if (nome === 'definir_meta_diaria') {
+        const minutos = Math.max(5, Math.min(1440, Number(args.minutos) || 60)); appData.dailyGoalMinutes = minutos;
+        return resultadoFerramentaIa(`Meta diária alterada para ${minutos} minutos.`, { toast: '✓ Meta diária atualizada' });
+    }
+
+    if (nome === 'atualizar_perfil') {
+        if (args.nome) appData.profileName = limparTextoIa(args.nome, 32);
+        if (typeof args.bio === 'string') appData.profileBio = limparTextoIa(args.bio, 190);
+        aplicarIdentidadePerfil();
+        return resultadoFerramentaIa('Perfil atualizado.', { section: 'perfil', toast: '✓ Perfil atualizado pelo Gemini' });
+    }
+
+    if (nome === 'alterar_visual') {
+        if (['classic', 'futuristic'].includes(args.visual)) { appData.visualMode = args.visual; document.documentElement.dataset.visual = args.visual; syncVisualModeControl(); }
+        if (['aura', 'militar'].includes(args.carreira)) { appData.rankVisualMode = args.carreira; sincronizarModoPatente(); renderizarAtalhosXpTeste(); renderGamificacao(true); }
+        const cor = normalizarIa(args.cor || '');
+        if (CORES_IA[cor]) { appData.themeColor = CORES_IA[cor][0]; appData.themeColorRgb = CORES_IA[cor][1]; document.documentElement.style.setProperty('--accent-color', CORES_IA[cor][0]); document.documentElement.style.setProperty('--accent-rgb', CORES_IA[cor][1]); syncSettingsUI(); }
+        return resultadoFerramentaIa('Visual do King Master atualizado.', { section: 'perfil', toast: '✦ Visual atualizado pelo Gemini' });
+    }
+
+    if (nome === 'abrir_area') {
+        const chave = normalizarIa(args.area || 'painel');
+        const rota = ROTAS_IA[chave] || Object.entries(ROTAS_IA).find(([apelido]) => chave.includes(apelido))?.[1] || 'dashboard';
+        return resultadoFerramentaIa(`Área ${args.area || 'Painel'} aberta.`, { section: rota });
+    }
+
+    if (nome === 'solicitar_exclusao_materia') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
+        estadoIaQg.pendente = { type: 'delete-subject', id: materia.id, label: materia.subject };
+        return resultadoFerramentaIa(`A exclusão de ${materia.subject} aguarda confirmação explícita do usuário.`, { requiresConfirmation: true });
+    }
+
+    return { ok: false, message: `Ferramenta desconhecida: ${nome}.` };
+}
+
+window.KingMasterAI = {
+    getContext: contextoGeminiIa,
+    executeTool: executarFerramentaGeminiIa
+};
 
 function encontrarMateriaIa(termo) {
     const alvo = normalizarIa(limparTextoIa(termo, 80).replace(/^(a|o|de)\s+/, ''));

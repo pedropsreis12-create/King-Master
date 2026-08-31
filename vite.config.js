@@ -13,11 +13,13 @@ function staticSiteWorker() {
           body: await readFile('dist/index.html', 'utf8'),
           type: 'text/html; charset=utf-8',
         },
-        '/script.js': {
-          body: await readFile('dist/script.js', 'utf8'),
-          type: 'application/javascript; charset=utf-8',
-        },
       };
+
+      for (const name of ['script.js', 'ai-assistant.js', 'firebase-config.js', 'cloud-sync.js']) {
+        const body = await readFile(name, 'utf8');
+        await writeFile(`dist/${name}`, body, 'utf8');
+        files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };
+      }
 
       for (const name of assetNames) {
         if (!name.endsWith('.css')) continue;

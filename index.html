@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260831-profile-cloud">
+    <link rel="stylesheet" href="style.css?v=20260831-ia-qg">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -650,10 +650,42 @@
 
     </main>
 
+    <button class="ai-qg-launcher" id="aiQgLauncher" type="button" aria-controls="aiQgPanel" aria-expanded="false" onclick="toggleIaQg()">
+        <span class="ai-qg-launcher-orb" aria-hidden="true">✦</span>
+        <span><strong>IA do QG</strong><small>Pronta para agir</small></span>
+    </button>
+
+    <aside class="ai-qg-panel" id="aiQgPanel" aria-label="IA do QG" aria-hidden="true">
+        <header class="ai-qg-header">
+            <div class="ai-qg-avatar" aria-hidden="true">✦</div>
+            <div><strong>IA do QG</strong><small><i></i> Comandos ativos no King Master</small></div>
+            <button type="button" aria-label="Fechar IA do QG" onclick="toggleIaQg(false)">×</button>
+        </header>
+        <div class="ai-qg-capabilities" aria-label="Sugestões de comandos">
+            <button type="button" onclick="usarSugestaoIa('Adicione a matéria Matemática')">+ Matéria</button>
+            <button type="button" onclick="usarSugestaoIa('O que devo estudar agora?')">Plano agora</button>
+            <button type="button" onclick="usarSugestaoIa('Como está meu progresso?')">Meu progresso</button>
+            <button type="button" onclick="usarSugestaoIa('Abra minhas revisões')">Abrir revisões</button>
+        </div>
+        <div class="ai-qg-messages" id="aiQgMessages" role="log" aria-live="polite"></div>
+        <div class="ai-qg-thinking" id="aiQgThinking" hidden><i></i><i></i><i></i><span>Analisando e executando</span></div>
+        <form class="ai-qg-composer" id="aiQgForm" onsubmit="enviarMensagemIa(event)">
+            <label for="aiQgInput">Peça qualquer ação no site</label>
+            <div>
+                <textarea id="aiQgInput" rows="1" maxlength="500" placeholder='Ex.: "Adicione Física e crie o tópico Cinemática"' onkeydown="atalhoEnviarIa(event)"></textarea>
+                <button class="ai-qg-voice" id="aiQgVoice" type="button" aria-label="Falar comando" onclick="ouvirComandoIa()">◉</button>
+                <button class="ai-qg-send" type="submit" aria-label="Enviar comando">➜</button>
+            </div>
+            <small>A IA confirma o que fez. Para excluir dados, ela sempre pede confirmação.</small>
+        </form>
+    </aside>
+
+    <div class="ai-qg-backdrop" id="aiQgBackdrop" onclick="toggleIaQg(false)"></div>
     <div id="toastNotification" class="toast-notification"></div>
     <audio id="alarmAudio"></audio>
-    <script src="script.js?v=20260831-profile-cloud"></script>
+    <script src="script.js?v=20260831-ia-qg"></script>
+    <script src="ai-assistant.js?v=20260831-ia-qg"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
-    <script type="module" src="cloud-sync.js?v=20260831-profile-cloud"></script>
+    <script type="module" src="cloud-sync.js?v=20260831-ia-qg"></script>
 </body>
 </html>

@@ -63,10 +63,11 @@ if (!firebaseConfigured) {
     if (localStorage.getItem(appCheckDebugKey) === 'enabled') {
         self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
     }
-    appCheckSdk.initializeAppCheck(firebaseApp, {
+    const appCheck = appCheckSdk.initializeAppCheck(firebaseApp, {
         provider: new appCheckSdk.ReCaptchaEnterpriseProvider('6LcR-KEtAAAAAERFmCqsT_x3d7kNkigMaM2uyLbP'),
         isTokenAutoRefreshEnabled: true
     });
+    const appCheckReady = appCheckSdk.getToken(appCheck, true).then(() => true);
     const auth = authSdk.getAuth(firebaseApp);
     const db = firestoreSdk.getFirestore(firebaseApp);
     const provider = new authSdk.GoogleAuthProvider();
@@ -191,6 +192,7 @@ Se faltar um dado indispensável, faça uma pergunta curta. Para orientação de
         available: true,
         async send(message, context) {
             if (!window.KingMasterAI?.executeTool) throw new Error('As ferramentas do King Master ainda não estão prontas.');
+            await appCheckReady;
             const prompt = `CONTEXTO ATUAL DO KING MASTER:\n${JSON.stringify(context)}\n\nPEDIDO DO USUÁRIO:\n${message}`;
             let result = await geminiChat.sendMessage(prompt);
             const actions = [];

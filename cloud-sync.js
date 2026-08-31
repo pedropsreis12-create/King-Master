@@ -181,7 +181,7 @@ if (!firebaseConfigured) {
             maxOutputTokens: 800,
             thinkingConfig: { thinkingLevel: aiSdk.ThinkingLevel.LOW }
         },
-        tools: ferramentasGemini,
+        tools: [ferramentasGemini],
         systemInstruction: `Você é a IA do QG do King Master, assistente pessoal de estudos de Pedro, em português do Brasil.
 Converse de forma inteligente, calorosa, objetiva e natural. Analise os dados fornecidos em CONTEXTO ATUAL antes de responder.
 Quando o usuário pedir qualquer alteração no site, obrigatoriamente use as ferramentas disponíveis. Você pode combinar várias ferramentas no mesmo pedido.

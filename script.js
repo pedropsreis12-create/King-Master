@@ -19,7 +19,8 @@ const defaultAppData = {
     xpLoginDates: [],
     frasesMotivacionaisFila: [],
     ultimaFraseMotivacional: null,
-    profilePhoto: ''
+    profilePhoto: '',
+    xpResetOffset: 0
 };
 
 let appData;
@@ -46,6 +47,7 @@ if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!appData.revisoesItems) appData.revisoesItems = [];
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!appData.xpLoginDates) appData.xpLoginDates = [];
+if (!Number.isFinite(Number(appData.xpResetOffset))) appData.xpResetOffset = 0;
 if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
 if (!Number.isInteger(appData.ultimaFraseMotivacional)) appData.ultimaFraseMotivacional = null;
 if (typeof appData.profilePhoto !== 'string') appData.profilePhoto = '';
@@ -581,9 +583,10 @@ function calcularGamificacao() {
     appData.xpLoginDates.forEach(data => adicionar(data, 150));
 
     const mapaSequencias = criarMapaSequencias();
-    const xpTotal = Math.min(520000, Math.round(Object.entries(xpBasePorDia).reduce((total, [data, base]) => {
+    const xpBruto = Math.round(Object.entries(xpBasePorDia).reduce((total, [data, base]) => {
         return total + Math.round(base * multiplicadorPorSequencia(mapaSequencias[data] || 0));
-    }, 0)));
+    }, 0));
+    const xpTotal = Math.min(520000, Math.max(0, xpBruto - Number(appData.xpResetOffset || 0)));
     const nivel = obterNivelAtual(xpTotal);
     const sequencia = calcularSequenciaAtual();
     const liga = obterLigaAtual(nivel);
@@ -2045,7 +2048,24 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventL
     if (event.target === overlay) overlay.classList.remove('active');
 }));
 
+function aplicarZeramentoConfirmadoDoProgresso() {
+    const token = new URLSearchParams(window.location.search).get('zerarProgresso');
+    if (token !== 'confirmado-2026-08-30') return false;
+
+    appData.totalStudySeconds = 0;
+    appData.weeklyChart = [0, 0, 0, 0, 0, 0, 0];
+    appData.historyItems = [];
+    appData.cycleItems = appData.cycleItems.map(item => ({ ...item, executedMin: 0 }));
+    appData.xpLoginDates = [dataLocalISO()];
+    appData.xpResetOffset = 0;
+    appData.xpResetOffset = calcularGamificacao().xpTotal;
+    localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return true;
+}
+
 // INICIALIZAÇÃO DO APP
+aplicarZeramentoConfirmadoDoProgresso();
 fecharModalDeletar(); 
 syncVisualModeControl();
 syncSettingsUI();

@@ -380,11 +380,15 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
 .profile-hero { min-height: 520px; padding: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative; }
 .profile-hero::before { content: ''; position: absolute; width: 420px; height: 420px; border-radius: 50%; background: radial-gradient(circle, rgba(var(--accent-rgb), .14), transparent 68%); pointer-events: none; }
 .profile-league-name { position: relative; z-index: 2; margin-bottom: 24px; color: var(--text-main); font-size: .8rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
-.avatar-stage { position: relative; z-index: 2; display: grid; place-items: center; width: 290px; height: 290px; perspective: 900px; }
+.avatar-stage { position: relative; z-index: 2; display: grid; place-items: center; width: 290px; height: 326px; perspective: 900px; }
 .league-frame { --league-main: #a77044; --league-light: #e0aa66; position: relative; width: 250px; height: 250px; padding: 13px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(from 35deg, var(--league-main), var(--league-light), #684225, var(--league-light), var(--league-main)); box-shadow: 0 18px 42px rgba(0,0,0,.22), inset 0 0 12px rgba(255,255,255,.42); transition: transform .5s ease, filter .5s ease; }
 .league-frame::before, .league-frame::after { content: ''; position: absolute; pointer-events: none; }
 .league-frame::before { inset: -8px; border-radius: inherit; border: 2px solid color-mix(in srgb, var(--league-light) 70%, transparent); opacity: .55; }
 .league-frame::after { inset: 5px; z-index: 0; border-radius: inherit; border: 1px solid rgba(255,255,255,.45); }
+.rank-frame-emblem { position: absolute; z-index: 8; top: -8px; left: 50%; translate: -50% 0; min-width: 52px; height: 52px; padding: 0 10px; display: grid; place-items: center; border: 2px solid var(--rank-a); border-radius: 50%; background: color-mix(in srgb, var(--card-bg) 82%, #090b12); color: var(--rank-a); box-shadow: 0 0 18px color-mix(in srgb, var(--rank-a) 48%, transparent); font-size: 1.3rem; line-height: 1; text-shadow: 0 0 10px color-mix(in srgb, var(--rank-a) 65%, transparent); }
+.rank-frame-tag { position: absolute; z-index: 8; bottom: 0; left: 50%; translate: -50% 0; min-width: 92px; padding: 7px 12px; border: 1px solid color-mix(in srgb, var(--rank-a) 50%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--card-bg) 88%, var(--rank-c)); color: var(--text-main); box-shadow: 0 8px 20px rgba(0,0,0,.15); font-size: .58rem; font-weight: 900; letter-spacing: 1.5px; white-space: nowrap; }
+.rank-frame-detail { position: absolute; z-index: 6; display: block; pointer-events: none; }
+.rank-frame-detail.detail-one { top: 14%; left: -15px; }.rank-frame-detail.detail-two { top: 14%; right: -15px; }.rank-frame-detail.detail-three { bottom: 12%; left: 50%; translate: -50% 0; }
 .avatar-core { position: relative; z-index: 2; width: 100%; height: 100%; border-radius: inherit; display: grid; place-items: center; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,.22), transparent 25%), linear-gradient(145deg, #20242e, #08090d); color: white; font-size: 4.2rem; font-weight: 800; letter-spacing: -5px; text-shadow: 0 4px 18px rgba(0,0,0,.45); overflow: hidden; }
 .avatar-core img { display: none; width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .avatar-core img.has-photo { display: block; }
@@ -407,6 +411,118 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
 .profile-xp-track { position: relative; z-index: 2; width: min(620px, 100%); height: 13px; padding: 2px; border-radius: 999px; background: var(--border-strong); box-shadow: inset 0 2px 5px rgba(0,0,0,.15); }
 .profile-xp-track span { display: block; width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-color), #8e44ad, #ff9500); box-shadow: 0 0 14px rgba(var(--accent-rgb), .38); transition: width .8s cubic-bezier(.16,1,.3,1); }
 .profile-xp-note { position: relative; z-index: 2; margin-top: 9px; }
+.profile-evolution-caption { position: relative; z-index: 3; margin-top: 14px; padding: 8px 13px; border: 1px solid color-mix(in srgb, var(--rank-a) 42%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--rank-a) 10%, transparent); color: var(--text-main); font-size: .68rem; font-weight: 800; letter-spacing: .2px; text-align: center; }
+.profile-reference-strip { position: relative; z-index: 3; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 11px; }
+.profile-reference-strip span { display: inline-flex; align-items: center; gap: 7px; padding: 6px 10px 6px 7px; border: 1px solid color-mix(in srgb, var(--rank-a) 35%, var(--border-color)); border-radius: 999px; background: color-mix(in srgb, var(--rank-b) 7%, var(--card-bg)); color: var(--text-muted); font-size: .58rem; font-weight: 800; letter-spacing: .2px; }
+.profile-reference-strip b { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: var(--rank-a); color: color-mix(in srgb, var(--rank-c) 82%, #090909); font-size: .5rem; box-shadow: 0 0 9px color-mix(in srgb, var(--rank-a) 45%, transparent); }
+.profile-rank-scene { position: absolute; inset: 0; z-index: 1; overflow: hidden; pointer-events: none; }
+.profile-rank-scene strong { position: absolute; left: 50%; top: 48%; translate: -50% -50%; color: var(--rank-a); font-size: clamp(10rem, 23vw, 22rem); font-weight: 800; line-height: 1; opacity: var(--rank-emblem-opacity); filter: drop-shadow(0 0 var(--rank-shadow) color-mix(in srgb, var(--rank-a) 58%, transparent)); user-select: none; }
+.profile-rank-scene i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-radius: 50%; background: var(--rank-b); box-shadow: 0 0 13px var(--rank-a); opacity: var(--rank-particle-opacity); }
+.profile-rank-scene i:nth-of-type(1) { --i: 0; --delay: 0s; --drift: -42px; --angle: 0deg; --orbit: 72px; left: 10%; top: 19%; }.profile-rank-scene i:nth-of-type(2) { --i: 1; --delay: -.4s; --drift: -30px; --angle: 45deg; --orbit: 81px; left: 28%; top: 78%; }.profile-rank-scene i:nth-of-type(3) { --i: 2; --delay: -.8s; --drift: -18px; --angle: 90deg; --orbit: 90px; left: 46%; top: 12%; }.profile-rank-scene i:nth-of-type(4) { --i: 3; --delay: -1.2s; --drift: -6px; --angle: 135deg; --orbit: 99px; left: 63%; top: 84%; }.profile-rank-scene i:nth-of-type(5) { --i: 4; --delay: -1.6s; --drift: 6px; --angle: 180deg; --orbit: 108px; left: 82%; top: 22%; }.profile-rank-scene i:nth-of-type(6) { --i: 5; --delay: -2s; --drift: 18px; --angle: 225deg; --orbit: 117px; left: 91%; top: 67%; }.profile-rank-scene i:nth-of-type(7) { --i: 6; --delay: -2.4s; --drift: 30px; --angle: 270deg; --orbit: 126px; left: 18%; top: 51%; }.profile-rank-scene i:nth-of-type(8) { --i: 7; --delay: -2.8s; --drift: 42px; --angle: 315deg; --orbit: 135px; left: 73%; top: 48%; }
+
+html[data-xp-rank] body::before { background: var(--accent-color); opacity: var(--rank-body-opacity); }
+html[data-xp-rank] body::after { background: color-mix(in srgb, var(--accent-color) 55%, var(--rank-b)); opacity: var(--rank-body-opacity); }
+html[data-xp-rank] nav { border-color: color-mix(in srgb, var(--accent-color) 34%, var(--border-color)); box-shadow: 0 16px var(--rank-interface-shadow) color-mix(in srgb, var(--accent-color) 20%, transparent); }
+html[data-xp-rank] .widget { transition: border-color .55s ease, box-shadow .55s ease, background .55s ease, transform .35s ease; }
+#perfil[data-rank] .profile-hero { border-color: color-mix(in srgb, var(--accent-color) 42%, var(--border-color)); background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--accent-color) 20%, transparent), transparent 42%), linear-gradient(145deg, color-mix(in srgb, var(--rank-b) 8%, var(--card-bg)), var(--card-bg)); box-shadow: 0 20px var(--rank-interface-shadow) color-mix(in srgb, var(--accent-color) 22%, transparent); }
+#perfil[data-rank] .profile-xp-track span { background: linear-gradient(90deg, var(--accent-color), var(--rank-b), var(--rank-c)); box-shadow: 0 0 var(--rank-shadow) color-mix(in srgb, var(--accent-color) 58%, transparent); }
+
+html[data-xp-rank] { --rank-body-opacity: .18; --rank-emblem-opacity: .08; --rank-particle-opacity: .32; --rank-shadow: 18px; --rank-interface-shadow: 34px; }
+html[data-xp-rank="gear2"], html[data-xp-rank="kaioken"], html[data-xp-rank="saiyajin"] { --rank-body-opacity: .23; --rank-emblem-opacity: .11; --rank-particle-opacity: .45; --rank-shadow: 24px; --rank-interface-shadow: 44px; }
+html[data-xp-rank="bankai"], html[data-xp-rank="dominio"], html[data-xp-rank="sabio"] { --rank-body-opacity: .28; --rank-emblem-opacity: .15; --rank-particle-opacity: .55; --rank-shadow: 30px; --rank-interface-shadow: 54px; }
+html[data-xp-rank="portoes"], html[data-xp-rank="gear5"], html[data-xp-rank="monarca"] { --rank-body-opacity: .34; --rank-emblem-opacity: .2; --rank-particle-opacity: .68; --rank-shadow: 38px; --rank-interface-shadow: 66px; }
+html[data-xp-rank="instinto"], html[data-xp-rank="entidade"] { --rank-body-opacity: .4; --rank-emblem-opacity: .26; --rank-particle-opacity: .8; --rank-shadow: 48px; --rank-interface-shadow: 82px; }
+
+html[data-xp-rank="genin"] { --rank-a: #4f9b67; --rank-b: #b6d66f; --rank-c: #315944; --rank-power: 1; }
+html[data-xp-rank="chunin"] { --rank-a: #4a72a8; --rank-b: #d7aa58; --rank-c: #263a5c; --rank-power: 2; }
+html[data-xp-rank="oni"] { --rank-a: #d63131; --rank-b: #75233a; --rank-c: #16131b; --rank-power: 3; }
+html[data-xp-rank="gear2"] { --rank-a: #ef4f67; --rank-b: #f3a9b7; --rank-c: #782b50; --rank-power: 4; }
+html[data-xp-rank="kaioken"] { --rank-a: #ff2d2d; --rank-b: #ff8b38; --rank-c: #6d0713; --rank-power: 5; }
+html[data-xp-rank="saiyajin"] { --rank-a: #f6c515; --rank-b: #fff082; --rank-c: #e07300; --rank-power: 6; }
+html[data-xp-rank="bankai"] { --rank-a: #e73d50; --rank-b: #1c1822; --rank-c: #8b071e; --rank-power: 7; }
+html[data-xp-rank="dominio"] { --rank-a: #8e52ff; --rank-b: #241042; --rank-c: #39d9ff; --rank-power: 8; }
+html[data-xp-rank="sabio"] { --rank-a: #ef8b25; --rank-b: #d7c06a; --rank-c: #40563a; --rank-power: 9; }
+html[data-xp-rank="portoes"] { --rank-a: #29db76; --rank-b: #ff5247; --rank-c: #ffe56b; --rank-power: 10; }
+html[data-xp-rank="gear5"] { --rank-a: #f8fbff; --rank-b: #8deaff; --rank-c: #c786ff; --rank-power: 11; }
+html[data-xp-rank="monarca"] { --rank-a: #6ee7ff; --rank-b: #4b2e9e; --rank-c: #0c1024; --rank-power: 12; }
+html[data-xp-rank="instinto"] { --rank-a: #e9f1ff; --rank-b: #7f99ba; --rank-c: #ad7cff; --rank-power: 13; }
+html[data-xp-rank="entidade"] { --rank-a: #ffd968; --rank-b: #7c4dff; --rank-c: #3fffd0; --rank-power: 14; }
+
+#perfil[data-rank="genin"] .profile-rank-scene strong { animation: geninLeafBreath 4.8s ease-in-out infinite; }
+#perfil[data-rank="genin"] .profile-rank-scene i { width: 12px; height: 7px; border-radius: 90% 0 90% 0; animation: geninLeaves 6s var(--delay) linear infinite; }
+#perfil[data-rank="chunin"] .profile-rank-scene strong { outline: 2px dashed color-mix(in srgb, var(--rank-a) 24%, transparent); outline-offset: 22px; border-radius: 50%; animation: chuninSeal 10s linear infinite; }
+#perfil[data-rank="chunin"] .profile-rank-scene i { width: 25px; height: 3px; border-radius: 2px; animation: chuninScroll 3.8s var(--delay) ease-in-out infinite; }
+#perfil[data-rank="oni"] .profile-rank-scene strong { animation: oniImpact 3.2s ease-in-out infinite; }
+#perfil[data-rank="oni"] .profile-rank-scene i { width: 54px; height: 3px; border-radius: 0; rotate: -35deg; animation: oniSlash 2.8s var(--delay) ease-out infinite; }
+#perfil[data-rank="gear2"] .profile-rank-scene strong { animation: gearPiston 1.3s cubic-bezier(.2,.8,.3,1) infinite; }
+#perfil[data-rank="gear2"] .profile-rank-scene i { width: 18px; height: 18px; background: rgba(255,255,255,.65); filter: blur(3px); animation: gearSteam 3.4s var(--delay) ease-out infinite; }
+#perfil[data-rank="kaioken"] .profile-rank-scene strong { animation: kaiokenRage .72s steps(2,end) infinite; }
+#perfil[data-rank="kaioken"] .profile-rank-scene i { width: 5px; height: 58px; border-radius: 999px; transform-origin: 50% 220%; animation: kaiokenAura 1.45s var(--delay) ease-out infinite; }
+#perfil[data-rank="saiyajin"] .profile-rank-scene strong { animation: saiyajinCharge 1.6s ease-in-out infinite; }
+#perfil[data-rank="saiyajin"] .profile-rank-scene i { width: 8px; height: 34px; border-radius: 0; clip-path: polygon(45% 0,100% 0,65% 40%,100% 40%,20% 100%,42% 52%,0 52%); animation: saiyajinLightning 1.1s var(--delay) linear infinite; }
+#perfil[data-rank="bankai"] .profile-rank-scene strong { animation: bankaiInk 4s ease-in-out infinite; }
+#perfil[data-rank="bankai"] .profile-rank-scene i { width: 13px; height: 22px; border-radius: 90% 0 90% 0; animation: bankaiPetals 5.2s var(--delay) linear infinite; }
+#perfil[data-rank="dominio"] .profile-rank-scene strong { border: 2px solid color-mix(in srgb, var(--rank-a) 22%, transparent); border-radius: 50%; padding: 35px; animation: domainVoid 7s linear infinite; }
+#perfil[data-rank="dominio"] .profile-rank-scene i { animation: domainOrbit 5.5s var(--delay) linear infinite; }
+#perfil[data-rank="sabio"] .profile-rank-scene strong { animation: sageMeditation 3.8s ease-in-out infinite; }
+#perfil[data-rank="sabio"] .profile-rank-scene i { width: 20px; height: 20px; background: transparent; border: 2px solid var(--rank-a); animation: sageRunes 7s var(--delay) linear infinite; }
+#perfil[data-rank="portoes"] .profile-rank-scene strong { animation: gatesBreak 1.9s cubic-bezier(.17,.84,.44,1) infinite; }
+#perfil[data-rank="portoes"] .profile-rank-scene i { width: 55px; height: 55px; background: transparent; border: 2px solid var(--rank-a); animation: gatesRings 2.4s var(--delay) ease-out infinite; }
+#perfil[data-rank="gear5"] .profile-rank-scene strong { animation: gearFiveBounce 2.5s cubic-bezier(.34,1.56,.64,1) infinite; }
+#perfil[data-rank="gear5"] .profile-rank-scene i { width: 42px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.78); filter: blur(2px); animation: gearFiveClouds 5s var(--delay) ease-in-out infinite; }
+#perfil[data-rank="monarca"] .profile-rank-scene strong { animation: monarchCrown 3.2s ease-in-out infinite; }
+#perfil[data-rank="monarca"] .profile-rank-scene i { width: 12px; height: 34px; border-radius: 50% 50% 2px 2px; background: linear-gradient(var(--rank-a), var(--rank-b)); animation: shadowArmy 3.6s var(--delay) ease-in-out infinite; }
+#perfil[data-rank="instinto"] .profile-rank-scene strong { animation: instinctFloat 5s ease-in-out infinite; }
+#perfil[data-rank="instinto"] .profile-rank-scene i { width: 70px; height: 2px; border-radius: 999px; background: linear-gradient(90deg,transparent,var(--rank-a),transparent); animation: instinctFlow 3.2s var(--delay) ease-in-out infinite; }
+#perfil[data-rank="entidade"] .profile-rank-scene strong { background: conic-gradient(var(--rank-a),var(--rank-b),var(--rank-c),var(--rank-a)); background-clip: text; -webkit-background-clip: text; color: transparent; animation: entityAscension 4s ease-in-out infinite; }
+#perfil[data-rank="entidade"] .profile-rank-scene i { width: 4px; height: 75px; border-radius: 999px; background: linear-gradient(transparent,var(--rank-a),var(--rank-c),transparent); animation: entityWarp 1.8s var(--delay) linear infinite; }
+
+@keyframes geninLeafBreath { 50% { rotate: 4deg; scale: 1.05; } }
+@keyframes geninLeaves { 0% { translate: -20px -65px; rotate: 0deg; opacity: 0; } 30% { opacity: .45; } 100% { translate: 55px 115px; rotate: 540deg; opacity: 0; } }
+@keyframes chuninSeal { to { rotate: 360deg; } }
+@keyframes chuninScroll { 50% { translate: 22px -14px; scale: 1.2 1; opacity: .6; } }
+@keyframes oniImpact { 48%,52% { translate: -50% -50%; } 50% { translate: calc(-50% + 8px) calc(-50% - 3px); filter: drop-shadow(18px 0 0 rgba(255,255,255,.12)); } }
+@keyframes oniSlash { 0% { translate: -130px 85px; opacity: 0; } 35% { opacity: .75; } 100% { translate: 150px -100px; opacity: 0; } }
+@keyframes gearPiston { 50% { scale: 1.08 .94; filter: drop-shadow(0 0 28px var(--rank-a)); } }
+@keyframes gearSteam { 0% { translate: 0 80px; scale: .4; opacity: 0; } 25% { opacity: .55; } 100% { translate: var(--drift) -145px; scale: 2.6; opacity: 0; } }
+@keyframes kaiokenRage { 50% { translate: calc(-50% + 3px) calc(-50% - 2px); scale: 1.06; filter: drop-shadow(0 0 28px #ff2020); } }
+@keyframes kaiokenAura { 0% { scale: .4 0; opacity: 0; } 40% { opacity: .7; } 100% { translate: var(--drift) -100px; scale: 1 1.8; opacity: 0; } }
+@keyframes saiyajinCharge { 50% { scale: 1.09; filter: drop-shadow(0 0 36px #ffe866); } }
+@keyframes saiyajinLightning { 0%,70%,100% { opacity: 0; } 12%,45% { opacity: .95; scale: 1.3; } }
+@keyframes bankaiInk { 50% { scale: 1.08; filter: blur(1px) drop-shadow(0 0 24px #b90027); } }
+@keyframes bankaiPetals { 0% { translate: -35px -100px; rotate: 0deg; opacity: 0; } 18% { opacity: .65; } 100% { translate: 45px 150px; rotate: 620deg; opacity: 0; } }
+@keyframes domainVoid { 50% { rotate: 180deg; scale: 1.08; box-shadow: inset 0 0 60px rgba(95,32,180,.18); } to { rotate: 360deg; } }
+@keyframes domainOrbit { from { transform: rotate(var(--angle)) translateX(65px) rotate(0deg); } to { transform: rotate(var(--angle)) translateX(165px) rotate(360deg); } }
+@keyframes sageMeditation { 50% { translate: -50% calc(-50% - 12px); filter: drop-shadow(0 18px 18px rgba(239,139,37,.3)); } }
+@keyframes sageRunes { to { transform: rotate(360deg) translateX(var(--orbit)) rotate(-360deg); } }
+@keyframes gatesBreak { 0%,100% { scale: 1; } 42% { scale: 1.13; filter: drop-shadow(0 0 40px var(--rank-a)); } 55% { scale: .98; } }
+@keyframes gatesRings { 0% { scale: .2; opacity: .8; } 100% { scale: 4; opacity: 0; } }
+@keyframes gearFiveBounce { 0%,100% { rotate: -3deg; scale: 1; } 45% { translate: -50% calc(-50% - 18px); rotate: 5deg; scale: 1.1 .92; } 70% { scale: .94 1.08; } }
+@keyframes gearFiveClouds { 50% { translate: var(--drift) -32px; scale: 1.5 .8; opacity: .7; } }
+@keyframes monarchCrown { 50% { translate: -50% calc(-50% - 9px); scale: 1.08; filter: drop-shadow(0 22px 20px rgba(53,24,115,.7)); } }
+@keyframes shadowArmy { 0%,100% { translate: 0 50px; opacity: 0; } 45%,70% { translate: 0 0; opacity: .65; } }
+@keyframes instinctFloat { 50% { translate: -50% calc(-50% - 8px); scale: 1.04; filter: drop-shadow(0 0 30px rgba(235,242,255,.9)); } }
+@keyframes instinctFlow { 0% { translate: -100px 50px; opacity: 0; } 45% { opacity: .75; } 100% { translate: 130px -60px; opacity: 0; } }
+@keyframes entityAscension { 50% { translate: -50% calc(-50% - 16px); scale: 1.12; rotate: 3deg; filter: drop-shadow(0 0 42px rgba(255,210,85,.85)); } }
+@keyframes entityWarp { 0% { translate: 0 130px; scale: 1 .2; opacity: 0; } 35% { opacity: .9; } 100% { translate: var(--drift) -160px; scale: 1 1.7; opacity: 0; } }
+.xp-test-panel { margin-top: 22px; padding: 26px; border-color: rgba(var(--accent-rgb), .28); background: linear-gradient(135deg, rgba(var(--accent-rgb), .08), transparent 48%), var(--card-bg); }
+.xp-test-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+.xp-test-heading h3 { margin: 2px 0 5px; color: var(--text-main); font-size: 1.12rem; }
+.xp-test-heading p { color: var(--text-muted); font-size: .76rem; }
+.xp-test-kicker { color: var(--accent-color); font-size: .64rem; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase; }
+.xp-test-status { flex: 0 0 auto; padding: 8px 12px; border-radius: 999px; background: var(--hover-bg); border: 1px solid var(--border-strong); color: var(--text-muted); font-size: .68rem; font-weight: 800; }
+.xp-test-status.is-testing { color: var(--accent-color); background: rgba(var(--accent-rgb), .12); border-color: rgba(var(--accent-rgb), .35); }
+.xp-test-controls { display: grid; grid-template-columns: minmax(220px, 1fr) 145px auto auto; gap: 12px; align-items: end; }
+.xp-test-range-wrap, .xp-test-number-wrap { display: flex; flex-direction: column; gap: 8px; color: var(--text-muted); font-size: .68rem; font-weight: 800; }
+.xp-test-range-wrap input { width: 100%; accent-color: var(--accent-color); cursor: pointer; }
+.xp-test-number-wrap input { width: 100%; min-height: 43px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--hover-bg); color: var(--text-main); font: 800 .82rem/1 Poppins, sans-serif; outline: none; }
+.xp-test-number-wrap input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .13); }
+.xp-test-apply, .xp-test-reset { min-height: 43px; white-space: nowrap; }
+.xp-test-milestones { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border-color); }
+.xp-test-milestone { padding: 8px 11px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--hover-bg); color: var(--text-main); font: 700 .65rem/1 Poppins, sans-serif; cursor: pointer; transition: transform .2s ease, color .2s ease, border-color .2s ease, background .2s ease; }
+.xp-test-milestone:hover, .xp-test-milestone.active { transform: translateY(-2px); color: var(--accent-color); border-color: rgba(var(--accent-rgb), .45); background: rgba(var(--accent-rgb), .1); }
+.profile-hero.xp-test-flash { animation: xpTestFlash .7s cubic-bezier(.16,1,.3,1); }
+@keyframes xpTestFlash { 0% { transform: scale(.985); filter: brightness(.82); } 45% { transform: scale(1.012); filter: brightness(1.18); box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .2), var(--card-shadow); } 100% { transform: scale(1); filter: brightness(1); } }
 .profile-section-title { margin: 34px 0 18px; font-size: 1.1rem; }
 .profile-stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
 .profile-stat-card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 23px; border-radius: 20px; background: var(--card-bg); backdrop-filter: var(--glass-blur); border: 1px solid var(--border-color); box-shadow: var(--card-shadow); }
@@ -437,6 +553,133 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
 @keyframes diamondPulse { 50% { filter: drop-shadow(0 0 24px rgba(138,224,255,.9)) brightness(1.18); } }
 @keyframes masterMorph { 50% { border-radius: 58% 42% 62% 38% / 42% 58% 45% 55%; transform: rotate(2deg); } }
 @keyframes entityAura { 50% { filter: brightness(1.22) drop-shadow(0 0 19px rgba(255,194,52,.8)); } }
+
+/* Molduras autorais inspiradas nos marcos de cada título */
+.league-frame.rank-frame-genin { --league-main: #315943; --league-light: #9dc96b; border-radius: 46% 54% 48% 52% / 53% 44% 56% 47%; background: repeating-conic-gradient(from 18deg, #294d38 0 13deg, #7eae5d 13deg 18deg, #d4ba75 18deg 23deg, #365f44 23deg 36deg); box-shadow: 0 14px 34px rgba(40,91,58,.34), inset 0 0 0 5px rgba(219,201,137,.28); animation: geninFrameLeaf 4.6s ease-in-out infinite; }
+.rank-frame-genin::before { inset: -10px; border: 2px dashed #6e9c56; }
+#perfil[data-rank="genin"] .rank-frame-emblem { border-radius: 42% 58% 45% 55%; rotate: -7deg; }
+.rank-frame-genin .rank-frame-detail { width: 22px; height: 12px; border-radius: 100% 0 100% 0; background: #74aa58; box-shadow: 0 0 10px rgba(83,145,80,.55); animation: frameLeaves 3.8s ease-in-out infinite; }
+
+.league-frame.rank-frame-chunin { --league-main: #304b76; --league-light: #e2bd73; border-radius: 24px; clip-path: polygon(18% 0,82% 0,100% 18%,100% 82%,82% 100%,18% 100%,0 82%,0 18%); background: repeating-conic-gradient(from 22deg, #263c61 0 20deg, #e1bd79 20deg 23deg, #53729d 23deg 42deg); box-shadow: 0 16px 40px rgba(38,60,97,.42), inset 0 0 0 7px rgba(235,206,146,.3); animation: chuninFrameTactic 5.5s ease-in-out infinite; }
+.rank-frame-chunin::before { inset: 8px; border: 2px dashed rgba(250,224,163,.75); border-radius: 16px; }
+#perfil[data-rank="chunin"] .rank-frame-emblem { border-radius: 8px; rotate: 45deg; }
+.rank-frame-chunin .rank-frame-detail { width: 32px; height: 8px; border: 2px solid #dab871; border-radius: 2px; background: #f1dfb4; box-shadow: 0 4px 0 #58452a; animation: scrollMarks 4s ease-in-out infinite; }
+
+.league-frame.rank-frame-oni { --league-main: #7f1226; --league-light: #ef4a43; clip-path: polygon(50% 0,63% 7%,78% 4%,87% 17%,98% 25%,94% 42%,100% 56%,91% 69%,89% 87%,70% 89%,57% 100%,42% 94%,26% 99%,17% 85%,2% 76%,7% 59%,0 45%,10% 31%,12% 14%,31% 12%); background: repeating-conic-gradient(from 8deg, #150f17 0 10deg, #a91f31 10deg 17deg, #f15b48 17deg 20deg, #21131b 20deg 31deg); box-shadow: 0 0 30px rgba(199,26,45,.55), inset 0 0 20px rgba(0,0,0,.75); animation: oniFrameBreath 2.7s ease-in-out infinite; }
+.rank-frame-oni::after { inset: 17px -20px; border: 0; border-top: 4px solid rgba(255,221,194,.8); border-bottom: 2px solid rgba(202,32,52,.8); border-radius: 0; rotate: -38deg; filter: drop-shadow(0 0 7px #f23c45); animation: nichirinSlash 2.7s ease-out infinite; }
+#perfil[data-rank="oni"] .rank-frame-emblem { border-radius: 8px 8px 50% 50%; background: #1b1117; color: #ff5b52; }
+.rank-frame-oni .rank-frame-detail { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle,#ff7660 0 20%,#7b1424 22% 48%,transparent 50%); }
+
+.league-frame.rank-frame-gear2 { --league-main: #be2949; --league-light: #ffc1cd; border-radius: 50%; background: radial-gradient(circle at 50% 50%, transparent 58%, rgba(255,230,236,.68) 59% 63%, transparent 64%), repeating-conic-gradient(#8f1e3b 0 14deg,#ff718b 14deg 24deg,#3d162a 24deg 34deg); box-shadow: 0 0 38px rgba(235,72,106,.55), inset 0 0 18px rgba(255,255,255,.5); animation: gear2FrameHeartbeat 1.25s cubic-bezier(.2,.8,.3,1) infinite; }
+.rank-frame-gear2::before { inset: -13px; border: 5px double #f28ba0; }
+#perfil[data-rank="gear2"] .rank-frame-emblem { border: 3px double #ff9fb2; }
+.rank-frame-gear2 .rank-frame-detail { width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.62); filter: blur(5px); animation: frameSteam 2.8s ease-out infinite; }
+
+.league-frame.rank-frame-kaioken { --league-main: #a80518; --league-light: #ff813c; border-radius: 44% 56% 47% 53%; background: repeating-conic-gradient(from 0deg,#2a0710 0 8deg,#e51f27 8deg 12deg,#ff923d 12deg 15deg,#4a0912 15deg 25deg); box-shadow: 0 0 25px #ff1f28, 0 0 58px rgba(255,67,27,.48), inset 0 0 20px rgba(255,187,77,.32); animation: kaiokenFrameFury .72s steps(2,end) infinite; }
+.rank-frame-kaioken::before { inset: -19px; border: 5px solid transparent; border-top-color: #ff442e; border-bottom-color: #ff9e43; filter: drop-shadow(0 0 9px red); animation: kaiokenRing 1.2s linear infinite; }
+.rank-frame-kaioken .rank-frame-detail { width: 4px; height: 44px; border-radius: 999px; background: linear-gradient(transparent,#ff9a48,#ff202b); transform-origin: 50% 170px; animation: auraNeedles 1.4s ease-out infinite; }
+
+.league-frame.rank-frame-saiyajin { --league-main: #c98900; --league-light: #fff39c; clip-path: polygon(50% 0,59% 10%,71% 3%,77% 16%,91% 12%,91% 29%,100% 36%,92% 50%,100% 63%,88% 70%,90% 87%,74% 84%,67% 98%,54% 89%,42% 100%,34% 87%,18% 91%,17% 74%,2% 68%,10% 53%,0 41%,14% 33%,11% 17%,28% 17%,36% 3%); background: conic-gradient(#9c5800,#ffe149,#fff8bb,#e89b00,#fff278,#a96000); box-shadow: 0 0 36px #ffd63d, 0 0 72px rgba(255,225,57,.36); animation: saiyajinFrameSurge 1.45s ease-in-out infinite; }
+.rank-frame-saiyajin::after { inset: 3px; border: 3px solid rgba(255,255,220,.8); filter: drop-shadow(0 0 8px white); }
+#perfil[data-rank="saiyajin"] .rank-frame-emblem { background: #fff8cf; color: #bd7800; }
+.rank-frame-saiyajin .rank-frame-detail { width: 11px; height: 38px; clip-path: polygon(45% 0,100% 0,63% 43%,100% 43%,10% 100%,39% 54%,0 54%); background: #fff7a8; animation: frameLightning 1.05s linear infinite; }
+
+.league-frame.rank-frame-bankai { --league-main: #170d12; --league-light: #df1f3e; border-radius: 35% 65% 43% 57% / 58% 40% 60% 42%; background: conic-gradient(from 30deg,#050507,#6d061b,#ef2946,#11070c,#9f0a27,#050507); box-shadow: 0 0 40px rgba(183,11,43,.6), inset 0 0 26px #000; animation: bankaiFrameRelease 4.2s ease-in-out infinite; }
+.rank-frame-bankai::before { inset: -15px; border: 2px solid #d51c3c; border-left-width: 7px; border-right-width: 1px; animation: bankaiInkRing 6s linear infinite; }
+#perfil[data-rank="bankai"] .rank-frame-emblem { border-color: #db1838; background: #09070a; color: #f53a54; }
+.rank-frame-bankai .rank-frame-detail { width: 12px; height: 24px; border-radius: 100% 0 100% 0; background: linear-gradient(135deg,#f23a55,#570718); animation: framePetal 4.4s linear infinite; }
+
+.league-frame.rank-frame-dominio { --league-main: #452077; --league-light: #a66dff; border-radius: 50%; background: radial-gradient(circle,transparent 54%,rgba(57,217,255,.35) 55% 58%,transparent 59%), conic-gradient(from 0deg,#08030f,#6c36bc,#0c0619,#39d9ff,#130823,#a66dff,#08030f); box-shadow: 0 0 44px rgba(129,71,255,.67), inset 0 0 30px rgba(0,0,0,.78); animation: domainFrameVoid 6.5s linear infinite; }
+.rank-frame-dominio::before { inset: -18px; border: 2px solid transparent; border-top-color: #a56dff; border-bottom-color: #39d9ff; animation: domainBarrier 4s linear infinite reverse; }
+.rank-frame-dominio::after { inset: 13px; border: 1px dashed rgba(215,185,255,.66); animation: domainBarrier 7s linear infinite; }
+#perfil[data-rank="dominio"] .rank-frame-emblem { background: radial-gradient(circle,#2b124c,#08030f); color: #b885ff; }
+.rank-frame-dominio .rank-frame-detail { width: 13px; height: 13px; border-radius: 50%; background: #08020f; border: 2px solid #8f56e9; box-shadow: 0 0 18px #823fe6; animation: frameVoidOrbit 4s linear infinite; }
+
+.league-frame.rank-frame-sabio { --league-main: #b66016; --league-light: #eec66d; border-radius: 50% 50% 46% 54% / 42% 42% 58% 58%; background: radial-gradient(ellipse at 50% 12%,#232b20 0 8%,transparent 9%), conic-gradient(#5b713f,#dda14b,#f1d079,#64734a,#c77427,#e6bb63,#5b713f); box-shadow: 0 0 36px rgba(230,139,42,.45), inset 0 -18px 22px rgba(57,72,45,.35); animation: sageFrameBalance 3.8s ease-in-out infinite; }
+.rank-frame-sabio::before { inset: -11px; border: 4px dotted #d99a45; box-shadow: 0 0 18px rgba(216,140,54,.5); }
+#perfil[data-rank="sabio"] .rank-frame-emblem { border-color: #d88935; background: #38442f; color: #f2c76e; }
+.rank-frame-sabio .rank-frame-detail { width: 24px; height: 12px; border-radius: 50%; background: #e48931; border: 3px solid #43523a; animation: sageEyes 3s ease-in-out infinite; }
+
+.league-frame.rank-frame-portoes { --league-main: #149f56; --league-light: #ffdf64; clip-path: polygon(29% 0,71% 0,100% 29%,100% 71%,71% 100%,29% 100%,0 71%,0 29%); background: repeating-conic-gradient(from 0deg,#126a3f 0 15deg,#25df78 15deg 23deg,#ff554b 23deg 30deg,#ffdc63 30deg 38deg,#126a3f 38deg 45deg); box-shadow: 0 0 36px rgba(42,224,120,.63), 0 0 66px rgba(255,76,65,.3), inset 0 0 22px rgba(255,238,112,.25); animation: gatesFrameOpen 1.85s cubic-bezier(.2,.9,.3,1) infinite; }
+.rank-frame-portoes::after { inset: 12px; border: 5px double #ffdd62; border-radius: 18px; animation: gatesInner 2.4s ease-in-out infinite; }
+#perfil[data-rank="portoes"] .rank-frame-emblem { border-radius: 8px; background: #173d2a; color: #58f48f; }
+.rank-frame-portoes .rank-frame-detail { width: 54px; height: 54px; border-radius: 50%; border: 3px solid #31db78; background: transparent; animation: frameGateRing 2.2s ease-out infinite; }
+
+.league-frame.rank-frame-gear5 { --league-main: #d8eef5; --league-light: #fff; border-radius: 42% 58% 51% 49% / 57% 40% 60% 43%; background: conic-gradient(from 30deg,#fff,#9deaff,#f9fbff,#c99cff,#fff,#7cdded,#fff); box-shadow: 0 0 38px rgba(255,255,255,.95), 0 0 72px rgba(115,225,255,.42), inset 0 0 20px rgba(158,121,223,.2); animation: gear5FrameDrums 2.25s cubic-bezier(.34,1.56,.64,1) infinite; }
+.rank-frame-gear5::before { inset: -18px; border: 8px dotted rgba(255,255,255,.92); filter: drop-shadow(0 0 8px #a9edff); animation: cloudRing 7s linear infinite; }
+#perfil[data-rank="gear5"] .rank-frame-emblem { background: #fff; color: #8d6ed1; border-color: #96deef; }
+.rank-frame-gear5 .rank-frame-detail { width: 40px; height: 19px; border-radius: 50%; background: #fff; box-shadow: -16px 5px 0 -4px #fff,16px 5px 0 -4px #fff; animation: frameCloud 3.6s ease-in-out infinite; }
+
+.league-frame.rank-frame-monarca { --league-main: #121936; --league-light: #6de6ff; clip-path: polygon(16% 8%,36% 14%,50% 0,64% 14%,84% 8%,94% 30%,90% 77%,70% 95%,50% 100%,30% 95%,10% 77%,6% 30%); background: conic-gradient(from 0deg,#060914,#3a277d,#6ce6ff,#171533,#54309c,#060914); box-shadow: 0 0 45px rgba(71,64,196,.66), 0 25px 55px rgba(4,7,18,.75), inset 0 0 26px rgba(103,231,255,.23); animation: monarchFrameRise 3.3s ease-in-out infinite; }
+.rank-frame-monarca::before { inset: -9px; border: 3px solid #69e4ff; clip-path: inherit; filter: drop-shadow(0 0 9px #5f52d1); }
+#perfil[data-rank="monarca"] .rank-frame-emblem { border-radius: 6px 6px 50% 50%; background: #080b18; color: #6be8ff; }
+.rank-frame-monarca .rank-frame-detail { width: 16px; height: 36px; border-radius: 50% 50% 4px 4px; background: linear-gradient(#6ee7ff,#31206c 70%,transparent); box-shadow: 0 0 16px #5cdcf9; animation: frameShadowSoldier 3.4s ease-in-out infinite; }
+
+.league-frame.rank-frame-instinto { --league-main: #70839d; --league-light: #f5f9ff; border-radius: 50%; background: conic-gradient(from 0deg,#546579,#fff,#8ca0b8,#d8e5f5,#ad79e0,#f7fbff,#546579); box-shadow: 0 0 34px rgba(230,241,255,.88), 0 0 70px rgba(155,126,210,.32), inset 0 0 18px rgba(255,255,255,.58); animation: instinctFrameDrift 4.8s ease-in-out infinite; }
+.rank-frame-instinto::before { inset: -16px; border: 1px solid rgba(240,248,255,.9); box-shadow: 0 0 18px rgba(255,255,255,.75); animation: instinctHalo 5s ease-in-out infinite; }
+.rank-frame-instinto::after { inset: 8px; border: 2px solid rgba(189,205,226,.62); }
+#perfil[data-rank="instinto"] .rank-frame-emblem { background: rgba(240,246,255,.9); color: #65778e; border-color: #dfeaff; }
+.rank-frame-instinto .rank-frame-detail { width: 62px; height: 2px; border-radius: 999px; background: linear-gradient(90deg,transparent,#f4f8ff,transparent); animation: frameSilverFlow 3s ease-in-out infinite; }
+
+.league-frame.rank-frame-entidade { --league-main: #090713; --league-light: #ffe071; clip-path: polygon(50% 0,60% 8%,74% 3%,81% 16%,95% 19%,92% 34%,100% 46%,92% 58%,97% 73%,83% 80%,76% 96%,61% 91%,50% 100%,39% 91%,24% 96%,17% 80%,3% 73%,8% 58%,0 46%,8% 34%,5% 19%,19% 16%,26% 3%,40% 8%); background: conic-gradient(from 0deg,#030207,#ffce43,#5128af,#31f4ca,#06030d,#ffdf73,#7242df,#030207); box-shadow: 0 0 42px rgba(255,213,88,.9), 0 0 90px rgba(110,67,222,.52), 0 0 135px rgba(45,244,201,.25); animation: entityFrameCosmos 3.8s ease-in-out infinite; }
+.rank-frame-entidade::before { inset: -24px; border: 5px dotted #ffe071; clip-path: inherit; box-shadow: 0 0 25px #7b4fe2; animation: entityConstellation 8s linear infinite; }
+.rank-frame-entidade::after { inset: 8px; border: 2px solid transparent; border-top-color: #fff0a8; border-right-color: #41f6d0; animation: entityConstellation 4s linear infinite reverse; }
+#perfil[data-rank="entidade"] .rank-frame-emblem { background: conic-gradient(#171022,#ffdf70,#6940cf,#45f3d1,#171022); color: #fff; border-color: #ffe781; }
+#perfil[data-rank="entidade"] .rank-frame-tag { background: linear-gradient(90deg,#201335,#5e39bd,#157d72); color: #fff7c7; border-color: #ffe071; }
+.rank-frame-entidade .rank-frame-detail { width: 7px; height: 7px; border-radius: 50%; background: #fff7c5; box-shadow: 0 0 14px #ffe071,0 0 27px #5bf3d2; animation: frameStars 2.2s ease-in-out infinite; }
+
+/* Silhuetas consistentes: somente círculos ou quadrados arredondados. */
+.league-frame.rank-frame-genin,
+.league-frame.rank-frame-oni,
+.league-frame.rank-frame-gear2,
+.league-frame.rank-frame-kaioken,
+.league-frame.rank-frame-saiyajin,
+.league-frame.rank-frame-dominio,
+.league-frame.rank-frame-sabio,
+.league-frame.rank-frame-gear5,
+.league-frame.rank-frame-instinto,
+.league-frame.rank-frame-entidade { clip-path: none; border-radius: 50%; }
+.league-frame.rank-frame-chunin,
+.league-frame.rank-frame-bankai,
+.league-frame.rank-frame-portoes,
+.league-frame.rank-frame-monarca { clip-path: none; border-radius: 34px; }
+
+.rank-frame-detail.detail-two { animation-delay: -.9s !important; }.rank-frame-detail.detail-three { animation-delay: -1.8s !important; }
+@keyframes geninFrameLeaf { 50% { rotate: 2deg; scale: 1.025; } }
+@keyframes frameLeaves { 50% { translate: 7px -8px; rotate: 35deg; } }
+@keyframes chuninFrameTactic { 50% { filter: brightness(1.12); box-shadow: 0 16px 45px rgba(38,60,97,.56), inset 0 0 0 7px rgba(235,206,146,.42); } }
+@keyframes scrollMarks { 50% { scale: 1.25 .8; rotate: 5deg; } }
+@keyframes oniFrameBreath { 50% { filter: brightness(1.16) drop-shadow(0 0 11px #b8132e); } }
+@keyframes nichirinSlash { 0%,68% { opacity: .18; translate: -40px 30px; } 76% { opacity: 1; } 100% { opacity: 0; translate: 45px -35px; } }
+@keyframes gear2FrameHeartbeat { 45% { scale: 1.045; } 55% { scale: .985; } }
+@keyframes frameSteam { 0% { translate: 0 20px; opacity: 0; } 40% { opacity: .7; } 100% { translate: 0 -42px; scale: 1.8; opacity: 0; } }
+@keyframes kaiokenFrameFury { 50% { translate: 2px -2px; filter: brightness(1.24); } }
+@keyframes kaiokenRing { to { rotate: 360deg; } }
+@keyframes auraNeedles { 0% { scale: 1 .2; opacity: 0; } 45% { opacity: .9; } 100% { translate: 0 -35px; scale: 1 1.6; opacity: 0; } }
+@keyframes saiyajinFrameSurge { 50% { filter: brightness(1.28) drop-shadow(0 0 15px #ffe150); scale: 1.025; } }
+@keyframes frameLightning { 0%,65%,100% { opacity: 0; } 12%,40% { opacity: 1; scale: 1.25; } }
+@keyframes bankaiFrameRelease { 50% { scale: 1.025; rotate: 1deg; filter: brightness(1.16); } }
+@keyframes bankaiInkRing { to { rotate: -360deg; } }
+@keyframes framePetal { 0% { translate: -12px -20px; rotate: 0; opacity: 0; } 25% { opacity: .8; } 100% { translate: 20px 36px; rotate: 420deg; opacity: 0; } }
+@keyframes domainFrameVoid { to { filter: hue-rotate(360deg); } }
+@keyframes domainBarrier { to { rotate: 360deg; } }
+@keyframes frameVoidOrbit { 50% { translate: 26px -18px; scale: 1.5; } }
+@keyframes sageFrameBalance { 50% { translate: 0 -7px; filter: brightness(1.12); } }
+@keyframes sageEyes { 50% { scale: 1.4 .65; filter: brightness(1.3); } }
+@keyframes gatesFrameOpen { 45% { scale: 1.04; filter: brightness(1.22); } 58% { scale: .99; } }
+@keyframes gatesInner { 50% { scale: 1.06; border-color: #ff5b4f; } }
+@keyframes frameGateRing { 0% { scale: .35; opacity: .9; } 100% { scale: 2.3; opacity: 0; } }
+@keyframes gear5FrameDrums { 50% { translate: 0 -8px; rotate: 3deg; scale: 1.045 .97; } }
+@keyframes cloudRing { to { rotate: 360deg; } }
+@keyframes frameCloud { 50% { translate: 12px -7px; scale: 1.25 .8; } }
+@keyframes monarchFrameRise { 50% { translate: 0 -8px; filter: drop-shadow(0 18px 17px rgba(5,8,22,.8)) brightness(1.15); } }
+@keyframes frameShadowSoldier { 0%,100% { translate: 0 23px; opacity: .2; } 50% { translate: 0 -5px; opacity: .9; } }
+@keyframes instinctFrameDrift { 50% { translate: 0 -5px; rotate: -1deg; filter: brightness(1.15); } }
+@keyframes instinctHalo { 50% { scale: 1.08; opacity: .3; } }
+@keyframes frameSilverFlow { 0% { translate: -30px 22px; opacity: 0; } 50% { opacity: .9; } 100% { translate: 30px -22px; opacity: 0; } }
+@keyframes entityFrameCosmos { 50% { scale: 1.045; rotate: 2deg; filter: brightness(1.22) hue-rotate(18deg); } }
+@keyframes entityConstellation { to { rotate: 360deg; } }
+@keyframes frameStars { 50% { scale: 2.1; opacity: .35; } }
 
 /* BANNERS E ALERTAS */
 .urgency-banner { background: rgba(255, 59, 48, 0.05); border: 1px solid rgba(255, 59, 48, 0.3); backdrop-filter: var(--glass-blur); color: var(--text-main); padding: 18px 30px; border-radius: 20px; font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; animation: glassFade 0.5s ease; box-shadow: 0 8px 25px rgba(255, 59, 48, 0.1);}
@@ -578,6 +821,7 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
     .stats-grid, .history-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 16px; }
     .dashboard-stats-grid .motivation-card { grid-column: 1 / -1; }
     .profile-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .xp-test-controls { grid-template-columns: minmax(180px, 1fr) 145px; }
     .form-grid.five { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .settings-panel { left: 16px; right: 16px; bottom: 16px; width: auto; max-width: 420px; }
     .timer-hero-dashboard { min-height: 455px; padding: 22px 25px; }
@@ -603,8 +847,11 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
     .revision-card { align-items: flex-start; flex-direction: column; padding: 19px; }
     .revision-actions { width: 100%; justify-content: flex-start; }
     .profile-heading { flex-direction: column; }
+    .xp-test-heading { flex-direction: column; }
+    .xp-test-controls { grid-template-columns: 1fr; }
+    .xp-test-apply, .xp-test-reset { width: 100%; }
     .profile-hero { min-height: 450px; padding: 28px 18px; }
-    .avatar-stage { width: 235px; height: 235px; }
+    .avatar-stage { width: 235px; height: 280px; }
     .league-frame { width: 205px; height: 205px; padding: 11px; }
     .league-emerald .league-orb { animation-name: emeraldOrbitMobile; }
     .timer-hero-dashboard { min-height: 420px; padding: 18px 13px; }
@@ -665,7 +912,7 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
     .revision-tag-create .cycle-btn { width: 100%; }
     .profile-hero { min-height: 415px; padding: 24px 12px; }
     .profile-league-name { margin-bottom: 12px; }
-    .avatar-stage { width: 205px; height: 205px; }
+    .avatar-stage { width: 205px; height: 252px; }
     .league-frame { width: 178px; height: 178px; padding: 9px; }
     .profile-level-title { margin-top: 17px; font-size: 1.02rem; }
     .profile-xp-line { margin-top: 20px; font-size: .68rem; }
@@ -720,11 +967,10 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
 @keyframes emeraldOrbitMobile { from { transform: rotate(0deg) translateX(116px) rotate(0deg); } to { transform: rotate(360deg) translateX(116px) rotate(-360deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-    .league-frame, .league-frame::before, .league-frame::after, .league-orb, .profile-xp-track span, .nav-xp-track span { animation: none !important; transition: none !important; }
+    .league-frame, .league-frame::before, .league-frame::after, .league-orb, .rank-frame-emblem, .rank-frame-detail, .profile-rank-scene strong, .profile-rank-scene i, .profile-hero.xp-test-flash, .profile-xp-track span, .nav-xp-track span { animation: none !important; transition: none !important; }
 }
 
 select.cycle-input { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 18px center; background-size: 18px; padding-right: 45px; }
 [data-theme="dark"] select.cycle-input { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23aeaeae' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); }
 input[type="date"]::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.5; transition: 0.3s ease; filter: invert(0.5); }
 input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; transform: scale(1.15); }
-

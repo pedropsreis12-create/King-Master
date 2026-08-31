@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260831-frames">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -347,15 +347,24 @@
             </div>
 
             <div class="profile-hero widget">
+                <div class="profile-rank-scene" aria-hidden="true">
+                    <strong id="profileRankEmblem">忍</strong>
+                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                </div>
                 <div class="profile-league-name" id="profileLeagueName">Liga Bronze</div>
                 <div class="avatar-stage">
+                    <span class="rank-frame-emblem" id="profileFrameEmblem" aria-hidden="true">忍</span>
                     <div class="league-frame league-bronze" id="profileLeagueFrame">
                         <span class="league-orb orb-one"></span><span class="league-orb orb-two"></span><span class="league-orb orb-three"></span>
+                        <span class="rank-frame-detail detail-one" aria-hidden="true"></span>
+                        <span class="rank-frame-detail detail-two" aria-hidden="true"></span>
+                        <span class="rank-frame-detail detail-three" aria-hidden="true"></span>
                         <div class="avatar-core" aria-label="Foto de perfil de Pedro Reis">
                             <img id="profileAvatarImage" alt="Foto de perfil de Pedro Reis">
                             <span id="profileAvatarFallback">PR</span>
                         </div>
                     </div>
+                    <span class="rank-frame-tag" id="profileFrameTag">NÍVEL 1</span>
                 </div>
                 <label class="profile-photo-button" for="profilePhotoInput">
                     <span aria-hidden="true">📷</span> Alterar foto
@@ -367,6 +376,32 @@
                 <div class="profile-xp-line"><span id="profileXpText">0 / 520.000 XP</span><span id="profileXpPercent">0%</span></div>
                 <div class="profile-xp-track"><span id="profileXpBar"></span></div>
                 <p class="profile-xp-note">Progresso total até o nível máximo</p>
+                <div class="profile-evolution-caption" id="profileEvolutionCaption">Despertar Genin • Disciplina em formação</div>
+                <div class="profile-reference-strip" id="profileReferenceStrip" aria-label="Referências visuais deste título"></div>
+            </div>
+
+            <div class="xp-test-panel widget" aria-labelledby="xpTestTitle">
+                <div class="xp-test-heading">
+                    <div>
+                        <span class="xp-test-kicker">Laboratório local</span>
+                        <h3 id="xpTestTitle">Controle total de XP</h3>
+                        <p>Teste títulos, níveis, ligas e animações sem salvar nada no seu progresso.</p>
+                    </div>
+                    <span class="xp-test-status" id="xpTestStatus">XP real</span>
+                </div>
+                <div class="xp-test-controls">
+                    <label class="xp-test-range-wrap" for="xpTestRange">
+                        <span>Arraste para escolher o XP</span>
+                        <input type="range" id="xpTestRange" min="0" max="520000" step="1" value="0" oninput="sincronizarXpTeste(this.value)">
+                    </label>
+                    <label class="xp-test-number-wrap" for="xpTestInput">
+                        <span>XP exato</span>
+                        <input type="number" id="xpTestInput" min="0" max="520000" step="1" value="0" oninput="sincronizarXpTeste(this.value)">
+                    </label>
+                    <button type="button" class="cycle-btn primary xp-test-apply" onclick="visualizarXpTeste()">Aplicar e animar</button>
+                    <button type="button" class="cycle-btn xp-test-reset" onclick="sairDoModoTesteXp()">Voltar ao XP real</button>
+                </div>
+                <div class="xp-test-milestones" id="xpTestMilestones" aria-label="Atalhos de títulos e níveis"></div>
             </div>
 
             <h3 class="profile-section-title">Estatísticas do Império</h3>
@@ -569,4 +604,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-

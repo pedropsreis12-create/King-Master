@@ -508,20 +508,20 @@ function nomeDoMultiplicador(dias) {
 }
 
 const MARCOS_NIVEL = [
-    { nivel: 1, xp: 0, titulo: 'Genin do Foco' },
-    { nivel: 2, xp: 1500, titulo: 'Chunin' },
-    { nivel: 4, xp: 4500, titulo: 'Caçador de Oni' },
-    { nivel: 6, xp: 9000, titulo: 'Gear Second' },
-    { nivel: 8, xp: 15000, titulo: 'Kaioken' },
-    { nivel: 12, xp: 30000, titulo: 'Super Saiyajin' },
-    { nivel: 16, xp: 50000, titulo: 'Bankai' },
-    { nivel: 20, xp: 75000, titulo: 'Expansão de Domínio' },
-    { nivel: 25, xp: 115000, titulo: 'Modo Sábio' },
-    { nivel: 30, xp: 165000, titulo: 'Oito Portões Internos' },
-    { nivel: 35, xp: 225000, titulo: 'Gear 5 / Sol da Libertação' },
-    { nivel: 40, xp: 300000, titulo: 'Monarca das Sombras' },
-    { nivel: 45, xp: 400000, titulo: 'Instinto Superior' },
-    { nivel: 50, xp: 520000, titulo: 'Entidade Absoluta do ENEM' }
+    { nivel: 1, xp: 0, titulo: 'Genin do Foco', tema: 'genin', simbolo: '忍', legenda: 'Disciplina em formação', referencias: ['Folha Oculta', 'Kunai', 'Missão D'] },
+    { nivel: 2, xp: 1500, titulo: 'Chunin', tema: 'chunin', simbolo: '中', legenda: 'Estratégia e constância', referencias: ['Pergaminho', 'Exame Chunin', 'Estratégia'] },
+    { nivel: 4, xp: 4500, titulo: 'Caçador de Oni', tema: 'oni', simbolo: '滅', legenda: 'A lâmina corta a procrastinação', referencias: ['Nichirin', 'Respiração', 'Lua Carmesim'] },
+    { nivel: 6, xp: 9000, titulo: 'Gear Second', tema: 'gear2', simbolo: 'Ⅱ', legenda: 'O ritmo entra em sobrecarga', referencias: ['Vapor', 'Batimento', 'Velocidade'] },
+    { nivel: 8, xp: 15000, titulo: 'Kaioken', tema: 'kaioken', simbolo: '界', legenda: 'Poder elevado além do limite', referencias: ['Aura Rubra', 'Multiplicador', 'Limite'] },
+    { nivel: 12, xp: 30000, titulo: 'Super Saiyajin', tema: 'saiyajin', simbolo: '超', legenda: 'A determinação vira eletricidade', referencias: ['Ki Dourado', 'Relâmpago', 'Ascensão'] },
+    { nivel: 16, xp: 50000, titulo: 'Bankai', tema: 'bankai', simbolo: '卍', legenda: 'Liberação total do potencial', referencias: ['Zangetsu', 'Pétalas', 'Liberação'] },
+    { nivel: 20, xp: 75000, titulo: 'Expansão de Domínio', tema: 'dominio', simbolo: '領', legenda: 'Seu foco domina todo o espaço', referencias: ['Infinito', 'Vazio', 'Barreira'] },
+    { nivel: 25, xp: 115000, titulo: 'Modo Sábio', tema: 'sabio', simbolo: '仙', legenda: 'Conhecimento em equilíbrio perfeito', referencias: ['Monte Myōboku', 'Senjutsu', 'Equilíbrio'] },
+    { nivel: 30, xp: 165000, titulo: 'Oito Portões Internos', tema: 'portoes', simbolo: '八', legenda: 'Os limites começam a se romper', referencias: ['Lótus', 'Oito Portões', 'Juventude'] },
+    { nivel: 35, xp: 225000, titulo: 'Gear 5 / Sol da Libertação', tema: 'gear5', simbolo: '☀', legenda: 'Liberdade, criatividade e poder', referencias: ['Nika', 'Tambores', 'Liberdade'] },
+    { nivel: 40, xp: 300000, titulo: 'Monarca das Sombras', tema: 'monarca', simbolo: '♛', legenda: 'O exército do conhecimento desperta', referencias: ['Erga-se', 'Exército Sombrio', 'Coroa'] },
+    { nivel: 45, xp: 400000, titulo: 'Instinto Superior', tema: 'instinto', simbolo: '身', legenda: 'A resposta surge antes da dúvida', referencias: ['Aura Prateada', 'Mente Vazia', 'Movimento'] },
+    { nivel: 50, xp: 520000, titulo: 'Entidade Absoluta do ENEM', tema: 'entidade', simbolo: '∞', legenda: 'O conhecimento não possui mais fronteiras', referencias: ['Coroa ENEM', 'Constelações', 'Infinito'] }
 ];
 
 function criarLimitesDeNivel() {
@@ -539,6 +539,7 @@ function criarLimitesDeNivel() {
 
 const LIMITES_NIVEL = criarLimitesDeNivel();
 const formatarNumero = valor => Math.round(valor).toLocaleString('pt-BR');
+let xpTesteLocal = null;
 
 function obterNivelAtual(xp) {
     let nivel = 1;
@@ -551,6 +552,10 @@ function obterNivelAtual(xp) {
 
 function obterTituloAtual(nivel) {
     return [...MARCOS_NIVEL].reverse().find(marco => nivel >= marco.nivel)?.titulo || MARCOS_NIVEL[0].titulo;
+}
+
+function obterTemaVisualAtual(nivel) {
+    return [...MARCOS_NIVEL].reverse().find(marco => nivel >= marco.nivel) || MARCOS_NIVEL[0];
 }
 
 function obterLigaAtual(nivel) {
@@ -660,8 +665,16 @@ function alterarFotoPerfil(event) {
     imagemOriginal.src = enderecoTemporario;
 }
 
-function renderGamificacao() {
-    const dados = calcularGamificacao();
+function criarDadosGamificacaoDeTeste(xp) {
+    const dadosReais = calcularGamificacao();
+    const xpTotal = Math.max(0, Math.min(520000, Math.round(Number(xp) || 0)));
+    const nivel = obterNivelAtual(xpTotal);
+    return { ...dadosReais, xpTotal, nivel, liga: obterLigaAtual(nivel), titulo: obterTituloAtual(nivel) };
+}
+
+function renderGamificacao(animar = false) {
+    const dados = xpTesteLocal === null ? calcularGamificacao() : criarDadosGamificacaoDeTeste(xpTesteLocal);
+    const temaVisual = obterTemaVisualAtual(dados.nivel);
     const estatisticas = calcularEstatisticasGlobais();
     const proximoNivelXp = dados.nivel < 50 ? LIMITES_NIVEL[dados.nivel + 1] : 520000;
     const inicioNivelXp = LIMITES_NIVEL[dados.nivel];
@@ -685,10 +698,64 @@ function renderGamificacao() {
     colocarTexto('profileTopics', estatisticas.topicos);
     colocarTexto('profileAccuracy', `${estatisticas.taxa}%`);
     const frame = document.getElementById('profileLeagueFrame');
-    if (frame) frame.className = `league-frame ${dados.liga.classe}`;
+    if (frame) frame.className = `league-frame ${dados.liga.classe} rank-frame-${temaVisual.tema}`;
     aplicarFotoPerfil();
     const perfil = document.getElementById('perfil');
-    if (perfil) perfil.dataset.league = dados.liga.classe;
+    if (perfil) {
+        perfil.dataset.league = dados.liga.classe;
+        perfil.dataset.rank = temaVisual.tema;
+    }
+    document.documentElement.dataset.xpRank = temaVisual.tema;
+    colocarTexto('profileRankEmblem', temaVisual.simbolo);
+    colocarTexto('profileFrameEmblem', temaVisual.simbolo);
+    colocarTexto('profileFrameTag', `NÍVEL ${dados.nivel}`);
+    colocarTexto('profileEvolutionCaption', `${dados.titulo} • ${temaVisual.legenda}`);
+    const referencias = document.getElementById('profileReferenceStrip');
+    if (referencias) referencias.innerHTML = temaVisual.referencias.map((referencia, indice) => `<span><b>${String(indice + 1).padStart(2, '0')}</b>${referencia}</span>`).join('');
+    const status = document.getElementById('xpTestStatus');
+    if (status) {
+        status.textContent = xpTesteLocal === null ? 'XP real' : `Teste: ${formatarNumero(dados.xpTotal)} XP`;
+        status.classList.toggle('is-testing', xpTesteLocal !== null);
+    }
+    document.querySelectorAll('.xp-test-milestone').forEach(botao => botao.classList.toggle('active', Number(botao.dataset.xp) === dados.xpTotal && xpTesteLocal !== null));
+    if (animar) {
+        const hero = document.querySelector('.profile-hero');
+        if (hero) {
+            hero.classList.remove('xp-test-flash');
+            void hero.offsetWidth;
+            hero.classList.add('xp-test-flash');
+        }
+    }
+}
+
+function sincronizarXpTeste(valor) {
+    const xp = Math.max(0, Math.min(520000, Math.round(Number(valor) || 0)));
+    const range = document.getElementById('xpTestRange');
+    const input = document.getElementById('xpTestInput');
+    if (range && document.activeElement !== range) range.value = xp;
+    if (input && document.activeElement !== input) input.value = xp;
+}
+
+function visualizarXpTeste(valor) {
+    if (valor !== undefined) sincronizarXpTeste(valor);
+    const input = document.getElementById('xpTestInput');
+    xpTesteLocal = Math.max(0, Math.min(520000, Math.round(Number(input?.value) || 0)));
+    sincronizarXpTeste(xpTesteLocal);
+    renderGamificacao(true);
+}
+
+function sairDoModoTesteXp() {
+    xpTesteLocal = null;
+    const dados = calcularGamificacao();
+    sincronizarXpTeste(dados.xpTotal);
+    renderGamificacao(true);
+}
+
+function renderizarAtalhosXpTeste() {
+    const container = document.getElementById('xpTestMilestones');
+    if (!container) return;
+    container.innerHTML = MARCOS_NIVEL.map(marco => `<button type="button" class="xp-test-milestone" data-xp="${marco.xp}" onclick="visualizarXpTeste(${marco.xp})">Lvl ${marco.nivel} · ${marco.titulo}</button>`).join('');
+    sincronizarXpTeste(calcularGamificacao().xpTotal);
 }
 
 function updateDashboardStats() {
@@ -2054,6 +2121,7 @@ syncVisualModeControl();
 syncSettingsUI();
 registrarBonusLoginDiario();
 updateDashboardStats(); 
+renderizarAtalhosXpTeste();
 mostrarFraseMotivacional();
 executarResetTimer(); 
 renderizarCiclo();
@@ -2066,4 +2134,3 @@ renderizarRedacoes();
 // Dispara contagem do ENEM e atualiza a cada 1 hora em background
 atualizarContagemEnem();
 setInterval(atualizarContagemEnem, 3600000);
-

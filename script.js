@@ -2048,24 +2048,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventL
     if (event.target === overlay) overlay.classList.remove('active');
 }));
 
-function aplicarZeramentoConfirmadoDoProgresso() {
-    const token = new URLSearchParams(window.location.search).get('zerarProgresso');
-    if (token !== 'confirmado-2026-08-30') return false;
-
-    appData.totalStudySeconds = 0;
-    appData.weeklyChart = [0, 0, 0, 0, 0, 0, 0];
-    appData.historyItems = [];
-    appData.cycleItems = appData.cycleItems.map(item => ({ ...item, executedMin: 0 }));
-    appData.xpLoginDates = [dataLocalISO()];
-    appData.xpResetOffset = 0;
-    appData.xpResetOffset = calcularGamificacao().xpTotal;
-    localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
-    window.history.replaceState({}, document.title, window.location.pathname);
-    return true;
-}
-
 // INICIALIZAÇÃO DO APP
-aplicarZeramentoConfirmadoDoProgresso();
 fecharModalDeletar(); 
 syncVisualModeControl();
 syncSettingsUI();

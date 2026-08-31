@@ -50,50 +50,79 @@
 
     <nav>
         <h2>King Master</h2>
+        <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-expanded="false" aria-label="Abrir menu de navegação" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><strong>Menu</strong></button>
+        <button type="button" class="nav-xp-badge" onclick="showSection('perfil')" aria-label="Abrir Meu Perfil">
+            <span class="nav-xp-top"><strong id="nav-xp-level">Nível 1</strong><span id="nav-xp-streak">🔥 0</span></span>
+            <span class="nav-xp-track"><span id="nav-xp-progress"></span></span>
+        </button>
         
         <button class="menu-btn active" onclick="showSection('dashboard')">Painel Diário</button>
         
         <div class="section-title">Gestão de Estudo</div>
-        <button class="menu-btn" onclick="showSection('planejamento')">Ciclo e Matérias</button>
-        <button class="menu-btn" onclick="showSection('mapa-progresso')">Mapa de Progresso</button>
-        <button class="menu-btn" onclick="showSection('escola-provas')">Radar de Provas</button>
+        <button class="menu-btn" onclick="showSection('planejamento')">Hub de Matérias</button>
         <button class="menu-btn" onclick="showSection('agendamento')">Agendamento Diário</button>
+        <button class="menu-btn" onclick="showSection('revisoes')">Revisões</button>
         <button class="menu-btn" onclick="showSection('simulados')">Simulados ENEM</button>
         <button class="menu-btn" onclick="showSection('redacao')">Lab. de Redação</button>
         <button class="menu-btn" onclick="showSection('historico')">Histórico de Sessões</button>
+        <button class="menu-btn" onclick="showSection('perfil')">Meu Perfil</button>
         
         <div class="bottom-actions">
-            <button class="menu-btn" style="width: 100%; background: var(--hover-bg); justify-content: center; font-weight: 600;" onclick="toggleSettings()">Ajustes</button>
-        </div>
-
-        <div class="settings-panel" id="settingsPanel">
-            <div class="settings-group">
-                <h3>Aparência</h3>
-                <button class="toggle-btn" id="themeToggleBtn" onclick="toggleDarkMode()">Modo Escuro / Claro</button>
+            <div class="visual-mode-control">
+                <span class="visual-mode-copy"><strong id="visualModeLabel">Visual futurista</strong><small>Alternar aparência</small></span>
+                <button class="visual-switch" id="visualModeSwitch" type="button" role="switch" aria-checked="true" aria-label="Alternar entre o visual futurista e o visual clássico" onclick="toggleVisualMode()">
+                    <span class="visual-switch-text visual-switch-on">ON</span>
+                    <span class="visual-switch-text visual-switch-off">OFF</span>
+                    <span class="visual-switch-knob"></span>
+                </button>
             </div>
-            <div class="settings-group">
-                <h3>Cor do Sistema</h3>
-                <div class="theme-options">
-                    <div class="theme-circle" style="background: #007aff" onclick="setTheme('#007aff', '0, 122, 255')"></div>
-                    <div class="theme-circle" style="background: #af52de" onclick="setTheme('#af52de', '175, 82, 222')"></div>
-                    <div class="theme-circle" style="background: #34c759" onclick="setTheme('#34c759', '52, 199, 89')"></div>
-                    <div class="theme-circle" style="background: #ff9500" onclick="setTheme('#ff9500', '255, 149, 0')"></div>
-                </div>
-                <div class="custom-color-picker" style="margin-top: 15px;">
-                    <span>Cor customizada</span>
-                    <input type="color" id="colorPicker" value="#007aff" oninput="previewTheme(this.value)" onchange="handleColorPicker(this.value)">
-                </div>
-            </div>
+            <button class="menu-btn settings-toggle-btn" id="settingsToggleBtn" type="button" aria-expanded="false" onclick="toggleSettings()"><span>⚙ Ajustes</span><span>›</span></button>
         </div>
     </nav>
+
+    <div class="settings-panel" id="settingsPanel">
+            <div class="settings-header">
+                <div><strong>Ajustes</strong><small>Personalize o King Master</small></div>
+                <button type="button" onclick="toggleSettings()" aria-label="Fechar ajustes">×</button>
+            </div>
+            <div class="settings-group">
+                <h3><span>◐</span> Aparência</h3>
+                <button class="settings-theme-toggle toggle-btn" id="themeToggleBtn" onclick="toggleDarkMode()"><span><strong id="themeToggleText">Modo escuro</strong><small id="themeToggleHint">Ativar interface escura</small></span><i></i></button>
+            </div>
+            <div class="settings-group">
+                <h3><span>✦</span> Cor do Sistema</h3>
+                <div class="theme-options">
+                    <button class="theme-circle" aria-label="Usar azul" style="background: #007aff" onclick="setTheme('#007aff', '0, 122, 255')"></button>
+                    <button class="theme-circle" aria-label="Usar roxo" style="background: #af52de" onclick="setTheme('#af52de', '175, 82, 222')"></button>
+                    <button class="theme-circle" aria-label="Usar verde" style="background: #34c759" onclick="setTheme('#34c759', '52, 199, 89')"></button>
+                    <button class="theme-circle" aria-label="Usar laranja" style="background: #ff9500" onclick="setTheme('#ff9500', '255, 149, 0')"></button>
+                </div>
+                <label class="custom-color-picker">
+                    <span><strong>Cor personalizada</strong><small>Escolha qualquer tonalidade</small></span>
+                    <input type="color" id="colorPicker" value="#007aff" oninput="previewTheme(this.value)" onchange="handleColorPicker(this.value)">
+                </label>
+            </div>
+        </div>
 
     <main>
         <section id="dashboard" class="content-section active">
             <h1>Foco e Execução</h1>
+            
+            <!-- Contagem Regressiva ENEM -->
+            <div class="widget" style="margin-bottom: 30px; padding: 25px 30px; background: linear-gradient(135deg, var(--text-main), var(--card-bg)); border-left: 6px solid var(--accent-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">Operação ENEM</div>
+                        <div id="enem-countdown" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color); margin-top: 5px; line-height: 1;">A calcular...</div>
+                    </div>
+                    <div style="font-size: 3.5rem; opacity: 0.8;">🎯</div>
+                </div>
+            </div>
+
             <div id="dashboardUrgencyAlert" style="display: none;"></div>
-            <div class="stats-grid">
+            <div class="stats-grid dashboard-stats-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Tempo de Estudo</div>
+                    <div class="stat-label">Tempo estudado nesta semana</div>
                     <div class="stat-value" id="top-time" style="color: var(--text-main);">0h 00m</div>
                 </div>
                 <div class="stat-card">
@@ -106,35 +135,29 @@
                         <div class="stat-value" id="top-perc" style="margin:0;">0%</div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Progresso no Edital</div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <div style="font-size: 0.8rem; font-weight: 600;">
-                            <div style="color: #34c759;" id="top-topicos-ok">0 Concluídos</div>
-                            <div style="color: #ff3b30;" id="top-topicos-pendentes">0 Pendentes</div>
-                        </div>
-                        <div class="stat-value" id="top-progresso-perc" style="margin:0;">0%</div>
-                    </div>
-                </div>
-                <div class="stat-card" style="display: flex; justify-content: center; align-items: center; text-align: center; border-left: 4px solid var(--accent-color);">
-                    <div style="font-style: italic; color: var(--text-muted); font-size: 0.85rem; font-weight: 500;" id="frase-motivacional"></div>
+                <div class="stat-card motivation-card">
+                    <div class="motivation-quote-mark" aria-hidden="true">“</div>
+                    <blockquote id="frase-motivacional">Foco na missão!</blockquote>
+                    <cite id="frase-motivacional-autor">— King Master</cite>
                 </div>
             </div>
+            
             <div class="widget" style="margin-bottom: 30px; padding: 20px 30px;">
                 <div class="widget-title" style="margin-bottom: 10px;">Constância nos Estudos</div>
                 <div id="constancia-texto" style="font-size: 0.85rem; color: var(--text-main); margin-bottom: 15px;">A calcular os dias de estudo...</div>
                 <div class="streak-row" id="streak-row"></div>
             </div>
-            <div class="analytics-top">
-                <div class="widget timer-hero">
+
+            <div class="dashboard-focus-grid">
+                <div class="widget timer-hero timer-hero-dashboard">
                     <div class="mode-selector">
                         <button class="mode-btn active" id="btn-estudo" onclick="setMode('estudo')">Estudo (Cronómetro)</button>
                         <button class="mode-btn" id="btn-descanso" onclick="setMode('descanso')">Descanso (Timer)</button>
                     </div>
                     <div class="progress-container-large">
-                        <svg class="progress-ring-large" width="220" height="220">
-                            <circle class="progress-ring__circle-bg" r="100" cx="110" cy="110"></circle>
-                            <circle class="progress-ring__circle" id="progressRing" r="100" cx="110" cy="110"></circle>
+                        <svg class="progress-ring-large" width="300" height="300" viewBox="0 0 300 300">
+                            <circle class="progress-ring__circle-bg" r="135" cx="150" cy="150"></circle>
+                            <circle class="progress-ring__circle" id="progressRing" r="135" cx="150" cy="150"></circle>
                         </svg>
                         <div style="position: absolute; display: flex; flex-direction: column; align-items: center;">
                             <div class="timer-display-large" id="timeDisplay">00:00:00</div>
@@ -170,7 +193,7 @@
                         <button class="control-btn-large btn-stop" id="endSessionBtnDash" onclick="encerrarSessaoDashboard()" title="Encerrar e Guardar no Histórico" style="display: none;">⏹</button>
                     </div>
                 </div>
-                <div class="widget">
+                <div class="widget weekly-study-widget">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <div class="widget-title" style="margin-bottom: 0;">Tempo Semanal</div>
                         <button class="cycle-btn" style="padding: 6px 15px; font-size: 0.8rem;" onclick="showSection('historico')">Ver Histórico</button>
@@ -178,88 +201,69 @@
                     <div class="chart-container" id="weeklyChart"></div>
                 </div>
             </div>
-        </section>
-
-        <section id="mapa-progresso" class="content-section">
-            <div class="cycle-header-actions">
-                <div>
-                    <h1>Mapa de Progresso Competitivo</h1>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -20px; font-weight: 500;">T = Teoria | P = Prática | D = Domínio</p>
-                </div>
-                <div style="text-align: right;">
-                    <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Evolução Global do Edital</div>
-                    <div id="global-mapa-pct" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color); line-height: 1;">0%</div>
-                </div>
+            <div class="widget dashboard-reviews-widget dashboard-reviews-below">
+                    <div class="dashboard-reviews-heading">
+                        <div>
+                            <div class="widget-title">Revisões Pendentes</div>
+                            <p>Assuntos que precisam voltar ao foco</p>
+                        </div>
+                        <button class="cycle-btn" onclick="showSection('revisoes')">Ver todas</button>
+                    </div>
+                    <div class="dashboard-review-table-wrap">
+                        <table class="dashboard-review-table">
+                            <thead><tr><th>Assunto</th><th>Matéria</th><th>Revisar em</th></tr></thead>
+                            <tbody id="dashboardRevisoesTableBody"></tbody>
+                        </table>
+                    </div>
             </div>
-            <div class="mapa-grid" id="mapaContainer">
-                </div>
         </section>
 
+        <!-- HUB DE MATÉRIAS -->
         <section id="planejamento" class="content-section">
             <div class="cycle-header-actions">
-                <h1>Ciclo e Matérias</h1>
+                <h1>Hub de Matérias</h1>
                 <div class="cycle-btn-group">
                     <button class="cycle-btn" onclick="abrirModalDeletar('clearCycle', null, 'Apagar tudo?', 'Todas as matérias e tópicos serão removidos.')">Limpar Tudo</button>
                     <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova Matéria</button>
-                </div>
-            </div>
-            <div class="cycle-grid" style="margin-bottom: 30px;">
-                <div class="widget cycle-stat-box" style="display: flex; flex-direction: column; justify-content: center; gap: 20px;">
-                    <div>
-                        <div class="widget-title" style="margin-bottom: 5px;">Total de Matérias</div>
-                        <div class="cycle-number" id="cycleTotalMatters" style="text-align: left; font-size: 3rem;">0</div>
-                    </div>
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                            <div class="widget-title" style="margin: 0;">Meta Diária</div>
-                            <div style="display: flex; align-items: center; gap: 5px; background: var(--bg-body); padding: 2px 8px; border-radius: 8px; border: 1px solid var(--border-color);">
-                                <input type="number" id="inputMetaDiaria" value="240" min="1" onchange="ajustarMetaDiaria(this.value)" style="width: 50px; background: transparent; border: none; color: var(--text-main); font-weight: 800; font-family: inherit; text-align: right; outline: none;">
-                                <span style="font-size: 0.65rem; font-weight: 800; color: var(--text-muted);">MIN</span>
-                            </div>
-                        </div>
-                        <div class="cycle-progress-wrap">
-                            <div class="cycle-progress-text" id="cycleProgressText"><span>0m executados</span><span>0m meta</span></div>
-                            <div class="cycle-progress-bg"><div class="cycle-progress-fill" id="cycleProgressBar" style="width: 0%;"></div></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="widget" style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                    <div class="widget-title" style="align-self: flex-start; margin-bottom: 0;">Distribuição de Tempo</div>
-                    <div class="cycle-donut-container" style="min-height: 200px;">
-                        <svg class="cycle-donut-svg" width="220" height="220" viewBox="0 0 280 280" id="cycleDonutSvg"></svg>
-                        <div class="cycle-donut-content">
-                            <span class="cycle-donut-total" id="cycleDonutTotal" style="font-size: 1.5rem;">0h 0m</span>
-                            <span class="cycle-donut-label" id="cycleDonutLabel">Total da Semana</span>
-                        </div>
-                    </div>
                 </div>
             </div>
             <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">As Minhas Disciplinas</h3>
             <div class="disciplinas-grid" id="disciplinasGrid"></div>
         </section>
 
-        <section id="escola-provas" class="content-section">
-            <div class="cycle-header-actions">
-                <h1>Radar de Provas e Revisões</h1>
-                <button class="cycle-btn primary" onclick="abrirModalAgenda()">+ Novo Agendamento</button>
-            </div>
-            <div class="widget" style="padding: 20px; margin-bottom: 30px; border-left: 5px solid var(--accent-color);" id="agendaHighlight">
-                <p style="color: var(--text-muted); font-size: 0.9rem;">A processar próximo desafio...</p>
-            </div>
-            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">A Sua Linha do Tempo</h3>
-            <div class="agenda-list" id="agendaList"></div>
-        </section>
-        
+        <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
         <section id="agendamento" class="content-section">
             <div class="cycle-header-actions">
-                <h1>Planeador de Rotina</h1>
+                <div>
+                    <h1>Planeador de Rotina</h1>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -20px;">blocos e compromissos do dia</p>
+                </div>
                 <button class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo Compromisso</button>
             </div>
             <div class="widget" style="padding: 20px; margin-bottom: 30px; border-left: 5px solid #ff9500;" id="agendamentoHighlight">
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Organize o seu dia e vença as metas.</p>
+                <p style="color: var(--text-muted); font-size: 0.9rem;">Organize o seu dia e avance nas prioridades.</p>
             </div>
             <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">Cronograma do Dia</h3>
             <div class="agenda-list" id="agendamentoList"></div>
+        </section>
+
+        <section id="revisoes" class="content-section">
+            <div class="cycle-header-actions">
+                <div>
+                    <h1>Revisões</h1>
+                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -20px;">lista manual de pontos que precisam de novo foco</p>
+                </div>
+                <div class="cycle-btn-group">
+                    <button class="cycle-btn" onclick="abrirModalTagsRevisao()">Gerir Tags</button>
+                    <button class="cycle-btn primary" onclick="abrirModalRevisao()">+ Nova Revisão</button>
+                </div>
+            </div>
+            <div class="stats-grid revision-summary-grid">
+                <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value" id="rev-pendentes">0</div></div>
+                <div class="stat-card"><div class="stat-label">Atrasadas</div><div class="stat-value" id="rev-atrasadas" style="color:#ff3b30;">0</div></div>
+                <div class="stat-card"><div class="stat-label">Essa Semana</div><div class="stat-value" id="rev-semana" style="color:var(--accent-color);">0</div></div>
+            </div>
+            <div class="revision-list" id="revisoesList"></div>
         </section>
 
         <section id="simulados" class="content-section">
@@ -267,42 +271,38 @@
                 <h1>Módulo de Guerra: Simulados</h1>
                 <button class="cycle-btn primary" onclick="abrirModalSimulado()">+ Registar Simulado</button>
             </div>
-            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 30px;">
                 <div class="stat-card">
                     <div class="stat-label">Média de Acertos Global</div>
                     <div class="stat-value" id="sim-media-acertos" style="color: var(--text-main);">0%</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Tempo Médio por Questão</div>
+                    <div class="stat-label">Tempo Médio / Questão</div>
                     <div class="stat-value" id="sim-tempo-questao" style="color: var(--accent-color);">0m 00s</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-label">Área Mais Forte</div>
                     <div class="stat-value" id="sim-ponto-forte" style="color: #34c759;">-</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-label">Área Mais Fraca (Focar)</div>
+                    <div class="stat-value" id="sim-ponto-fraco" style="color: #ff3b30;">-</div>
+                </div>
             </div>
             <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">Histórico de Testes</h3>
             <div class="agenda-list" id="listaSimulados"></div>
         </section>
 
+        <!-- Redação e Histórico continuam iguais -->
         <section id="redacao" class="content-section">
             <div class="cycle-header-actions">
                 <h1>Laboratório de Redação</h1>
                 <button class="cycle-btn primary" onclick="abrirModalRedacao()">+ Registar Texto</button>
             </div>
             <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
-                <div class="stat-card">
-                    <div class="stat-label">Média Global</div>
-                    <div class="stat-value" id="red-media" style="color: var(--text-main);">0</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Maior Força</div>
-                    <div class="stat-value" id="red-forte" style="color: #34c759;">-</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-label">Gargalo Crítico (Focar)</div>
-                    <div class="stat-value" id="red-gargalo" style="color: #ff3b30;">-</div>
-                </div>
+                <div class="stat-card"><div class="stat-label">Média Global</div><div class="stat-value" id="red-media" style="color: var(--text-main);">0</div></div>
+                <div class="stat-card"><div class="stat-label">Maior Força</div><div class="stat-value" id="red-forte" style="color: #34c759;">-</div></div>
+                <div class="stat-card"><div class="stat-label">Gargalo Crítico (Focar)</div><div class="stat-value" id="red-gargalo" style="color: #ff3b30;">-</div></div>
             </div>
             <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">Histórico Analítico</h3>
             <div class="agenda-list" id="listaRedacoes"></div>
@@ -337,8 +337,51 @@
             <div class="history-timeline" id="historyListContainer"></div>
         </section>
 
+        <section id="perfil" class="content-section">
+            <div class="profile-heading">
+                <div>
+                    <h1>Meu Perfil</h1>
+                    <p>Seu progresso no caminho até a Entidade Absoluta do ENEM.</p>
+                </div>
+                <span class="profile-multiplier-badge" id="profileMultiplierBadge">1.0x • XP Base</span>
+            </div>
+
+            <div class="profile-hero widget">
+                <div class="profile-league-name" id="profileLeagueName">Liga Bronze</div>
+                <div class="avatar-stage">
+                    <div class="league-frame league-bronze" id="profileLeagueFrame">
+                        <span class="league-orb orb-one"></span><span class="league-orb orb-two"></span><span class="league-orb orb-three"></span>
+                        <div class="avatar-core" aria-label="Foto de perfil de Pedro Reis">
+                            <img id="profileAvatarImage" alt="Foto de perfil de Pedro Reis">
+                            <span id="profileAvatarFallback">PR</span>
+                        </div>
+                    </div>
+                </div>
+                <label class="profile-photo-button" for="profilePhotoInput">
+                    <span aria-hidden="true">📷</span> Alterar foto
+                    <input type="file" id="profilePhotoInput" accept="image/jpeg,image/png,image/webp,image/gif" onchange="alterarFotoPerfil(event)">
+                </label>
+                <span class="profile-photo-hint">Escolha uma imagem JPG, PNG, WebP ou GIF</span>
+                <div class="profile-level-title" id="profileLevelTitle">Lvl 1 • Genin do Foco</div>
+                <div class="profile-next-level" id="profileNextLevel">Próximo nível: 1.500 XP</div>
+                <div class="profile-xp-line"><span id="profileXpText">0 / 520.000 XP</span><span id="profileXpPercent">0%</span></div>
+                <div class="profile-xp-track"><span id="profileXpBar"></span></div>
+                <p class="profile-xp-note">Progresso total até o nível máximo</p>
+            </div>
+
+            <h3 class="profile-section-title">Estatísticas do Império</h3>
+            <div class="profile-stats-grid">
+                <article class="profile-stat-card"><span class="profile-stat-icon">🔥</span><span class="profile-stat-value" id="profileStreak">0 dias</span><span class="profile-stat-label">Ofensiva atual</span></article>
+                <article class="profile-stat-card"><span class="profile-stat-icon">⏱</span><span class="profile-stat-value" id="profileTotalTime">0m</span><span class="profile-stat-label">Tempo focado vitalício</span></article>
+                <article class="profile-stat-card"><span class="profile-stat-icon">✓</span><span class="profile-stat-value" id="profileTopics">0</span><span class="profile-stat-label">Tópicos dominados</span></article>
+                <article class="profile-stat-card"><span class="profile-stat-icon">🎯</span><span class="profile-stat-value" id="profileAccuracy">0%</span><span class="profile-stat-label">Taxa global de acerto</span></article>
+            </div>
+        </section>
+
+        <!-- MODAIS -->
         <div class="modal-overlay" id="cycleModal">
             <div class="modal-box">
+                <button type="button" class="modal-close" onclick="fecharModal('cycleModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title" id="cycleModalTitle">Adicionar Matéria</div>
                 <form id="formAddCycle" onsubmit="salvarMateriaCiclo(event)">
                     <input type="hidden" id="cycleEditId" value="">
@@ -365,22 +408,14 @@
                             <option value="Livre">Livre</option>
                         </select>
                     </div>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Meta de Tempo na Semana (Minutos)</label>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="number" id="cycleDuration" class="cycle-input" min="1" value="60" style="flex: 1;">
-                            <label style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap;">
-                                <input type="checkbox" id="cycleLivreCheck" onchange="document.getElementById('cycleDuration').disabled = this.checked; if(this.checked) document.getElementById('cycleDuration').value = 0;"> LIVRE
-                            </label>
-                        </div>
-                    </div>
-                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('cycleModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Guardar</button></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar</button></div>
                 </form>
             </div>
         </div>
 
         <div class="modal-overlay" id="assuntosModal">
             <div class="modal-box" style="width: 700px; max-width: 95%;">
+                <button type="button" class="modal-close" onclick="fecharModal('assuntosModal')" aria-label="Fechar">×</button>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
                     <div>
                         <h3 id="assuntosModalTitle" style="color: var(--text-main); font-weight: 800; margin: 0; font-size: 1.6rem; text-transform: uppercase;">Assuntos</h3>
@@ -389,7 +424,6 @@
                             <span id="assuntosModalTimeValue">0h 00m</span>
                         </div>
                     </div>
-                    <button class="cycle-btn" style="padding: 8px 20px; font-size: 0.9rem;" onclick="fecharModal('assuntosModal')">Fechar</button>
                 </div>
                 <form id="formAddTopico" style="display: flex; gap: 12px; margin-bottom: 25px;" onsubmit="adicionarTopico(event)">
                     <input type="hidden" id="assuntosMateriaId">
@@ -400,205 +434,139 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="agendaModal">
-            <div class="modal-box" style="width: 500px;">
-                <div class="cycle-modal-title" id="agendaModalTitle">Novo Agendamento</div>
-                <form id="formAddAgenda" onsubmit="salvarAgendamento(event)">
-                    <input type="hidden" id="agendaEditId" value="">
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">O que é?</label>
-                        <input type="text" id="agendaTitle" class="cycle-input" required autocomplete="off">
-                    </div>
-                    <div style="display: flex; gap: 15px;">
-                        <div class="cycle-form-group" style="flex: 1;">
-                            <label class="cycle-label">Matéria</label>
-                            <input type="text" id="agendaSubject" class="cycle-input" required autocomplete="off">
-                        </div>
-                        <div class="cycle-form-group" style="flex: 1;">
-                            <label class="cycle-label">Tipo</label>
-                            <select id="agendaType" class="cycle-input" required style="cursor: pointer;">
-                                <option value="Prova">Prova</option>
-                                <option value="Trabalho">Trabalho</option>
-                                <option value="Seminário">Seminário</option>
-                                <option value="Leitura">Leitura</option>
-                                <option value="Revisão">Revisão</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Assuntos / Conteúdo da Prova</label>
-                        <textarea id="agendaDescription" class="cycle-input" rows="2" style="resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea>
-                    </div>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Data da Entrega / Prova</label>
-                        <input type="date" id="agendaDate" class="cycle-input" required>
-                    </div>
-                    <div class="cycle-modal-actions">
-                        <button type="button" class="cycle-btn" onclick="fecharModal('agendaModal')">Cancelar</button>
-                        <button type="submit" class="cycle-btn primary">Guardar no Radar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
         <div class="modal-overlay" id="agendamentoModal">
+            <!-- Modal de Compromissos com "Treino Físico" corrigido e "Redação" adicionada -->
             <div class="modal-box" style="width: 500px;">
+                <button type="button" class="modal-close" onclick="fecharModal('agendamentoModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title" id="agendamentoModalTitle">Novo Compromisso</div>
                 <form id="formAddAgendamento" onsubmit="salvarAgendamentoNovo(event)">
                     <input type="hidden" id="agendamentoEditId" value="">
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Descrição do Compromisso</label>
-                        <input type="text" id="agendamentoTitleInput" class="cycle-input" placeholder="Ex: Treino TAF / Estudar Direito" required autocomplete="off">
-                    </div>
+                    <div class="cycle-form-group"><label class="cycle-label">Descrição do Compromisso</label><input type="text" id="agendamentoTitleInput" class="cycle-input" placeholder="Ex: Treino / Estudar" required></div>
                     <div style="display: flex; gap: 15px;">
-                        <div class="cycle-form-group" style="flex: 1.5;">
-                            <label class="cycle-label">Data</label>
-                            <input type="date" id="agendamentoDateInput" class="cycle-input" required>
-                        </div>
-                        <div class="cycle-form-group" style="flex: 1;">
-                            <label class="cycle-label">Hora</label>
-                            <input type="time" id="agendamentoTimeInput" class="cycle-input" required>
-                        </div>
+                        <div class="cycle-form-group" style="flex: 1.5;"><label class="cycle-label">Data</label><input type="date" id="agendamentoDateInput" class="cycle-input" required></div>
+                        <div class="cycle-form-group" style="flex: 1;"><label class="cycle-label">Hora</label><input type="time" id="agendamentoTimeInput" class="cycle-input" required></div>
                     </div>
                     <div class="cycle-form-group">
                         <label class="cycle-label">Categoria</label>
                         <select id="agendamentoTypeInput" class="cycle-input" required>
                             <option value="Estudo">📚 Estudo</option>
-                            <option value="TAF">🏃 Treino TAF</option>
                             <option value="Prova">📝 Prova / Simulado</option>
-                            <option value="Revisão">🧠 Revisão</option>
+                            <option value="Redação">✍️ Redação</option>
                             <option value="Pessoal">👤 Pessoal</option>
                         </select>
                     </div>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Notas</label>
-                        <textarea id="agendamentoDescInput" class="cycle-input" rows="2" style="resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea>
-                    </div>
-                    <div class="cycle-modal-actions">
-                        <button type="button" class="cycle-btn" onclick="fecharModal('agendamentoModal')">Cancelar</button>
-                        <button type="submit" class="cycle-btn primary">Agendar</button>
-                    </div>
+                    <div class="cycle-form-group"><label class="cycle-label">Notas</label><textarea id="agendamentoDescInput" class="cycle-input" rows="2"></textarea></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Agendar</button></div>
                 </form>
             </div>
         </div>
 
         <div class="modal-overlay" id="simuladoModal">
-            <div class="modal-box" style="width: 550px;">
+            <div class="modal-box modal-wide">
+                <button type="button" class="modal-close" onclick="fecharModal('simuladoModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title" id="simuladoModalTitle">Registar Simulado</div>
                 <form id="formAddSimulado" onsubmit="salvarSimulado(event)">
-                    <input type="hidden" id="simEditId" value="">
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Identificação da Batalha</label>
-                        <input type="text" id="simTitle" class="cycle-input" placeholder="Ex: Enem 2023 - PPL" required autocomplete="off">
-                    </div>
-                    <div style="display: flex; gap: 15px;">
-                        <div class="cycle-form-group" style="flex: 1;">
-                            <label class="cycle-label">Data</label>
-                            <input type="date" id="simDate" class="cycle-input" required>
-                        </div>
-                        <div class="cycle-form-group" style="flex: 1;">
-                            <label class="cycle-label">Tempo (Minutos)</label>
-                            <input type="number" id="simTempo" class="cycle-input" placeholder="Ex: 180" required min="1">
-                        </div>
-                    </div>
-                    
-                    <div style="background: var(--bg-body); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); margin-top: 10px; margin-bottom: 10px;">
-                        <div class="cycle-form-group" style="margin-bottom: 20px;">
-                            <label class="cycle-label">Área de Conhecimento</label>
-                            <select id="simArea" class="cycle-input" required style="cursor: pointer; background-color: var(--card-bg);">
-                                <option value="Linguagens, Códigos e suas Tecnologias">Linguagens, Códigos e suas Tecnologias</option>
-                                <option value="Ciências Humanas e suas Tecnologias">Ciências Humanas e suas Tecnologias</option>
-                                <option value="Ciências da Natureza e suas Tecnologias">Ciências da Natureza e suas Tecnologias</option>
-                                <option value="Matemática e suas Tecnologias">Matemática e suas Tecnologias</option>
-                                <option value="Livre / Conhecimentos Gerais">Livre / Conhecimentos Gerais</option>
-                            </select>
-                        </div>
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
-                            <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" style="text-align: center;">Total Questões</label><input type="number" id="simTotal" class="cycle-input" min="1" required value="45" style="text-align: center; font-size: 1.2rem; background-color: var(--card-bg);"></div>
-                            <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" style="text-align: center; color: #34c759;">Acertos</label><input type="number" id="simAcertos" class="cycle-input" min="0" required value="0" style="text-align: center; font-size: 1.3rem; font-weight: 800; color: #34c759; background-color: var(--card-bg); border-color: rgba(52, 199, 89, 0.3);"></div>
-                            <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" style="text-align: center; color: #ff3b30;">Erros</label><input type="number" id="simErros" class="cycle-input" min="0" required value="0" style="text-align: center; font-size: 1.3rem; font-weight: 800; color: #ff3b30; background-color: var(--card-bg); border-color: rgba(255, 59, 48, 0.3);"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="cycle-form-group" style="margin-bottom: 25px;">
-                        <label class="cycle-label">Anexar Folha / Gabarito (Opcional - Máx 2MB)</label>
-                        <input type="file" id="simFile" class="file-input-hidden" accept="image/*,application/pdf" onchange="handleFileSelect(event, 'simFileName', 'simAttachmentData')">
-                        <label for="simFile" class="file-upload-btn">
-                            <span style="font-size: 1.3rem;">📎</span> <span id="simFileName">Selecionar Arquivo do Computador</span>
-                        </label>
-                        <input type="hidden" id="simAttachmentData" value="">
-                    </div>
-
-                    <div class="cycle-modal-actions">
-                        <button type="button" class="cycle-btn" onclick="fecharModal('simuladoModal')">Cancelar</button>
-                        <button type="submit" class="cycle-btn primary">Arquivar Desempenho</button>
-                    </div>
+                    <input type="hidden" id="simEditId"><input type="hidden" id="simAttachmentData">
+                    <div class="cycle-form-group"><label class="cycle-label">Nome do simulado</label><input class="cycle-input" id="simTitle" required autocomplete="off"></div>
+                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label">Data</label><input type="date" class="cycle-input" id="simDate" required></div><div class="cycle-form-group"><label class="cycle-label">Tempo total (minutos)</label><input type="number" class="cycle-input" id="simTempo" min="1" required></div></div>
+                    <div class="cycle-form-group"><label class="cycle-label">Área</label><select class="cycle-input" id="simArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div>
+                    <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label">Questões</label><input type="number" class="cycle-input" id="simTotal" min="1" value="45" required></div><div class="cycle-form-group"><label class="cycle-label">Acertos</label><input type="number" class="cycle-input" id="simAcertos" min="0" value="0" required></div><div class="cycle-form-group"><label class="cycle-label">Erros</label><input type="number" class="cycle-input" id="simErros" min="0" value="0" required></div></div>
+                    <label class="file-upload-btn" for="simFile"><span>📎</span><span id="simFileName">Selecionar Arquivo do Computador</span></label><input class="file-input-hidden" id="simFile" type="file" onchange="handleFileSelect(event, 'simFileName', 'simAttachmentData')">
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar simulado</button></div>
                 </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="revisaoModal">
+            <div class="modal-box" style="width: 520px;">
+                <button type="button" class="modal-close" onclick="fecharModal('revisaoModal')" aria-label="Fechar">×</button>
+                <div class="cycle-modal-title" id="revisaoModalTitle">Nova Revisão</div>
+                <form id="formAddRevisao" onsubmit="salvarRevisao(event)">
+                    <input type="hidden" id="revisaoEditId">
+                    <input type="hidden" id="revisaoOrigem" value="manual">
+                    <p id="revisaoSemMaterias" style="display:none;color:#ff9500;background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.25);padding:12px 14px;border-radius:12px;font-size:.82rem;font-weight:700;margin-bottom:16px;">Adicione uma matéria no Hub de Matérias antes de guardar uma revisão.</p>
+                    <div class="cycle-form-group">
+                        <label class="cycle-label">Matéria</label>
+                        <select class="cycle-input" id="revisaoMateria" onchange="atualizarAssuntosRevisao()" required></select>
+                    </div>
+                    <div class="cycle-form-group">
+                        <label class="cycle-label">Assunto</label>
+                        <input class="cycle-input" id="revisaoAssunto" list="revisaoAssuntosOptions" autocomplete="off" required>
+                        <datalist id="revisaoAssuntosOptions"></datalist>
+                    </div>
+                    <div class="form-grid two">
+                        <div class="cycle-form-group">
+                            <label class="cycle-label">Dia em que estudou <span style="font-weight:500;text-transform:none;">(opcional)</span></label>
+                            <input type="date" class="cycle-input" id="revisaoDataEstudo">
+                        </div>
+                        <div class="cycle-form-group">
+                            <label class="cycle-label">Dia para revisar <span style="font-weight:500;text-transform:none;">(opcional)</span></label>
+                            <input type="date" class="cycle-input" id="revisaoDataAlvo">
+                        </div>
+                    </div>
+                    <div class="cycle-form-group">
+                        <div class="revision-tags-label-row"><label class="cycle-label">Tags</label><button type="button" onclick="abrirModalTagsRevisao()">+ Criar tag</button></div>
+                        <div class="revision-tag-selector" id="revisaoTagsSelecao"></div>
+                    </div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar revisão</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="reagendarRevisaoModal">
+            <div class="modal-box" style="width: 430px;">
+                <button type="button" class="modal-close" onclick="fecharModal('reagendarRevisaoModal')" aria-label="Fechar">×</button>
+                <div class="cycle-modal-title">Marcar nova revisão</div>
+                <form onsubmit="salvarReagendamentoRevisao(event)">
+                    <input type="hidden" id="reagendarRevisaoId">
+                    <p class="modal-message" id="reagendarRevisaoResumo" style="margin-bottom:18px;"></p>
+                    <div class="cycle-form-group"><label class="cycle-label">Nova data de revisão</label><input type="date" class="cycle-input" id="reagendarRevisaoData" required></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Reagendar</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="tagsRevisaoModal">
+            <div class="modal-box" style="width: 460px;">
+                <button type="button" class="modal-close" onclick="fecharModal('tagsRevisaoModal')" aria-label="Fechar">×</button>
+                <div class="cycle-modal-title">Tags de Revisão</div>
+                <form class="revision-tag-create" onsubmit="salvarTagRevisao(event)">
+                    <input type="text" class="cycle-input" id="novaTagRevisao" placeholder="Ex.: Fórmulas, Difícil, Prioridade" maxlength="28" required autocomplete="off">
+                    <button type="submit" class="cycle-btn primary">Criar</button>
+                </form>
+                <p class="revision-tag-help">As tags criadas ficam disponíveis em todas as revisões.</p>
+                <div class="revision-tag-manager" id="revisaoTagsLista"></div>
             </div>
         </div>
 
         <div class="modal-overlay" id="redacaoModal">
-            <div class="modal-box" style="width: 550px;">
+            <div class="modal-box modal-wide">
+                <button type="button" class="modal-close" onclick="fecharModal('redacaoModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title" id="redacaoModalTitle">Registar Redação</div>
                 <form id="formAddRedacao" onsubmit="salvarRedacao(event)">
-                    <input type="hidden" id="redEditId" value="">
-                    <div class="cycle-form-group"><label class="cycle-label">Tema da Redação</label><input type="text" id="redTheme" class="cycle-input" required autocomplete="off"></div>
-                    <div class="cycle-form-group"><label class="cycle-label">Data da Produção</label><input type="date" id="redDate" class="cycle-input" required></div>
-                    
-                    <div style="margin: 15px 0 10px; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Competências (0 a 200 pontos)</div>
-                    <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 10px;">
-                        <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" title="Escrita">C1</label><input type="number" id="redC1" class="cycle-input" min="0" max="200" step="40" value="0" style="padding: 10px; text-align: center;"></div>
-                        <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" title="Tema">C2</label><input type="number" id="redC2" class="cycle-input" min="0" max="200" step="40" value="0" style="padding: 10px; text-align: center;"></div>
-                        <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" title="Ideias">C3</label><input type="number" id="redC3" class="cycle-input" min="0" max="200" step="40" value="0" style="padding: 10px; text-align: center;"></div>
-                        <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" title="Coesão">C4</label><input type="number" id="redC4" class="cycle-input" min="0" max="200" step="40" value="0" style="padding: 10px; text-align: center;"></div>
-                        <div class="cycle-form-group" style="margin:0;"><label class="cycle-label" title="Intervenção">C5</label><input type="number" id="redC5" class="cycle-input" min="0" max="200" step="40" value="0" style="padding: 10px; text-align: center;"></div>
+                    <input type="hidden" id="redEditId"><input type="hidden" id="redAttachmentData">
+                    <div class="cycle-form-group"><label class="cycle-label">Tema da redação</label><input class="cycle-input" id="redTheme" required autocomplete="off"></div>
+                    <div class="cycle-form-group"><label class="cycle-label">Data</label><input type="date" class="cycle-input" id="redDate" required></div>
+                    <div class="form-grid five">
+                        <div class="cycle-form-group"><label class="cycle-label">C1</label><input type="number" class="cycle-input" id="redC1" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C2</label><input type="number" class="cycle-input" id="redC2" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C3</label><input type="number" class="cycle-input" id="redC3" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C4</label><input type="number" class="cycle-input" id="redC4" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C5</label><input type="number" class="cycle-input" id="redC5" min="0" max="200" step="40" required></div>
                     </div>
-
-                    <div class="cycle-form-group" style="margin-bottom: 25px;">
-                        <label class="cycle-label">Anexar Redação Escrita (Opcional - Máx 2MB)</label>
-                        <input type="file" id="redFile" class="file-input-hidden" accept="image/*,application/pdf" onchange="handleFileSelect(event, 'redFileName', 'redAttachmentData')">
-                        <label for="redFile" class="file-upload-btn">
-                            <span style="font-size: 1.3rem;">📎</span> <span id="redFileName">Selecionar Arquivo do Computador</span>
-                        </label>
-                        <input type="hidden" id="redAttachmentData" value="">
-                    </div>
-
-                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('redacaoModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Guardar Nota</button></div>
+                    <label class="file-upload-btn" for="redFile"><span>📎</span><span id="redFileName">Selecionar Arquivo do Computador</span></label><input class="file-input-hidden" id="redFile" type="file" onchange="handleFileSelect(event, 'redFileName', 'redAttachmentData')">
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar redação</button></div>
                 </form>
             </div>
         </div>
 
-        <div class="modal-overlay" id="editHistoryModal">
-            <div class="modal-box">
-                <div class="cycle-modal-title">Editar Sessão</div>
-                <form onsubmit="salvarEdicaoHistorico(event)">
-                    <input type="hidden" id="histEditId" value="">
-                    <div class="cycle-form-group"><label class="cycle-label">Matéria</label><input type="text" id="histSubject" class="cycle-input" required autocomplete="off"></div>
-                    <div class="cycle-form-group"><label class="cycle-label">Comentário / Anotações</label><textarea id="histComment" class="cycle-input" rows="3" style="resize: vertical; font-family: inherit; font-size: 0.9rem;"></textarea></div>
-                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('editHistoryModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Guardar Alterações</button></div>
-                </form>
-            </div>
-        </div>
-        
-        <div class="modal-overlay" id="confirmResetModal">
-            <div class="modal-box" style="text-align: center; width: 340px;">
-                <div class="cycle-modal-title">Zerar o Cronómetro?</div>
-                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; line-height: 1.4;">O tempo atual será perdido e não será guardado no histórico.</p>
-                <div class="cycle-modal-actions" style="justify-content: center;"><button class="cycle-btn" onclick="fecharModal('confirmResetModal')">Cancelar</button><button class="cycle-btn btn-danger" onclick="executarResetTimer()">Sim, Zerar</button></div>
-            </div>
-        </div>
+        <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Guardar</button></div></form></div></div>
 
-        <div class="modal-overlay" id="deleteConfirmModal">
-            <div class="modal-box" style="text-align: center; width: 340px;">
-                <div class="cycle-modal-title" id="deleteConfirmTitle">Atenção</div>
-                <p id="deleteConfirmMessage" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 25px; line-height: 1.4;"></p>
-                <div class="cycle-modal-actions" style="justify-content: center;"><button class="cycle-btn" onclick="fecharModalDeletar()">Cancelar</button><button class="cycle-btn btn-danger" onclick="confirmarDelecao()">Sim, Apagar</button></div>
-            </div>
-        </div>
+        <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronómetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
+
+        <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registo?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
+
     </main>
 
     <div id="toastNotification" class="toast-notification"></div>
     <audio id="alarmAudio"></audio>
-    <script src="script.js"></script>
+    <script src="/script.js"></script>
 </body>
 </html>
+

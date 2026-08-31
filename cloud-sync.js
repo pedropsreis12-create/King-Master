@@ -176,7 +176,7 @@ if (!firebaseConfigured) {
 
     const firebaseAI = aiSdk.getAI(firebaseApp, { backend: new aiSdk.GoogleAIBackend() });
     const geminiModel = aiSdk.getGenerativeModel(firebaseAI, {
-        model: 'gemini-3.7-flash',
+        model: 'gemini-2.5-flash',
         tools: ferramentasGemini,
         systemInstruction: `Você é a IA do QG do King Master, assistente pessoal de estudos de Pedro, em português do Brasil.
 Converse de forma inteligente, calorosa, objetiva e natural. Analise os dados fornecidos em CONTEXTO ATUAL antes de responder.

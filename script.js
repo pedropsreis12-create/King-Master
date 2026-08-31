@@ -1,105 +1,4 @@
-// DADOS DO MAPA DE PROGRESSO (Atualizado com Incidência e Complexidade baseados no PDF)
-const MAPA_PROGRESSO_DATA = [
-    { id: 'mat', title: 'Matemática', color: '#007aff', topics: [
-        { name: 'Fundamentos Básicos', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Frações e Porcentagem', inc: 'Alta', comp: 'Baixa' },
-        { name: 'MMC e MDC', inc: 'Média', comp: 'Baixa' },
-        { name: 'Potenciação e Radiciação', inc: 'Média', comp: 'Média' },
-        { name: 'Razão, Proporção e Regra de 3', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Notação Científica e Escalas', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Estatística', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Geometria Plana', inc: 'Alta', comp: 'Média' },
-        { name: 'Geometria Espacial', inc: 'Alta', comp: 'Alta' },
-        { name: 'Geometria Analítica', inc: 'Média', comp: 'Alta' },
-        { name: 'Análise Combinatória', inc: 'Alta', comp: 'Alta' },
-        { name: 'Probabilidade', inc: 'Alta', comp: 'Alta' },
-        { name: 'Função 1º e 2º Grau', inc: 'Alta', comp: 'Média' },
-        { name: 'Função Exponencial e Logarítmica', inc: 'Média', comp: 'Alta' },
-        { name: 'Trigonometria', inc: 'Média', comp: 'Média' },
-        { name: 'Matrizes', inc: 'Baixa', comp: 'Baixa' }
-    ] },
-    { id: 'fis', title: 'Física', color: '#af52de', topics: [
-        { name: 'Cinemática', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Dinâmica (Leis de Newton)', inc: 'Alta', comp: 'Média' },
-        { name: 'Trabalho, Energia e Potência', inc: 'Alta', comp: 'Média' },
-        { name: 'Estática e Equilíbrio', inc: 'Média', comp: 'Média' },
-        { name: 'Gravitação', inc: 'Média', comp: 'Baixa' },
-        { name: 'Hidrostática', inc: 'Média', comp: 'Média' },
-        { name: 'Termologia e Calorimetria', inc: 'Alta', comp: 'Média' },
-        { name: 'Gases e Termodinâmica', inc: 'Média', comp: 'Média' },
-        { name: 'Ondulatória e Acústica', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Óptica Geométrica', inc: 'Média', comp: 'Média' },
-        { name: 'Eletrostática', inc: 'Média', comp: 'Alta' },
-        { name: 'Eletrodinâmica', inc: 'Alta', comp: 'Média' },
-        { name: 'Magnetismo e Eletromagnetismo', inc: 'Média', comp: 'Alta' }
-    ] },
-    { id: 'qui', title: 'Química', color: '#ff9500', topics: [
-        { name: 'Propriedades e Separação de Misturas', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Atomística e Tabela Periódica', inc: 'Média', comp: 'Baixa' },
-        { name: 'Ligações Químicas e Polaridade', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Química Inorgânica', inc: 'Alta', comp: 'Média' },
-        { name: 'Estequiometria e Leis Ponderais', inc: 'Alta', comp: 'Alta' },
-        { name: 'Gases e Soluções', inc: 'Alta', comp: 'Média' },
-        { name: 'Propriedades Coligativas', inc: 'Média', comp: 'Alta' },
-        { name: 'Termoquímica', inc: 'Alta', comp: 'Média' },
-        { name: 'Cinética Química', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Equilíbrio Químico', inc: 'Alta', comp: 'Alta' },
-        { name: 'Eletroquímica e Oxirredução', inc: 'Alta', comp: 'Alta' },
-        { name: 'Radioatividade', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Química Orgânica (Funções)', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Reações Orgânicas', inc: 'Média', comp: 'Alta' },
-        { name: 'Química Ambiental', inc: 'Alta', comp: 'Baixa' }
-    ] },
-    { id: 'bio', title: 'Biologia', color: '#34c759', topics: [
-        { name: 'Citologia e Moléculas da Vida', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Metabolismo Energético', inc: 'Alta', comp: 'Média' },
-        { name: 'Biotecnologia', inc: 'Alta', comp: 'Média' },
-        { name: 'Evolução (Darwinismo/Lamarckismo)', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Ecologia e Impactos Ambientais', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Fisiologia Humana', inc: 'Alta', comp: 'Média' },
-        { name: 'Fisiomorfologia Comparada', inc: 'Média', comp: 'Média' },
-        { name: 'Taxonomia e Reinos', inc: 'Baixa', comp: 'Baixa' },
-        { name: 'Botânica', inc: 'Alta', comp: 'Média' },
-        { name: 'Genética (Mendeliana e Molecular)', inc: 'Alta', comp: 'Média' },
-        { name: 'Doenças e Parasitoses', inc: 'Alta', comp: 'Média' }
-    ] },
-    { id: 'lin', title: 'Linguagens', color: '#ff3b30', topics: [
-        { name: 'Funções da Linguagem', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Figuras de Linguagem', inc: 'Alta', comp: 'Média' },
-        { name: 'Gêneros e Tipologia Textual', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Organização Textual e Coesão', inc: 'Alta', comp: 'Média' },
-        { name: 'Campanhas Publicitárias e Mídia', inc: 'Alta', comp: 'Baixa' },
-        { name: 'Escolas Literárias', inc: 'Média', comp: 'Média' },
-        { name: 'Lirismo e Poesia', inc: 'Média', comp: 'Alta' },
-        { name: 'Arte e Crítica Social', inc: 'Média', comp: 'Média' }
-    ] },
-    { id: 'hum', title: 'Ciências Humanas', color: '#8e44ad', topics: [
-        { name: 'História: Antiguidade e Idade Média', inc: 'Baixa', comp: 'Média' },
-        { name: 'História: Idade Moderna e Expansão', inc: 'Média', comp: 'Média' },
-        { name: 'História: Brasil Colônia e Império', inc: 'Alta', comp: 'Média' },
-        { name: 'História: Idade Contemporânea', inc: 'Alta', comp: 'Média' },
-        { name: 'História: Século XX (Guerras)', inc: 'Alta', comp: 'Alta' },
-        { name: 'Geografia Física e Climatologia', inc: 'Alta', comp: 'Alta' },
-        { name: 'Geografia: Hidrografia e Solos', inc: 'Média', comp: 'Média' },
-        { name: 'Geopolítica e Geografia Econômica', inc: 'Alta', comp: 'Alta' },
-        { name: 'Geografia Agrária e Urbana', inc: 'Alta', comp: 'Média' },
-        { name: 'Filosofia Clássica e Moderna', inc: 'Alta', comp: 'Média' },
-        { name: 'Sociologia Clássica e do Trabalho', inc: 'Alta', comp: 'Média' },
-        { name: 'Sociologia Política e Cultura', inc: 'Alta', comp: 'Média' }
-    ] },
-    { id: 'red', title: 'Redação', color: '#e74c3c', topics: [
-        { name: 'Estrutura Dissertativo-Argumentativa', inc: 'Obrigatório', comp: 'Baixa' },
-        { name: 'Interpretação da Proposta', inc: 'Obrigatório', comp: 'Baixa' },
-        { name: 'Planejamento Textual (Projeto)', inc: 'Obrigatório', comp: 'Média' },
-        { name: 'Engenharia Argumentativa e Tese', inc: 'Obrigatório', comp: 'Alta' },
-        { name: 'Coesão e Conectivos', inc: 'Obrigatório', comp: 'Média' },
-        { name: 'Gramática e Normas Cultas', inc: 'Recomendado', comp: 'Alta' },
-        { name: 'Repertório Sociocultural', inc: 'Obrigatório', comp: 'Média' },
-        { name: 'Proposta de Intervenção', inc: 'Obrigatório', comp: 'Baixa' }
-    ] }
-];
-
-let appData = JSON.parse(localStorage.getItem('qg_pedro_data')) || { 
+const defaultAppData = {
     totalStudySeconds: 0, 
     weeklyChart: [0, 0, 0, 0, 0, 0, 0], 
     cycleItems: [], 
@@ -108,23 +7,28 @@ let appData = JSON.parse(localStorage.getItem('qg_pedro_data')) || {
     agendamentoItems: [],
     simuladosItems: [],
     redacaoItems: [],
-    mapaProgressoState: {},
+    revisoesItems: [],
+    revisaoTags: [],
     dailyGoalMinutes: 240,
     lastWeekStart: '', 
     themeColor: '', 
     themeColorRgb: '', 
-    darkMode: false 
+    darkMode: false,
+    visualMode: 'futuristic',
+    piorAreaGargalo: null,
+    xpLoginDates: [],
+    frasesMotivacionaisFila: [],
+    ultimaFraseMotivacional: null,
+    profilePhoto: ''
 };
 
-if (!appData.mapaProgressoState) appData.mapaProgressoState = {};
-MAPA_PROGRESSO_DATA.forEach(sub => {
-    if(!appData.mapaProgressoState[sub.id]) appData.mapaProgressoState[sub.id] = {};
-    sub.topics.forEach(top => {
-        if(!appData.mapaProgressoState[sub.id][top.name]) {
-            appData.mapaProgressoState[sub.id][top.name] = { t: false, p: false, d: false };
-        }
-    });
-});
+let appData;
+try {
+    appData = { ...defaultAppData, ...(JSON.parse(localStorage.getItem('qg_pedro_data')) || {}) };
+} catch (error) {
+    appData = { ...defaultAppData };
+    console.warn('Os dados locais estavam ilegíveis. O King Master iniciou com uma base segura.', error);
+}
 
 const getMonday = (d) => { const dt = new Date(d); const day = dt.getDay(); const diff = dt.getDate() - day + (day === 0 ? -6 : 1); return new Date(dt.setDate(diff)).toDateString(); };
 if (appData.lastWeekStart !== getMonday(new Date())) {
@@ -133,13 +37,22 @@ if (appData.lastWeekStart !== getMonday(new Date())) {
 }
 
 if (!appData.weeklyChart || appData.weeklyChart.length !== 7) appData.weeklyChart = [0, 0, 0, 0, 0, 0, 0];
+if (!appData.cycleItems) appData.cycleItems = [];
 if (!appData.historyItems) appData.historyItems = [];
 if (!appData.agendaItems) appData.agendaItems = [];
 if (!appData.agendamentoItems) appData.agendamentoItems = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!appData.redacaoItems) appData.redacaoItems = [];
+if (!appData.revisoesItems) appData.revisoesItems = [];
+if (!appData.revisaoTags) appData.revisaoTags = [];
+if (!appData.xpLoginDates) appData.xpLoginDates = [];
+if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
+if (!Number.isInteger(appData.ultimaFraseMotivacional)) appData.ultimaFraseMotivacional = null;
+if (typeof appData.profilePhoto !== 'string') appData.profilePhoto = '';
+if (!appData.visualMode) appData.visualMode = 'futuristic';
 
 if(appData.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
+document.documentElement.setAttribute('data-visual', appData.visualMode === 'classic' ? 'classic' : 'futuristic');
 if(appData.themeColor) { 
     document.documentElement.style.setProperty('--accent-color', appData.themeColor); 
     document.documentElement.style.setProperty('--accent-rgb', appData.themeColorRgb); 
@@ -150,7 +63,152 @@ function saveAppData() {
     updateDashboardStats(); 
 }
 
+function fecharMenuMovel() {
+    const menu = document.querySelector('nav');
+    const botao = document.getElementById('mobileNavToggle');
+    menu?.classList.remove('mobile-open');
+    document.documentElement.classList.remove('mobile-menu-open');
+    document.body.classList.remove('mobile-menu-open');
+    if (botao) {
+        botao.setAttribute('aria-expanded', 'false');
+        botao.setAttribute('aria-label', 'Abrir menu de navegação');
+        const icone = botao.querySelector('span');
+        if (icone) icone.textContent = '☰';
+    }
+}
+
+function toggleMobileNav() {
+    const menu = document.querySelector('nav');
+    const botao = document.getElementById('mobileNavToggle');
+    if (!menu || !botao) return;
+    const aberto = menu.classList.toggle('mobile-open');
+    document.documentElement.classList.toggle('mobile-menu-open', aberto);
+    document.body.classList.toggle('mobile-menu-open', aberto);
+    botao.setAttribute('aria-expanded', String(aberto));
+    botao.setAttribute('aria-label', aberto ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
+    const icone = botao.querySelector('span');
+    if (icone) icone.textContent = aberto ? '×' : '☰';
+}
+
+const FRASES_MOTIVACIONAIS = [
+    'O resultado de amanhã começa no minuto de foco de hoje.',
+    'Não espere a motivação chegar: comece, e ela alcançará você.',
+    'Uma questão compreendida vale mais que dez páginas apenas lidas.',
+    'Seu ritmo pode variar; sua direção precisa permanecer.',
+    'Todo conteúdo difícil fica menor quando você volta a ele.',
+    'A aprovação é construída em sessões que ninguém aplaude.',
+    'Disciplina é continuar mesmo quando o entusiasmo descansa.',
+    'O estudo de hoje é um voto na pessoa que você quer se tornar.',
+    'Você não precisa vencer o dia inteiro, apenas o próximo bloco.',
+    'Cada erro corrigido é uma armadilha a menos na prova.',
+    'Constância transforma minutos comuns em resultados extraordinários.',
+    'O cansaço pede pausa; o objetivo pede que você retorne.',
+    'Começar pequeno ainda é começar na direção certa.',
+    'O assunto que assusta hoje pode ser seu ponto forte amanhã.',
+    'Revisar é encontrar de novo aquilo que você decidiu não perder.',
+    'Sua maior vantagem é poder tentar mais uma vez com mais experiência.',
+    'Um dia consistente supera uma semana de promessas.',
+    'Foco não é fazer tudo; é proteger o que importa agora.',
+    'A dúvida anotada hoje pode virar segurança no dia da prova.',
+    'Quando o plano estiver pesado, reduza o passo, não abandone o caminho.',
+    'A mente aprende melhor quando a coragem aceita errar.',
+    'Cada simulado é treino para manter a calma quando valer de verdade.',
+    'O progresso silencioso também conta — e conta muito.',
+    'Sua meta não exige perfeição; exige presença repetida.',
+    'Estudar cansado com equilíbrio ainda é avançar.',
+    'A confiança vem depois das repetições, não antes delas.',
+    'Você não está atrasado enquanto continuar se movendo.',
+    'Uma revisão bem feita devolve força ao conhecimento.',
+    'A concentração cresce quando você dá a ela alguns minutos sem interrupção.',
+    'O próximo acerto pode nascer exatamente do erro que você quase ignorou.',
+    'Transforme ansiedade em uma tarefa pequena e executável.',
+    'A prova mede respostas; sua rotina constrói a capacidade de encontrá-las.',
+    'Nenhum minuto focado desaparece: ele se acumula em domínio.',
+    'Você não precisa sentir vontade para honrar seu plano.',
+    'Persistir também é saber descansar e voltar inteiro.',
+    'Conhecimento forte nasce de encontros repetidos com o mesmo tema.',
+    'A sua versão aprovada agradecerá por esta sessão.',
+    'Hoje é um ótimo dia para tornar uma fraqueza menos fraca.',
+    'Faça o possível com atenção; amanhã, o possível será maior.',
+    'O cronômetro registra tempo, mas sua dedicação registra transformação.',
+    'A rotina certa deixa menos espaço para a dúvida vencer.',
+    'Cada tópico dominado abre espaço mental para o próximo.',
+    'Paciência também é uma estratégia de alto desempenho.',
+    'A dificuldade não é um aviso para parar; é um mapa do que treinar.',
+    'O estudo rende quando você troca pressa por presença.',
+    'Uma sessão honesta vale mais que um plano perfeito nunca iniciado.',
+    'Seu futuro não precisa de um milagre hoje; precisa de continuidade.',
+    'Quando você mede o progresso, percebe que o esforço já está falando.',
+    'Aprender é permitir que a repetição faça o trabalho profundo.',
+    'A cada retorno, o conteúdo encontra uma mente mais preparada.',
+    'Não negocie com a distração durante o tempo que pertence ao seu sonho.',
+    'O objetivo parece distante até que a constância encurta o caminho.',
+    'Você pode não controlar a prova, mas controla a preparação de agora.',
+    'A coragem acadêmica começa com a pergunta que você decide enfrentar.',
+    'Seu desempenho não é uma sentença; é um retrato que o treino pode mudar.',
+    'A repetição consciente transforma informação em ferramenta.',
+    'Um bloco concluído é uma promessa cumprida consigo mesmo.',
+    'A clareza chega para quem permanece tempo suficiente diante da dúvida.',
+    'Não compare bastidores de estudo com resultados prontos de outra pessoa.',
+    'O conteúdo não precisa ser fácil para se tornar familiar.',
+    'Pequenas vitórias diárias formam uma grande vantagem no fim.',
+    'Toda vez que você volta, sua disciplina fica mais confiável.',
+    'A aprovação gosta de quem aparece também nos dias comuns.',
+    'O foco de uma hora pode mudar a confiança de uma semana.',
+    'Descobrir onde errou é uma forma concreta de avançar.',
+    'Sua preparação ganha força quando o plano vira prática.',
+    'O melhor momento para recuperar o ritmo é o próximo minuto.',
+    'A matéria difícil não define seu limite; revela seu próximo treino.',
+    'Um pouco todos os dias deixa de ser pouco depois de algum tempo.',
+    'A constância faz parecer inevitável aquilo que antes parecia impossível.',
+    'Estude para entender; a memória seguirá o caminho da compreensão.',
+    'O hábito protege seu objetivo nos dias em que a emoção oscila.',
+    'Cada questão resolvida treina conhecimento, atenção e decisão.',
+    'A pausa certa conserva energia; o retorno certo conserva o sonho.',
+    'Progresso real é conseguir hoje aquilo que ontem exigia mais esforço.',
+    'Não tema recomeçar: você recomeça com tudo o que já aprendeu.',
+    'Faça desta sessão uma evidência de que você leva seu objetivo a sério.',
+    'Sua disciplina de hoje pode ser a tranquilidade do dia da prova.',
+    'Mais importante que estudar muito uma vez é voltar muitas vezes.',
+    'O caminho fica mais nítido quando você cumpre a próxima tarefa.'
+].map(texto => ({ texto, autor: 'King Master' }));
+
+function embaralharFrasesMotivacionais() {
+    const indices = FRASES_MOTIVACIONAIS.map((_, indice) => indice);
+    for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    if (indices.length > 1 && indices[0] === appData.ultimaFraseMotivacional) {
+        [indices[0], indices[1]] = [indices[1], indices[0]];
+    }
+    return indices;
+}
+
+function mostrarFraseMotivacional() {
+    const fraseElemento = document.getElementById('frase-motivacional');
+    const autorElemento = document.getElementById('frase-motivacional-autor');
+    if (!fraseElemento || !autorElemento || !FRASES_MOTIVACIONAIS.length) return;
+
+    let fila = appData.frasesMotivacionaisFila.filter(indice => Number.isInteger(indice) && FRASES_MOTIVACIONAIS[indice]);
+    if (!fila.length) fila = embaralharFrasesMotivacionais();
+    if (fila.length > 1 && fila[0] === appData.ultimaFraseMotivacional) {
+        [fila[0], fila[1]] = [fila[1], fila[0]];
+    }
+
+    const indice = fila.shift();
+    const frase = FRASES_MOTIVACIONAIS[indice];
+    fraseElemento.textContent = frase.texto;
+    autorElemento.textContent = `— ${frase.autor}`;
+    appData.frasesMotivacionaisFila = fila;
+    appData.ultimaFraseMotivacional = indice;
+    localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
+}
+
 function showSection(sectionId) {
+    fecharMenuMovel();
+    document.getElementById('settingsPanel')?.classList.remove('active');
+    document.getElementById('settingsToggleBtn')?.setAttribute('aria-expanded', 'false');
     document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
     document.querySelectorAll('.menu-btn:not(.toggle-btn)').forEach(b => { 
         b.classList.remove('active'); 
@@ -160,14 +218,34 @@ function showSection(sectionId) {
     
     if(sectionId === 'historico') renderizarHistorico();
     if(sectionId === 'planejamento') renderizarCiclo();
-    if(sectionId === 'mapa-progresso') renderizarMapaProgresso();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
+    if(sectionId === 'revisoes') renderizarRevisoes();
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
+    if(sectionId === 'perfil') renderGamificacao();
 }
 
-function toggleSettings() { document.getElementById('settingsPanel').classList.toggle('active'); }
+function toggleSettings() {
+    const painel = document.getElementById('settingsPanel');
+    const botao = document.getElementById('settingsToggleBtn');
+    const aberto = painel.classList.toggle('active');
+    if (aberto) fecharMenuMovel();
+    botao?.setAttribute('aria-expanded', String(aberto));
+    if (aberto) syncSettingsUI();
+}
+
+function syncSettingsUI() {
+    const escuro = document.documentElement.getAttribute('data-theme') === 'dark';
+    const texto = document.getElementById('themeToggleText');
+    const dica = document.getElementById('themeToggleHint');
+    const botao = document.getElementById('themeToggleBtn');
+    const seletor = document.getElementById('colorPicker');
+    if (texto) texto.textContent = escuro ? 'Modo claro' : 'Modo escuro';
+    if (dica) dica.textContent = escuro ? 'Usar interface clara' : 'Usar interface escura';
+    if (botao) botao.classList.toggle('is-dark', escuro);
+    if (seletor) seletor.value = appData.themeColor || '#007aff';
+}
 
 function previewTheme(hex) { 
     hex = hex.replace('#', ''); 
@@ -182,6 +260,7 @@ function setTheme(hex, rgb) {
     appData.themeColor = hex; 
     appData.themeColorRgb = rgb; 
     saveAppData(); 
+    syncSettingsUI();
 }
 
 function handleColorPicker(hex) { 
@@ -195,11 +274,55 @@ function toggleDarkMode() {
     html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); 
     appData.darkMode = html.getAttribute('data-theme') === 'dark'; 
     saveAppData(); 
+    syncSettingsUI();
 }
 
+function syncVisualModeControl() {
+    const isFuturistic = appData.visualMode !== 'classic';
+    const control = document.getElementById('visualModeSwitch');
+    const label = document.getElementById('visualModeLabel');
+    if (control) control.setAttribute('aria-checked', String(isFuturistic));
+    if (label) label.textContent = isFuturistic ? 'Visual futurista' : 'Visual clássico';
+}
+
+function toggleVisualMode() {
+    appData.visualMode = appData.visualMode === 'classic' ? 'futuristic' : 'classic';
+    document.documentElement.setAttribute('data-visual', appData.visualMode);
+    saveAppData();
+    syncVisualModeControl();
+    showToast(appData.visualMode === 'classic' ? 'Visual clássico ativado.' : 'Visual futurista ativado.');
+}
+
+// ==========================================
+// CONTAGEM REGRESSIVA ENEM
+// ==========================================
+function atualizarContagemEnem() {
+    // 📅 ALTERE A DATA DO ENEM AQUI (Formato: YYYY-MM-DDTHH:MM:00)
+    const dataEnem = new Date('2026-11-08T13:00:00');
+    
+    const hoje = new Date();
+    const diffTime = Math.max(0, dataEnem - hoje);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const countdownEl = document.getElementById('enem-countdown');
+    
+    if (countdownEl) {
+        if (diffDays === 0 && hoje.getDate() === dataEnem.getDate() && hoje.getMonth() === dataEnem.getMonth()) {
+            countdownEl.textContent = "É HOJE!";
+        } else if (diffDays === 0) {
+            countdownEl.textContent = "Concluído";
+        } else {
+            countdownEl.textContent = `${diffDays} DIAS`;
+        }
+    }
+}
+
+
+// ==========================================
+// LÓGICA DE MODAIS E EXCLUSÕES
+// ==========================================
 let itemToDelete = null, deleteType = '';
 
-function fecharModal(id) { document.getElementById(id).classList.remove('active'); }
+function fecharModal(id) { document.getElementById(id)?.classList.remove('active'); }
 
 function abrirModalDeletar(tipo, id, titulo, msg) { 
     itemToDelete = id; 
@@ -244,7 +367,6 @@ function confirmarDelecao() {
         appData.historyItems = appData.historyItems.filter(i => i.id !== id); 
         saveAppData(); 
         renderizarHistorico(); 
-        showToast('🗑️ Sessão apagada e gráficos recalculados!'); 
     }
     else if (tipo === 'clearCycle') { 
         appData.cycleItems = []; 
@@ -271,6 +393,11 @@ function confirmarDelecao() {
         saveAppData(); renderizarRedacoes(); 
         showToast('🗑️ Redação removida do histórico!'); 
     }
+    else if (tipo === 'revisao') {
+        appData.revisoesItems = appData.revisoesItems.filter(i => i.id !== id);
+        saveAppData(); renderizarRevisoes();
+        showToast('🗑️ Revisão removida!');
+    }
 }
 
 function showToast(msg, isError = false) {
@@ -285,11 +412,287 @@ function showToast(msg, isError = false) {
 const formatShortTime = sec => sec === 0 ? '0m' : (sec >= 3600 ? `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m` : `${Math.floor((sec % 3600) / 60)}m`);
 const formatHistoryTime = sec => `${Math.floor(sec / 3600).toString().padStart(2, '0')}:${Math.floor((sec % 3600) / 60).toString().padStart(2, '0')}:${(sec % 60).toString().padStart(2, '0')}`;
 
+function dataLocalISO(data = new Date()) {
+    return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, '0')}-${String(data.getDate()).padStart(2, '0')}`;
+}
+
+function dataISOParaLocal(valor) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(valor || '')) return null;
+    const [ano, mes, dia] = valor.split('-').map(Number);
+    const data = new Date(ano, mes - 1, dia);
+    return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function dataHistoricoISO(item) {
+    if (item.dataISO && dataISOParaLocal(item.dataISO)) return item.dataISO;
+    const partes = String(item.dataChave || '').match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (partes) {
+        // Os registos antigos guardavam janeiro como mês 0. Mantemos a compatibilidade sem alterar o histórico.
+        return dataLocalISO(new Date(Number(partes[1]), Number(partes[2]), Number(partes[3])));
+    }
+    const dataId = new Date(Number(item.id));
+    return Number.isNaN(dataId.getTime()) ? '' : dataLocalISO(dataId);
+}
+
+function obterDiasDeEstudo() {
+    return new Set(appData.historyItems.filter(item => (item.tempoSegundos || 0) > 0).map(dataHistoricoISO).filter(Boolean));
+}
+
+function calcularSequenciaAtual() {
+    const estudados = obterDiasDeEstudo();
+    const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
+    let cursor = new Date(hoje);
+    let sequencia = 0;
+    for (let i = 0; i < 730; i++) {
+        const iso = dataLocalISO(cursor);
+        const diaSemana = cursor.getDay();
+        const estudou = estudados.has(iso);
+        if (diaSemana === 0) {
+            // Domingo é neutro: não soma nem quebra.
+        } else if (diaSemana === 6) {
+            // Sábado é opcional: soma quando usado, mas a ausência não quebra.
+            if (estudou) sequencia++;
+        } else if (estudou) {
+            sequencia++;
+        } else if (iso !== dataLocalISO(hoje)) {
+            break;
+        }
+        cursor.setDate(cursor.getDate() - 1);
+    }
+    return sequencia;
+}
+
+function criarMapaSequencias() {
+    const diasEstudados = obterDiasDeEstudo();
+    const mapa = {};
+    if (!diasEstudados.size) return mapa;
+    const datas = [...diasEstudados].map(dataISOParaLocal).filter(Boolean).sort((a, b) => a - b);
+    const cursor = new Date(datas[0]); cursor.setHours(12, 0, 0, 0);
+    const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
+    const limite = new Date(Math.max(hoje.getTime(), datas[datas.length - 1].getTime()));
+    let sequencia = 0;
+    while (cursor <= limite) {
+        const iso = dataLocalISO(cursor);
+        const estudou = diasEstudados.has(iso);
+        if (cursor.getDay() === 0) {
+            // Domingo neutro.
+        } else if (cursor.getDay() === 6) {
+            if (estudou) sequencia++;
+        } else if (estudou) {
+            sequencia++;
+        } else if (iso !== dataLocalISO(hoje)) {
+            sequencia = 0;
+        }
+        mapa[iso] = sequencia;
+        cursor.setDate(cursor.getDate() + 1);
+    }
+    return mapa;
+}
+
+function multiplicadorPorSequencia(dias) {
+    if (dias >= 30) return 2;
+    if (dias >= 15) return 1.5;
+    if (dias >= 7) return 1.25;
+    if (dias >= 3) return 1.1;
+    return 1;
+}
+
+function nomeDoMultiplicador(dias) {
+    if (dias >= 30) return 'Poder Absoluto';
+    if (dias >= 15) return 'Modo Berserk';
+    if (dias >= 7) return 'Bônus de 25%';
+    if (dias >= 3) return 'Bônus de 10%';
+    return 'XP Base';
+}
+
+const MARCOS_NIVEL = [
+    { nivel: 1, xp: 0, titulo: 'Genin do Foco' },
+    { nivel: 2, xp: 1500, titulo: 'Chunin' },
+    { nivel: 4, xp: 4500, titulo: 'Caçador de Oni' },
+    { nivel: 6, xp: 9000, titulo: 'Gear Second' },
+    { nivel: 8, xp: 15000, titulo: 'Kaioken' },
+    { nivel: 12, xp: 30000, titulo: 'Super Saiyajin' },
+    { nivel: 16, xp: 50000, titulo: 'Bankai' },
+    { nivel: 20, xp: 75000, titulo: 'Expansão de Domínio' },
+    { nivel: 25, xp: 115000, titulo: 'Modo Sábio' },
+    { nivel: 30, xp: 165000, titulo: 'Oito Portões Internos' },
+    { nivel: 35, xp: 225000, titulo: 'Gear 5 / Sol da Libertação' },
+    { nivel: 40, xp: 300000, titulo: 'Monarca das Sombras' },
+    { nivel: 45, xp: 400000, titulo: 'Instinto Superior' },
+    { nivel: 50, xp: 520000, titulo: 'Entidade Absoluta do ENEM' }
+];
+
+function criarLimitesDeNivel() {
+    const limites = Array(51).fill(0);
+    for (let indice = 0; indice < MARCOS_NIVEL.length - 1; indice++) {
+        const atual = MARCOS_NIVEL[indice];
+        const proximo = MARCOS_NIVEL[indice + 1];
+        for (let nivel = atual.nivel; nivel <= proximo.nivel; nivel++) {
+            const progresso = (nivel - atual.nivel) / (proximo.nivel - atual.nivel);
+            limites[nivel] = Math.round(atual.xp + ((proximo.xp - atual.xp) * progresso));
+        }
+    }
+    return limites;
+}
+
+const LIMITES_NIVEL = criarLimitesDeNivel();
+const formatarNumero = valor => Math.round(valor).toLocaleString('pt-BR');
+
+function obterNivelAtual(xp) {
+    let nivel = 1;
+    for (let candidato = 2; candidato <= 50; candidato++) {
+        if (xp >= LIMITES_NIVEL[candidato]) nivel = candidato;
+        else break;
+    }
+    return nivel;
+}
+
+function obterTituloAtual(nivel) {
+    return [...MARCOS_NIVEL].reverse().find(marco => nivel >= marco.nivel)?.titulo || MARCOS_NIVEL[0].titulo;
+}
+
+function obterLigaAtual(nivel) {
+    if (nivel >= 50) return { nome: 'Liga Entidade', classe: 'league-entity' };
+    if (nivel >= 45) return { nome: 'Mestres do Conhecimento', classe: 'league-master' };
+    if (nivel >= 40) return { nome: 'Liga Diamante', classe: 'league-diamond' };
+    if (nivel >= 30) return { nome: 'Liga Esmeralda', classe: 'league-emerald' };
+    if (nivel >= 20) return { nome: 'Liga Ouro', classe: 'league-gold' };
+    if (nivel >= 10) return { nome: 'Liga Prata', classe: 'league-silver' };
+    return { nome: 'Liga Bronze', classe: 'league-bronze' };
+}
+
+function registrarBonusLoginDiario() {
+    const hoje = dataLocalISO();
+    if (!appData.xpLoginDates.includes(hoje)) {
+        appData.xpLoginDates.push(hoje);
+        localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
+    }
+}
+
+function calcularGamificacao() {
+    const xpBasePorDia = {};
+    const adicionar = (data, valor) => {
+        if (!data || !Number.isFinite(valor) || valor <= 0) return;
+        xpBasePorDia[data] = (xpBasePorDia[data] || 0) + valor;
+    };
+    appData.historyItems.forEach(item => adicionar(dataHistoricoISO(item), ((item.tempoSegundos || 0) / 60) * 7));
+    appData.simuladosItems.forEach(item => adicionar(item.date, (item.acertos || 0) * 30));
+    appData.redacaoItems.forEach(item => adicionar(item.date, 1000));
+    appData.xpLoginDates.forEach(data => adicionar(data, 150));
+
+    const mapaSequencias = criarMapaSequencias();
+    const xpTotal = Math.min(520000, Math.round(Object.entries(xpBasePorDia).reduce((total, [data, base]) => {
+        return total + Math.round(base * multiplicadorPorSequencia(mapaSequencias[data] || 0));
+    }, 0)));
+    const nivel = obterNivelAtual(xpTotal);
+    const sequencia = calcularSequenciaAtual();
+    const liga = obterLigaAtual(nivel);
+    return { xpTotal, nivel, sequencia, liga, titulo: obterTituloAtual(nivel), multiplicador: multiplicadorPorSequencia(sequencia) };
+}
+
+function calcularEstatisticasGlobais() {
+    let acertos = 0, total = 0, topicos = 0;
+    appData.cycleItems.forEach(materia => {
+        acertos += materia.acertos || 0;
+        total += (materia.acertos || 0) + (materia.erros || 0);
+        topicos += (materia.topicos || []).filter(topico => topico.concluido).length;
+    });
+    appData.simuladosItems.forEach(simulado => {
+        acertos += simulado.acertos || 0;
+        total += simulado.total || ((simulado.acertos || 0) + (simulado.erros || 0));
+    });
+    return { topicos, taxa: total ? Math.round((acertos / total) * 100) : 0 };
+}
+
+function aplicarFotoPerfil() {
+    const imagem = document.getElementById('profileAvatarImage');
+    if (!imagem) return;
+    if (appData.profilePhoto) {
+        imagem.src = appData.profilePhoto;
+        imagem.classList.add('has-photo');
+    } else {
+        imagem.removeAttribute('src');
+        imagem.classList.remove('has-photo');
+    }
+}
+
+function alterarFotoPerfil(event) {
+    const input = event.target;
+    const arquivo = input.files?.[0];
+    if (!arquivo) return;
+    if (!arquivo.type.startsWith('image/')) {
+        showToast('Escolha um arquivo de imagem válido.', true);
+        input.value = '';
+        return;
+    }
+    if (arquivo.size > 15 * 1024 * 1024) {
+        showToast('A imagem deve ter no máximo 15 MB.', true);
+        input.value = '';
+        return;
+    }
+
+    const enderecoTemporario = URL.createObjectURL(arquivo);
+    const imagemOriginal = new Image();
+    imagemOriginal.onload = () => {
+        const lado = Math.min(imagemOriginal.naturalWidth, imagemOriginal.naturalHeight);
+        const origemX = (imagemOriginal.naturalWidth - lado) / 2;
+        const origemY = (imagemOriginal.naturalHeight - lado) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = 512;
+        canvas.height = 512;
+        const contexto = canvas.getContext('2d');
+        contexto.drawImage(imagemOriginal, origemX, origemY, lado, lado, 0, 0, 512, 512);
+        appData.profilePhoto = canvas.toDataURL('image/jpeg', 0.86);
+        localStorage.setItem('qg_pedro_data', JSON.stringify(appData));
+        aplicarFotoPerfil();
+        showToast('Foto de perfil atualizada!');
+        URL.revokeObjectURL(enderecoTemporario);
+        input.value = '';
+    };
+    imagemOriginal.onerror = () => {
+        URL.revokeObjectURL(enderecoTemporario);
+        input.value = '';
+        showToast('Não foi possível abrir essa imagem.', true);
+    };
+    imagemOriginal.src = enderecoTemporario;
+}
+
+function renderGamificacao() {
+    const dados = calcularGamificacao();
+    const estatisticas = calcularEstatisticasGlobais();
+    const proximoNivelXp = dados.nivel < 50 ? LIMITES_NIVEL[dados.nivel + 1] : 520000;
+    const inicioNivelXp = LIMITES_NIVEL[dados.nivel];
+    const progressoNivel = dados.nivel >= 50 ? 100 : Math.max(0, Math.min(100, ((dados.xpTotal - inicioNivelXp) / (proximoNivelXp - inicioNivelXp)) * 100));
+    const progressoTotal = Math.min(100, (dados.xpTotal / 520000) * 100);
+    const colocarTexto = (id, texto) => { const el = document.getElementById(id); if (el) el.textContent = texto; };
+    const colocarLargura = (id, valor) => { const el = document.getElementById(id); if (el) el.style.width = `${valor}%`; };
+
+    colocarTexto('nav-xp-level', `Nível ${dados.nivel}`);
+    colocarTexto('nav-xp-streak', `🔥 ${dados.sequencia}`);
+    colocarLargura('nav-xp-progress', progressoNivel);
+    colocarTexto('profileLeagueName', dados.liga.nome);
+    colocarTexto('profileLevelTitle', `Lvl ${dados.nivel} • ${dados.titulo}`);
+    colocarTexto('profileNextLevel', dados.nivel >= 50 ? 'Nível máximo alcançado' : `Próximo nível: ${formatarNumero(proximoNivelXp)} XP`);
+    colocarTexto('profileXpText', `${formatarNumero(dados.xpTotal)} / 520.000 XP`);
+    colocarTexto('profileXpPercent', `${progressoTotal.toFixed(1).replace('.', ',')}%`);
+    colocarLargura('profileXpBar', progressoTotal);
+    colocarTexto('profileMultiplierBadge', `${dados.multiplicador.toFixed(2).replace(/0$/, '').replace('.', ',')}x • ${nomeDoMultiplicador(dados.sequencia)}`);
+    colocarTexto('profileStreak', `${dados.sequencia} ${dados.sequencia === 1 ? 'dia' : 'dias'}`);
+    colocarTexto('profileTotalTime', formatShortTime(appData.totalStudySeconds || 0));
+    colocarTexto('profileTopics', estatisticas.topicos);
+    colocarTexto('profileAccuracy', `${estatisticas.taxa}%`);
+    const frame = document.getElementById('profileLeagueFrame');
+    if (frame) frame.className = `league-frame ${dados.liga.classe}`;
+    aplicarFotoPerfil();
+    const perfil = document.getElementById('perfil');
+    if (perfil) perfil.dataset.league = dados.liga.classe;
+}
+
 function updateDashboardStats() {
-    if(document.getElementById('top-time')) document.getElementById('top-time').textContent = formatShortTime(appData.totalStudySeconds);
+    const tempoSemana = appData.weeklyChart.reduce((total, segundos) => total + (segundos || 0), 0);
+    if(document.getElementById('top-time')) document.getElementById('top-time').textContent = formatShortTime(tempoSemana);
     
     let totalAcertos = 0, totalErros = 0, totalQuestoes = 0;
-    let topicosOk = 0, topicosTotal = 0;
 
     appData.cycleItems.forEach(mat => {
         if(mat.acertos === undefined) mat.acertos = 0;
@@ -307,23 +710,9 @@ function updateDashboardStats() {
         totalQuestoes += (sim.total || (sAcertos + sErros > 0 ? sAcertos + sErros : 1));
     });
 
-    if (typeof MAPA_PROGRESSO_DATA !== 'undefined' && appData.mapaProgressoState) {
-        MAPA_PROGRESSO_DATA.forEach(sub => {
-            sub.topics.forEach(top => {
-                topicosTotal++;
-                const state = appData.mapaProgressoState[sub.id]?.[top.name];
-                if (state && state.t && state.p && state.d) topicosOk++;
-            });
-        });
-    }
-
     if(document.getElementById('top-acertos')) document.getElementById('top-acertos').textContent = `${totalAcertos} Acertos`;
     if(document.getElementById('top-erros')) document.getElementById('top-erros').textContent = `${totalErros} Erros`;
     if(document.getElementById('top-perc')) document.getElementById('top-perc').textContent = totalQuestoes > 0 ? `${Math.round((totalAcertos/totalQuestoes)*100)}%` : '0%';
-    if(document.getElementById('top-topicos-ok')) document.getElementById('top-topicos-ok').textContent = `${topicosOk} Concluídos`;
-    if(document.getElementById('top-topicos-pendentes')) document.getElementById('top-topicos-pendentes').textContent = `${topicosTotal - topicosOk} Pendentes`;
-    if(document.getElementById('top-progresso-perc')) document.getElementById('top-progresso-perc').textContent = topicosTotal > 0 ? `${Math.round((topicosOk/topicosTotal)*100)}%` : '0%';
-
     const chart = document.getElementById('weeklyChart'); 
     if(chart) {
         chart.innerHTML = '';
@@ -335,33 +724,38 @@ function updateDashboardStats() {
     }
     renderStreak();
     atualizarLinhaMediaSedilhadDynamica();
+    renderDashboardRevisoes();
+    renderGamificacao();
 }
 
 function renderStreak() {
     const streakRow = document.getElementById('streak-row');
     if(!streakRow) return;
-    
+    const diasEstudados = obterDiasDeEstudo();
+    const hojeISO = dataLocalISO();
     let html = '';
-    let diasSeguidos = 0;
-    let contandoStreak = true;
-
     for(let i = 29; i >= 0; i--) {
-        let d = new Date();
+        const d = new Date();
+        d.setHours(12, 0, 0, 0);
         d.setDate(d.getDate() - i);
-        let strData = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-        let estudou = appData.historyItems.some(h => h.dataChave === strData);
-        
-        if(estudou) {
-            html += `<div class="streak-dot ok">✓</div>`;
-            if(i === 0 || contandoStreak) diasSeguidos++;
+        const iso = dataLocalISO(d);
+        const estudou = diasEstudados.has(iso);
+        const rotulo = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        if (d.getDay() === 0) {
+            html += `<div class="streak-dot ignored" title="${rotulo}: domingo não conta">•</div>`;
+        } else if (d.getDay() === 6 && !estudou) {
+            html += `<div class="streak-dot optional" title="${rotulo}: sábado opcional">○</div>`;
+        } else if (estudou) {
+            html += `<div class="streak-dot ok" title="${rotulo}: estudou">✓</div>`;
+        } else if (iso === hojeISO) {
+            html += `<div class="streak-dot pending" title="${rotulo}: hoje ainda está em aberto">·</div>`;
         } else {
-            html += `<div class="streak-dot fail">×</div>`;
-            if(i === 0) contandoStreak = false; 
+            html += `<div class="streak-dot fail" title="${rotulo}: sem estudo">×</div>`;
         }
     }
-    
     streakRow.innerHTML = html;
-    document.getElementById('constancia-texto').innerHTML = `Encontra-se com uma constância de <b>${diasSeguidos} dias</b> seguidos.`;
+    const sequencia = calcularSequenciaAtual();
+    document.getElementById('constancia-texto').innerHTML = `Constância atual: <b>${sequencia} ${sequencia === 1 ? 'dia' : 'dias'}</b>. Domingo não conta e sábado é opcional.`;
 }
 
 function atualizarLinhaMediaSedilhadDynamica() {
@@ -387,7 +781,7 @@ function atualizarLinhaMediaSedilhadDynamica() {
 let timerInterval, isRunning = false, currentMode = 'estudo', currentSeconds = 0, descansoTempoAtual = 5;
 let lastTickTime = 0;
 let alarmTriggered = false;
-const alarmAudio = document.getElementById('alarmAudio'), stopAlarmBtn = document.getElementById('stopAlarmBtn'), timeDisplay = document.getElementById('timeDisplay'), playPauseBtn = document.getElementById('playPauseBtn'), progressRing = document.getElementById('progressRing'), circ = 628;
+const alarmAudio = document.getElementById('alarmAudio'), stopAlarmBtn = document.getElementById('stopAlarmBtn'), timeDisplay = document.getElementById('timeDisplay'), playPauseBtn = document.getElementById('playPauseBtn'), progressRing = document.getElementById('progressRing'), circ = 2 * Math.PI * 135;
 if(progressRing) progressRing.style.strokeDasharray = circ;
 
 const getTargetSeconds = () => currentMode === 'descanso' ? descansoTempoAtual * 60 : ((parseInt(document.getElementById('inputHours').value) || 0) * 3600) + ((parseInt(document.getElementById('inputMinutes').value) || 0) * 60) + (parseInt(document.getElementById('inputSeconds').value) || 0);
@@ -426,9 +820,10 @@ function registrarSessao(segundos) {
         if (idx > -1) { nome = appData.cycleItems[idx].subject; cor = appData.cycleItems[idx].color; tipo = appData.cycleItems[idx].type || 'Teórica'; appData.cycleItems[idx].executedMin = (appData.cycleItems[idx].executedMin || 0) + (segundos / 60); }
     } else { cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)]; }
     
-    appData.historyItems.push({ id: Date.now(), dataChave: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, diaNum: d.getDate().toString().padStart(2, '0'), mesAno: `${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`, diaStr: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][d.getDay()], materia: nome, assunto: '', tempoSegundos: segundos, cor: cor, tipo: tipo, comentario: '' });
+    appData.historyItems.push({ id: Date.now(), dataISO: dataLocalISO(d), dataChave: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, diaNum: d.getDate().toString().padStart(2, '0'), mesAno: `${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`, diaStr: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][d.getDay()], materia: nome, assunto: '', tempoSegundos: segundos, cor: cor, tipo: tipo, comentario: '' });
     saveAppData(); renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico(); 
     showToast('✅ Sessão guardada no histórico!');
+    mostrarFraseMotivacional();
 }
 
 function toggleTimer() {
@@ -569,15 +964,18 @@ function limparSelecaoPresets() { document.querySelectorAll('.color-preset').for
 function selecionarCorPreset(el, cor) { limparSelecaoPresets(); el.classList.add('selected'); document.getElementById('cycleColor').value = cor; }
 
 function abrirModalCiclo() { 
-    document.getElementById('cycleModalTitle').textContent = "Adicionar Matéria"; 
-    document.getElementById('cycleEditId').value = ""; 
-    document.getElementById('cycleSubject').value = "";
-    document.getElementById('cycleDuration').value = "60";
-    document.getElementById('cycleDuration').disabled = false;
-    document.getElementById('cycleLivreCheck').checked = false;
+    const modal = document.getElementById('cycleModal');
+    const form = document.getElementById('formAddCycle');
+    if (!modal || !form) return showToast('Não foi possível abrir o cadastro de matéria.', true);
+    form.reset();
+    document.getElementById('cycleModalTitle').textContent = "Adicionar Matéria";
+    document.getElementById('cycleEditId').value = "";
+    document.getElementById('cycleColor').value = '#007aff';
     const firstPreset = document.querySelector('.color-preset');
-    if(firstPreset) firstPreset.click(); 
-    document.getElementById('cycleModal').classList.add('active'); 
+    limparSelecaoPresets();
+    if(firstPreset) firstPreset.classList.add('selected');
+    modal.classList.add('active');
+    setTimeout(() => document.getElementById('cycleSubject')?.focus(), 50);
 }
 
 function editarMateriaCiclo(id) {
@@ -587,9 +985,6 @@ function editarMateriaCiclo(id) {
     document.getElementById('cycleEditId').value = mat.id;
     document.getElementById('cycleSubject').value = mat.subject;
     document.getElementById('cycleType').value = mat.type || 'Teórica';
-    document.getElementById('cycleDuration').value = mat.targetMin > 0 ? mat.targetMin : 60;
-    document.getElementById('cycleLivreCheck').checked = mat.targetMin <= 0;
-    document.getElementById('cycleDuration').disabled = mat.targetMin <= 0;
     document.getElementById('cycleColor').value = mat.color;
     limparSelecaoPresets();
     document.getElementById('cycleModal').classList.add('active');
@@ -598,101 +993,40 @@ function editarMateriaCiclo(id) {
 function salvarMateriaCiclo(e) {
     e.preventDefault(); 
     const idEdit = document.getElementById('cycleEditId').value;
-    const color = document.getElementById('cycleColor').value;
-    const subject = document.getElementById('cycleSubject').value;
+    const color = document.getElementById('cycleColor').value || '#007aff';
+    const subject = document.getElementById('cycleSubject').value.trim();
     const type = document.getElementById('cycleType').value;
-    const isLivre = document.getElementById('cycleLivreCheck').checked;
-    const duration = isLivre ? 0 : (parseInt(document.getElementById('cycleDuration').value) || 0);
+    if (!subject) return showToast('Digite o nome da matéria.', true);
+    const duplicada = appData.cycleItems.some(item => item.id != idEdit && (item.subject || '').trim().toLocaleLowerCase('pt-BR') === subject.toLocaleLowerCase('pt-BR'));
+    if (duplicada) return showToast('Essa matéria já está cadastrada.', true);
     
     if (idEdit) { 
         const idx = appData.cycleItems.findIndex(i => i.id == idEdit); 
         if (idx > -1) { 
-            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, targetMin: duration }; 
+            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, targetMin: 0 }; 
         } 
     } else { 
-        appData.cycleItems.push({ id: Date.now(), color, subject, type, targetMin: duration, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 }); 
+        appData.cycleItems.push({ id: Date.now(), color, subject, type, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 }); 
     }
-    saveAppData(); renderizarCiclo(); fecharModal('cycleModal'); showToast('📚 Matéria guardada!');
-}
-
-function hoverDonut(sub, time, col) { const t = document.getElementById('cycleDonutTotal'); if(t) { t.textContent = time; t.style.color = col; } const l = document.getElementById('cycleDonutLabel'); if(l) l.textContent = sub; }
-
-function resetDonutHover() { 
-    const t = document.getElementById('cycleDonutTotal');
-    const l = document.getElementById('cycleDonutLabel');
-    if(!t || !l) return;
-    const tot = appData.cycleItems.reduce((acc, c) => acc + c.targetMin, 0); 
-    t.textContent = `${Math.floor(tot/60)}h ${tot%60}m`; 
-    t.style.color = 'var(--text-main)'; 
-    l.textContent = 'Total da Semana'; 
-}
-
-function ajustarMetaDiaria(valor) {
-    appData.dailyGoalMinutes = parseInt(valor) || 240;
-    saveAppData();
+    saveAppData(); renderizarCiclo(); renderizarRevisoes(); fecharModal('cycleModal'); showToast('📚 Matéria guardada!');
 }
 
 function renderizarCiclo() {
     atualizarSeletorDeMaterias();
-    
     const grid = document.getElementById('disciplinasGrid');
-    const totalMat = document.getElementById('cycleTotalMatters');
-    const progText = document.getElementById('cycleProgressText');
-    const progBar = document.getElementById('cycleProgressBar');
-    const donutSvg = document.getElementById('cycleDonutSvg');
-    const inputMeta = document.getElementById('inputMetaDiaria');
-
     if(!grid) return;
-    if(inputMeta) inputMeta.value = appData.dailyGoalMinutes || 240;
 
     if(appData.cycleItems.length === 0) { 
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);background:var(--card-bg);border-radius:16px;border:1px dashed var(--border-color);">Nenhuma matéria registada. Comece criando o seu ciclo.</div>'; 
-        if(totalMat) totalMat.textContent = 0; 
-        if(progText) progText.innerHTML = `<span>0m executados</span><span>0m meta</span>`; 
-        if(progBar) progBar.style.width = `0%`; 
-        resetDonutHover(); 
-        if(donutSvg) donutSvg.innerHTML = ''; 
+        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);background:var(--card-bg);border-radius:16px;border:1px dashed var(--border-color);">Nenhuma matéria registada. Comece adicionando a primeira matéria.</div>'; 
         return; 
     }
-    
-    let totalTar = 0, htmlGrid = '', svgHtml = '', offset = 0, circSvg = 2 * Math.PI * 100;
-    appData.cycleItems.forEach(i => totalTar += i.targetMin);
 
-    appData.cycleItems.forEach(i => {
+    grid.innerHTML = appData.cycleItems.map(i => {
         let exec = i.executedMin || 0; 
-        let isLivre = i.targetMin <= 0;
-        let pct = isLivre ? 100 : Math.min(100, (exec / i.targetMin) * 100);
-        
         let txtExec = exec >= 60 ? `${Math.floor(exec/60)}h${Math.floor(exec%60).toString().padStart(2,'0')}m` : `${Math.floor(exec%60)}m`;
-        let txtTar = isLivre ? 'Livre' : (i.targetMin >= 60 ? `${Math.floor(i.targetMin/60)}h${(i.targetMin%60).toString().padStart(2,'0')}m` : `${i.targetMin%60}m`);
         let concluidos = i.topicos ? i.topicos.filter(t => t.concluido).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
-
-        htmlGrid += `<div class="disc-card" style="border-left-color: ${i.color}; cursor: pointer;" onclick="abrirModalAssuntos(${i.id})"><div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;"><div><div class="disc-title" style="margin-bottom: 2px;">${i.subject}</div><span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">${i.type || 'Teórica'} • Semanal: ${txtTar}</span></div><div style="display: flex; gap: 12px;"><i onclick="event.stopPropagation(); editarMateriaCiclo(${i.id})" style="cursor: pointer; opacity: 0.4; font-style: normal; font-size: 1.1rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'" title="Editar Matéria">✏️</i><i onclick="event.stopPropagation(); abrirModalDeletar('cycle', ${i.id}, 'Apagar Matéria?', 'Isto vai excluir a matéria e tópicos.')" style="cursor: pointer; opacity: 0.4; font-style: normal; font-size: 1.1rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.4'" title="Apagar Matéria">🗑️</i></div></div><div class="cycle-progress-bg" style="height: 4px; margin-bottom: 15px; border-radius: 2px;"><div class="cycle-progress-fill" style="width: ${pct}%; background: ${isLivre ? 'var(--text-muted)' : i.color}; opacity: ${isLivre ? 0.3 : 1}; border-radius: 2px;"></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color: ${i.color};">${txtExec}</span><span class="ds-lbl">Tempo Real</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div></div>`;
-        
-        if(!isLivre) {
-            let slice = totalTar > 0 ? (i.targetMin / totalTar) * circSvg : 0;
-            svgHtml += `<circle class="donut-slice" cx="140" cy="140" r="100" fill="transparent" stroke="${i.color}" stroke-width="40" stroke-dasharray="${slice} ${circSvg}" stroke-dashoffset="${-offset}" onmouseenter="hoverDonut('${i.subject}', '${txtTar}', '${i.color}')" onmouseleave="resetDonutHover()"></circle>`;
-            offset += slice;
-        }
-    });
-    
-    grid.innerHTML = htmlGrid; 
-    if(donutSvg) donutSvg.innerHTML = svgHtml;
-    if(totalMat) totalMat.textContent = appData.cycleItems.length;
-
-    const d = new Date();
-    const hojeStr = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-    let execHojeSegundos = appData.historyItems.reduce((acc, h) => h.dataChave === hojeStr ? acc + h.tempoSegundos : acc, 0);
-    
-    let execHojeMin = Math.floor(execHojeSegundos / 60);
-    let metaConfig = appData.dailyGoalMinutes || 240; 
-    let pctDiario = Math.min(100, (execHojeMin / metaConfig) * 100);
-    let txtExecHoje = execHojeMin >= 60 ? `${Math.floor(execHojeMin/60)}h ${Math.floor(execHojeMin%60).toString().padStart(2,'0')}m` : `${execHojeMin}m`;
-
-    if(progText) progText.innerHTML = `<span><b style="color:var(--text-main);">${txtExecHoje}</b> estudados hoje</span><span>${metaConfig}m alvo</span>`;
-    if(progBar) progBar.style.width = `${pctDiario}%`; 
-    
-    resetDonutHover();
+        return `<div class="disc-card" style="border-left-color: ${i.color}; cursor: pointer;" onclick="abrirModalAssuntos(${i.id})"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;"><div><div class="disc-title" style="margin-bottom:2px;">${i.subject}</div><span style="font-size:.75rem;color:var(--text-muted);font-weight:600;">${i.type || 'Teórica'}</span></div><div style="display:flex;gap:12px;"><i onclick="event.stopPropagation(); editarMateriaCiclo(${i.id})" style="cursor:pointer;opacity:.4;font-style:normal;font-size:1.1rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.4'" title="Editar Matéria">✏️</i><i onclick="event.stopPropagation(); abrirModalDeletar('cycle', ${i.id}, 'Apagar Matéria?', 'Isto vai excluir a matéria e tópicos.')" style="cursor:pointer;opacity:.4;font-style:normal;font-size:1.1rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.4'" title="Apagar Matéria">🗑️</i></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo Real</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div></div>`;
+    }).join('');
 }
 
 function abrirModalAssuntos(id) {
@@ -714,24 +1048,8 @@ function adicionarTopico(e) { e.preventDefault(); const id = parseInt(document.g
 function toggleTopico(id, tIdx) { 
     const idx = appData.cycleItems.findIndex(m => m.id === id); 
     if (idx > -1) { 
-        const isConcluido = !appData.cycleItems[idx].topicos[tIdx].concluido;
-        appData.cycleItems[idx].topicos[tIdx].concluido = isConcluido; 
-        
-        if(isConcluido) {
-            const hoje = new Date();
-            const d7 = new Date(hoje); d7.setDate(hoje.getDate() + 7);
-            const d30 = new Date(hoje); d30.setDate(hoje.getDate() + 30);
-            
-            const topNome = appData.cycleItems[idx].topicos[tIdx].nome;
-            const matNome = appData.cycleItems[idx].subject;
-            
-            appData.agendaItems.push({ id: Date.now(), title: `Revisão 7d: ${topNome}`, subject: matNome, type: 'Revisão', date: d7.toISOString().split('T')[0], description: 'Revisão espaçada automática gerada pelo sistema.', completed: false });
-            appData.agendaItems.push({ id: Date.now()+1, title: `Revisão 30d: ${topNome}`, subject: matNome, type: 'Revisão', date: d30.toISOString().split('T')[0], description: 'Revisão espaçada automática gerada pelo sistema.', completed: false });
-            
-            showToast('🧠 Revisões de 7 e 30 dias inseridas no Radar!');
-        }
-        
-        saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarAgenda();
+        appData.cycleItems[idx].topicos[tIdx].concluido = !appData.cycleItems[idx].topicos[tIdx].concluido;
+        saveAppData(); renderizarListaAssuntos(id); renderizarCiclo();
     } 
 }
 
@@ -853,112 +1171,6 @@ function renderizarRaioX() {
 
     barElement.innerHTML = barHtml;
     legendElement.innerHTML = legendHtml;
-}
-
-// ==========================================
-// MAPA DE PROGRESSO COMPETITIVO
-// ==========================================
-function getBadgeStyle(type, level) {
-    if(type === 'inc') {
-        if(level === 'Alta' || level === 'Obrigatório') return 'background: rgba(255, 59, 48, 0.15); color: #ff3b30; border: 1px solid rgba(255, 59, 48, 0.3);';
-        if(level === 'Média') return 'background: rgba(255, 149, 0, 0.15); color: #ff9500; border: 1px solid rgba(255, 149, 0, 0.3);';
-        return 'background: rgba(142, 142, 147, 0.15); color: #8e8e93; border: 1px solid rgba(142, 142, 147, 0.3);';
-    } else {
-        if(level === 'Alta') return 'background: rgba(142, 68, 173, 0.15); color: #8e44ad; border: 1px solid rgba(142, 68, 173, 0.3);';
-        if(level === 'Média') return 'background: rgba(0, 122, 255, 0.15); color: #007aff; border: 1px solid rgba(0, 122, 255, 0.3);';
-        return 'background: rgba(52, 199, 89, 0.15); color: #34c759; border: 1px solid rgba(52, 199, 89, 0.3);';
-    }
-}
-
-function renderizarMapaProgresso() {
-    const container = document.getElementById('mapaContainer');
-    const globalPct = document.getElementById('global-mapa-pct');
-    if(!container) return;
-
-    let totalCheckboxes = 0;
-    let checkedCheckboxes = 0;
-    let html = '';
-
-    MAPA_PROGRESSO_DATA.forEach(sub => {
-        let subTotal = sub.topics.length * 3;
-        let subChecked = 0;
-        let topicsHtml = '';
-
-        sub.topics.forEach(top => {
-            const state = appData.mapaProgressoState[sub.id][top.name];
-            if(state.t) { subChecked++; checkedCheckboxes++; }
-            if(state.p) { subChecked++; checkedCheckboxes++; }
-            if(state.d) { subChecked++; checkedCheckboxes++; }
-            totalCheckboxes += 3;
-
-            topicsHtml += `
-            <div class="mapa-topic-row" style="align-items: flex-start; flex-direction: column; gap: 10px;">
-                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                    <div style="display: flex; flex-direction: column; gap: 6px; flex: 1; padding-right: 15px;">
-                        <div class="mapa-topic-name" style="padding: 0; border: none; font-size: 0.9rem;">${top.name}</div>
-                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                            <span style="font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; ${getBadgeStyle('inc', top.inc)}">🎯 INCIDÊNCIA: ${top.inc.toUpperCase()}</span>
-                            <span style="font-size: 0.65rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; ${getBadgeStyle('comp', top.comp)}">🧠 COMPLEXIDADE: ${top.comp.toUpperCase()}</span>
-                        </div>
-                    </div>
-                    <div class="mapa-tpd-group">
-                        <button class="tpd-btn ${state.t ? 'active' : ''}" style="${state.t ? `background:${sub.color};` : ''}" onclick="toggleMapaItem('${sub.id}', '${top.name}', 't', event)" title="Teoria">T</button>
-                        <button class="tpd-btn ${state.p ? 'active' : ''}" style="${state.p ? `background:${sub.color};` : ''}" onclick="toggleMapaItem('${sub.id}', '${top.name}', 'p', event)" title="Prática">P</button>
-                        <button class="tpd-btn ${state.d ? 'active' : ''}" style="${state.d ? `background:${sub.color};` : ''}" onclick="toggleMapaItem('${sub.id}', '${top.name}', 'd', event)" title="Domínio (Revisão)">D</button>
-                    </div>
-                </div>
-            </div>`;
-        });
-
-        let subPct = Math.round((subChecked / subTotal) * 100);
-
-        html += `
-        <div class="mapa-card">
-            <div class="mapa-card-header" onclick="toggleMapaAccordion('${sub.id}')">
-                <div class="mapa-title-area">
-                    <div class="mapa-title" style="color: ${sub.color};">${sub.title}</div>
-                    <div class="mapa-progress-bg"><div class="mapa-progress-fill" style="width: ${subPct}%; background: ${sub.color};"></div></div>
-                </div>
-                <div class="mapa-pct">${subPct}%</div>
-            </div>
-            <div class="mapa-body" id="mapa-body-${sub.id}">
-                ${topicsHtml}
-            </div>
-        </div>`;
-    });
-
-    container.innerHTML = html;
-    
-    let globalPercentage = totalCheckboxes === 0 ? 0 : Math.round((checkedCheckboxes / totalCheckboxes) * 100);
-    if(globalPct) globalPct.textContent = `${globalPercentage}%`;
-}
-
-function toggleMapaAccordion(id) {
-    const body = document.getElementById(`mapa-body-${id}`);
-    if(body) {
-        const isOpen = body.classList.contains('open');
-        document.querySelectorAll('.mapa-body').forEach(b => b.classList.remove('open'));
-        if (!isOpen) {
-            body.classList.add('open');
-        }
-    }
-}
-
-function toggleMapaItem(subId, topicName, type, e) {
-    e.stopPropagation();
-    appData.mapaProgressoState[subId][topicName][type] = !appData.mapaProgressoState[subId][topicName][type];
-    saveAppData();
-    
-    const body = document.getElementById(`mapa-body-${subId}`);
-    const scrollPos = body ? body.scrollTop : 0;
-    
-    renderizarMapaProgresso();
-    
-    const newBody = document.getElementById(`mapa-body-${subId}`);
-    if(newBody) {
-        newBody.classList.add('open');
-        newBody.scrollTop = scrollPos;
-    }
 }
 
 function abrirModalAgenda() {
@@ -1118,6 +1330,7 @@ function abrirModalAgendamento() {
     document.getElementById('formAddAgendamento').reset();
     document.getElementById('agendamentoEditId').value = "";
     document.getElementById('agendamentoModalTitle').textContent = "Novo Compromisso";
+    document.getElementById('agendamentoDateInput').value = new Date().toISOString().split('T')[0];
     document.getElementById('agendamentoModal').classList.add('active');
 }
 
@@ -1154,7 +1367,7 @@ function editarAgendamentoItem(id) {
         document.getElementById('agendamentoTitleInput').value = item.title;
         document.getElementById('agendamentoDateInput').value = item.date;
         document.getElementById('agendamentoTimeInput').value = item.time;
-        document.getElementById('agendamentoTypeInput').value = item.type;
+        document.getElementById('agendamentoTypeInput').value = item.type === 'Treino Físico' ? 'Pessoal' : (item.type === 'Revisão' ? 'Estudo' : item.type);
         document.getElementById('agendamentoDescInput').value = item.description || "";
         document.getElementById('agendamentoModalTitle').textContent = "Editar Compromisso";
         document.getElementById('agendamentoModal').classList.add('active');
@@ -1216,9 +1429,293 @@ function renderizarAgendamento() {
     }
 }
 
-// ==========================================
-// 9. SIMULADOS ENEM E REDAÇÃO
-// ==========================================
+function normalizarRevisaoTexto(valor) {
+    return (valor || '').trim().toLocaleLowerCase('pt-PT');
+}
+
+function escaparRevisaoHtml(valor) {
+    return String(valor || '').replace(/[&<>"']/g, caractere => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    })[caractere]);
+}
+
+function obterTagsSelecionadasFormulario() {
+    return [...document.querySelectorAll('#revisaoTagsSelecao input[type="checkbox"]:checked')].map(input => input.value);
+}
+
+function renderTagsRevisaoSelecionaveis(selecionadas = []) {
+    const container = document.getElementById('revisaoTagsSelecao');
+    if (!container) return;
+    if (!appData.revisaoTags.length) {
+        container.innerHTML = '<span class="revision-tag-empty">Nenhuma tag criada.</span>';
+        return;
+    }
+    container.innerHTML = [...appData.revisaoTags].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(tag => {
+        const segura = escaparRevisaoHtml(tag);
+        return `<label class="revision-tag-option"><input type="checkbox" value="${segura}" ${selecionadas.includes(tag) ? 'checked' : ''}><span>${segura}</span></label>`;
+    }).join('');
+}
+
+function abrirModalRevisao(id = null) {
+    const form = document.getElementById('formAddRevisao');
+    const select = document.getElementById('revisaoMateria');
+    const assunto = document.getElementById('revisaoAssunto');
+    const dataEstudo = document.getElementById('revisaoDataEstudo');
+    const dataAlvo = document.getElementById('revisaoDataAlvo');
+    const aviso = document.getElementById('revisaoSemMaterias');
+    const submit = form.querySelector('button[type="submit"]');
+    const item = id ? appData.revisoesItems.find(revisao => revisao.id === id) : null;
+    const temMaterias = appData.cycleItems.length > 0 || Boolean(item);
+    form.reset();
+    document.getElementById('revisaoModalTitle').textContent = item ? 'Editar Revisão' : 'Nova Revisão';
+    document.getElementById('revisaoEditId').value = item?.id || '';
+    document.getElementById('revisaoOrigem').value = item?.origem || 'manual';
+    const materias = appData.cycleItems.map(materia => materia.subject);
+    if (item?.materia && !materias.includes(item.materia)) materias.unshift(item.materia);
+    select.innerHTML = temMaterias
+        ? materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}">${escaparRevisaoHtml(materia)}</option>`).join('')
+        : '<option value="">Nenhuma matéria cadastrada</option>';
+    if (item) {
+        select.value = item.materia;
+        assunto.value = item.assunto || '';
+        dataEstudo.value = item.dataEstudo || '';
+        dataAlvo.value = item.dataAlvo || '';
+    }
+    select.disabled = !temMaterias;
+    assunto.disabled = !temMaterias;
+    dataEstudo.disabled = !temMaterias;
+    dataAlvo.disabled = !temMaterias;
+    submit.disabled = !temMaterias;
+    aviso.style.display = temMaterias ? 'none' : 'block';
+    atualizarAssuntosRevisao();
+    renderTagsRevisaoSelecionaveis(item?.tags || []);
+    document.getElementById('revisaoModal').classList.add('active');
+}
+
+function atualizarAssuntosRevisao() {
+    const materiaNome = document.getElementById('revisaoMateria')?.value;
+    const materia = appData.cycleItems.find(item => item.subject === materiaNome);
+    const datalist = document.getElementById('revisaoAssuntosOptions');
+    if (!datalist) return;
+    datalist.innerHTML = (materia?.topicos || []).map(topico => `<option value="${escaparRevisaoHtml(topico.nome)}"></option>`).join('');
+}
+
+function salvarRevisao(e) {
+    e.preventDefault();
+    const idEdit = Number(document.getElementById('revisaoEditId').value) || null;
+    if (!appData.cycleItems.length && !idEdit) return;
+    const dados = {
+        materia: document.getElementById('revisaoMateria').value,
+        assunto: document.getElementById('revisaoAssunto').value.trim(),
+        dataEstudo: document.getElementById('revisaoDataEstudo').value,
+        dataAlvo: document.getElementById('revisaoDataAlvo').value,
+        origem: document.getElementById('revisaoOrigem').value || 'manual',
+        tags: obterTagsSelecionadasFormulario(),
+        atualizadoEm: Date.now()
+    };
+    if (idEdit) {
+        const indice = appData.revisoesItems.findIndex(item => item.id === idEdit);
+        if (indice < 0) return;
+        appData.revisoesItems[indice] = { ...appData.revisoesItems[indice], ...dados };
+    } else {
+        appData.revisoesItems.push({ id: Date.now(), ...dados, status: 'pendente', criadoEm: Date.now() });
+    }
+    saveAppData();
+    renderizarRevisoes();
+    fecharModal('revisaoModal');
+    showToast(idEdit ? 'Revisão atualizada.' : 'Revisão adicionada à lista.');
+}
+
+function marcarRevisao(id, novoStatus) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === id);
+    if (!item) return;
+    item.status = novoStatus;
+    item.atualizadoEm = Date.now();
+    if (novoStatus === 'revisado') item.revisadoEm = Date.now();
+    saveAppData();
+    renderizarRevisoes();
+    showToast(novoStatus === 'fraco' ? 'Item voltou ao topo como ainda fraco.' : 'Revisão marcada como concluída.');
+}
+
+function abrirReagendamentoRevisao(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === id);
+    if (!item) return;
+    document.getElementById('reagendarRevisaoId').value = item.id;
+    document.getElementById('reagendarRevisaoResumo').textContent = `${item.materia} • ${item.assunto}`;
+    document.getElementById('reagendarRevisaoData').value = item.dataAlvo || '';
+    document.getElementById('reagendarRevisaoModal').classList.add('active');
+}
+
+function salvarReagendamentoRevisao(e) {
+    e.preventDefault();
+    const id = Number(document.getElementById('reagendarRevisaoId').value);
+    const item = appData.revisoesItems.find(revisao => revisao.id === id);
+    if (!item) return;
+    item.dataAlvo = document.getElementById('reagendarRevisaoData').value;
+    item.status = 'pendente';
+    item.ultimaRevisaoEm = dataLocalISO();
+    item.atualizadoEm = Date.now();
+    saveAppData();
+    renderizarRevisoes();
+    fecharModal('reagendarRevisaoModal');
+    showToast('Nova data de revisão marcada.');
+}
+
+function abrirModalTagsRevisao() {
+    renderGerenciadorTagsRevisao();
+    document.getElementById('tagsRevisaoModal').classList.add('active');
+    setTimeout(() => document.getElementById('novaTagRevisao')?.focus(), 50);
+}
+
+function renderGerenciadorTagsRevisao() {
+    const lista = document.getElementById('revisaoTagsLista');
+    if (!lista) return;
+    lista.innerHTML = appData.revisaoTags.length
+        ? [...appData.revisaoTags].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(tag => `<span class="revision-tag-chip">${escaparRevisaoHtml(tag)}</span>`).join('')
+        : '<span class="revision-tag-empty">Crie sua primeira tag para reutilizá-la nas revisões.</span>';
+}
+
+function salvarTagRevisao(e) {
+    e.preventDefault();
+    const input = document.getElementById('novaTagRevisao');
+    const tag = input.value.trim();
+    if (!tag) return;
+    if (appData.revisaoTags.some(item => normalizarRevisaoTexto(item) === normalizarRevisaoTexto(tag))) {
+        return showToast('Essa tag já existe.', true);
+    }
+    const selecionadas = obterTagsSelecionadasFormulario();
+    appData.revisaoTags.push(tag);
+    saveAppData();
+    input.value = '';
+    renderGerenciadorTagsRevisao();
+    renderTagsRevisaoSelecionaveis(selecionadas);
+    showToast('Tag criada e pronta para usar.');
+}
+
+function obterDesempenhoPorArea() {
+    const areas = {};
+    appData.simuladosItems.forEach(simulado => {
+        const area = simulado.area || 'Geral';
+        const total = simulado.total || ((simulado.acertos || 0) + (simulado.erros || 0));
+        if (total <= 0) return;
+        if (!areas[area]) areas[area] = { acertos: 0, total: 0 };
+        areas[area].acertos += simulado.acertos || 0;
+        areas[area].total += total;
+    });
+    return areas;
+}
+
+function obterPiorAreaSimulados() {
+    const areas = obterDesempenhoPorArea();
+    let piorArea = null;
+    let piorTaxa = Infinity;
+    Object.entries(areas).forEach(([area, dados]) => {
+        const taxa = dados.total > 0 ? dados.acertos / dados.total : 1;
+        if (taxa < piorTaxa) {
+            piorTaxa = taxa;
+            piorArea = area;
+        }
+    });
+    return piorArea;
+}
+
+function criarRevisaoDoPiorSimulado() {
+    const piorArea = obterPiorAreaSimulados();
+    if (!piorArea) return false;
+    const jaExiste = appData.revisoesItems.some(item =>
+        ['pendente', 'fraco'].includes(item.status) && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(piorArea)
+    );
+    if (jaExiste) return false;
+    appData.revisoesItems.push({
+        id: Date.now() + 1,
+        materia: piorArea,
+        assunto: 'Rever a área com pior desempenho nos simulados',
+        dataEstudo: '',
+        dataAlvo: '',
+        origem: 'simulado',
+        status: 'pendente',
+        tags: [],
+        criadoEm: Date.now(),
+        atualizadoEm: Date.now()
+    });
+    return true;
+}
+
+function renderDashboardRevisoes() {
+    const corpo = document.getElementById('dashboardRevisoesTableBody');
+    if (!corpo) return;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const pendentes = appData.revisoesItems
+        .filter(item => ['pendente', 'fraco'].includes(item.status))
+        .sort((a, b) => {
+            const prioridade = item => item.status === 'fraco' ? 0 : (item.dataAlvo && new Date(`${item.dataAlvo}T12:00:00`) < hoje ? 1 : 2);
+            return prioridade(a) - prioridade(b) || (a.dataAlvo || '9999-12-31').localeCompare(b.dataAlvo || '9999-12-31') || (b.atualizadoEm || b.id) - (a.atualizadoEm || a.id);
+        })
+        .slice(0, 6);
+    if (!pendentes.length) {
+        corpo.innerHTML = '<tr><td colspan="3" class="dashboard-review-empty">Nenhum assunto pendente. Sua lista está em dia.</td></tr>';
+        return;
+    }
+    corpo.innerHTML = pendentes.map(item => {
+        const data = item.dataAlvo ? new Date(`${item.dataAlvo}T12:00:00`) : null;
+        const atrasada = data && data < hoje;
+        const dataTexto = data ? data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : 'Sem data';
+        return `<tr onclick="showSection('revisoes')" tabindex="0"><td data-label="Assunto"><strong>${escaparRevisaoHtml(item.assunto)}</strong>${item.status === 'fraco' ? '<span class="dashboard-review-weak">Ainda fraco</span>' : ''}</td><td data-label="Matéria">${escaparRevisaoHtml(item.materia)}</td><td data-label="Revisar em" class="${atrasada ? 'dashboard-review-overdue' : ''}">${atrasada ? 'Atrasada • ' : ''}${dataTexto}</td></tr>`;
+    }).join('');
+}
+
+function renderizarRevisoes() {
+    const lista = document.getElementById('revisoesList');
+    if (!lista) return;
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+    const inicioSemana = new Date(hoje);
+    const diaSemana = hoje.getDay() || 7;
+    inicioSemana.setDate(hoje.getDate() - diaSemana + 1);
+    const fimSemana = new Date(inicioSemana); fimSemana.setDate(inicioSemana.getDate() + 6); fimSemana.setHours(23, 59, 59, 999);
+    const pendente = item => ['pendente', 'fraco'].includes(item.status);
+    const dataItem = item => item.dataAlvo ? new Date(`${item.dataAlvo}T12:00:00`) : null;
+    const atrasada = item => pendente(item) && dataItem(item) && dataItem(item) < hoje;
+    const naSemana = item => pendente(item) && dataItem(item) && dataItem(item) >= inicioSemana && dataItem(item) <= fimSemana;
+
+    document.getElementById('rev-pendentes').textContent = appData.revisoesItems.filter(pendente).length;
+    document.getElementById('rev-atrasadas').textContent = appData.revisoesItems.filter(atrasada).length;
+    document.getElementById('rev-semana').textContent = appData.revisoesItems.filter(naSemana).length;
+
+    if (!appData.revisoesItems.length) {
+        lista.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;border:1px dashed var(--border-color);border-radius:16px;">Nenhuma revisão registada.</p>';
+        renderDashboardRevisoes();
+        return;
+    }
+
+    const ordenados = [...appData.revisoesItems].sort((a, b) => {
+        const prioridade = item => item.status === 'fraco' ? 0 : (atrasada(item) ? 1 : (item.status === 'pendente' ? 2 : 3));
+        const diferenca = prioridade(a) - prioridade(b);
+        if (diferenca) return diferenca;
+        if (a.status === 'fraco' && b.status === 'fraco') return (b.atualizadoEm || 0) - (a.atualizadoEm || 0);
+        const dataA = a.dataAlvo || '9999-12-31';
+        const dataB = b.dataAlvo || '9999-12-31';
+        return dataA.localeCompare(dataB) || (b.criadoEm || b.id) - (a.criadoEm || a.id);
+    });
+
+    lista.innerHTML = ordenados.map(item => {
+        const estaAtrasada = atrasada(item);
+        const revisado = item.status === 'revisado';
+        const aindaFraco = item.status === 'fraco';
+        const statusTexto = revisado ? 'Revisado' : (aindaFraco ? 'Revisado, mas ainda fraco' : (estaAtrasada ? 'Atrasado' : 'Pendente'));
+        const statusClasse = revisado ? 'done' : (aindaFraco ? 'weak' : (estaAtrasada ? 'overdue' : ''));
+        const dataTexto = item.dataAlvo ? new Date(`${item.dataAlvo}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem data para revisar';
+        const dataEstudoTexto = item.dataEstudo ? new Date(`${item.dataEstudo}T12:00:00`).toLocaleDateString('pt-BR') : '';
+        const ultimaRevisaoTexto = item.ultimaRevisaoEm ? new Date(`${item.ultimaRevisaoEm}T12:00:00`).toLocaleDateString('pt-BR') : '';
+        const origemTexto = item.origem === 'simulado' ? 'Veio do simulado' : 'Manual';
+        const cor = revisado ? '#34c759' : (aindaFraco ? '#ff9500' : (estaAtrasada ? '#ff3b30' : 'var(--accent-color)'));
+        const tagsHtml = (item.tags || []).map(tag => `<span class="revision-tag-chip small">${escaparRevisaoHtml(tag)}</span>`).join('');
+        const datasExtras = `${dataEstudoTexto ? `<span class="revision-badge">Estudou: ${dataEstudoTexto}</span>` : ''}${ultimaRevisaoTexto ? `<span class="revision-badge">Última revisão: ${ultimaRevisaoTexto}</span>` : ''}`;
+        const acoesDeFluxo = !revisado ? `<button class="cycle-btn" onclick="marcarRevisao(${item.id},'revisado')">Marcar revisado</button><button class="cycle-btn weak-action" onclick="abrirReagendamentoRevisao(${item.id})">Marcar nova data</button>` : '';
+        return `<article class="revision-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="revision-card-main"><div class="revision-card-title">${escaparRevisaoHtml(item.materia)}</div><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div>${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge ${statusClasse}">${statusTexto}</span><span class="revision-badge">${origemTexto}</span><span class="revision-badge">Revisar: ${dataTexto}</span>${datasExtras}</div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão será removida da sua lista.')">Excluir</button></div></article>`;
+    }).join('');
+    renderDashboardRevisoes();
+}
+
 function abrirModalSimulado() {
     document.getElementById('formAddSimulado').reset();
     document.getElementById('simEditId').value = "";
@@ -1226,6 +1723,7 @@ function abrirModalSimulado() {
     document.getElementById('simFileName').textContent = "Selecionar Arquivo do Computador";
     document.getElementById('simAttachmentData').value = "";
     document.getElementById('simuladoModalTitle').textContent = "Registar Simulado";
+    document.getElementById('simDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('simuladoModal').classList.add('active');
 }
 
@@ -1250,6 +1748,7 @@ function editarSimulado(id) {
 function salvarSimulado(e) {
     e.preventDefault();
     const idEdit = document.getElementById('simEditId').value;
+    const novoRegisto = !idEdit;
     const title = document.getElementById('simTitle').value;
     const date = document.getElementById('simDate').value;
     const tempoMin = parseInt(document.getElementById('simTempo').value) || 0;
@@ -1259,13 +1758,22 @@ function salvarSimulado(e) {
     const erros = parseInt(document.getElementById('simErros').value) || 0;
     const attachment = document.getElementById('simAttachmentData').value;
 
+    if (acertos + erros > total) {
+        return showToast('A soma de acertos e erros não pode ultrapassar o total de questões.', true);
+    }
+
     if (idEdit) {
         const idx = appData.simuladosItems.findIndex(i => i.id == idEdit);
         if (idx > -1) appData.simuladosItems[idx] = { ...appData.simuladosItems[idx], title, date, tempoMin, area, total, acertos, erros, attachment };
     } else {
         appData.simuladosItems.push({ id: Date.now(), title, date, tempoMin, area, total, acertos, erros, attachment });
     }
-    saveAppData(); renderizarSimulados(); fecharModal('simuladoModal'); showToast('🎯 Simulado registado!');
+    const revisaoCriada = novoRegisto ? criarRevisaoDoPiorSimulado() : false;
+    saveAppData();
+    renderizarSimulados();
+    renderizarRevisoes();
+    fecharModal('simuladoModal');
+    showToast(revisaoCriada ? '🎯 Simulado registado e revisão criada para a área mais fraca!' : '🎯 Simulado registado!');
 }
 
 function renderizarSimulados() {
@@ -1276,6 +1784,12 @@ function renderizarSimulados() {
         document.getElementById('sim-media-acertos').textContent = "0%";
         document.getElementById('sim-tempo-questao').textContent = "0m 00s";
         document.getElementById('sim-ponto-forte').textContent = "-";
+        
+        const fracoDisplay = document.getElementById('sim-ponto-fraco');
+        if(fracoDisplay) fracoDisplay.textContent = "-";
+        
+        appData.piorAreaGargalo = null; 
+        
         list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; border: 1px dashed var(--border-color); border-radius: 16px;">Nenhum simulado arquivado. A arena aguarda dados.</p>';
         return;
     }
@@ -1328,14 +1842,30 @@ function renderizarSimulados() {
     });
 
     list.innerHTML = html;
+    
     if (totalQuestoesGeral > 0) {
         document.getElementById('sim-media-acertos').textContent = `${Math.round((totalAcertosGeral / totalQuestoesGeral) * 100)}%`;
         const mQG = Math.floor(Math.floor((totalTempoMinGeral * 60) / totalQuestoesGeral) / 60);
         const sQG = Math.floor((totalTempoMinGeral * 60) / totalQuestoesGeral) % 60;
         document.getElementById('sim-tempo-questao').textContent = `${mQG}m ${sQG.toString().padStart(2, '0')}s`;
-        let maxPerc = -1, pontoForte = "-";
-        for (let key in areasMap) { if((areasMap[key].acertos / areasMap[key].total) > maxPerc) { maxPerc = areasMap[key].acertos / areasMap[key].total; pontoForte = key.split(',')[0].split(' e ')[0]; } }
-        document.getElementById('sim-ponto-forte').textContent = pontoForte;
+        
+        let maxPerc = -1, minPerc = 101, pontoForte = "-", pontoFraco = "-";
+        
+        for (let key in areasMap) { 
+            let aproveitamento = areasMap[key].acertos / areasMap[key].total;
+            if(aproveitamento > maxPerc) { maxPerc = aproveitamento; pontoForte = key; }
+            if(aproveitamento < minPerc) { minPerc = aproveitamento; pontoFraco = key; }
+        }
+        
+        let formatadoForte = pontoForte.split(',')[0].split(' e ')[0];
+        let formatadoFraco = pontoFraco.split(',')[0].split(' e ')[0];
+
+        document.getElementById('sim-ponto-forte').textContent = formatadoForte;
+        
+        const fracoDisplay = document.getElementById('sim-ponto-fraco');
+        if(fracoDisplay) fracoDisplay.textContent = formatadoFraco;
+        
+        appData.piorAreaGargalo = pontoFraco; 
     }
 }
 
@@ -1345,6 +1875,7 @@ function abrirModalRedacao() {
     document.getElementById('redFileName').textContent = "Selecionar Arquivo do Computador";
     document.getElementById('redAttachmentData').value = "";
     document.getElementById('redacaoModalTitle').textContent = "Registar Redação";
+    document.getElementById('redDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('redacaoModal').classList.add('active');
 }
 
@@ -1458,12 +1989,78 @@ function handleFileSelect(e, labelId, hiddenDataId) {
     reader.readAsDataURL(file);
 }
 
+function alternarAbasHub(aba) {
+    const ciclo = aba === 'ciclo';
+    document.getElementById('aba-ciclo-content').style.display = ciclo ? 'block' : 'none';
+    document.getElementById('aba-dominio-content').style.display = ciclo ? 'none' : 'block';
+    document.getElementById('tab-ciclo').classList.toggle('primary', ciclo);
+    document.getElementById('tab-dominio').classList.toggle('primary', !ciclo);
+    if (!ciclo) renderizarMapaDominio();
+}
+
+function toggleMapaCard(id) {
+    document.getElementById(`mapa-body-${id}`)?.classList.toggle('open');
+}
+
+function toggleTopicoDominio(materiaId, topicoIndex, etapa) {
+    const materia = appData.cycleItems.find(item => item.id === materiaId);
+    if (!materia?.topicos?.[topicoIndex]) return;
+    const topico = materia.topicos[topicoIndex];
+    if (!topico.dominio) topico.dominio = { teoria: false, pratica: false, dominio: false };
+    topico.dominio[etapa] = !topico.dominio[etapa];
+    if (etapa === 'dominio') topico.concluido = topico.dominio[etapa];
+    saveAppData();
+    renderizarMapaDominio();
+    renderizarCiclo();
+}
+
+function renderizarMapaDominio() {
+    const container = document.getElementById('mapaContainer');
+    if (!container) return;
+    let total = 0, completos = 0;
+    if (!appData.cycleItems.length) {
+        container.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:35px;border:1px dashed var(--border-color);border-radius:16px;">Adicione matérias e tópicos para montar o mapa.</p>';
+        document.getElementById('global-mapa-pct').textContent = '0%';
+        return;
+    }
+    container.innerHTML = appData.cycleItems.map(materia => {
+        const topicos = materia.topicos || [];
+        total += topicos.length;
+        const concluidos = topicos.filter(t => t.concluido || t.dominio?.dominio).length;
+        completos += concluidos;
+        const pct = topicos.length ? Math.round(concluidos / topicos.length * 100) : 0;
+        const linhas = topicos.length ? topicos.map((topico, index) => {
+            const d = topico.dominio || {};
+            return `<div class="mapa-topic-row"><span class="mapa-topic-name">${topico.nome}</span><div class="mapa-tpd-group"><button class="tpd-btn ${d.teoria ? 'active' : ''}" style="${d.teoria ? `background:${materia.color}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'teoria')">T</button><button class="tpd-btn ${d.pratica ? 'active' : ''}" style="${d.pratica ? `background:${materia.color}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'pratica')">P</button><button class="tpd-btn ${d.dominio ? 'active' : ''}" style="${d.dominio ? `background:${materia.color}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'dominio')">D</button></div></div>`;
+        }).join('') : '<p style="padding:20px;color:var(--text-muted);font-size:.85rem;">Nenhum tópico nesta matéria.</p>';
+        return `<article class="mapa-card"><div class="mapa-card-header" onclick="toggleMapaCard(${materia.id})"><div class="mapa-title-area"><div class="mapa-title">${materia.subject}</div><div class="mapa-progress-bg"><div class="mapa-progress-fill" style="width:${pct}%;background:${materia.color}"></div></div></div><span class="mapa-pct">${pct}%</span></div><div class="mapa-body open" id="mapa-body-${materia.id}">${linhas}</div></article>`;
+    }).join('');
+    document.getElementById('global-mapa-pct').textContent = total ? `${Math.round(completos / total * 100)}%` : '0%';
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+});
+document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('mousedown', event => {
+    if (event.target === overlay) overlay.classList.remove('active');
+}));
+
+// INICIALIZAÇÃO DO APP
 fecharModalDeletar(); 
+syncVisualModeControl();
+syncSettingsUI();
+registrarBonusLoginDiario();
 updateDashboardStats(); 
+mostrarFraseMotivacional();
 executarResetTimer(); 
 renderizarCiclo();
-renderizarMapaProgresso();
 renderizarAgenda();
 renderizarAgendamento();
+renderizarRevisoes();
 renderizarSimulados();
 renderizarRedacoes();
+
+// Dispara contagem do ENEM e atualiza a cada 1 hora em background
+atualizarContagemEnem();
+setInterval(atualizarContagemEnem, 3600000);
+

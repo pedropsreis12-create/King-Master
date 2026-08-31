@@ -131,7 +131,10 @@ async function processarEntradaIa(texto) {
     let resultado;
     if (window.kingGemini?.available) {
         try {
-            resultado = await window.kingGemini.send(comando, contextoGeminiIa());
+            resultado = await Promise.race([
+                window.kingGemini.send(comando, contextoGeminiIa()),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('O Gemini demorou mais que 25 segundos para responder.')), 25000))
+            ]);
             estadoIaQg.geminiAtivo = true;
         } catch (error) {
             console.warn('Gemini indisponível; usando o modo local seguro.', error);

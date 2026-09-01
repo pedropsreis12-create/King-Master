@@ -545,6 +545,30 @@ html[data-rank-mode="aura"][data-xp-rank="instinto"], html[data-rank-mode="aura"
 @keyframes entityAscension { 50% { translate: -50% calc(-50% - 16px); scale: 1.12; rotate: 3deg; filter: drop-shadow(0 0 42px rgba(255,210,85,.85)); } }
 @keyframes entityWarp { 0% { translate: 0 130px; scale: 1 .2; opacity: 0; } 35% { opacity: .9; } 100% { translate: var(--drift) -160px; scale: 1 1.7; opacity: 0; } }
 .xp-test-panel { margin-top: 22px; padding: 26px; border-color: rgba(var(--accent-rgb), .28); background: linear-gradient(135deg, rgba(var(--accent-rgb), .08), transparent 48%), var(--card-bg); }
+.xp-test-panel.is-locked { padding: 14px; background: linear-gradient(135deg, rgba(var(--accent-rgb), .07), transparent 55%), var(--card-bg); }
+.xp-lab-lock-button { width: 100%; min-height: 82px; display: flex; align-items: center; gap: 15px; padding: 16px 18px; border: 1px solid var(--border-color); border-radius: 17px; background: var(--hover-bg); color: var(--text-main); text-align: left; cursor: pointer; transition: border-color .2s ease, transform .2s ease, background .2s ease; }
+.xp-lab-lock-button:hover { transform: translateY(-1px); border-color: rgba(var(--accent-rgb), .45); background: rgba(var(--accent-rgb), .08); }
+.xp-lab-lock-button > span:nth-child(2) { display: flex; flex: 1; flex-direction: column; gap: 4px; }
+.xp-lab-lock-button small { color: var(--accent-color); font-size: .62rem; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
+.xp-lab-lock-button strong { font-size: .9rem; }
+.xp-lab-lock-button > i { color: var(--accent-color); font: 700 1.5rem/1 sans-serif; transform: rotate(90deg); transition: transform .2s ease; }
+.xp-lab-lock-button[aria-expanded="true"] > i { transform: rotate(-90deg); }
+.xp-lab-lock-icon { width: 48px; height: 48px; display: grid; flex: 0 0 auto; place-items: center; border: 1px solid rgba(var(--accent-rgb), .35); border-radius: 50%; background: rgba(var(--accent-rgb), .1); font-size: 1.25rem; box-shadow: 0 0 22px rgba(var(--accent-rgb), .12); }
+.xp-lab-unlock-form { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: end; gap: 12px; margin-top: 12px; padding: 16px 18px; border: 1px solid var(--border-color); border-radius: 17px; background: var(--card-bg); }
+.xp-lab-unlock-form[hidden] { display: none; }
+.xp-lab-unlock-form label { display: flex; flex-direction: column; gap: 7px; color: var(--text-muted); font-size: .68rem; font-weight: 800; }
+.xp-lab-unlock-form input { min-height: 43px; padding: 10px 13px; border: 1px solid var(--border-strong); border-radius: 12px; outline: none; background: var(--hover-bg); color: var(--text-main); font: 800 1rem/1 Poppins, sans-serif; letter-spacing: 5px; }
+.xp-lab-unlock-form input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .13); }
+.xp-lab-unlock-form input.is-invalid { animation: xpLockShake .35s ease; border-color: #ff4d5f; }
+.xp-lab-unlock-form > small { grid-column: 1 / -1; color: var(--text-muted); font-size: .64rem; }
+.xp-lab-lock-again { display: flex; align-items: center; gap: 7px; margin: 18px 0 0 auto; padding: 8px 11px; border: 0; background: transparent; color: var(--text-muted); font: 700 .65rem/1 Poppins, sans-serif; cursor: pointer; }
+.xp-lab-lock-again:hover { color: var(--accent-color); }
+@keyframes xpLockShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+@media (max-width: 620px) {
+    .xp-lab-unlock-form { grid-template-columns: 1fr; }
+    .xp-lab-unlock-form .cycle-btn { width: 100%; }
+    .xp-lab-lock-button { align-items: flex-start; }
+}
 .xp-test-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
 .xp-test-heading h3 { margin: 2px 0 5px; color: var(--text-main); font-size: 1.12rem; }
 .xp-test-heading p { color: var(--text-muted); font-size: .76rem; }
@@ -1229,8 +1253,7 @@ html[data-rank-mode="aura"] .rank-frame-tag { box-shadow: 0 0 22px color-mix(in 
 .streak-tooltip-fixed strong { font-size: .64rem; text-transform: capitalize; }
 .streak-tooltip-fixed small { color: color-mix(in srgb,var(--bg-body) 75%,transparent); font-size: .56rem; }
 
-/* O laboratório de XP existe somente na prévia local com ?version=. */
-html:not([data-xp-lab="true"]) .xp-test-panel { display: none !important; }
+html:not([data-xp-lab="true"]) .xp-test-content { display: none !important; }
 
 /* Desktop volta a usar a navegação lateral; o menu móvel continua no topo. */
 @media (min-width: 1101px) {

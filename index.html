@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260831-ia-qg">
+    <link rel="stylesheet" href="style.css?v=20260901-xp-lock-2">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -415,7 +415,20 @@
                 <div class="profile-reference-strip" id="profileReferenceStrip" aria-label="Referências visuais deste título"></div>
             </div>
 
-            <div class="xp-test-panel widget" aria-labelledby="xpTestTitle">
+            <div class="xp-test-panel widget is-locked" id="xpTestPanel" aria-labelledby="xpTestTitle">
+                <div class="xp-lab-lock" id="xpLabLock">
+                    <button type="button" class="xp-lab-lock-button" id="xpLabLockButton" aria-expanded="false" aria-controls="xpLabUnlockForm" onclick="abrirCadeadoXp()">
+                        <span class="xp-lab-lock-icon" aria-hidden="true">🔒</span>
+                        <span><small>Laboratório protegido</small><strong>Liberar controle experimental de XP</strong></span>
+                        <i aria-hidden="true">›</i>
+                    </button>
+                    <form class="xp-lab-unlock-form" id="xpLabUnlockForm" hidden onsubmit="desbloquearLaboratorioXp(event)">
+                        <label for="xpLabPassword"><span>Senha do cadeado</span><input type="password" id="xpLabPassword" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" aria-describedby="xpLabPasswordHint"></label>
+                        <button type="submit" class="cycle-btn primary">Desbloquear</button>
+                        <small id="xpLabPasswordHint">O XP usado aqui é apenas uma prévia e não altera seu progresso salvo.</small>
+                    </form>
+                </div>
+                <div class="xp-test-content" id="xpTestContent" hidden>
                 <div class="xp-test-heading">
                     <div>
                         <span class="xp-test-kicker">Campo de provas local</span>
@@ -439,6 +452,8 @@
                     <button type="button" class="cycle-btn xp-test-reset" onclick="sairDoModoTesteXp()">Voltar ao XP real</button>
                 </div>
                 <div class="xp-test-milestones" id="xpTestMilestones" aria-label="Atalhos de títulos e níveis"></div>
+                <button type="button" class="xp-lab-lock-again" onclick="bloquearLaboratorioXp()"><span aria-hidden="true">🔒</span> Fechar laboratório</button>
+                </div>
             </div>
 
             <div class="frame-vault widget" aria-labelledby="frameVaultTitle">
@@ -683,7 +698,7 @@
     <div class="ai-qg-backdrop" id="aiQgBackdrop" onclick="toggleIaQg(false)"></div>
     <div id="toastNotification" class="toast-notification"></div>
     <audio id="alarmAudio"></audio>
-    <script src="script.js?v=20260831-gemini-qg-8"></script>
+    <script src="script.js?v=20260901-xp-lock-2"></script>
     <script src="ai-assistant.js?v=20260831-gemini-qg-8"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script type="module" src="cloud-sync.js?v=20260831-gemini-qg-8"></script>

@@ -1,4 +1,5 @@
-const XP_LAB_ATIVO = ['localhost', '127.0.0.1'].includes(window.location.hostname) && new URLSearchParams(window.location.search).has('version');
+const XP_LAB_SESSION_KEY = 'kingMasterXpLabUnlocked';
+let XP_LAB_ATIVO = sessionStorage.getItem(XP_LAB_SESSION_KEY) === 'true';
 document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
 
 const defaultAppData = {
@@ -944,6 +945,64 @@ function sincronizarXpTeste(valor) {
     if (range && document.activeElement !== range) range.value = xp;
     if (input && document.activeElement !== input) input.value = xp;
 }
+
+function sincronizarCadeadoXp() {
+    const painel = document.getElementById('xpTestPanel');
+    const cadeado = document.getElementById('xpLabLock');
+    const conteudo = document.getElementById('xpTestContent');
+    if (!painel || !cadeado || !conteudo) return;
+    painel.classList.toggle('is-locked', !XP_LAB_ATIVO);
+    painel.classList.toggle('is-unlocked', XP_LAB_ATIVO);
+    cadeado.hidden = XP_LAB_ATIVO;
+    conteudo.hidden = !XP_LAB_ATIVO;
+    document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
+}
+
+function abrirCadeadoXp() {
+    const form = document.getElementById('xpLabUnlockForm');
+    const botao = document.getElementById('xpLabLockButton');
+    if (!form || !botao) return;
+    const abrir = form.hidden;
+    form.hidden = !abrir;
+    botao.setAttribute('aria-expanded', String(abrir));
+    if (abrir) setTimeout(() => document.getElementById('xpLabPassword')?.focus(), 50);
+}
+
+function desbloquearLaboratorioXp(event) {
+    event?.preventDefault();
+    const campo = document.getElementById('xpLabPassword');
+    if (campo?.value !== '1303') {
+        campo?.classList.remove('is-invalid');
+        void campo?.offsetWidth;
+        campo?.classList.add('is-invalid');
+        if (campo) { campo.value = ''; campo.focus(); }
+        showToast('🔒 Senha incorreta', true);
+        return;
+    }
+    XP_LAB_ATIVO = true;
+    sessionStorage.setItem(XP_LAB_SESSION_KEY, 'true');
+    if (campo) campo.value = '';
+    sincronizarCadeadoXp();
+    renderizarAtalhosXpTeste();
+    showToast('🔓 Laboratório de XP liberado');
+}
+
+function bloquearLaboratorioXp() {
+    sairDoModoTesteXp();
+    XP_LAB_ATIVO = false;
+    sessionStorage.removeItem(XP_LAB_SESSION_KEY);
+    const form = document.getElementById('xpLabUnlockForm');
+    const botao = document.getElementById('xpLabLockButton');
+    if (form) form.hidden = true;
+    if (botao) botao.setAttribute('aria-expanded', 'false');
+    sincronizarCadeadoXp();
+    showToast('🔒 Laboratório fechado; XP real restaurado');
+}
+
+// Expõe apenas os controles chamados diretamente pelo HTML.
+window.abrirCadeadoXp = abrirCadeadoXp;
+window.desbloquearLaboratorioXp = desbloquearLaboratorioXp;
+window.bloquearLaboratorioXp = bloquearLaboratorioXp;
 
 function visualizarXpTeste(valor) {
     if (valor !== undefined) sincronizarXpTeste(valor);
@@ -2393,6 +2452,7 @@ syncSettingsUI();
 registrarBonusLoginDiario();
 updateDashboardStats(); 
 sincronizarModoPatente();
+sincronizarCadeadoXp();
 renderizarAtalhosXpTeste();
 mostrarFraseMotivacional();
 executarResetTimer(); 

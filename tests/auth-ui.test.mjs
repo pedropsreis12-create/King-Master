@@ -57,3 +57,11 @@ test('settings keep navigation visible and reduced motion preserves short transi
     assert.doesNotMatch(usability, /animation-duration:\s*\.001ms/);
     assert.match(usability, /html\.reduce-motion[\s\S]+transition-duration:\s*\.14s/);
 });
+
+test('dashboard replaces the ENEM countdown with a calm daily schedule summary', () => {
+    assert.doesNotMatch(html, /enem-countdown|Operação ENEM/);
+    assert.doesNotMatch(script, /atualizarContagemEnem|dataEnem/);
+    assert.match(html, /id="dashboardAgendaTitle"/);
+    assert.match(html, /Organize quando quiser, sem pressão/);
+    assert.match(script, /function renderizarResumoAgendamento/);
+});

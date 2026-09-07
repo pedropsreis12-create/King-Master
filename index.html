@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260906-worlds-2">
+    <link rel="stylesheet" href="style.css?v=20260907-calm-agenda-1">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
     <link rel="stylesheet" href="usability.css?v=20260907-account-6">
@@ -194,16 +194,14 @@
         <section id="dashboard" class="content-section active">
             <h1>Foco e Execução</h1>
             
-            <!-- Contagem Regressiva ENEM -->
-            <div class="widget" style="margin-bottom: 30px; padding: 25px 30px; background: linear-gradient(135deg, var(--text-main), var(--card-bg)); border-left: 6px solid var(--accent-color);">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <div style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted);">Operação ENEM</div>
-                        <div id="enem-countdown" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color); margin-top: 5px; line-height: 1;">A calcular...</div>
-                    </div>
-                    <div style="font-size: 3.5rem; opacity: 0.8;">🎯</div>
-                </div>
-            </div>
+            <button type="button" class="widget dashboard-agenda-glance" onclick="showSection('agendamento')" aria-label="Abrir o Agendamento Diário">
+                <span class="dashboard-agenda-copy">
+                    <span class="dashboard-agenda-kicker">AGENDAMENTO DIÁRIO</span>
+                    <strong id="dashboardAgendaTitle">Seu dia, no seu ritmo</strong>
+                    <span id="dashboardAgendaMeta">Organize quando quiser, sem pressão.</span>
+                </span>
+                <span class="dashboard-agenda-action"><span id="dashboardAgendaAction">Abrir agenda</span><b aria-hidden="true">→</b></span>
+            </button>
 
             <div id="dashboardUrgencyAlert" style="display: none;"></div>
             <div class="stats-grid dashboard-stats-grid">
@@ -782,7 +780,7 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260907-account-6"></script>
+    <script src="script.js?v=20260907-calm-agenda-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260907-account-5"></script>
     <script src="productivity.js?v=20260907-account-6"></script>

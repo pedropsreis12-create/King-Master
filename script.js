@@ -368,30 +368,6 @@ function toggleVisualMode() {
 }
 
 // ==========================================
-// CONTAGEM REGRESSIVA ENEM
-// ==========================================
-function atualizarContagemEnem() {
-    // 📅 ALTERE A DATA DO ENEM AQUI (Formato: YYYY-MM-DDTHH:MM:00)
-    const dataEnem = new Date('2026-11-08T13:00:00');
-    
-    const hoje = new Date();
-    const diffTime = Math.max(0, dataEnem - hoje);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const countdownEl = document.getElementById('enem-countdown');
-    
-    if (countdownEl) {
-        if (diffDays === 0 && hoje.getDate() === dataEnem.getDate() && hoje.getMonth() === dataEnem.getMonth()) {
-            countdownEl.textContent = "É HOJE!";
-        } else if (diffDays === 0) {
-            countdownEl.textContent = "Concluído";
-        } else {
-            countdownEl.textContent = `${diffDays} DIAS`;
-        }
-    }
-}
-
-
-// ==========================================
 // LÓGICA DE MODAIS E EXCLUSÕES
 // ==========================================
 let itemToDelete = null, deleteType = '';
@@ -1893,6 +1869,7 @@ function editarAgendamentoItem(id) {
 function renderizarAgendamento() {
     const list = document.getElementById('agendamentoList');
     const highlight = document.getElementById('agendamentoHighlight');
+    renderizarResumoAgendamento();
     if (!list) return;
 
     if (!appData.agendamentoItems || appData.agendamentoItems.length === 0) {
@@ -1943,6 +1920,48 @@ function renderizarAgendamento() {
         highlight.innerHTML = `<h3 style="margin:0; font-size:0.75rem; color:var(--text-muted); text-transform: uppercase; font-weight: 700;">PRÓXIMO NA LISTA</h3>
                                <div style="font-size:1.3rem; font-weight:800; margin-top:5px; color: var(--text-main);">${proximo.time} - ${proximo.title}</div>`;
     }
+}
+
+function renderizarResumoAgendamento() {
+    const title = document.getElementById('dashboardAgendaTitle');
+    const meta = document.getElementById('dashboardAgendaMeta');
+    const action = document.getElementById('dashboardAgendaAction');
+    if (!title || !meta || !action) return;
+
+    const itens = Array.isArray(appData.agendamentoItems) ? appData.agendamentoItems : [];
+    const pendentes = itens.filter(item => !item.completed).sort((a, b) => {
+        const dataA = new Date(`${a.date || '9999-12-31'}T${a.time || '23:59'}`);
+        const dataB = new Date(`${b.date || '9999-12-31'}T${b.time || '23:59'}`);
+        return dataA - dataB;
+    });
+
+    if (!itens.length) {
+        title.textContent = 'Seu dia, no seu ritmo';
+        meta.textContent = 'Organize quando quiser, sem pressão.';
+        action.textContent = 'Criar agenda';
+        return;
+    }
+
+    if (!pendentes.length) {
+        title.textContent = 'Tudo feito por hoje';
+        meta.textContent = 'Seu planejamento está em dia. Aproveite a pausa.';
+        action.textContent = 'Ver agenda';
+        return;
+    }
+
+    const agora = new Date();
+    const chaveHoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+    const proximo = pendentes.find(item => item.date === chaveHoje && new Date(`${item.date}T${item.time || '23:59'}`) >= agora)
+        || pendentes.find(item => item.date === chaveHoje)
+        || pendentes.find(item => new Date(`${item.date || '9999-12-31'}T${item.time || '23:59'}`) >= agora)
+        || pendentes[0];
+    const data = new Date(`${proximo.date || chaveHoje}T12:00:00`);
+    const dataTexto = proximo.date === chaveHoje ? 'Hoje' : data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+    const detalhes = [dataTexto, proximo.time, proximo.type].filter(Boolean);
+
+    title.textContent = proximo.title || 'Próximo compromisso';
+    meta.textContent = detalhes.join(' • ');
+    action.textContent = 'Abrir agenda';
 }
 
 function normalizarRevisaoTexto(valor) {
@@ -2613,7 +2632,3 @@ renderizarAgendamento();
 renderizarRevisoes();
 renderizarSimulados();
 renderizarRedacoes();
-
-// Dispara contagem do ENEM e atualiza a cada 1 hora em background
-atualizarContagemEnem();
-setInterval(atualizarContagemEnem, 3600000);

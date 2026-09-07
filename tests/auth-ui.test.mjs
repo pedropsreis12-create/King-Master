@@ -2,14 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, cloud, script, usability, resetPage, resetScript, vite] = await Promise.all([
+const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail] = await Promise.all([
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8'),
     readFile(new URL('../script.js', import.meta.url), 'utf8'),
     readFile(new URL('../usability.css', import.meta.url), 'utf8'),
     readFile(new URL('../recuperar.html', import.meta.url), 'utf8'),
     readFile(new URL('../password-reset.js', import.meta.url), 'utf8'),
-    readFile(new URL('../vite.config.js', import.meta.url), 'utf8')
+    readFile(new URL('../vite.config.js', import.meta.url), 'utf8'),
+    readFile(new URL('../email-templates/password-reset.html', import.meta.url), 'utf8')
 ]);
 
 test('account creation requires matching strong passwords and a human verification token', () => {
@@ -34,6 +35,15 @@ test('password recovery is neutral, localized and ships a branded action handler
     assert.match(resetPage, /Recuperação segura de conta/);
     assert.match(vite, /recuperar\.html/);
     assert.match(vite, /password-reset\.js/);
+});
+
+test('password recovery email is branded, responsive and keeps Firebase placeholders safe', () => {
+    assert.match(resetEmail, /Redefina sua senha \| King Master/);
+    assert.match(resetEmail, /href="%LINK%"/);
+    assert.match(resetEmail, /%EMAIL%/);
+    assert.match(resetEmail, /@media screen and \(max-width:640px\)/);
+    assert.match(resetEmail, /Se você não solicitou esta alteração/);
+    assert.doesNotMatch(resetEmail, /<script|<form|\son[a-z]+=/i);
 });
 
 test('settings keep navigation visible and reduced motion preserves short transitions', () => {

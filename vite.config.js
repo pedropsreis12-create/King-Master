@@ -15,11 +15,15 @@ function staticSiteWorker() {
         },
       };
 
-      for (const name of ['script.js', 'timer-recovery.js', 'ai-assistant.js', 'firebase-config.js', 'cloud-sync.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js']) {
+      for (const name of ['script.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };
       }
+
+      const manifest = await readFile('manifest.webmanifest', 'utf8');
+      await writeFile('dist/manifest.webmanifest', manifest, 'utf8');
+      files['/manifest.webmanifest'] = { body: manifest, type: 'application/manifest+json; charset=utf-8' };
 
       for (const name of assetNames) {
         if (!name.endsWith('.css') && !name.endsWith('.js')) continue;
@@ -31,10 +35,10 @@ function staticSiteWorker() {
 
       // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
       for (const name of await readdir('assets')) {
-        if (!/^rank-[a-z0-9-]+\.webp$/.test(name)) continue;
+        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name)) continue;
         const body = await readFile(`assets/${name}`);
         await writeFile(`dist/assets/${name}`, body);
-        files[`/assets/${name}`] = { body: body.toString('base64'), type: 'image/webp', binary: true };
+        files[`/assets/${name}`] = { body: body.toString('base64'), type: name.endsWith('.png') ? 'image/png' : 'image/webp', binary: true };
       }
 
       await mkdir('dist/server', { recursive: true });

@@ -50,7 +50,7 @@ async function cloudHarness(replies, executeTool = () => ({ ok: true, message: '
     const schema = new Proxy({}, { get: (_, key) => value => ({ type: key, ...value }) });
     const sdk = {
         'firebase-app': { initializeApp() { return {}; } },
-        'firebase-auth': { getAuth() { return {}; }, GoogleAuthProvider: class {}, setPersistence: async () => {}, getRedirectResult: async () => {}, onAuthStateChanged() {} },
+        'firebase-auth': { getAuth() { return {}; }, GoogleAuthProvider: class { setCustomParameters() {} }, OAuthProvider: class { addScope() {} setCustomParameters() {} }, setPersistence: async () => {}, getRedirectResult: async () => {}, onAuthStateChanged() {} },
         'firebase-firestore': { getFirestore() { return {}; } },
         'firebase-app-check': { initializeAppCheck() { return {}; }, ReCaptchaEnterpriseProvider: class {}, getToken: async () => ({ token: 'fixture-token' }) },
         'firebase-ai': { Schema: schema, ThinkingLevel: { LOW: 'LOW', MEDIUM: 'MEDIUM' }, getAI() { return {}; }, GoogleAIBackend: class {},
@@ -74,8 +74,8 @@ async function cloudHarness(replies, executeTool = () => ({ ok: true, message: '
             persistChanges() { records.saves += 1; persistChanges(); }
         }
     };
-    const context = vm.createContext({ window, self: window, console: { ...console, warn(...items) { records.warnings.push(items); } }, Date, JSON, Set, Map, Promise, URLSearchParams, AbortController, DOMException, setTimeout, clearTimeout,
-        document: { getElementById() { return null; } }, localStorage: { getItem() { return null; }, setItem() {} }, __sdk: sdk });
+    const context = vm.createContext({ window, self: window, console: { ...console, warn(...items) { records.warnings.push(items); } }, Date, JSON, Set, Map, Promise, URLSearchParams, AbortController, DOMException, crypto: { randomUUID() { return 'fixture-client'; } }, setTimeout, clearTimeout,
+        document: { getElementById() { return null; }, querySelector() { return null; }, querySelectorAll() { return []; }, documentElement: { classList: { add() {}, remove() {} } } }, localStorage: { getItem() { return null; }, setItem() {} }, __sdk: sdk });
     const source = cloudSource.replace(/import\('https:\/\/www\.gstatic\.com\/firebasejs\/[^/]+\/(firebase-[\w-]+)\.js'\)/g, 'Promise.resolve(__sdk["$1"])');
     await vm.runInContext(`(async () => { ${source}\n})()`, context);
     return { gemini: window.kingGemini, records };
@@ -96,9 +96,12 @@ test('bulk topics are added together, without duplicates; ambiguous subject is r
     h.appData.cycleItems.push({ id: 1, subject: 'Física', topicos: [{ nome: 'Cinemática' }] }, { id: 2, subject: 'Física moderna', topicos: [] });
     const response = h.window.KingMasterAI.executeTool('adicionar_topicos', { materia: 'Física', topicos: ['Cinemática', 'Dinâmica', 'Ondas'] });
     assert.equal(response.ok, true);
+    assert.equal(response.requiresConfirmation, true);
+    h.context.executarAcaoPendenteIa(true);
     assert.equal(h.appData.cycleItems[0].topicos.length, 3);
-    assert.equal(h.window.KingMasterAI.executeTool('adicionar_topico', { materia: 'Fís', topico: 'Novo' }).ok, false);
-    assert.equal(h.window.KingMasterAI.executeTool('concluir_topico', { materia: 'Física', topico: '' }).ok, false);
+    const ambiguous = h.window.KingMasterAI.executeTool('adicionar_topico', { materia: 'Fís', topico: 'Novo' });
+    assert.equal(ambiguous.ok, false);
+    assert.equal(h.appData.cycleItems[0].topicos.length, 3);
 });
 
 test('invalid dates and numeric values do not silently create another action', () => {

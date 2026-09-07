@@ -1,16 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
+    <script>document.documentElement.classList.add('auth-pending');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>King Master - Sistema de Alta Performance</title>
+    <meta name="theme-color" content="#0f1720">
+    <meta name="description" content="King Master — seu painel pessoal de estudos para o ENEM.">
+    <link rel="icon" href="assets/app-icon-192.png" type="image/png">
+    <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+    <link rel="manifest" href="manifest.webmanifest?v=20260907-account-5">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=20260906-worlds-2">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
-    <link rel="stylesheet" href="usability.css?v=20260907-save-2">
+    <link rel="stylesheet" href="usability.css?v=20260907-account-5">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -50,6 +56,31 @@
     </style>
 </head>
 <body>
+
+    <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle" aria-live="polite">
+        <div class="auth-gate-card">
+            <div class="auth-brand"><span>KM</span><div><strong>King Master</strong><small>Seu progresso, em qualquer dispositivo</small></div></div>
+            <div class="auth-gate-copy"><p>Conta obrigatória</p><h1 id="authGateTitle">Continue sua preparação</h1><span>Entre para recuperar tempo, matérias, cores, molduras e todo o seu histórico.</span></div>
+            <div class="auth-provider-grid">
+                <button type="button" class="auth-provider google" id="authGoogleBtn"><b>G</b> Continuar com Google</button>
+                <button type="button" class="auth-provider apple" id="authAppleBtn"><b aria-hidden="true">A</b> Continuar com Apple</button>
+            </div>
+            <div class="auth-divider"><span>ou use seu cadastro</span></div>
+            <div class="auth-tabs" role="tablist" aria-label="Acesso por e-mail">
+                <button type="button" role="tab" aria-selected="true" data-auth-mode="login">Entrar</button>
+                <button type="button" role="tab" aria-selected="false" data-auth-mode="signup">Criar conta</button>
+            </div>
+            <form class="auth-email-form" id="authEmailForm">
+                <label class="auth-name-field" hidden><span>Nome</span><input id="authName" autocomplete="name" maxlength="40" placeholder="Como devemos chamar você?"></label>
+                <label><span>E-mail</span><input type="email" id="authEmail" autocomplete="email" required placeholder="voce@exemplo.com"></label>
+                <label><span>Senha</span><input type="password" id="authPassword" autocomplete="current-password" minlength="6" required placeholder="Mínimo de 6 caracteres"></label>
+                <button type="submit" class="auth-submit" id="authSubmitBtn">Entrar com e-mail</button>
+                <button type="button" class="auth-forgot" id="authForgotBtn">Esqueci minha senha</button>
+            </form>
+            <p class="auth-feedback" id="authFeedback" role="status">Verificando sua conta…</p>
+            <small class="auth-privacy">Seus dados ficam vinculados à sua conta e protegidos pelas regras do Firebase.</small>
+        </div>
+    </section>
 
     <button id="navReveal" class="nav-reveal" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menu lateral"><span aria-hidden="true">›</span><small>MENU</small></button>
     <nav id="mainNavigation">
@@ -118,6 +149,24 @@
                 </div>
                 <p class="cloud-account-note">Depois de entrar, cada alteração é salva automaticamente e acompanha você em qualquer dispositivo.</p>
             </div>
+            <div class="settings-group">
+                <h3><span>↥</span> Backup de Segurança</h3>
+                <div class="settings-action-grid"><button type="button" class="cycle-btn" onclick="exportarBackup()">Exportar dados</button><button type="button" class="cycle-btn" onclick="selecionarBackup()">Importar backup</button></div>
+                <input type="file" id="backupImportInput" accept="application/json,.json" hidden>
+                <p class="cloud-account-note">A nuvem continua automática. O arquivo é uma cópia extra sob seu controle.</p>
+            </div>
+            <div class="settings-group">
+                <h3><span>◉</span> Acessibilidade</h3>
+                <label class="settings-select-row"><span><strong>Tamanho do texto</strong><small>Aumenta a leitura em todo o site</small></span><select id="fontScaleSelect"><option value="normal">Normal</option><option value="large">Grande</option><option value="xlarge">Muito grande</option></select></label>
+                <button class="settings-theme-toggle toggle-btn" id="contrastToggleBtn" type="button"><span><strong>Contraste reforçado</strong><small>Contornos e textos mais nítidos</small></span><i></i></button>
+                <button class="settings-theme-toggle toggle-btn" id="motionToggleBtn" type="button"><span><strong>Reduzir animações</strong><small>Suaviza a interface e as molduras</small></span><i></i></button>
+            </div>
+            <div class="settings-group">
+                <h3><span>▣</span> Aplicativo e Lembretes</h3>
+                <button type="button" class="cycle-btn primary settings-full-button" id="installAppBtn" hidden>Instalar King Master</button>
+                <label class="settings-select-row"><span><strong>Lembrete diário</strong><small>O navegador avisa no horário escolhido</small></span><input type="time" id="reminderTime" value="19:00"></label>
+                <button type="button" class="settings-theme-toggle toggle-btn" id="reminderToggleBtn"><span><strong>Ativar lembrete</strong><small id="reminderHint">Notificações desativadas</small></span><i></i></button>
+            </div>
         </div>
 
     <main>
@@ -156,6 +205,11 @@
                     <blockquote id="frase-motivacional">Foco na missão!</blockquote>
                     <cite id="frase-motivacional-autor">— King Master</cite>
                 </div>
+            </div>
+
+            <div class="widget daily-missions" id="dailyMissions" aria-labelledby="dailyMissionsTitle">
+                <div class="daily-missions-heading"><div><span>MISSÕES DE HOJE</span><h2 id="dailyMissionsTitle">Avance uma etapa por vez</h2></div><strong id="dailyMissionsScore">0/3</strong></div>
+                <div class="daily-missions-grid" id="dailyMissionsGrid"></div>
             </div>
             
             <div class="widget" style="margin-bottom: 30px; padding: 20px 30px;">
@@ -379,7 +433,7 @@
                     </div>
                     <div class="profile-identity-copy">
                         <span class="profile-online"><i></i> Perfil sincronizado</span>
-                        <h2 id="profileDisplayName">Pedro Reis</h2>
+                        <h2 id="profileDisplayName">Estudante</h2>
                         <p id="profileDisplayBio">Construindo meu caminho até o ENEM, um foco de cada vez.</p>
                     </div>
                     <button type="button" class="cycle-btn profile-edit-toggle" id="profileEditToggle" aria-expanded="false" onclick="toggleEditorPerfil()">Editar perfil</button>
@@ -404,8 +458,8 @@
                         <span class="rank-frame-detail detail-one" aria-hidden="true"></span>
                         <span class="rank-frame-detail detail-two" aria-hidden="true"></span>
                         <span class="rank-frame-detail detail-three" aria-hidden="true"></span>
-                        <div class="avatar-core" aria-label="Foto de perfil de Pedro Reis">
-                            <img id="profileAvatarImage" alt="Foto de perfil de Pedro Reis">
+                        <div class="avatar-core" aria-label="Foto de perfil do estudante">
+                            <img id="profileAvatarImage" alt="Foto de perfil do estudante">
                             <span id="profileAvatarFallback">PR</span>
                         </div>
                     </div>
@@ -460,7 +514,6 @@
                 <button type="button" class="xp-lab-lock-again" onclick="bloquearLaboratorioXp()"><span aria-hidden="true">🔒</span> Fechar laboratório</button>
                 </div>
             </div>
-
             <div class="frame-vault widget" aria-labelledby="frameVaultTitle">
                 <div class="frame-vault-heading">
                     <div><span class="xp-test-kicker">Arsenal visual</span><h3 id="frameVaultTitle">Molduras desbloqueadas</h3><p>Equipe qualquer moldura conquistada sem alterar seu nível ou título atual.</p></div>
@@ -667,6 +720,8 @@
         <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronómetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
 
         <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registo?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
+        <div class="modal-overlay" id="backupConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="cancelarImportacaoBackup()" aria-label="Fechar">×</button><div class="cycle-modal-title">Restaurar este backup?</div><p class="modal-message" id="backupConfirmMessage">Os dados atuais serão substituídos e enviados para sua nuvem.</p><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="cancelarImportacaoBackup()">Cancelar</button><button class="cycle-btn primary" type="button" onclick="confirmarImportacaoBackup()">Restaurar backup</button></div></div></div>
+        <div class="modal-overlay onboarding-modal" id="onboardingModal"><div class="modal-box onboarding-box"><div class="onboarding-mark">KM</div><div class="cycle-modal-title">Seu QG está pronto</div><p class="modal-message">Três passos para começar sem se perder entre as ferramentas.</p><div class="onboarding-steps"><span><b>1</b><strong>Adicione suas matérias</strong><small>Monte o conteúdo que realmente estuda.</small></span><span><b>2</b><strong>Inicie um bloco</strong><small>O cronômetro salva o tempo e o XP.</small></span><span><b>3</b><strong>Revise seu avanço</strong><small>Use gráficos, missões e revisões.</small></span></div><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="concluirOnboarding(false)">Explorar primeiro</button><button class="cycle-btn primary" type="button" onclick="concluirOnboarding(true)">Adicionar primeira matéria</button></div></div></div>
 
     </main>
 
@@ -696,7 +751,7 @@
                 <button class="ai-qg-voice" id="aiQgVoice" type="button" aria-label="Falar comando" onclick="ouvirComandoIa()">◉</button>
                 <button class="ai-qg-send" type="submit" aria-label="Enviar comando">➜</button>
             </div>
-            <small>O Gemini usa seus dados atuais para responder. Exclusões sempre exigem confirmação.</small>
+            <small>O Gemini mostra cada alteração antes de aplicar. Você também pode desfazer a última ação.</small>
         </form>
     </aside>
 
@@ -706,10 +761,12 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260907-save-2"></script>
+    <script src="script.js?v=20260907-account-5"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
-    <script src="ai-assistant.js?v=20260906-worlds-2"></script>
+    <script src="ai-assistant.js?v=20260907-account-5"></script>
+    <script src="productivity.js?v=20260907-account-5"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
-    <script type="module" src="cloud-sync.js?v=20260906-worlds-5"></script>
+    <script src="cloud-state.js?v=20260907-account-5"></script>
+    <script type="module" src="cloud-sync.js?v=20260907-account-5"></script>
 </body>
 </html>

@@ -24,12 +24,15 @@ const defaultAppData = {
     xpLoginDates: [],
     frasesMotivacionaisFila: [],
     ultimaFraseMotivacional: null,
-    profileName: 'Pedro Reis',
+    profileName: 'Estudante',
     profileBio: 'Construindo meu caminho até o ENEM, um foco de cada vez.',
     profilePhoto: '',
     xpResetOffset: 0,
     selectedFrames: { militar: '', aura: '' },
     frameVaultOpen: false,
+    onboardingCompleted: false,
+    accessibility: { fontScale: 'normal', highContrast: false, reduceMotion: false },
+    reminder: { enabled: false, time: '19:00', lastShown: '' },
     lastModifiedAt: 0
 };
 
@@ -65,7 +68,7 @@ if (!appData.xpLoginDates) appData.xpLoginDates = [];
 if (!Number.isFinite(Number(appData.xpResetOffset))) appData.xpResetOffset = 0;
 if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
 if (!Number.isInteger(appData.ultimaFraseMotivacional)) appData.ultimaFraseMotivacional = null;
-if (typeof appData.profileName !== 'string' || !appData.profileName.trim()) appData.profileName = 'Pedro Reis';
+if (typeof appData.profileName !== 'string' || !appData.profileName.trim()) appData.profileName = 'Estudante';
 if (typeof appData.profileBio !== 'string') appData.profileBio = '';
 appData.profileName = appData.profileName.trim().slice(0, 32);
 appData.profileBio = appData.profileBio.trim().slice(0, 190);
@@ -76,6 +79,10 @@ if (!appData.selectedFrames || typeof appData.selectedFrames !== 'object') appDa
 if (typeof appData.selectedFrames.militar !== 'string') appData.selectedFrames.militar = '';
 if (typeof appData.selectedFrames.aura !== 'string') appData.selectedFrames.aura = '';
 if (typeof appData.frameVaultOpen !== 'boolean') appData.frameVaultOpen = false;
+if (!appData.accessibility || typeof appData.accessibility !== 'object') appData.accessibility = { ...defaultAppData.accessibility };
+appData.accessibility = { ...defaultAppData.accessibility, ...appData.accessibility };
+if (!appData.reminder || typeof appData.reminder !== 'object') appData.reminder = { ...defaultAppData.reminder };
+appData.reminder = { ...defaultAppData.reminder, ...appData.reminder };
 if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
 
 if(appData.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
@@ -99,6 +106,13 @@ function saveAppData() {
 
 window.kingMasterCloudBridge = {
     exportData: () => JSON.parse(JSON.stringify(appData)),
+    resetForAccount: profileName => {
+        const fresh = { ...defaultAppData, profileName: String(profileName || 'Estudante').trim().slice(0, 32) || 'Estudante', lastModifiedAt: Date.now() };
+        localStorage.setItem('qg_pedro_data', JSON.stringify(fresh));
+        timerPersistenceReady = false;
+        localStorage.removeItem(window.KingTimerRecovery.KEY);
+        window.location.reload();
+    },
     importData: dados => {
         if (!dados || typeof dados !== 'object') return;
         localStorage.setItem('qg_pedro_data', JSON.stringify({ ...defaultAppData, ...dados }));
@@ -797,7 +811,7 @@ function aplicarFotoPerfil() {
 }
 
 function aplicarIdentidadePerfil() {
-    const nome = appData.profileName || 'Pedro Reis';
+    const nome = appData.profileName || 'Estudante';
     const bio = appData.profileBio || 'Sem bio por enquanto.';
     const nomeExibido = document.getElementById('profileDisplayName');
     const bioExibida = document.getElementById('profileDisplayBio');
@@ -1263,9 +1277,9 @@ function updateProgress() {
     
     if (isRunning) {
         const icone = currentMode === 'estudo' ? '⏱️' : '☕';
-        document.title = `${icone} ${formatHistoryTime(currentSeconds)} - QG de Estudos`;
+        document.title = `${icone} ${formatHistoryTime(currentSeconds)} - King Master`;
     } else {
-        document.title = "QG de Estudos - Pedro";
+        document.title = "King Master";
     }
 }
 
@@ -1337,7 +1351,7 @@ function tickTimer() {
                     
                     if (target > 0 && currentSeconds >= target && !alarmTriggered) { 
                         alarmTriggered = true; 
-                        document.title = "⏰ META ATINGIDA! - QG";
+                        document.title = "⏰ META ATINGIDA! - King Master";
                         triggerAlarm(); 
                         showToast('🎯 Meta de tempo atingida! O cronômetro continua rodando.');
                     }
@@ -1348,7 +1362,7 @@ function tickTimer() {
                         clearInterval(timerInterval); 
                         isRunning = false; 
                         playPauseBtn.textContent = '▶'; 
-                        document.title = "⏰ DE VOLTA À MISSÃO! - QG";
+                        document.title = "⏰ DE VOLTA À MISSÃO! - King Master";
                         updateProgress(); 
                         triggerAlarm(); 
                         toggleBotaoStopHistorico(); 
@@ -1401,8 +1415,8 @@ function stopAlarm() {
 }
 
 function abrirConfirmReset() { document.getElementById('confirmResetModal').classList.add('active'); }
-function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "QG de Estudos - Pedro"; }
-function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) registrarSessao(currentSeconds); else showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "QG de Estudos - Pedro"; }
+function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
+function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) registrarSessao(currentSeconds); else showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
 function setDescansoTime(mins) { descansoTempoAtual = mins; document.getElementById('btn-descanso-5').classList.remove('primary'); document.getElementById('btn-descanso-10').classList.remove('primary'); document.getElementById(`btn-descanso-${mins}`).classList.add('primary'); executarResetTimer(); }
 
 function setMode(mode) {

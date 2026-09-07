@@ -1,5 +1,5 @@
 /* IA do QG: Gemini interpreta a conversa e estas funções executam ações seguras no King Master. */
-const estadoIaQg = { pendente: null, ouvindo: false, geminiAtivo: false, processando: false, controller: null, rascunho: null };
+const estadoIaQg = { pendente: null, desfazer: null, ouvindo: false, geminiAtivo: false, processando: false, controller: null, rascunho: null };
 const LIMITE_RESPOSTA_IA = 16000;
 
 const CORES_IA = {
@@ -107,7 +107,7 @@ function renderizarConteudoIa(container, texto) {
     container.replaceChildren(...blocos);
 }
 
-function criarMensagemVisualIa(role, text, timestamp, comConfirmacao = false) {
+function criarMensagemVisualIa(role, text, timestamp, acaoDisponivel = '') {
     const artigo = document.createElement('article');
     artigo.className = `ai-qg-message ${role}`;
     const conteudo = document.createElement(role === 'assistant' ? 'div' : 'p');
@@ -118,14 +118,24 @@ function criarMensagemVisualIa(role, text, timestamp, comConfirmacao = false) {
     const hora = document.createElement('small');
     hora.textContent = role === 'assistant' ? `IA do QG • ${horarioMensagemIa(timestamp)}` : `Você • ${horarioMensagemIa(timestamp)}`;
     artigo.append(conteudo, hora);
-    if (comConfirmacao) {
+    if (acaoDisponivel === 'confirmar') {
         const acoes = document.createElement('div');
         acoes.className = 'ai-qg-message-action';
         const cancelar = document.createElement('button');
         cancelar.type = 'button'; cancelar.textContent = 'Cancelar'; cancelar.onclick = () => confirmarAcaoIa(false);
         const confirmar = document.createElement('button');
-        confirmar.type = 'button'; confirmar.className = 'danger'; confirmar.textContent = 'Confirmar exclusão'; confirmar.onclick = () => confirmarAcaoIa(true);
+        confirmar.type = 'button';
+        if (estadoIaQg.pendente?.type === 'delete-subject') confirmar.className = 'danger';
+        confirmar.textContent = estadoIaQg.pendente?.type === 'delete-subject' ? 'Confirmar exclusão' : 'Aplicar alterações';
+        confirmar.onclick = () => confirmarAcaoIa(true);
         acoes.append(cancelar, confirmar);
+        artigo.appendChild(acoes);
+    } else if (acaoDisponivel === 'desfazer') {
+        const acoes = document.createElement('div');
+        acoes.className = 'ai-qg-message-action';
+        const desfazer = document.createElement('button');
+        desfazer.type = 'button'; desfazer.textContent = '↶ Desfazer última alteração'; desfazer.onclick = desfazerUltimaAcaoIa;
+        acoes.appendChild(desfazer);
         artigo.appendChild(acoes);
     }
     return artigo;
@@ -143,7 +153,8 @@ function renderizarConversaIa() {
     }];
     mensagens.forEach((mensagem, indice) => {
         const ultima = indice === mensagens.length - 1;
-        container.appendChild(criarMensagemVisualIa(mensagem.role, mensagem.text, mensagem.timestamp, ultima && mensagem.role === 'assistant' && Boolean(estadoIaQg.pendente)));
+        const acao = ultima && mensagem.role === 'assistant' ? (estadoIaQg.pendente ? 'confirmar' : (estadoIaQg.desfazer ? 'desfazer' : '')) : '';
+        container.appendChild(criarMensagemVisualIa(mensagem.role, mensagem.text, mensagem.timestamp, acao));
     });
     if (estadoIaQg.rascunho) container.appendChild(estadoIaQg.rascunho);
     requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
@@ -302,7 +313,7 @@ function contextoGeminiIa() {
         agora: new Date().toISOString(),
         dataLocal: hoje,
         fusoHorario: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        usuario: { nome: appData.profileName || 'Pedro', bio: appData.profileBio || '' },
+        usuario: { nome: appData.profileName || 'Estudante', bio: appData.profileBio || '' },
         progresso: {
             nivel: gamificacao.nivel,
             xp: gamificacao.xpTotal,
@@ -335,7 +346,7 @@ function resultadoFerramentaIa(message, extra = {}) {
     return { ok: true, message, ...extra };
 }
 
-function executarFerramentaGeminiIa(nome, args = {}) {
+function executarFerramentaGeminiIaImediata(nome, args = {}) {
     const texto = chave => limparTextoIa(args?.[chave] ?? '', chave === 'bio' ? 190 : 100);
     if (nome === 'consultar_progresso') return resultadoFerramentaIa(resumoProgressoIa(), { data: contextoGeminiIa() });
     if (nome === 'listar_materias') return resultadoFerramentaIa(appData.cycleItems.length ? `Matérias: ${appData.cycleItems.map(item => item.subject).join(', ')}.` : 'Nenhuma matéria cadastrada.', { subjects: contextoGeminiIa().materias });
@@ -472,6 +483,70 @@ function executarFerramentaGeminiIa(nome, args = {}) {
     }
 
     return { ok: false, message: `Ferramenta desconhecida: ${nome}.` };
+}
+
+const FERRAMENTAS_IA_COM_CONFIRMACAO = new Set([
+    'adicionar_materia', 'adicionar_topico', 'adicionar_topicos', 'concluir_topico',
+    'agendar_estudo', 'criar_revisao', 'preparar_cronometro', 'definir_meta_diaria',
+    'atualizar_perfil', 'alterar_visual'
+]);
+
+const ROTULOS_FERRAMENTAS_IA = {
+    adicionar_materia: 'adicionar matéria', adicionar_topico: 'adicionar tópico', adicionar_topicos: 'adicionar tópicos',
+    concluir_topico: 'concluir tópico', agendar_estudo: 'agendar estudo', criar_revisao: 'criar revisão',
+    preparar_cronometro: 'preparar cronômetro', definir_meta_diaria: 'alterar meta diária',
+    atualizar_perfil: 'atualizar perfil', alterar_visual: 'alterar visual'
+};
+
+function validarFerramentaGeminiIa(nome, args = {}) {
+    const texto = (chave, limite = 100) => limparTextoIa(args?.[chave] ?? '', limite);
+    const materiaAtualOuPlanejada = termo => {
+        const atual = encontrarMateriaIa(termo);
+        if (atual) return atual;
+        const alvo = normalizarIa(termo);
+        const planejada = estadoIaQg.pendente?.actions?.find(item => item.name === 'adicionar_materia' && normalizarIa(item.args?.nome) === alvo);
+        return planejada ? { id: 'planned', subject: planejada.args.nome, topicos: [] } : null;
+    };
+    if (nome === 'adicionar_materia') {
+        const subject = texto('nome');
+        if (subject.length < 2) return 'O nome da matéria é inválido.';
+        if (encontrarMateriaIa(subject)) return `A matéria ${subject} já existe ou o nome é ambíguo.`;
+    }
+    if (['adicionar_topico', 'adicionar_topicos', 'concluir_topico', 'criar_revisao', 'preparar_cronometro'].includes(nome) && !materiaAtualOuPlanejada(texto('materia'))) return 'Matéria não encontrada ou nome ambíguo.';
+    if (nome === 'adicionar_topico' && !texto('topico')) return 'Tópico inválido.';
+    if (nome === 'adicionar_topicos' && (!Array.isArray(args.topicos) || !args.topicos.length || args.topicos.length > 20)) return 'Envie entre 1 e 20 tópicos.';
+    if (nome === 'concluir_topico' && !texto('topico')) return 'Informe o tópico a concluir.';
+    if (nome === 'agendar_estudo' && (!texto('materia') || !dataValidaIa(args.data) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(args.hora || ''))) return 'Informe matéria/atividade, uma data válida YYYY-MM-DD e horário HH:MM.';
+    if (nome === 'criar_revisao' && (!texto('assunto') || !dataValidaIa(args.data))) return 'Informe um assunto e uma data válida no formato YYYY-MM-DD.';
+    if (nome === 'preparar_cronometro' && (!Number.isInteger(Number(args.minutos)) || Number(args.minutos) < 1 || Number(args.minutos) > 600)) return 'A duração deve ser um número inteiro entre 1 e 600 minutos.';
+    if (nome === 'definir_meta_diaria' && (!Number.isInteger(Number(args.minutos)) || Number(args.minutos) < 5 || Number(args.minutos) > 1440)) return 'A meta deve ser um número inteiro entre 5 e 1440 minutos.';
+    if (nome === 'atualizar_perfil' && typeof args.nome !== 'string' && typeof args.bio !== 'string') return 'Informe o nome ou a bio para atualizar.';
+    if (nome === 'atualizar_perfil' && args.nome && texto('nome', 32).length < 2) return 'O nome deve ter pelo menos 2 caracteres.';
+    if (nome === 'alterar_visual') {
+        if (args.visual && !['classic', 'futuristic'].includes(args.visual)) return 'Escolha classic ou futuristic para o visual.';
+        if (args.carreira && !['aura', 'militar'].includes(args.carreira)) return 'Escolha aura ou militar para a carreira.';
+        if (args.cor && !CORES_IA[normalizarIa(args.cor)]) return 'Essa cor não está disponível.';
+        if (!args.visual && !args.carreira && !args.cor) return 'Informe qual visual, carreira ou cor deve mudar.';
+    }
+    return '';
+}
+
+function executarFerramentaGeminiIa(nome, args = {}) {
+    if (!FERRAMENTAS_IA_COM_CONFIRMACAO.has(nome)) return executarFerramentaGeminiIaImediata(nome, args);
+    if (estadoIaQg.pendente && estadoIaQg.pendente.type !== 'tool-batch') {
+        return { ok: false, message: 'Conclua ou cancele primeiro a alteração que já aguarda confirmação.' };
+    }
+    const erro = validarFerramentaGeminiIa(nome, args);
+    if (erro) return { ok: false, message: erro };
+    if (!estadoIaQg.pendente) estadoIaQg.pendente = { type: 'tool-batch', actions: [] };
+    const assinatura = JSON.stringify([nome, args]);
+    if (!estadoIaQg.pendente.actions.some(item => item.signature === assinatura)) {
+        estadoIaQg.pendente.actions.push({ name: nome, args: JSON.parse(JSON.stringify(args || {})), signature: assinatura });
+    }
+    const quantidade = estadoIaQg.pendente.actions.length;
+    return resultadoFerramentaIa(`${ROTULOS_FERRAMENTAS_IA[nome] || 'alteração'} preparada. Revise e confirme para aplicar.`, {
+        requiresConfirmation: true, pendingCount: quantidade
+    });
 }
 
 window.KingMasterAI = {
@@ -754,15 +829,57 @@ function interpretarComandoIa(texto) {
 function executarAcaoPendenteIa(confirmado) {
     const acao = estadoIaQg.pendente;
     estadoIaQg.pendente = null;
-    if (!confirmado) return { text: 'Exclusão cancelada. Nenhum dado foi alterado.' };
+    if (!confirmado) return { text: 'Alteração cancelada. Nenhum dado foi modificado.' };
+    if (acao?.type === 'tool-batch') {
+        const anterior = JSON.parse(JSON.stringify(appData));
+        const resultados = [];
+        for (const item of acao.actions || []) {
+            const resultado = executarFerramentaGeminiIaImediata(item.name, item.args);
+            resultados.push(resultado);
+            if (!resultado.ok) {
+                appData = anterior;
+                atualizarInterfaceCompletaIa();
+                return { text: `Não apliquei o pacote porque uma etapa falhou: ${resultado.message} Nenhum dado foi alterado.`, error: true };
+            }
+        }
+        estadoIaQg.desfazer = { data: anterior, label: `${resultados.length} alteração(ões)` };
+        return {
+            text: `${resultados.map(item => `✓ ${item.message}`).join('\n')}\n\nTudo foi aplicado. Se mudar de ideia, use “Desfazer última alteração”.`,
+            changed: true,
+            section: [...resultados].reverse().find(item => item.section)?.section,
+            toast: `✓ ${resultados.length} alteração(ões) aplicada(s)`
+        };
+    }
     if (acao?.type === 'delete-subject') {
+        const anterior = JSON.parse(JSON.stringify(appData));
         const materia = appData.cycleItems.find(item => item.id === acao.id);
         if (!materia) return { text: 'Essa matéria já não existe.' };
         appData.cycleItems = appData.cycleItems.filter(item => item.id !== acao.id);
         renderizarCiclo(); renderizarRevisoes();
+        estadoIaQg.desfazer = { data: anterior, label: `exclusão de ${acao.label}` };
         return { text: `Matéria ${acao.label} excluída com confirmação.`, changed: true, section: 'planejamento', toast: '✓ Matéria excluída pela IA' };
     }
     return { text: 'Não encontrei a ação que aguardava confirmação.', error: true };
+}
+
+function atualizarInterfaceCompletaIa() {
+    const funcoes = [
+        'syncSettingsUI', 'syncVisualModeControl', 'aplicarIdentidadePerfil', 'renderGamificacao',
+        'renderStreak', 'atualizarSeletorDeMaterias', 'renderizarCiclo', 'renderizarHistorico',
+        'renderizarRaioX', 'renderizarAgenda', 'renderizarAgendamento', 'renderizarRevisoes',
+        'renderizarSimulados', 'renderizarRedacoes', 'renderizarMapaDominio', 'updateDashboardStats'
+    ];
+    funcoes.forEach(nome => { try { if (typeof window[nome] === 'function') window[nome](); } catch (_) {} });
+}
+
+function desfazerUltimaAcaoIa() {
+    const registro = estadoIaQg.desfazer;
+    if (!registro?.data) return;
+    const conversa = Array.isArray(appData.aiConversation) ? [...appData.aiConversation] : [];
+    conversa.push({ role: 'assistant', text: `Desfiz ${registro.label}. Seus dados anteriores foram restaurados.`, timestamp: Date.now() });
+    const restaurado = { ...registro.data, aiConversation: conversa.slice(-36), lastModifiedAt: Date.now() + 1 };
+    estadoIaQg.desfazer = null;
+    window.kingMasterCloudBridge?.importData?.(restaurado);
 }
 
 function confirmarAcaoIa(confirmado) {

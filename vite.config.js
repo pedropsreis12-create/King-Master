@@ -15,18 +15,26 @@ function staticSiteWorker() {
         },
       };
 
-      for (const name of ['script.js', 'ai-assistant.js', 'firebase-config.js', 'cloud-sync.js']) {
+      for (const name of ['script.js', 'ai-assistant.js', 'firebase-config.js', 'cloud-sync.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };
       }
 
       for (const name of assetNames) {
-        if (!name.endsWith('.css')) continue;
+        if (!name.endsWith('.css') && !name.endsWith('.js')) continue;
         files[`/assets/${name}`] = {
           body: await readFile(`dist/assets/${name}`, 'utf8'),
-          type: 'text/css; charset=utf-8',
+          type: name.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8',
         };
+      }
+
+      // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
+      for (const name of await readdir('assets')) {
+        if (!/^rank-[a-z0-9-]+\.webp$/.test(name)) continue;
+        const body = await readFile(`assets/${name}`);
+        await writeFile(`dist/assets/${name}`, body);
+        files[`/assets/${name}`] = { body: body.toString('base64'), type: 'image/webp', binary: true };
       }
 
       await mkdir('dist/server', { recursive: true });
@@ -50,7 +58,8 @@ export default {
       'Cache-Control': path === '/index.html' ? 'private, no-cache' : 'public, max-age=31536000, immutable',
       'X-Content-Type-Options': 'nosniff',
     };
-    return new Response(request.method === 'HEAD' ? null : file.body, { status: 200, headers });
+    const body = file.binary ? Uint8Array.from(atob(file.body), c => c.charCodeAt(0)) : file.body;
+    return new Response(request.method === 'HEAD' ? null : body, { status: 200, headers });
   }
 };
 `,

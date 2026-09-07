@@ -1,5 +1,6 @@
 /* IA do QG: Gemini interpreta a conversa e estas funções executam ações seguras no King Master. */
-const estadoIaQg = { pendente: null, ouvindo: false, geminiAtivo: false };
+const estadoIaQg = { pendente: null, ouvindo: false, geminiAtivo: false, processando: false, controller: null, rascunho: null };
+const LIMITE_RESPOSTA_IA = 16000;
 
 const CORES_IA = {
     azul: ['#007aff', '0, 122, 255'], verde: ['#34c759', '52, 199, 89'],
@@ -33,14 +34,90 @@ function horarioMensagemIa(timestamp) {
     return new Date(timestamp || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
+function adicionarTextoFormatadoIa(container, texto) {
+    // Só há três marcas inline permitidas. HTML, URLs e atributos nunca são interpretados.
+    const marcas = /`([^`\n]+)`|\*\*([^\n]+?)\*\*|__([^\n]+?)__/g;
+    let inicio = 0;
+    for (const trecho of texto.matchAll(marcas)) {
+        if (trecho.index > inicio) container.appendChild(document.createTextNode(texto.slice(inicio, trecho.index)));
+        const elemento = document.createElement(trecho[1] !== undefined ? 'code' : 'strong');
+        elemento.textContent = trecho[1] ?? trecho[2] ?? trecho[3];
+        container.appendChild(elemento);
+        inicio = trecho.index + trecho[0].length;
+    }
+    if (inicio < texto.length) container.appendChild(document.createTextNode(texto.slice(inicio)));
+}
+
+function renderizarConteudoIa(container, texto) {
+    const blocos = [];
+    let paragrafo = [];
+    let lista = null;
+    let codigo = null;
+    const concluirParagrafo = () => {
+        if (!paragrafo.length) return;
+        const elemento = document.createElement('p');
+        adicionarTextoFormatadoIa(elemento, paragrafo.join('\n'));
+        blocos.push(elemento);
+        paragrafo = [];
+    };
+    const concluirCodigo = () => {
+        const pre = document.createElement('pre');
+        const conteudo = document.createElement('code');
+        conteudo.textContent = codigo.join('\n');
+        pre.appendChild(conteudo);
+        blocos.push(pre);
+        codigo = null;
+    };
+    for (const linha of String(texto).slice(0, LIMITE_RESPOSTA_IA).replace(/\r\n?/g, '\n').split('\n')) {
+        if (/^\s*```/.test(linha)) {
+            concluirParagrafo(); lista = null;
+            if (codigo !== null) concluirCodigo();
+            else codigo = [];
+            continue;
+        }
+        if (codigo !== null) { codigo.push(linha); continue; }
+        if (!linha.trim()) { concluirParagrafo(); lista = null; continue; }
+        const titulo = linha.match(/^\s{0,3}#{1,6}\s+(.+?)(?:\s+#+)?$/);
+        if (titulo) {
+            concluirParagrafo(); lista = null;
+            const elemento = document.createElement('h4');
+            adicionarTextoFormatadoIa(elemento, titulo[1]);
+            blocos.push(elemento);
+            continue;
+        }
+        const item = linha.match(/^\s*(?:([-+*•])\s+|(\d{1,3})[.)]\s+)(.+)$/);
+        if (item) {
+            concluirParagrafo();
+            const tipo = item[2] ? 'ol' : 'ul';
+            if (!lista || lista.tagName.toLowerCase() !== tipo) {
+                lista = document.createElement(tipo);
+                if (tipo === 'ol' && Number(item[2]) > 1) lista.start = Number(item[2]);
+                blocos.push(lista);
+            }
+            const elemento = document.createElement('li');
+            adicionarTextoFormatadoIa(elemento, item[3]);
+            lista.appendChild(elemento);
+            continue;
+        }
+        lista = null;
+        paragrafo.push(linha);
+    }
+    concluirParagrafo();
+    if (codigo !== null) concluirCodigo();
+    container.replaceChildren(...blocos);
+}
+
 function criarMensagemVisualIa(role, text, timestamp, comConfirmacao = false) {
     const artigo = document.createElement('article');
     artigo.className = `ai-qg-message ${role}`;
-    const paragrafo = document.createElement('p');
-    paragrafo.textContent = text;
+    const conteudo = document.createElement(role === 'assistant' ? 'div' : 'p');
+    if (role === 'assistant') {
+        conteudo.className = 'ai-qg-message-copy';
+        renderizarConteudoIa(conteudo, text);
+    } else conteudo.textContent = text;
     const hora = document.createElement('small');
     hora.textContent = role === 'assistant' ? `IA do QG • ${horarioMensagemIa(timestamp)}` : `Você • ${horarioMensagemIa(timestamp)}`;
-    artigo.append(paragrafo, hora);
+    artigo.append(conteudo, hora);
     if (comConfirmacao) {
         const acoes = document.createElement('div');
         acoes.className = 'ai-qg-message-action';
@@ -68,12 +145,13 @@ function renderizarConversaIa() {
         const ultima = indice === mensagens.length - 1;
         container.appendChild(criarMensagemVisualIa(mensagem.role, mensagem.text, mensagem.timestamp, ultima && mensagem.role === 'assistant' && Boolean(estadoIaQg.pendente)));
     });
+    if (estadoIaQg.rascunho) container.appendChild(estadoIaQg.rascunho);
     requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
 }
 
 function registrarMensagemIa(role, text) {
     garantirMemoriaIa();
-    appData.aiConversation.push({ role, text: String(text).slice(0, 1200), timestamp: Date.now() });
+    appData.aiConversation.push({ role, text: String(text).slice(0, LIMITE_RESPOSTA_IA), timestamp: Date.now() });
     appData.aiConversation = appData.aiConversation.slice(-36);
     renderizarConversaIa();
 }
@@ -108,13 +186,19 @@ function usarSugestaoIa(texto) {
     processarEntradaIa(texto);
 }
 
-function mostrarPensamentoIa(visivel) {
+function mostrarPensamentoIa(visivel, mensagem = 'Pensando no seu pedido…') {
     const elemento = document.getElementById('aiQgThinking');
     if (elemento) elemento.hidden = !visivel;
+    const legenda = elemento?.querySelector('span');
+    if (legenda) legenda.textContent = mensagem;
 }
 
 function enviarMensagemIa(event) {
     event.preventDefault();
+    if (estadoIaQg.processando) {
+        estadoIaQg.controller?.abort();
+        return;
+    }
     const input = document.getElementById('aiQgInput');
     const texto = input?.value.trim() || '';
     if (!texto) return;
@@ -123,57 +207,126 @@ function enviarMensagemIa(event) {
 }
 
 async function processarEntradaIa(texto) {
-    const comando = String(texto).trim().slice(0, 500);
+    if (estadoIaQg.processando) return;
+    const comando = String(texto).trim().slice(0, 2000);
     if (!comando) return;
+    const historico = appData.aiConversation.slice(-16).map(item => ({ role: item.role, text: item.text }));
     registrarMensagemIa('user', comando);
-    mostrarPensamentoIa(true);
-    await new Promise(resolve => setTimeout(resolve, 180));
-    let resultado;
-    if (window.kingGemini?.available) {
-        try {
-            resultado = await Promise.race([
-                window.kingGemini.send(comando, contextoGeminiIa()),
-                new Promise((_, reject) => setTimeout(() => reject(new Error('O Gemini demorou mais que 60 segundos para responder.')), 60000))
-            ]);
+    estadoIaQg.processando = true;
+    estadoIaQg.controller = new AbortController();
+    const enviar = document.querySelector('#aiQgForm button[type="submit"]');
+    if (enviar) { enviar.textContent = '■'; enviar.setAttribute('aria-label', 'Interromper resposta'); }
+    document.getElementById('aiQgMessages')?.setAttribute('aria-busy', 'true');
+    mostrarPensamentoIa(true, 'Conectando ao Gemini…');
+    let resultado = { text: 'Não foi possível concluir este pedido.', error: true };
+    try {
+        // A confirmação pertence à ação pendente, não a uma nova interpretação do modelo.
+        if (estadoIaQg.pendente) resultado = interpretarComandoIa(comando);
+        else {
+            if (!window.kingGemini?.available && window.kingGeminiReady) {
+                await esperarConexaoIa(window.kingGeminiReady, estadoIaQg.controller.signal);
+            }
+            if (!window.kingGemini?.available) throw new Error('A conexão com o Gemini não está disponível. Atualize a página ou confira sua conexão.');
+            resultado = await window.kingGemini.send(comando, contextoGeminiIa(), {
+                history: historico,
+                signal: estadoIaQg.controller.signal,
+                onStatus: mensagem => mostrarPensamentoIa(true, mensagem),
+                onText: atualizarRascunhoIa
+            });
             estadoIaQg.geminiAtivo = true;
-        } catch (error) {
-            console.warn('Gemini indisponível; usando o modo local seguro.', error);
-            resultado = interpretarComandoIa(comando);
-            resultado.text = `${resultado.text}\n\nO Gemini está temporariamente indisponível; concluí pelo modo local do QG.`;
         }
-    } else {
-        resultado = interpretarComandoIa(comando);
+    } catch (error) {
+        estadoIaQg.geminiAtivo = false;
+        resultado = { text: error.name === 'AbortError' ? 'Resposta interrompida.' : descreverErroGeminiIa(error), error: true };
+        console.warn('Não foi possível concluir a resposta do Gemini.', error?.code || error?.name || 'connection');
+    } finally {
+        estadoIaQg.processando = false;
+        estadoIaQg.controller = null;
+        estadoIaQg.rascunho?.remove();
+        estadoIaQg.rascunho = null;
+        mostrarPensamentoIa(false);
+        document.getElementById('aiQgMessages')?.setAttribute('aria-busy', 'false');
+        if (enviar) { enviar.textContent = '➜'; enviar.setAttribute('aria-label', 'Enviar comando'); }
     }
-    mostrarPensamentoIa(false);
     registrarMensagemIa('assistant', resultado.text);
     const ultimaAcao = Array.isArray(resultado.actions) ? [...resultado.actions].reverse().find(item => item?.section || item?.toast) : null;
     if (resultado.section || ultimaAcao?.section) showSection(resultado.section || ultimaAcao.section);
-    saveAppData();
+    try {
+        saveAppData();
+    } catch (error) {
+        registrarMensagemIa('assistant', 'Não consegui salvar a conversa no navegador. Ela continua visível nesta página; confira o espaço disponível antes de fechá-la.');
+        showToast('Não foi possível salvar os dados neste dispositivo.', true);
+    }
     if (resultado.toast || ultimaAcao?.toast) showToast(resultado.toast || ultimaAcao.toast, resultado.error === true);
+}
+
+function esperarConexaoIa(promise, signal) {
+    return new Promise((resolve, reject) => {
+        const concluir = (erro) => { clearTimeout(timer); signal.removeEventListener('abort', cancelar); erro ? reject(erro) : resolve(); };
+        const cancelar = () => concluir(new DOMException('Interrompido.', 'AbortError'));
+        const timer = setTimeout(() => concluir(new Error('A conexão com o Gemini está demorando para iniciar. Tente novamente em instantes.')), 10000);
+        if (signal.aborted) return cancelar();
+        signal.addEventListener('abort', cancelar, { once: true });
+        Promise.resolve(promise).then(() => concluir(), concluir);
+    });
+}
+
+function atualizarRascunhoIa(texto) {
+    const container = document.getElementById('aiQgMessages');
+    if (!container || !estadoIaQg.processando) return;
+    const estavaNoFim = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+    if (!estadoIaQg.rascunho) {
+        estadoIaQg.rascunho = criarMensagemVisualIa('assistant', '', Date.now());
+        container.appendChild(estadoIaQg.rascunho);
+    }
+    renderizarConteudoIa(estadoIaQg.rascunho.querySelector('.ai-qg-message-copy'), texto);
+    if (estavaNoFim) container.scrollTop = container.scrollHeight;
+}
+
+function descreverErroGeminiIa(error) {
+    const detalhe = `${error?.code || ''} ${error?.message || ''}`.toLowerCase();
+    if (/429|quota|resource.exhausted/.test(detalhe)) return 'O limite de uso do Gemini foi atingido. Aguarde um pouco e tente novamente. Seu pedido não foi executado.';
+    if (/app.check|appcheck|recaptcha|403|permission.denied/.test(detalhe)) return 'O Google não conseguiu validar o acesso ao Gemini neste navegador. Recarregue a página; se continuar, teste pelo endereço oficial em outro navegador. Seu pedido não foi executado.';
+    if (/timeout|timed.out|deadline/.test(detalhe)) return 'O Gemini demorou demais para responder e a tentativa foi interrompida. Tente novamente com uma parte do pedido. Nenhuma ação foi executada.';
+    if (/404|not.found|model.*not/.test(detalhe)) return 'O modelo do Gemini está indisponível para este projeto. A conexão precisa ser ajustada; seu pedido não foi executado.';
+    return 'Não consegui receber a resposta do Gemini. Confira sua conexão e tente novamente. Nenhuma ação foi executada.';
 }
 
 function contextoGeminiIa() {
     const gamificacao = calcularGamificacao();
+    const hoje = dataLocalISO(new Date());
+    const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
+    const historico = Array.isArray(appData.historyItems) ? appData.historyItems : [];
+    const minutosHoje = Math.round(historico.filter(item => dataHistoricoISO(item) === hoje).reduce((total, item) => total + (Number(item.tempoSegundos) || 0), 0) / 60);
     return {
         agora: new Date().toISOString(),
+        dataLocal: hoje,
+        fusoHorario: Intl.DateTimeFormat().resolvedOptions().timeZone,
         usuario: { nome: appData.profileName || 'Pedro', bio: appData.profileBio || '' },
         progresso: {
             nivel: gamificacao.nivel,
             xp: gamificacao.xpTotal,
             sequenciaDias: gamificacao.sequencia,
             minutosEstudados: Math.round((appData.totalStudySeconds || 0) / 60),
+            minutosHoje,
+            minutosNestaSemana: Math.round((appData.weeklyChart || []).reduce((total, segundos) => total + (Number(segundos) || 0), 0) / 60),
             metaDiariaMinutos: appData.dailyGoalMinutes || 60
         },
-        materias: appData.cycleItems.map(item => ({
+        materias: materias.slice(0, 60).map(item => ({
             nome: item.subject,
             tipo: item.type,
             minutos: item.executedMin || 0,
             acertos: item.acertos || 0,
             erros: item.erros || 0,
-            topicos: (item.topicos || []).map(topico => ({ nome: topico.nome, concluido: Boolean(topico.concluido) }))
+            topicos: (item.topicos || []).slice(0, 30).map(topico => ({ nome: topico.nome, concluido: Boolean(topico.concluido) })),
+            totalTopicos: (item.topicos || []).length
         })),
-        revisoesPendentes: appData.revisoesItems.filter(item => item.status !== 'revisado').slice(0, 20).map(item => ({ assunto: item.assunto, data: item.dataAlvo })),
-        agendamentos: appData.agendamentoItems.filter(item => !item.completed).slice(0, 20).map(item => ({ titulo: item.title, data: item.date, hora: item.time })),
+        totalMaterias: materias.length,
+        sessoesRecentes: [...historico].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 12).map(item => ({ materia: item.materia, assunto: item.assunto || '', data: dataHistoricoISO(item), minutos: Math.round((item.tempoSegundos || 0) / 60) })),
+        revisoesPendentes: appData.revisoesItems.filter(item => item.status !== 'revisado').sort((a, b) => String(a.dataAlvo).localeCompare(String(b.dataAlvo))).slice(0, 20).map(item => ({ materia: materias.find(materia => String(materia.id) === String(item.materia))?.subject, assunto: item.assunto, data: item.dataAlvo })),
+        agendamentos: appData.agendamentoItems.filter(item => !item.completed && item.date >= hoje).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 20).map(item => ({ titulo: item.title, data: item.date, hora: item.time })),
+        simuladosRecentes: [...(appData.simuladosItems || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3).map(item => ({ titulo: item.title, data: item.date, acertos: item.acertos, total: item.total })),
+        recorte: 'Até 60 matérias, 30 tópicos por matéria, 12 sessões, 20 revisões e 20 compromissos. Zero questões significa ausência de avaliação, não dificuldade comprovada.',
         visual: { modo: appData.visualMode || 'classic', carreira: appData.rankVisualMode || 'aura' }
     };
 }
@@ -184,7 +337,7 @@ function resultadoFerramentaIa(message, extra = {}) {
 
 function executarFerramentaGeminiIa(nome, args = {}) {
     const texto = chave => limparTextoIa(args?.[chave] ?? '', chave === 'bio' ? 190 : 100);
-    if (nome === 'consultar_progresso') return resultadoFerramentaIa(resumoProgressoIa(), { summary: resumoProgressoIa(), recommendation: recomendacaoEstudoIa(), section: 'perfil' });
+    if (nome === 'consultar_progresso') return resultadoFerramentaIa(resumoProgressoIa(), { data: contextoGeminiIa() });
     if (nome === 'listar_materias') return resultadoFerramentaIa(appData.cycleItems.length ? `Matérias: ${appData.cycleItems.map(item => item.subject).join(', ')}.` : 'Nenhuma matéria cadastrada.', { subjects: contextoGeminiIa().materias });
 
     if (nome === 'adicionar_materia') {
@@ -209,11 +362,28 @@ function executarFerramentaGeminiIa(nome, args = {}) {
         return resultadoFerramentaIa(`Tópico ${topicoNome} adicionado em ${materia.subject}.`, { section: 'planejamento', toast: '✓ Tópico criado pelo Gemini' });
     }
 
+    if (nome === 'adicionar_topicos') {
+        const materia = encontrarMateriaIa(texto('materia'));
+        if (!materia) return { ok: false, message: 'Matéria não encontrada ou nome ambíguo. Informe o nome exato.' };
+        if (!Array.isArray(args.topicos) || !args.topicos.length || args.topicos.length > 20) return { ok: false, message: 'Envie entre 1 e 20 tópicos.' };
+        const nomes = args.topicos.map(nome => limparTextoIa(nome, 100)).filter(Boolean);
+        if (!Array.isArray(materia.topicos)) materia.topicos = [];
+        const adicionados = [];
+        for (const nome of nomes) {
+            if (materia.topicos.some(topico => normalizarIa(topico.nome) === normalizarIa(nome))) continue;
+            materia.topicos.push({ nome, concluido: false }); adicionados.push(nome);
+        }
+        renderizarCiclo();
+        return resultadoFerramentaIa(`${adicionados.length} tópico(s) adicionado(s) em ${materia.subject}. Os já existentes foram preservados.`, { added: adicionados, section: 'planejamento', toast: '✓ Tópicos atualizados' });
+    }
+
     if (nome === 'concluir_topico') {
         const materia = encontrarMateriaIa(texto('materia'));
         if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
         const alvo = normalizarIa(texto('topico'));
-        const topico = (materia.topicos || []).find(item => normalizarIa(item.nome) === alvo || normalizarIa(item.nome).includes(alvo));
+        if (!alvo) return { ok: false, message: 'Informe o tópico a concluir.' };
+        const candidatos = (materia.topicos || []).filter(item => normalizarIa(item.nome).includes(alvo));
+        const topico = (materia.topicos || []).find(item => normalizarIa(item.nome) === alvo) || (candidatos.length === 1 ? candidatos[0] : null);
         if (!topico) return { ok: false, message: 'Tópico não encontrado.' };
         topico.concluido = true; renderizarCiclo();
         return resultadoFerramentaIa(`Tópico ${topico.nome} concluído em ${materia.subject}.`, { section: 'planejamento', toast: '✓ Tópico concluído' });
@@ -222,8 +392,11 @@ function executarFerramentaGeminiIa(nome, args = {}) {
     if (nome === 'agendar_estudo') {
         const materia = encontrarMateriaIa(texto('materia'));
         const subject = materia?.subject || texto('materia');
-        const date = /^\d{4}-\d{2}-\d{2}$/.test(args.data || '') ? args.data : dataDoComandoIa(args.data || 'amanhã');
-        const time = /^([01]\d|2[0-3]):[0-5]\d$/.test(args.hora || '') ? args.hora : '18:00';
+        if (!subject || !dataValidaIa(args.data) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(args.hora || '')) return { ok: false, message: 'Informe matéria/atividade, uma data válida YYYY-MM-DD e horário HH:MM.' };
+        const date = args.data;
+        const time = args.hora;
+        const title = texto('titulo') || `Estudar ${subject}`;
+        if (appData.agendamentoItems.some(item => !item.completed && item.date === date && item.time === time && normalizarIa(item.title) === normalizarIa(title))) return { ok: false, message: 'Esse estudo já está agendado nessa data e horário.' };
         appData.agendamentoItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), title: texto('titulo') || `Estudar ${subject}`, date, time, type: 'Estudo', description: texto('descricao') || 'Planejado pelo Gemini do QG', completed: false });
         renderizarAgendamento();
         return resultadoFerramentaIa(`${subject} agendada para ${dataBonitaIa(date)} às ${time}.`, { section: 'agendamento', toast: '✓ Estudo agendado pelo Gemini' });
@@ -233,7 +406,9 @@ function executarFerramentaGeminiIa(nome, args = {}) {
         const materia = encontrarMateriaIa(texto('materia'));
         if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
         const assunto = texto('assunto');
-        const dataAlvo = /^\d{4}-\d{2}-\d{2}$/.test(args.data || '') ? args.data : dataDoComandoIa(args.data || 'amanhã');
+        if (!assunto || !dataValidaIa(args.data)) return { ok: false, message: 'Informe um assunto e uma data válida no formato YYYY-MM-DD.' };
+        const dataAlvo = args.data;
+        if (appData.revisoesItems.some(item => item.status !== 'revisado' && String(item.materia) === String(materia.id) && item.dataAlvo === dataAlvo && normalizarIa(item.assunto) === normalizarIa(assunto))) return { ok: false, message: 'Essa revisão já está cadastrada.' };
         appData.revisoesItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), materia: String(materia.id), assunto, dataEstudo: '', dataAlvo, origem: 'gemini-qg', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
         renderizarRevisoes();
         return resultadoFerramentaIa(`Revisão de ${assunto} criada em ${materia.subject} para ${dataBonitaIa(dataAlvo)}.`, { section: 'revisoes', toast: '✓ Revisão criada pelo Gemini' });
@@ -242,7 +417,9 @@ function executarFerramentaGeminiIa(nome, args = {}) {
     if (nome === 'preparar_cronometro') {
         const materia = encontrarMateriaIa(texto('materia'));
         if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
-        const minutos = Math.max(1, Math.min(600, Number(args.minutos) || 25));
+        const minutos = Number(args.minutos);
+        if (!Number.isInteger(minutos) || minutos < 1 || minutos > 600) return { ok: false, message: 'A duração deve ser um número inteiro entre 1 e 600 minutos.' };
+        if (typeof isRunning !== 'undefined' && isRunning) return { ok: false, message: 'Já existe uma sessão em andamento. Pause-a antes de preparar outra.' };
         setMode('estudo');
         document.getElementById('inputHours').value = Math.floor(minutos / 60);
         document.getElementById('inputMinutes').value = minutos % 60;
@@ -252,11 +429,15 @@ function executarFerramentaGeminiIa(nome, args = {}) {
     }
 
     if (nome === 'definir_meta_diaria') {
-        const minutos = Math.max(5, Math.min(1440, Number(args.minutos) || 60)); appData.dailyGoalMinutes = minutos;
+        const minutos = Number(args.minutos);
+        if (!Number.isInteger(minutos) || minutos < 5 || minutos > 1440) return { ok: false, message: 'A meta deve ser um número inteiro entre 5 e 1440 minutos.' };
+        appData.dailyGoalMinutes = minutos;
         return resultadoFerramentaIa(`Meta diária alterada para ${minutos} minutos.`, { toast: '✓ Meta diária atualizada' });
     }
 
     if (nome === 'atualizar_perfil') {
+        if (typeof args.nome !== 'string' && typeof args.bio !== 'string') return { ok: false, message: 'Informe o nome ou a bio para atualizar.' };
+        if (args.nome && limparTextoIa(args.nome, 32).length < 2) return { ok: false, message: 'O nome deve ter pelo menos 2 caracteres.' };
         if (args.nome) appData.profileName = limparTextoIa(args.nome, 32);
         if (typeof args.bio === 'string') appData.profileBio = limparTextoIa(args.bio, 190);
         aplicarIdentidadePerfil();
@@ -264,6 +445,10 @@ function executarFerramentaGeminiIa(nome, args = {}) {
     }
 
     if (nome === 'alterar_visual') {
+        if (args.visual && !['classic', 'futuristic'].includes(args.visual)) return { ok: false, message: 'Escolha classic ou futuristic para o visual.' };
+        if (args.carreira && !['aura', 'militar'].includes(args.carreira)) return { ok: false, message: 'Escolha aura ou militar para a carreira.' };
+        if (args.cor && !CORES_IA[normalizarIa(args.cor)]) return { ok: false, message: 'Essa cor não está disponível. Escolha azul, verde, laranja, roxo, vermelho, amarelo, rosa ou ciano.' };
+        if (!args.visual && !args.carreira && !args.cor) return { ok: false, message: 'Informe qual visual, carreira ou cor deve mudar.' };
         if (['classic', 'futuristic'].includes(args.visual)) { appData.visualMode = args.visual; document.documentElement.dataset.visual = args.visual; syncVisualModeControl(); }
         if (['aura', 'militar'].includes(args.carreira)) { appData.rankVisualMode = args.carreira; sincronizarModoPatente(); renderizarAtalhosXpTeste(); renderGamificacao(true); }
         const cor = normalizarIa(args.cor || '');
@@ -273,13 +458,15 @@ function executarFerramentaGeminiIa(nome, args = {}) {
 
     if (nome === 'abrir_area') {
         const chave = normalizarIa(args.area || 'painel');
-        const rota = ROTAS_IA[chave] || Object.entries(ROTAS_IA).find(([apelido]) => chave.includes(apelido))?.[1] || 'dashboard';
+        const rota = ROTAS_IA[chave] || Object.entries(ROTAS_IA).find(([apelido]) => chave.includes(apelido))?.[1];
+        if (!rota) return { ok: false, message: 'Área não encontrada. Use painel, matérias, agenda, revisões, simulados, redação, histórico ou perfil.' };
         return resultadoFerramentaIa(`Área ${args.area || 'Painel'} aberta.`, { section: rota });
     }
 
     if (nome === 'solicitar_exclusao_materia') {
         const materia = encontrarMateriaIa(texto('materia'));
         if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
+        if (estadoIaQg.pendente && estadoIaQg.pendente.id !== materia.id) return { ok: false, message: `Confirme ou cancele primeiro a exclusão de ${estadoIaQg.pendente.label}.` };
         estadoIaQg.pendente = { type: 'delete-subject', id: materia.id, label: materia.subject };
         return resultadoFerramentaIa(`A exclusão de ${materia.subject} aguarda confirmação explícita do usuário.`, { requiresConfirmation: true });
     }
@@ -289,14 +476,23 @@ function executarFerramentaGeminiIa(nome, args = {}) {
 
 window.KingMasterAI = {
     getContext: contextoGeminiIa,
-    executeTool: executarFerramentaGeminiIa
+    executeTool: executarFerramentaGeminiIa,
+    persistChanges: () => saveAppData()
 };
+
+function dataValidaIa(valor) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(valor || '')) return false;
+    const data = new Date(`${valor}T12:00:00`);
+    return !Number.isNaN(data.getTime()) && dataLocalISO(data) === valor;
+}
 
 function encontrarMateriaIa(termo) {
     const alvo = normalizarIa(limparTextoIa(termo, 80).replace(/^(a|o|de)\s+/, ''));
     if (!alvo) return null;
-    return appData.cycleItems.find(item => normalizarIa(item.subject) === alvo)
-        || appData.cycleItems.find(item => normalizarIa(item.subject).includes(alvo) || alvo.includes(normalizarIa(item.subject)));
+    const exata = appData.cycleItems.find(item => normalizarIa(item.subject) === alvo);
+    if (exata) return exata;
+    const candidatas = appData.cycleItems.filter(item => normalizarIa(item.subject).includes(alvo) || alvo.includes(normalizarIa(item.subject)));
+    return candidatas.length === 1 ? candidatas[0] : null;
 }
 
 function corDoComandoIa(comando, fallback = '#007aff') {

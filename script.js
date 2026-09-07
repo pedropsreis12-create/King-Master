@@ -629,6 +629,10 @@ function obterTrilhaVisualAtual() {
     return appData.rankVisualMode === 'aura' ? TITULOS_AURA : PATENTES_MILITARES;
 }
 
+function simboloDaMoldura(moldura) {
+    return window.KingMilitaryInsignia?.render(moldura.tema) || moldura.simbolo;
+}
+
 function obterMolduraEquipada(dados, temaAtual) {
     const trilha = obterTrilhaVisualAtual();
     const temaSelecionado = appData.selectedFrames?.[appData.rankVisualMode] || '';
@@ -691,7 +695,7 @@ function renderizarGaleriaMolduras(dados, molduraEquipada) {
         const desbloqueada = dados.nivel >= item.nivel;
         const equipada = selecionada ? selecionada === item.tema && desbloqueada : molduraEquipada.tema === item.tema;
         return `<button type="button" class="frame-vault-card${desbloqueada ? ' unlocked' : ' locked'}${equipada ? ' equipped' : ''}" onclick="equiparMoldura('${item.tema}')" ${desbloqueada ? '' : 'aria-disabled="true"'}>
-            <span class="frame-vault-mini league-frame rank-frame-${item.tema}" aria-hidden="true"><b>${item.simbolo}</b></span>
+            <span class="frame-vault-mini league-frame rank-frame-${item.tema}" aria-hidden="true"><b>${simboloDaMoldura(item)}</b></span>
             <span class="frame-vault-card-copy"><strong>${item.titulo}</strong><small>${desbloqueada ? (equipada ? 'Equipada agora' : `Liberada no nível ${item.nivel}`) : `Desbloqueia no nível ${item.nivel}`}</small></span>
             <span class="frame-vault-state" aria-hidden="true">${equipada ? '✓' : desbloqueada ? 'Usar' : '🔒'}</span>
         </button>`;
@@ -915,8 +919,11 @@ function renderGamificacao(animar = false) {
         perfil.dataset.rank = molduraVisual.tema;
     }
     document.documentElement.dataset.xpRank = molduraVisual.tema;
-    colocarTexto('profileRankEmblem', molduraVisual.simbolo);
-    colocarTexto('profileFrameEmblem', molduraVisual.simbolo);
+    for (const id of ['profileRankEmblem', 'profileFrameEmblem']) {
+        const elemento = document.getElementById(id);
+        if (elemento) elemento.innerHTML = simboloDaMoldura(molduraVisual);
+    }
+    window.KingRankArt?.render(document.querySelector('.profile-hero'), molduraVisual, appData.rankVisualMode);
     colocarTexto('profileFrameTag', `NÍVEL ${dados.nivel}`);
     colocarTexto('profileEvolutionCaption', `${molduraVisual.titulo} • ${molduraVisual.legenda}`);
     const referencias = document.getElementById('profileReferenceStrip');

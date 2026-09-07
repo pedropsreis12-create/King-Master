@@ -7,7 +7,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260901-xp-lock-2">
+    <link rel="stylesheet" href="style.css?v=20260906-worlds-2">
+    <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
+    <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -687,7 +689,7 @@
         <form class="ai-qg-composer" id="aiQgForm" onsubmit="enviarMensagemIa(event)">
             <label for="aiQgInput">Converse ou peça qualquer ação no site</label>
             <div>
-                <textarea id="aiQgInput" rows="1" maxlength="500" placeholder='Ex.: "Adicione Física e crie o tópico Cinemática"' onkeydown="atalhoEnviarIa(event)"></textarea>
+                <textarea id="aiQgInput" rows="1" maxlength="2000" placeholder='Ex.: "Adicione Física e crie o tópico Cinemática"' onkeydown="atalhoEnviarIa(event)"></textarea>
                 <button class="ai-qg-voice" id="aiQgVoice" type="button" aria-label="Falar comando" onclick="ouvirComandoIa()">◉</button>
                 <button class="ai-qg-send" type="submit" aria-label="Enviar comando">➜</button>
             </div>
@@ -698,9 +700,12 @@
     <div class="ai-qg-backdrop" id="aiQgBackdrop" onclick="toggleIaQg(false)"></div>
     <div id="toastNotification" class="toast-notification"></div>
     <audio id="alarmAudio"></audio>
-    <script src="script.js?v=20260901-xp-lock-2"></script>
-    <script src="ai-assistant.js?v=20260831-gemini-qg-8"></script>
+    <script src="military-insignia.js?v=20260906-worlds-2"></script>
+    <script src="rank-art.js?v=20260906-worlds-3"></script>
+    <script src="script.js?v=20260906-worlds-2"></script>
+    <script src="study-insights.js?v=20260906-worlds-2"></script>
+    <script src="ai-assistant.js?v=20260906-worlds-2"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
-    <script type="module" src="cloud-sync.js?v=20260831-gemini-qg-8"></script>
+    <script type="module" src="cloud-sync.js?v=20260906-worlds-5"></script>
 </body>
 </html>

@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow">
     <meta name="referrer" content="no-referrer">
     <meta name="theme-color" content="#09101a">
-    <title>Recuperar senha — King Master</title>
+    <title>Segurança da conta — King Master</title>
     <link rel="icon" href="assets/app-icon-192.png" type="image/png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -30,7 +30,7 @@
         .rules { display:flex; flex-wrap:wrap; gap:6px; }.rules span { padding:5px 8px; border:1px solid #ffffff17; border-radius:999px; background:#07101b; color:#8290a2; font-size:.54rem; font-weight:700; }.rules span::before { content:'○'; margin-right:5px; }.rules span.valid { border-color:#2dd69c4d; color:#68e6b8; background:#0d2b2566; }.rules span.valid::before { content:'✓'; }
         .primary { min-height:50px; margin-top:4px; border:0; border-radius:14px; background:linear-gradient(120deg,#12c98c,#167cff); color:#fff; font:850 .78rem Poppins,sans-serif; box-shadow:0 12px 30px #087ee22e; cursor:pointer; }.primary:disabled { opacity:.55; cursor:wait; }.feedback { min-height:22px; margin:2px 0 0; color:#aebccc; font-size:.68rem; line-height:1.5; text-align:center; }.feedback.error { color:#ff9c93; }.feedback.success { color:#68e7b7; }
         .account { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #ffffff18; border-radius:13px; background:#ffffff08; }.account span:first-child { width:31px; height:31px; display:grid; place-items:center; border-radius:10px; background:#2bd19c24; color:#5ce4b8; }.account span:last-child { min-width:0; display:flex; flex-direction:column; }.account small { color:#7f8da0; font-size:.55rem; }.account strong { overflow:hidden; color:#dbe6f2; font-size:.69rem; text-overflow:ellipsis; }
-        .success-card { display:grid; gap:14px; text-align:center; }.success-card .hero-mark { margin:0 auto 6px; }.success-card h2 { margin:0; font-size:1.45rem; }.success-card p { margin:0; color:#afbdcb; font-size:.75rem; line-height:1.65; }.link { min-height:49px; display:grid; place-items:center; border-radius:14px; background:linear-gradient(120deg,#12c98c,#167cff); color:white; font-size:.76rem; font-weight:850; text-decoration:none; }
+        .success-card,.confirm-card { display:grid; gap:14px; text-align:center; }.success-card .hero-mark,.confirm-card .hero-mark { margin:0 auto 6px; }.success-card h2,.confirm-card h2 { margin:0; font-size:1.45rem; }.success-card p,.confirm-card p { margin:0; color:#afbdcb; font-size:.75rem; line-height:1.65; }.confirm-card .account { text-align:left; }.link { min-height:49px; display:grid; place-items:center; border:0; border-radius:14px; background:linear-gradient(120deg,#12c98c,#167cff); color:white; font:850 .76rem Poppins,sans-serif; text-decoration:none; cursor:pointer; }.link:disabled { opacity:.55; cursor:wait; }
         .footer { margin-top:20px; color:#6f7d8d; font-size:.56rem; line-height:1.5; text-align:center; }
         @keyframes spin { to { transform:rotate(360deg); } }
         @media (max-width:540px) { body { padding:12px; align-items:start; }.brand { margin-top:2px; } main { margin-top:10px; padding:23px 18px; border-radius:24px; }.hero { margin:26px 0 20px; } }
@@ -39,12 +39,12 @@
 </head>
 <body>
     <main>
-        <div class="brand"><span class="brand-mark">KM</span><div><strong>King Master</strong><small>Recuperação segura de conta</small></div></div>
+        <div class="brand"><span class="brand-mark">KM</span><div><strong>King Master</strong><small>Central segura da conta</small></div></div>
         <section class="hero" id="resetHero">
             <span class="hero-mark" aria-hidden="true">⌁</span>
-            <p>Nova senha</p>
-            <h1>Retome seus estudos</h1>
-            <span>Estamos validando seu link. Em seguida você poderá criar uma senha nova para sua conta.</span>
+            <p id="actionEyebrow">Link seguro</p>
+            <h1 id="actionTitle">Conferindo sua solicitação</h1>
+            <span id="actionCopy">Estamos validando o link antes de mostrar a próxima etapa.</span>
         </section>
         <div class="state" id="resetLoading"><div><div class="spinner"></div>Conferindo a segurança do link…</div></div>
         <form id="resetForm" hidden>
@@ -55,21 +55,29 @@
             <button class="primary" id="resetSubmit" type="submit">Salvar minha nova senha</button>
             <p class="feedback" id="resetFeedback" role="status"></p>
         </form>
+        <section class="confirm-card" id="actionConfirm" hidden>
+            <span class="hero-mark" aria-hidden="true" id="actionConfirmMark">✓</span>
+            <h2 id="actionConfirmTitle">Confirmar alteração</h2>
+            <p id="actionConfirmCopy">Confira os dados e confirme para continuar.</p>
+            <div class="account" id="actionConfirmAccount" hidden><span aria-hidden="true">@</span><span><small id="actionConfirmAccountLabel">CONTA</small><strong id="actionConfirmEmail">••••@••••</strong></span></div>
+            <button class="link" id="actionConfirmButton" type="button">Confirmar com segurança</button>
+            <p class="feedback" id="actionFeedback" role="status"></p>
+        </section>
         <section class="success-card" id="resetSuccess" hidden>
-            <span class="hero-mark" aria-hidden="true">✓</span>
-            <h2>Senha alterada</h2>
-            <p>Sua conta já está protegida com a nova senha. Agora é só voltar ao King Master e continuar de onde parou.</p>
+            <span class="hero-mark" aria-hidden="true" id="actionSuccessMark">✓</span>
+            <h2 id="actionSuccessTitle">Alteração concluída</h2>
+            <p id="actionSuccessCopy">Sua conta foi atualizada com segurança.</p>
             <a class="link" href="./">Entrar no King Master</a>
         </section>
         <section class="success-card" id="resetError" hidden>
             <span class="hero-mark" aria-hidden="true">!</span>
-            <h2>Este link não é mais válido</h2>
+            <h2 id="actionErrorTitle">Não foi possível continuar</h2>
             <p id="resetErrorCopy">Por segurança, os links de recuperação expiram e só podem ser usados uma vez.</p>
-            <a class="link" href="./">Pedir um novo link</a>
+            <a class="link" href="./">Voltar ao King Master</a>
         </section>
-        <p class="footer">O King Master nunca pedirá sua senha por e-mail. Não compartilhe links de recuperação.</p>
+        <p class="footer">O King Master nunca pedirá sua senha por e-mail. Não compartilhe links de segurança.</p>
     </main>
     <script src="firebase-config.js?v=20260831-firebase"></script>
-    <script type="module" src="password-reset.js?v=20260907-account-6"></script>
+    <script type="module" src="password-reset.js?v=20260907-email-actions-1"></script>
 </body>
 </html>

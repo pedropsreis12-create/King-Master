@@ -32,7 +32,13 @@ test('password recovery is neutral, localized and ships a branded action handler
     assert.match(cloud, /Se existir uma conta com este e-mail/);
     assert.match(resetScript, /verifyPasswordResetCode/);
     assert.match(resetScript, /confirmPasswordReset/);
-    assert.match(resetPage, /Recuperação segura de conta/);
+    assert.match(resetScript, /checkActionCode/);
+    assert.match(resetScript, /applyActionCode/);
+    assert.match(resetScript, /VERIFY_EMAIL/);
+    assert.match(resetScript, /RECOVER_EMAIL/);
+    assert.match(resetScript, /VERIFY_AND_CHANGE_EMAIL/);
+    assert.match(resetScript, /actionConfirmButton\.onclick/);
+    assert.match(resetPage, /Central segura da conta/);
     assert.match(vite, /recuperar\.html/);
     assert.match(vite, /password-reset\.js/);
 });

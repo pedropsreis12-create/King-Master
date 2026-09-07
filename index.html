@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="style.css?v=20260906-worlds-2">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
+    <link rel="stylesheet" href="usability.css?v=20260907-save-2">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -50,7 +51,8 @@
 </head>
 <body>
 
-    <nav>
+    <button id="navReveal" class="nav-reveal" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menu lateral"><span aria-hidden="true">›</span><small>MENU</small></button>
+    <nav id="mainNavigation">
         <h2>King Master</h2>
         <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-expanded="false" aria-label="Abrir menu de navegação" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><strong>Menu</strong></button>
         <div class="nav-tabs" aria-label="Áreas do King Master">
@@ -206,6 +208,7 @@
                         <button class="control-btn-large btn-play" id="playPauseBtn" onclick="toggleTimer()" title="Iniciar / Pausar">▶</button>
                         <button class="control-btn-large btn-stop" id="endSessionBtnDash" onclick="encerrarSessaoDashboard()" title="Encerrar e Guardar no Histórico" style="display: none;">⏹</button>
                     </div>
+                    <p id="timerSaveStatus" class="timer-save-status" role="status">● Salvamento automático do cronômetro</p>
                 </div>
                 <div class="widget weekly-study-widget">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -412,7 +415,7 @@
                 <div class="profile-next-level" id="profileNextLevel">Próximo nível: 2.250 XP</div>
                 <div class="profile-xp-line"><span id="profileXpText">0 / 1.000.000 XP</span><span id="profileXpPercent">0%</span></div>
                 <div class="profile-xp-track"><span id="profileXpBar"></span></div>
-                <p class="profile-xp-note">Progresso total até o nível máximo</p>
+                        <p class="profile-xp-note" id="profileXpNote">Progresso para o próximo nível</p>
                 <div class="profile-evolution-caption" id="profileEvolutionCaption">Soldado do Foco • A base da tropa nasce da disciplina diária</div>
                 <div class="profile-reference-strip" id="profileReferenceStrip" aria-label="Referências visuais deste título"></div>
             </div>
@@ -701,8 +704,9 @@
     <div id="toastNotification" class="toast-notification"></div>
     <audio id="alarmAudio"></audio>
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
-    <script src="rank-art.js?v=20260906-worlds-3"></script>
-    <script src="script.js?v=20260906-worlds-2"></script>
+    <script src="rank-art.js?v=20260907-save-1"></script>
+    <script src="timer-recovery.js?v=20260907-save-2"></script>
+    <script src="script.js?v=20260907-save-2"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260906-worlds-2"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>

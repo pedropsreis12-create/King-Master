@@ -1,0 +1,29 @@
+/* Contraste confortável sem substituir a cor de destaque escolhida no perfil. */
+:root { --text-muted: #555d6a; }
+html[data-theme="dark"] { --text-muted: #b2bac7; }
+.timer-save-status { margin: 14px 0 0; text-align: center; color: var(--text-muted); font-size: .65rem; line-height: 1.5; }
+.timer-save-status[data-state="error"] { color: #d34533; font-weight: 700; }
+.nav-reveal { display: none; }
+@media (min-width: 1101px) {
+    body > nav { position: fixed; left: 12px; top: 14px; bottom: 14px; width: 300px; height: auto; margin: 0; z-index: 700; transform: translateX(calc(-100% - 16px)); visibility: hidden; transition: transform .26s ease, visibility .26s; background: color-mix(in srgb,var(--card-bg) 97%,transparent); box-shadow: 12px 0 45px #0003; }
+    body > nav.is-revealed { transform: translateX(0); visibility: visible; }
+    body > main { width: 100%; padding-left: 44px; }
+    .nav-reveal { position: fixed; z-index: 701; inset: 0 auto 0 0; width: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 0; border: 0; background: transparent; color: var(--text-muted); cursor: pointer; }
+    .nav-reveal span { display: grid; place-items: center; width: 23px; height: 54px; border: 1px solid var(--border-color); border-left: 0; border-radius: 0 14px 14px 0; background: var(--card-bg); font-size: 1.5rem; box-shadow: 2px 0 14px #0001; }
+    .nav-reveal small { writing-mode: vertical-rl; font: 700 .5rem Poppins,sans-serif; letter-spacing: .2em; }
+    .nav-reveal[aria-expanded="true"] { width: 12px; }
+    .nav-reveal[aria-expanded="true"] :is(span,small) { opacity: 0; }
+    .nav-reveal:focus-visible { outline: 2px solid var(--accent-color); outline-offset: -2px; }
+}
+/* O banner futurista é uma superfície escura, mesmo quando o restante do app é claro. */
+html[data-visual="futuristic"] #perfil[data-rank] .profile-hero { --banner-ink: #f8f5e9; --banner-soft: #dbe1e9; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-hero :is(.profile-next-level,.profile-xp-line,.profile-xp-note,.profile-evolution-caption,.profile-photo-hint,.rank-scene-heading span) { color: var(--banner-soft); text-shadow: 0 2px 6px #000c; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .profile-level-title { background: none; color: var(--banner-ink); -webkit-text-fill-color: var(--banner-ink); text-shadow: 0 2px 10px #000; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .profile-league-name { color: #ffe1a1; background: #0b141de6; border-color: #dbc38966; text-shadow: none; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .profile-xp-line { color: #fff; font-weight: 800; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-reference-strip span { color: #ecf0f7; background: #0b1527e6; border-color: #d8e3f34d; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-evolution-caption { background: #0b1527d9; border-color: #d8e3f34d; }
+html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .rank-world-shade { background: linear-gradient(0deg,#040b16e8, #040b164d 55%,#040b1633); }
+html[data-visual="futuristic"] .military-coordinate { color: #d7e5be; opacity: .7; }
+html[data-visual="classic"] #perfil[data-rank] .profile-level-title { background: none; color: var(--text-main); -webkit-text-fill-color: var(--text-main); }
+@media (prefers-reduced-motion: reduce) { body > nav { transition: none; } }

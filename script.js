@@ -34,12 +34,17 @@ const defaultAppData = {
 };
 
 let appData;
+let timerPersistenceReady = false;
 try {
     appData = { ...defaultAppData, ...(JSON.parse(localStorage.getItem('qg_pedro_data')) || {}) };
 } catch (error) {
     appData = { ...defaultAppData };
     console.warn('Os dados locais estavam ilegíveis. O King Master iniciou com uma base segura.', error);
 }
+
+try {
+    appData = window.KingTimerRecovery.recover(appData, JSON.parse(localStorage.getItem(window.KingTimerRecovery.KEY)));
+} catch { /* Um checkpoint incompleto não deve impedir o acesso ao progresso salvo. */ }
 
 const getMonday = (d) => { const dt = new Date(d); const day = dt.getDay(); const diff = dt.getDate() - day + (day === 0 ? -6 : 1); return new Date(dt.setDate(diff)).toDateString(); };
 if (appData.lastWeekStart !== getMonday(new Date())) {
@@ -82,9 +87,13 @@ if(appData.themeColor) {
 }
 
 function saveAppData() { 
+    if (timerPersistenceReady) appData.timerState = captureTimerState();
+    const previousRevision = appData.lastModifiedAt;
     appData.lastModifiedAt = Date.now();
-    localStorage.setItem('qg_pedro_data', JSON.stringify(appData)); 
+    try { localStorage.setItem('qg_pedro_data', JSON.stringify(appData)); }
+    catch (error) { appData.lastModifiedAt = previousRevision; persistTimerCheckpoint(); throw error; }
     window.dispatchEvent(new CustomEvent('king-master-data-changed', { detail: { updatedAt: appData.lastModifiedAt } }));
+    if (timerPersistenceReady) persistTimerCheckpoint();
     updateDashboardStats(); 
 }
 
@@ -93,6 +102,9 @@ window.kingMasterCloudBridge = {
     importData: dados => {
         if (!dados || typeof dados !== 'object') return;
         localStorage.setItem('qg_pedro_data', JSON.stringify({ ...defaultAppData, ...dados }));
+        // O fechamento causado pela importação não pode sobrescrever a versão da nuvem.
+        timerPersistenceReady = false;
+        localStorage.removeItem(window.KingTimerRecovery.KEY);
         window.location.reload();
     }
 };
@@ -891,7 +903,7 @@ function renderGamificacao(animar = false) {
     const proximoNivelXp = dados.nivel < NIVEL_MAXIMO ? LIMITES_NIVEL[dados.nivel + 1] : XP_MAXIMO;
     const inicioNivelXp = LIMITES_NIVEL[dados.nivel];
     const progressoNivel = dados.nivel >= NIVEL_MAXIMO ? 100 : Math.max(0, Math.min(100, ((dados.xpTotal - inicioNivelXp) / (proximoNivelXp - inicioNivelXp)) * 100));
-    const progressoTotal = Math.min(100, (dados.xpTotal / XP_MAXIMO) * 100);
+    const etapaXp = window.KingTimerRecovery.nextLevel(dados.xpTotal, inicioNivelXp, proximoNivelXp, dados.nivel >= NIVEL_MAXIMO);
     const colocarTexto = (id, texto) => { const el = document.getElementById(id); if (el) el.textContent = texto; };
     const colocarLargura = (id, valor) => { const el = document.getElementById(id); if (el) el.style.width = `${valor}%`; };
 
@@ -900,10 +912,11 @@ function renderGamificacao(animar = false) {
     colocarLargura('nav-xp-progress', progressoNivel);
     colocarTexto('profileLeagueName', dados.liga.nome);
     colocarTexto('profileLevelTitle', `Lvl ${dados.nivel} • ${temaVisual.titulo}`);
-    colocarTexto('profileNextLevel', dados.nivel >= NIVEL_MAXIMO ? 'Nível máximo alcançado' : `Próximo nível: ${formatarNumero(proximoNivelXp)} XP`);
-    colocarTexto('profileXpText', `${formatarNumero(dados.xpTotal)} / ${formatarNumero(XP_MAXIMO)} XP`);
-    colocarTexto('profileXpPercent', `${progressoTotal.toFixed(1).replace('.', ',')}%`);
-    colocarLargura('profileXpBar', progressoTotal);
+    colocarTexto('profileNextLevel', dados.nivel >= NIVEL_MAXIMO ? 'Nível máximo alcançado' : `Faltam ${formatarNumero(etapaXp.remaining)} XP para o nível ${dados.nivel + 1}`);
+    colocarTexto('profileXpText', dados.nivel >= NIVEL_MAXIMO ? 'Evolução completa' : `${formatarNumero(etapaXp.earned)} / ${formatarNumero(etapaXp.needed)} XP`);
+    colocarTexto('profileXpPercent', `${etapaXp.percent.toFixed(1).replace('.', ',')}%`);
+    colocarTexto('profileXpNote', dados.nivel >= NIVEL_MAXIMO ? 'Você conquistou o nível máximo' : `Progresso do nível ${dados.nivel} para o ${dados.nivel + 1}`);
+    colocarLargura('profileXpBar', etapaXp.percent);
     colocarTexto('profileMultiplierBadge', `${dados.multiplicador.toFixed(2).replace(/0$/, '').replace('.', ',')}x • ${nomeDoMultiplicador(dados.sequencia)}`);
     colocarTexto('profileStreak', `${dados.sequencia} ${dados.sequencia === 1 ? 'dia' : 'dias'}`);
     colocarTexto('profileTotalTime', formatShortTime(appData.totalStudySeconds || 0));
@@ -1188,11 +1201,57 @@ function atualizarLinhaMediaSedilhadDynamica() {
 let timerInterval, isRunning = false, currentMode = 'estudo', currentSeconds = 0, descansoTempoAtual = 5;
 let lastTickTime = 0;
 let alarmTriggered = false;
+let lastTimerCloudSave = 0;
 const alarmAudio = document.getElementById('alarmAudio'), stopAlarmBtn = document.getElementById('stopAlarmBtn'), timeDisplay = document.getElementById('timeDisplay'), playPauseBtn = document.getElementById('playPauseBtn'), progressRing = document.getElementById('progressRing'), circ = 2 * Math.PI * 135;
 if(progressRing) progressRing.style.strokeDasharray = circ;
 
 const getTargetSeconds = () => currentMode === 'descanso' ? descansoTempoAtual * 60 : ((parseInt(document.getElementById('inputHours').value) || 0) * 3600) + ((parseInt(document.getElementById('inputMinutes').value) || 0) * 60) + (parseInt(document.getElementById('inputSeconds').value) || 0);
-const sincronizarTempo = () => { if (!isRunning) updateProgress(); };
+const sincronizarTempo = () => { if (!isRunning) updateProgress(); if (timerPersistenceReady) persistTimerCheckpoint(); };
+
+function captureTimerState() {
+    return { mode: currentMode, seconds: currentSeconds, running: isRunning,
+        restMinutes: descansoTempoAtual, subjectId: document.getElementById('activeSubjectSelect').value,
+        target: ['inputHours', 'inputMinutes', 'inputSeconds'].map(id => Math.max(0, Number(document.getElementById(id).value) || 0)) };
+}
+
+function persistTimerCheckpoint() {
+    if (!timerPersistenceReady) return;
+    const status = document.getElementById('timerSaveStatus');
+    try {
+        localStorage.setItem(window.KingTimerRecovery.KEY, JSON.stringify(window.KingTimerRecovery.capture(appData, captureTimerState())));
+        if (status) { status.textContent = isRunning ? '● Tempo protegido automaticamente neste dispositivo' : '● Sessão protegida · você pode fechar e voltar'; status.dataset.state = 'saved'; }
+    } catch {
+        if (status) { status.textContent = 'Não foi possível salvar neste navegador. Evite fechar a aba e exporte seu progresso.'; status.dataset.state = 'error'; }
+    }
+}
+
+function restoreTimerSession() {
+    const saved = appData.timerState;
+    if (window.KingTimerRecovery.validState(saved)) {
+        currentMode = saved.mode;
+        currentSeconds = Math.floor(saved.seconds);
+        descansoTempoAtual = saved.restMinutes;
+        ['inputHours', 'inputMinutes', 'inputSeconds'].forEach((id, index) => document.getElementById(id).value = saved.target[index]);
+        const subject = document.getElementById('activeSubjectSelect');
+        subject.value = appData.cycleItems.some(item => String(item.id) === saved.subjectId) ? saved.subjectId : '';
+        atualizarSeletorDeMaterias();
+        const option = [...document.querySelectorAll('.custom-option')].find(option => option.dataset.value === subject.value);
+        if (option) document.querySelector('#customSelectTrigger span').innerHTML = option.innerHTML;
+        document.getElementById('btn-estudo').classList.toggle('active', currentMode === 'estudo');
+        document.getElementById('btn-descanso').classList.toggle('active', currentMode === 'descanso');
+        document.getElementById('manualTimeGroup').style.display = currentMode === 'estudo' ? 'flex' : 'none';
+        document.getElementById('subjectSelectorArea').style.display = currentMode === 'estudo' ? 'flex' : 'none';
+        document.getElementById('descansoPresetGroup').style.display = currentMode === 'estudo' ? 'none' : 'flex';
+        document.getElementById('labelConfig').textContent = currentMode === 'estudo' ? 'Tocar alarme após' : 'Tempo de Descanso';
+        [5, 10].forEach(value => document.getElementById(`btn-descanso-${value}`).classList.toggle('primary', value === descansoTempoAtual));
+        if (currentSeconds > 0) showToast('⏱ Sessão recuperada e pausada. Aperte ▶ para continuar.');
+    }
+    isRunning = false;
+    timerPersistenceReady = true;
+    updateProgress();
+    toggleBotaoStopHistorico();
+    persistTimerCheckpoint();
+}
 
 function updateProgress() {
     if(!timeDisplay) return;
@@ -1228,6 +1287,7 @@ function registrarSessao(segundos) {
     } else { cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)]; }
     
     appData.historyItems.push({ id: Date.now(), dataISO: dataLocalISO(d), dataChave: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, diaNum: d.getDate().toString().padStart(2, '0'), mesAno: `${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`, diaStr: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][d.getDay()], materia: nome, assunto: '', tempoSegundos: segundos, cor: cor, tipo: tipo, comentario: '' });
+    currentSeconds = 0; // Histórico e rascunho são salvos na mesma escrita, sem duplicar na recuperação.
     saveAppData(); renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico(); 
     showToast('✅ Sessão guardada no histórico!');
     mostrarFraseMotivacional();
@@ -1235,6 +1295,7 @@ function registrarSessao(segundos) {
 
 function toggleTimer() {
     if (isRunning) { 
+        tickTimer();
         clearInterval(timerInterval); 
         playPauseBtn.textContent = '▶'; 
         isRunning = false; 
@@ -1249,21 +1310,28 @@ function toggleTimer() {
         
         alarmTriggered = (target > 0 && currentSeconds >= target); 
         
-        timerInterval = setInterval(() => {
+        timerInterval = setInterval(tickTimer, 500);
+        playPauseBtn.innerHTML = '&#10074;&#10074;';
+        isRunning = true;
+        lastTimerCloudSave = Date.now();
+        saveAppData();
+        updateProgress();
+    }
+    toggleBotaoStopHistorico();
+}
+
+function tickTimer() {
+            if (!isRunning) return;
             let now = Date.now();
-            let deltaSecs = Math.round((now - lastTickTime) / 1000); 
+            let deltaSecs = Math.floor((now - lastTickTime) / 1000);
             
             if (deltaSecs >= 1) {
                 lastTickTime = lastTickTime + (deltaSecs * 1000); 
-                target = getTargetSeconds();
+                const target = getTargetSeconds();
                 
                 if (currentMode === 'estudo') {
                     currentSeconds += deltaSecs; 
-                    appData.totalStudySeconds += deltaSecs;
-                    
-                    let diaSemana = new Date().getDay() - 1;
-                    if(diaSemana === -1) diaSemana = 6;
-                    appData.weeklyChart[diaSemana] += deltaSecs;
+                    window.KingTimerRecovery.creditStudy(appData, lastTickTime - deltaSecs * 1000, lastTickTime);
                     
                     updateProgress();
                     
@@ -1289,15 +1357,30 @@ function toggleTimer() {
                     }
                 }
                 toggleBotaoStopHistorico();
+                persistTimerCheckpoint();
+                if (now - lastTimerCloudSave >= 15000) {
+                    lastTimerCloudSave = now;
+                    try { saveAppData(); } catch { /* O checkpoint pequeno continua preservando o relógio. */ }
+                }
             }
-        }, 500); 
-        
-        playPauseBtn.innerHTML = '&#10074;&#10074;'; 
-        isRunning = true;
-        updateProgress(); 
-    }
-    toggleBotaoStopHistorico();
 }
+
+// pagehide também cobre navegação e o cache de voltar/avançar, sem impedir o fechamento.
+window.addEventListener('pagehide', () => {
+    if (!timerPersistenceReady) return;
+    tickTimer();
+    clearInterval(timerInterval);
+    isRunning = false;
+    playPauseBtn.textContent = '▶';
+    updateProgress();
+    toggleBotaoStopHistorico();
+    try { saveAppData(); } catch { persistTimerCheckpoint(); }
+});
+document.addEventListener('visibilitychange', () => {
+    if (!timerPersistenceReady) return;
+    tickTimer();
+    if (document.hidden) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
+});
 
 function triggerAlarm() { 
     saveAppData(); 
@@ -1319,10 +1402,11 @@ function stopAlarm() {
 
 function abrirConfirmReset() { document.getElementById('confirmResetModal').classList.add('active'); }
 function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "QG de Estudos - Pedro"; }
-function encerrarSessaoDashboard() { if (currentSeconds >= 5) registrarSessao(currentSeconds); else showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "QG de Estudos - Pedro"; }
+function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) registrarSessao(currentSeconds); else showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "QG de Estudos - Pedro"; }
 function setDescansoTime(mins) { descansoTempoAtual = mins; document.getElementById('btn-descanso-5').classList.remove('primary'); document.getElementById('btn-descanso-10').classList.remove('primary'); document.getElementById(`btn-descanso-${mins}`).classList.add('primary'); executarResetTimer(); }
 
 function setMode(mode) {
+    tickTimer();
     if (currentMode === 'estudo' && currentSeconds >= 5) registrarSessao(currentSeconds);
     currentMode = mode;
     alarmTriggered = false;
@@ -1333,6 +1417,7 @@ function setMode(mode) {
     document.getElementById('labelConfig').textContent = mode === 'estudo' ? 'Tocar alarme após' : 'Tempo de Descanso';
     if(progressRing) progressRing.style.stroke = mode === 'estudo' ? 'var(--accent-color)' : '#ff4757'; 
     clearInterval(timerInterval); isRunning = false; playPauseBtn.textContent = '▶'; currentSeconds = mode === 'estudo' ? 0 : getTargetSeconds(); updateProgress(); toggleBotaoStopHistorico();
+    saveAppData();
 }
 
 function atualizarSeletorDeMaterias() {
@@ -1352,6 +1437,7 @@ function atualizarSeletorDeMaterias() {
     document.querySelectorAll('.custom-option').forEach(opt => opt.addEventListener('click', function() { 
         if(this.dataset.value === undefined) return; 
         hid.value = this.dataset.value; 
+        persistTimerCheckpoint();
         trig.innerHTML = this.innerHTML; 
         document.querySelector('.custom-select-wrapper').classList.remove('open'); 
         atualizarSeletorDeMaterias(); 
@@ -2453,6 +2539,35 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventL
 }));
 
 // INICIALIZAÇÃO DO APP
+(() => {
+    const nav = document.getElementById('mainNavigation');
+    const handle = document.getElementById('navReveal');
+    let hideTimer;
+    const open = () => {
+        clearTimeout(hideTimer);
+        nav.classList.add('is-revealed');
+        handle.setAttribute('aria-expanded', 'true');
+    };
+    const close = () => {
+        nav.classList.remove('is-revealed');
+        handle.setAttribute('aria-expanded', 'false');
+    };
+    const leave = () => { hideTimer = setTimeout(() => { if (!nav.matches(':hover,:focus-within') && !handle.matches(':hover,:focus')) close(); }, 220); };
+    handle.addEventListener('pointerenter', open);
+    handle.addEventListener('click', () => { open(); nav.querySelector('.menu-btn')?.focus(); });
+    handle.addEventListener('pointerleave', leave);
+    handle.addEventListener('blur', leave);
+    nav.addEventListener('pointerenter', open);
+    nav.addEventListener('focusin', open);
+    nav.addEventListener('pointerleave', () => {
+        // Cliques de mouse não devem prender a barra aberta pelo foco residual.
+        if (nav.contains(document.activeElement) && document.activeElement.matches(':focus:not(:focus-visible)')) document.activeElement.blur();
+        leave();
+    });
+    nav.addEventListener('focusout', leave);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && nav.classList.contains('is-revealed')) { handle.focus(); close(); } });
+    document.querySelector('main')?.addEventListener('pointerdown', close);
+})();
 fecharModalDeletar(); 
 syncVisualModeControl();
 syncSettingsUI();
@@ -2462,8 +2577,8 @@ sincronizarModoPatente();
 sincronizarCadeadoXp();
 renderizarAtalhosXpTeste();
 mostrarFraseMotivacional();
-executarResetTimer(); 
 renderizarCiclo();
+restoreTimerSession();
 renderizarAgenda();
 renderizarAgendamento();
 renderizarRevisoes();

@@ -1,9 +1,14 @@
 # Cenários das molduras
 
-As 12 ilustrações em `assets/rank-*.webp` foram geradas para o King Master em setembro de 2026, com referências visuais aos universos de anime. Não são capturas dos episódios nem artes oficiais das franquias.
+As 17 ilustrações em `assets/rank-*.webp` foram geradas para o King Master em setembro de 2026, com referências visuais aos universos de anime. Não são capturas dos episódios nem artes oficiais das franquias.
 
 | Arquivo | Referência da composição |
 | --- | --- |
+| genin | Vila ninja, campo de treinamento, telhados e montanha esculpida |
+| chunin | Floresta da Morte, árvores gigantes e torre do exame |
+| oni | Glicínias violetas, santuário, água e montanhas sob a lua |
+| gear2 | Ilha judicial, portões brancos, cachoeira oceânica e vapor vermelho |
+| kaioken | Pequeno planeta gramado, caminho da serpente e cosmos violeta |
 | namek | Namekusei: céu verde, água turquesa, árvores e planaltos |
 | bankai | Soul Society e Senbonzakura: lâminas, pátio e pétalas |
 | void | Vazio Ilimitado: horizonte de informação e eclipse |

@@ -1,11 +1,11 @@
 /* Cenários acompanham a moldura equipada, nunca o XP ou a liga por conta própria. */
 (() => {
     const scenes = {
-        genin: { chapter: 'KONOHA', name: 'O primeiro passo', motif: '忍', effect: 'leaves', power: 1 },
-        chunin: { chapter: 'EXAME CHUNIN', name: 'Estratégia em movimento', motif: '中', effect: 'seals', power: 2 },
-        oni: { chapter: 'CORPORAÇÃO DOS CAÇADORES', name: 'Respiração da água', motif: '滅', effect: 'tides', power: 3 },
-        gear2: { chapter: 'ENIES LOBBY', name: 'O pulso da determinação', motif: 'Ⅱ', effect: 'steam', power: 4 },
-        kaioken: { chapter: 'TÉCNICA DO SENHOR KAIOH', name: 'Além do próprio limite', motif: '界', effect: 'crimson', power: 5 },
+        genin: { chapter: 'KONOHA', name: 'O primeiro passo', motif: '忍', effect: 'leaves', power: 1, art: 'genin' },
+        chunin: { chapter: 'EXAME CHUNIN', name: 'Estratégia em movimento', motif: '中', effect: 'seals', power: 2, art: 'chunin' },
+        oni: { chapter: 'CORPORAÇÃO DOS CAÇADORES', name: 'Respiração da água', motif: '滅', effect: 'tides', power: 3, art: 'oni' },
+        gear2: { chapter: 'ENIES LOBBY', name: 'O pulso da determinação', motif: 'Ⅱ', effect: 'steam', power: 4, art: 'gear2' },
+        kaioken: { chapter: 'TÉCNICA DO SENHOR KAIOH', name: 'Além do próprio limite', motif: '界', effect: 'crimson', power: 5, art: 'kaioken' },
         saiyajin: { chapter: 'NAMEKUSEI', name: 'O despertar da lenda', motif: '超', effect: 'ki', power: 6, art: 'namek' },
         bankai: { chapter: 'SOUL SOCIETY', name: 'Liberação final', motif: '斬', effect: 'petals', power: 7, art: 'bankai' },
         dominio: { chapter: 'VAZIO ILIMITADO', name: 'Tudo converge para o infinito', motif: '領', effect: 'void', power: 8, art: 'void' },

@@ -15,7 +15,7 @@ function staticSiteWorker() {
         },
       };
 
-      for (const name of ['script.js', 'ai-assistant.js', 'firebase-config.js', 'cloud-sync.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js']) {
+      for (const name of ['script.js', 'timer-recovery.js', 'ai-assistant.js', 'firebase-config.js', 'cloud-sync.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };

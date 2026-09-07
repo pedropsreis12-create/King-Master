@@ -38,7 +38,7 @@ test('generals carry their corresponding star count and Army emblem', () => {
 test('all referenced landscapes exist as WebP assets', async () => {
     const source = await readFile(new URL('../rank-art.js', import.meta.url), 'utf8');
     const names = [...new Set([...source.matchAll(/art: '([a-z0-9-]+)'/g)].map(match => match[1]))];
-    assert.equal(names.length, 12);
+    assert.equal(names.length, 17);
     for (const name of names) {
         const asset = await readFile(new URL(`../assets/rank-${name}.webp`, import.meta.url));
         assert.equal(asset.toString('ascii', 0, 4), 'RIFF', name);

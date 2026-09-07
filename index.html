@@ -9,14 +9,14 @@
     <meta name="description" content="King Master — seu painel pessoal de estudos para o ENEM.">
     <link rel="icon" href="assets/app-icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="assets/app-icon-192.png">
-    <link rel="manifest" href="manifest.webmanifest?v=20260907-account-5">
+    <link rel="manifest" href="manifest.webmanifest?v=20260907-account-6">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=20260906-worlds-2">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
-    <link rel="stylesheet" href="usability.css?v=20260907-account-5">
+    <link rel="stylesheet" href="usability.css?v=20260907-account-6">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -58,12 +58,12 @@
 <body>
 
     <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle" aria-live="polite">
-        <div class="auth-gate-card">
+        <div class="auth-gate-card" id="authGateCard">
             <div class="auth-brand"><span>KM</span><div><strong>King Master</strong><small>Seu progresso, em qualquer dispositivo</small></div></div>
+            <div class="auth-primary" id="authPrimary">
             <div class="auth-gate-copy"><p>Conta obrigatória</p><h1 id="authGateTitle">Continue sua preparação</h1><span>Entre para recuperar tempo, matérias, cores, molduras e todo o seu histórico.</span></div>
             <div class="auth-provider-grid">
                 <button type="button" class="auth-provider google" id="authGoogleBtn"><b>G</b> Continuar com Google</button>
-                <button type="button" class="auth-provider apple" id="authAppleBtn"><b aria-hidden="true">A</b> Continuar com Apple</button>
             </div>
             <div class="auth-divider"><span>ou use seu cadastro</span></div>
             <div class="auth-tabs" role="tablist" aria-label="Acesso por e-mail">
@@ -73,12 +73,33 @@
             <form class="auth-email-form" id="authEmailForm">
                 <label class="auth-name-field" hidden><span>Nome</span><input id="authName" autocomplete="name" maxlength="40" placeholder="Como devemos chamar você?"></label>
                 <label><span>E-mail</span><input type="email" id="authEmail" autocomplete="email" required placeholder="voce@exemplo.com"></label>
-                <label><span>Senha</span><input type="password" id="authPassword" autocomplete="current-password" minlength="6" required placeholder="Mínimo de 6 caracteres"></label>
+                <label><span>Senha</span><span class="auth-password-control"><input type="password" id="authPassword" autocomplete="current-password" minlength="8" required placeholder="Mínimo de 8 caracteres"><button type="button" class="auth-password-toggle" data-password-target="authPassword" aria-label="Mostrar senha">Mostrar</button></span></label>
+                <label class="auth-confirm-field" hidden><span>Repita a senha</span><span class="auth-password-control"><input type="password" id="authPasswordConfirm" autocomplete="new-password" minlength="8" placeholder="Digite a mesma senha novamente"><button type="button" class="auth-password-toggle" data-password-target="authPasswordConfirm" aria-label="Mostrar confirmação de senha">Mostrar</button></span></label>
+                <div class="auth-password-rules" id="authPasswordRules" hidden aria-live="polite"><span data-rule="length">8 caracteres</span><span data-rule="letter">uma letra</span><span data-rule="number">um número</span></div>
+                <div class="auth-human-field" id="authHumanField" hidden>
+                    <button type="button" class="auth-human-check" id="authHumanCheck" role="checkbox" aria-checked="false">
+                        <span class="auth-human-box" aria-hidden="true">✓</span>
+                        <span><strong>Não sou um robô</strong><small>Verificação protegida pelo reCAPTCHA</small></span>
+                        <span class="auth-human-shield" aria-hidden="true">◇</span>
+                    </button>
+                </div>
                 <button type="submit" class="auth-submit" id="authSubmitBtn">Entrar com e-mail</button>
                 <button type="button" class="auth-forgot" id="authForgotBtn">Esqueci minha senha</button>
             </form>
             <p class="auth-feedback" id="authFeedback" role="status">Verificando sua conta…</p>
             <small class="auth-privacy">Seus dados ficam vinculados à sua conta e protegidos pelas regras do Firebase.</small>
+            </div>
+            <section class="auth-recovery" id="authRecoveryPanel" aria-labelledby="authRecoveryTitle" hidden>
+                <button type="button" class="auth-recovery-back" id="authRecoveryBackBtn" aria-label="Voltar para a entrada">‹ <span>Voltar</span></button>
+                <span class="auth-recovery-mark" aria-hidden="true">↗</span>
+                <p>Recuperação segura</p>
+                <h1 id="authRecoveryTitle">Vamos recuperar sua conta</h1>
+                <span class="auth-recovery-copy">Digite o e-mail do cadastro. Você receberá uma mensagem em português com um link seguro para criar uma nova senha.</span>
+                <label><span>Seu e-mail</span><input type="email" id="authRecoveryEmail" autocomplete="email" placeholder="voce@exemplo.com"></label>
+                <button type="button" class="auth-submit" id="authRecoverySendBtn">Enviar link de recuperação</button>
+                <p class="auth-feedback" id="authRecoveryFeedback" role="status"></p>
+                <small class="auth-privacy">O link é temporário. Se você não pediu a troca, basta ignorar a mensagem.</small>
+            </section>
         </div>
     </section>
 
@@ -159,7 +180,7 @@
                 <h3><span>◉</span> Acessibilidade</h3>
                 <label class="settings-select-row"><span><strong>Tamanho do texto</strong><small>Aumenta a leitura em todo o site</small></span><select id="fontScaleSelect"><option value="normal">Normal</option><option value="large">Grande</option><option value="xlarge">Muito grande</option></select></label>
                 <button class="settings-theme-toggle toggle-btn" id="contrastToggleBtn" type="button"><span><strong>Contraste reforçado</strong><small>Contornos e textos mais nítidos</small></span><i></i></button>
-                <button class="settings-theme-toggle toggle-btn" id="motionToggleBtn" type="button"><span><strong>Reduzir animações</strong><small>Suaviza a interface e as molduras</small></span><i></i></button>
+                <button class="settings-theme-toggle toggle-btn" id="motionToggleBtn" type="button"><span><strong>Movimento suave</strong><small>Mantém o visual e reduz efeitos intensos</small></span><i></i></button>
             </div>
             <div class="settings-group">
                 <h3><span>▣</span> Aplicativo e Lembretes</h3>
@@ -761,12 +782,12 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260907-account-5"></script>
+    <script src="script.js?v=20260907-account-6"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260907-account-5"></script>
-    <script src="productivity.js?v=20260907-account-5"></script>
+    <script src="productivity.js?v=20260907-account-6"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260907-account-5"></script>
+    <script type="module" src="cloud-sync.js?v=20260907-account-6"></script>
 </body>
 </html>

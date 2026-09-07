@@ -17,11 +17,25 @@ const authNameField = document.querySelector('.auth-name-field');
 const authName = document.getElementById('authName');
 const authEmail = document.getElementById('authEmail');
 const authPassword = document.getElementById('authPassword');
+const authPasswordConfirm = document.getElementById('authPasswordConfirm');
+const authConfirmField = document.querySelector('.auth-confirm-field');
+const authPasswordRules = document.getElementById('authPasswordRules');
+const authHumanField = document.getElementById('authHumanField');
+const authHumanCheck = document.getElementById('authHumanCheck');
 const authSubmitButton = document.getElementById('authSubmitBtn');
 const authForgotButton = document.getElementById('authForgotBtn');
 const authGoogleButton = document.getElementById('authGoogleBtn');
-const authAppleButton = document.getElementById('authAppleBtn');
+const authGateCard = document.getElementById('authGateCard');
+const authPrimary = document.getElementById('authPrimary');
+const authRecoveryPanel = document.getElementById('authRecoveryPanel');
+const authRecoveryEmail = document.getElementById('authRecoveryEmail');
+const authRecoverySendButton = document.getElementById('authRecoverySendBtn');
+const authRecoveryBackButton = document.getElementById('authRecoveryBackBtn');
+const authRecoveryFeedback = document.getElementById('authRecoveryFeedback');
 let authMode = 'login';
+let humanVerifiedUntil = 0;
+let recoveryCooldownUntil = 0;
+let recoveryCooldownTimer = null;
 const localPreview = ['127.0.0.1', 'localhost'].includes(window.location.hostname) && new URLSearchParams(window.location.search).get('preview') === '1';
 
 function setAuthFeedback(message, type = '') {
@@ -31,7 +45,59 @@ function setAuthFeedback(message, type = '') {
 }
 
 function setAuthBusy(busy) {
-    [authSubmitButton, authGoogleButton, authAppleButton, authForgotButton].forEach(button => { if (button) button.disabled = busy; });
+    [authSubmitButton, authGoogleButton, authForgotButton, authHumanCheck, authRecoveryBackButton].forEach(button => { if (button) button.disabled = busy; });
+    if (authRecoverySendButton) authRecoverySendButton.disabled = busy || Date.now() < recoveryCooldownUntil;
+}
+
+function setRecoveryFeedback(message, type = '') {
+    if (!authRecoveryFeedback) return;
+    authRecoveryFeedback.textContent = message;
+    authRecoveryFeedback.className = `auth-feedback${type ? ` ${type}` : ''}`;
+}
+
+function resetHumanVerification() {
+    humanVerifiedUntil = 0;
+    authHumanCheck?.setAttribute('aria-checked', 'false');
+    authHumanCheck?.classList.remove('checking');
+}
+
+function syncPasswordRules() {
+    const password = authPassword?.value || '';
+    const checks = {
+        length: password.length >= 8,
+        letter: /[A-Za-zÀ-ÿ]/.test(password),
+        number: /\d/.test(password)
+    };
+    authPasswordRules?.querySelectorAll('[data-rule]').forEach(rule => rule.classList.toggle('valid', Boolean(checks[rule.dataset.rule])));
+    return Object.values(checks).every(Boolean);
+}
+
+function showRecovery(open) {
+    if (!authRecoveryPanel || !authPrimary) return;
+    authGateCard?.classList.toggle('recovery-mode', open);
+    authPrimary.hidden = open;
+    authRecoveryPanel.hidden = !open;
+    if (open) {
+        authRecoveryEmail.value = authEmail?.value.trim() || '';
+        setRecoveryFeedback('');
+        requestAnimationFrame(() => authRecoveryEmail.focus());
+    } else {
+        requestAnimationFrame(() => authEmail?.focus());
+    }
+}
+
+function startRecoveryCooldown(seconds = 45) {
+    clearInterval(recoveryCooldownTimer);
+    recoveryCooldownUntil = Date.now() + seconds * 1000;
+    const update = () => {
+        const remaining = Math.max(0, Math.ceil((recoveryCooldownUntil - Date.now()) / 1000));
+        if (!authRecoverySendButton) return;
+        authRecoverySendButton.disabled = remaining > 0;
+        authRecoverySendButton.textContent = remaining > 0 ? `Reenviar em ${remaining}s` : 'Reenviar link de recuperação';
+        if (!remaining) clearInterval(recoveryCooldownTimer);
+    };
+    update();
+    recoveryCooldownTimer = setInterval(update, 1000);
 }
 
 function lockApplication(message = 'Entre para acessar seu painel.') {
@@ -53,6 +119,14 @@ function setAuthMode(mode) {
     document.querySelectorAll('[data-auth-mode]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.authMode === authMode)));
     if (authNameField) authNameField.hidden = authMode !== 'signup';
     if (authName) authName.required = authMode === 'signup';
+    if (authConfirmField) authConfirmField.hidden = authMode !== 'signup';
+    if (authPasswordConfirm) {
+        authPasswordConfirm.required = authMode === 'signup';
+        if (authMode !== 'signup') authPasswordConfirm.value = '';
+    }
+    if (authPasswordRules) authPasswordRules.hidden = authMode !== 'signup';
+    if (authHumanField) authHumanField.hidden = authMode !== 'signup';
+    resetHumanVerification();
     if (authPassword) authPassword.autocomplete = authMode === 'signup' ? 'new-password' : 'current-password';
     if (authSubmitButton) authSubmitButton.textContent = authMode === 'signup' ? 'Criar minha conta' : 'Entrar com e-mail';
     if (authForgotButton) authForgotButton.hidden = authMode === 'signup';
@@ -60,6 +134,17 @@ function setAuthMode(mode) {
 }
 
 document.querySelectorAll('[data-auth-mode]').forEach(button => button.addEventListener('click', () => setAuthMode(button.dataset.authMode)));
+document.querySelectorAll('[data-password-target]').forEach(button => button.addEventListener('click', () => {
+    const input = document.getElementById(button.dataset.passwordTarget);
+    if (!input) return;
+    const reveal = input.type === 'password';
+    input.type = reveal ? 'text' : 'password';
+    button.textContent = reveal ? 'Ocultar' : 'Mostrar';
+    button.setAttribute('aria-label', reveal ? 'Ocultar senha' : 'Mostrar senha');
+}));
+authPassword?.addEventListener('input', () => { syncPasswordRules(); if (authMode === 'signup') resetHumanVerification(); });
+authPasswordConfirm?.addEventListener('input', resetHumanVerification);
+authRecoveryBackButton?.addEventListener('click', () => showRecovery(false));
 setAuthMode('login');
 
 function updateCloudUi(state, user = null, message = '') {
@@ -127,10 +212,9 @@ if (!firebaseConfigured) {
     // Uma falha inicial pode ser recuperada no próximo pedido, sem desligar o App Check.
     const appCheckReady = appCheckSdk.getToken(appCheck, false).then(() => true, () => false);
     const auth = authSdk.getAuth(firebaseApp);
+    auth.languageCode = 'pt-BR';
     const db = firestoreSdk.getFirestore(firebaseApp);
     const googleProvider = new authSdk.GoogleAuthProvider();
-    const appleProvider = new authSdk.OAuthProvider('apple.com');
-    appleProvider.addScope('email'); appleProvider.addScope('name');
     let currentUser = null;
     let uploadTimer = null;
     let applyingRemote = false;
@@ -423,7 +507,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         if (code === 'auth/operation-not-allowed') return 'Esta forma de acesso ainda não foi habilitada no Firebase.';
         if (code === 'auth/email-already-in-use') return 'Já existe uma conta com este e-mail.';
         if (code === 'auth/invalid-email') return 'Digite um endereço de e-mail válido.';
-        if (code === 'auth/weak-password') return 'Use uma senha com pelo menos 6 caracteres.';
+        if (code === 'auth/weak-password') return 'Use uma senha com pelo menos 8 caracteres, uma letra e um número.';
         if (['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(code)) return 'E-mail ou senha incorretos.';
         if (code === 'auth/too-many-requests') return 'Muitas tentativas. Aguarde um pouco antes de tentar novamente.';
         if (code === 'auth/popup-closed-by-user') return 'A janela de acesso foi fechada antes de concluir.';
@@ -432,7 +516,6 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
 
     async function startSignIn(provider, label) {
         if (provider === googleProvider) provider.setCustomParameters({ prompt: 'select_account' });
-        if (provider === appleProvider) provider.setCustomParameters({ locale: 'pt_BR' });
         setAuthBusy(true); setAuthFeedback(`Abrindo o acesso seguro ${label}…`);
         updateCloudUi('syncing', null, `Abrindo o acesso seguro ${label}…`);
         try {
@@ -540,9 +623,15 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     authEmailForm?.addEventListener('submit', async event => {
         event.preventDefault();
         const email = authEmail.value.trim(); const password = authPassword.value;
+        if (authMode === 'signup') {
+            if (!syncPasswordRules()) return setAuthFeedback('Crie uma senha com 8 caracteres, uma letra e um número.', 'error');
+            if (password !== authPasswordConfirm?.value) return setAuthFeedback('As duas senhas precisam ser iguais.', 'error');
+            if (Date.now() >= humanVerifiedUntil) return setAuthFeedback('Conclua a verificação “Não sou um robô”.', 'error');
+        }
         setAuthBusy(true); setAuthFeedback(authMode === 'signup' ? 'Criando sua conta…' : 'Entrando…');
         try {
             if (authMode === 'signup') {
+                await appCheckSdk.getToken(appCheck, false);
                 const credential = await authSdk.createUserWithEmailAndPassword(auth, email, password);
                 const name = authName.value.trim().slice(0, 40);
                 if (name) { await authSdk.updateProfile(credential.user, { displayName: name }); appData.profileName = name; aplicarIdentidadePerfil(); saveAppData(); }
@@ -550,16 +639,41 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         } catch (error) { setAuthFeedback(describeAuthError(error), 'error'); }
         finally { setAuthBusy(false); }
     });
-    authForgotButton?.addEventListener('click', async () => {
-        const email = authEmail.value.trim();
-        if (!email) return setAuthFeedback('Digite seu e-mail para receber a recuperação.', 'error');
-        setAuthBusy(true);
-        try { await authSdk.sendPasswordResetEmail(auth, email); setAuthFeedback('Enviamos o link de recuperação para seu e-mail.', 'success'); }
-        catch (error) { setAuthFeedback(describeAuthError(error), 'error'); }
-        finally { setAuthBusy(false); }
+    authForgotButton?.addEventListener('click', () => showRecovery(true));
+    authRecoverySendButton?.addEventListener('click', async () => {
+        const email = authRecoveryEmail?.value.trim() || '';
+        if (!email || !authRecoveryEmail.checkValidity()) {
+            authRecoveryEmail?.focus();
+            return setRecoveryFeedback('Digite um endereço de e-mail válido.', 'error');
+        }
+        setAuthBusy(true); setRecoveryFeedback('Preparando seu link seguro…');
+        try {
+            await authSdk.sendPasswordResetEmail(auth, email, {
+                url: 'https://pedropsreis12-create.github.io/King-Master/?recuperacao=concluida',
+                handleCodeInApp: false
+            });
+        } catch (error) {
+            if (!['auth/user-not-found', 'auth/invalid-email'].includes(error?.code)) console.warn('Não foi possível confirmar o envio de recuperação.', error?.code || error);
+        } finally {
+            setAuthBusy(false);
+            authRecoveryPanel?.classList.add('sent');
+            setRecoveryFeedback('Se existir uma conta com este e-mail, as instruções chegarão em instantes. Confira também a pasta de spam.', 'success');
+            startRecoveryCooldown();
+        }
+    });
+    authHumanCheck?.addEventListener('click', async () => {
+        resetHumanVerification();
+        setAuthBusy(true); setAuthFeedback('Fazendo a verificação segura…');
+        try {
+            await appCheckSdk.getToken(appCheck, true);
+            humanVerifiedUntil = Date.now() + 5 * 60 * 1000;
+            authHumanCheck.setAttribute('aria-checked', 'true');
+            setAuthFeedback('Verificação concluída. Agora você pode criar a conta.', 'success');
+        } catch (error) {
+            setAuthFeedback('Não foi possível concluir a verificação. Atualize a página e tente novamente.', 'error');
+        } finally { setAuthBusy(false); }
     });
     authGoogleButton?.addEventListener('click', () => startSignIn(googleProvider, 'do Google').catch(error => setAuthFeedback(describeAuthError(error), 'error')));
-    authAppleButton?.addEventListener('click', () => startSignIn(appleProvider, 'da Apple').catch(error => setAuthFeedback(describeAuthError(error), 'error')));
 
     authSdk.onAuthStateChanged(auth, async user => {
         currentUser = user;
@@ -571,7 +685,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             }
             unsubscribeRemote?.(); unsubscribeRemote = null;
             updateCloudUi('signed-out');
-            lockApplication('Entre com Google, Apple ou seu cadastro para continuar.');
+            lockApplication('Entre com Google ou seu cadastro para continuar.');
             return;
         }
         setAuthBusy(true); setAuthFeedback('Sincronizando sua conta…');

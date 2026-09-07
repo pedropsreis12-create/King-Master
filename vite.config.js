@@ -15,7 +15,11 @@ function staticSiteWorker() {
         },
       };
 
-      for (const name of ['script.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
+      const passwordResetPage = await readFile('recuperar.html', 'utf8');
+      await writeFile('dist/recuperar.html', passwordResetPage, 'utf8');
+      files['/recuperar.html'] = { body: passwordResetPage, type: 'text/html; charset=utf-8' };
+
+      for (const name of ['script.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };

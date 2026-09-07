@@ -294,10 +294,19 @@ function showSection(sectionId) {
 function toggleSettings() {
     const painel = document.getElementById('settingsPanel');
     const botao = document.getElementById('settingsToggleBtn');
+    const menu = document.getElementById('mainNavigation');
+    const revelador = document.getElementById('navReveal');
     const aberto = painel.classList.toggle('active');
-    if (aberto) fecharMenuMovel();
     botao?.setAttribute('aria-expanded', String(aberto));
-    if (aberto) syncSettingsUI();
+    if (aberto) {
+        menu?.classList.add('is-revealed');
+        revelador?.setAttribute('aria-expanded', 'true');
+        syncSettingsUI();
+    } else {
+        fecharMenuMovel();
+        menu?.classList.remove('is-revealed');
+        revelador?.setAttribute('aria-expanded', 'false');
+    }
 }
 
 function syncSettingsUI() {
@@ -2546,7 +2555,9 @@ function renderizarMapaDominio() {
 }
 
 document.addEventListener('keydown', event => {
-    if (event.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+    if (event.key !== 'Escape') return;
+    document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+    if (document.getElementById('settingsPanel')?.classList.contains('active')) toggleSettings();
 });
 document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('mousedown', event => {
     if (event.target === overlay) overlay.classList.remove('active');
@@ -2563,6 +2574,10 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventL
         handle.setAttribute('aria-expanded', 'true');
     };
     const close = () => {
+        if (document.getElementById('settingsPanel')?.classList.contains('active')) {
+            open();
+            return;
+        }
         nav.classList.remove('is-revealed');
         handle.setAttribute('aria-expanded', 'false');
     };

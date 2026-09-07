@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <meta name="referrer" content="no-referrer">
+    <meta name="theme-color" content="#09101a">
+    <title>Recuperar senha — King Master</title>
+    <link rel="icon" href="assets/app-icon-192.png" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+        :root { color-scheme: dark; font-family: Poppins,system-ui,sans-serif; }
+        body { min-height: 100dvh; margin: 0; display: grid; place-items: center; padding: 24px; overflow-x: hidden; background: #07101a; color: #f7fbff; }
+        body::before,body::after { content:''; position: fixed; width: min(58vw,720px); aspect-ratio:1; border-radius:50%; filter: blur(8px); pointer-events:none; opacity:.22; }
+        body::before { top:-34%; left:-15%; background:radial-gradient(circle,#10d493,transparent 66%); }
+        body::after { right:-20%; bottom:-42%; background:radial-gradient(circle,#1d71ff,transparent 65%); }
+        main { position:relative; z-index:1; width:min(520px,100%); padding:32px; border:1px solid #ffffff1d; border-radius:30px; background:linear-gradient(145deg,#111d2beF,#0c1521ef); box-shadow:0 32px 100px #000a; backdrop-filter:blur(24px); }
+        .brand { display:flex; align-items:center; gap:12px; }
+        .brand-mark { width:48px; height:48px; display:grid; place-items:center; border-radius:15px; background:linear-gradient(135deg,#12d391,#1977ff); box-shadow:0 0 28px #1977ff4d; font-weight:900; }
+        .brand div { display:flex; flex-direction:column; }.brand strong { font-size:.98rem; }.brand small { color:#9eadbd; font-size:.68rem; }
+        .hero { margin:32px 0 24px; }.hero-mark { width:66px; height:66px; display:grid; place-items:center; margin-bottom:18px; border:1px solid #56efba57; border-radius:21px; background:linear-gradient(135deg,#2ee3aa,#1768e6); box-shadow:0 15px 42px #1ac4913d; font-size:1.6rem; }
+        .hero p { margin:0 0 7px; color:#63e8ba; font-size:.64rem; font-weight:900; letter-spacing:.17em; text-transform:uppercase; }.hero h1 { margin:0 0 10px; font-size:clamp(1.65rem,5vw,2.15rem); line-height:1.12; }.hero > span { color:#b5c3d2; font-size:.78rem; line-height:1.65; }
+        .state { min-height:128px; display:grid; place-items:center; text-align:center; color:#aab8c8; font-size:.76rem; line-height:1.6; }.spinner { width:34px; height:34px; margin:0 auto 12px; border:3px solid #ffffff1a; border-top-color:#39dda7; border-radius:50%; animation:spin .8s linear infinite; }
+        form { display:grid; gap:13px; } label { display:grid; gap:6px; color:#c4cedb; font-size:.65rem; font-weight:700; }.password-control { position:relative; display:block; }.password-control input { width:100%; min-height:49px; padding:11px 77px 11px 13px; border:1px solid #ffffff20; border-radius:13px; outline:0; background:#07111d; color:#fff; font:600 .8rem Poppins,sans-serif; }.password-control input:focus { border-color:#35dda6; box-shadow:0 0 0 4px #35dda617; }.password-control button { position:absolute; inset:7px 7px 7px auto; min-width:61px; border:0; border-radius:9px; background:#1b2d42; color:#a9d0ff; font:750 .57rem Poppins,sans-serif; cursor:pointer; }
+        .rules { display:flex; flex-wrap:wrap; gap:6px; }.rules span { padding:5px 8px; border:1px solid #ffffff17; border-radius:999px; background:#07101b; color:#8290a2; font-size:.54rem; font-weight:700; }.rules span::before { content:'○'; margin-right:5px; }.rules span.valid { border-color:#2dd69c4d; color:#68e6b8; background:#0d2b2566; }.rules span.valid::before { content:'✓'; }
+        .primary { min-height:50px; margin-top:4px; border:0; border-radius:14px; background:linear-gradient(120deg,#12c98c,#167cff); color:#fff; font:850 .78rem Poppins,sans-serif; box-shadow:0 12px 30px #087ee22e; cursor:pointer; }.primary:disabled { opacity:.55; cursor:wait; }.feedback { min-height:22px; margin:2px 0 0; color:#aebccc; font-size:.68rem; line-height:1.5; text-align:center; }.feedback.error { color:#ff9c93; }.feedback.success { color:#68e7b7; }
+        .account { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid #ffffff18; border-radius:13px; background:#ffffff08; }.account span:first-child { width:31px; height:31px; display:grid; place-items:center; border-radius:10px; background:#2bd19c24; color:#5ce4b8; }.account span:last-child { min-width:0; display:flex; flex-direction:column; }.account small { color:#7f8da0; font-size:.55rem; }.account strong { overflow:hidden; color:#dbe6f2; font-size:.69rem; text-overflow:ellipsis; }
+        .success-card { display:grid; gap:14px; text-align:center; }.success-card .hero-mark { margin:0 auto 6px; }.success-card h2 { margin:0; font-size:1.45rem; }.success-card p { margin:0; color:#afbdcb; font-size:.75rem; line-height:1.65; }.link { min-height:49px; display:grid; place-items:center; border-radius:14px; background:linear-gradient(120deg,#12c98c,#167cff); color:white; font-size:.76rem; font-weight:850; text-decoration:none; }
+        .footer { margin-top:20px; color:#6f7d8d; font-size:.56rem; line-height:1.5; text-align:center; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        @media (max-width:540px) { body { padding:12px; align-items:start; }.brand { margin-top:2px; } main { margin-top:10px; padding:23px 18px; border-radius:24px; }.hero { margin:26px 0 20px; } }
+        @media (prefers-reduced-motion:reduce) { *,*::before,*::after { animation:none !important; scroll-behavior:auto !important; transition-duration:.12s !important; } }
+    </style>
+</head>
+<body>
+    <main>
+        <div class="brand"><span class="brand-mark">KM</span><div><strong>King Master</strong><small>Recuperação segura de conta</small></div></div>
+        <section class="hero" id="resetHero">
+            <span class="hero-mark" aria-hidden="true">⌁</span>
+            <p>Nova senha</p>
+            <h1>Retome seus estudos</h1>
+            <span>Estamos validando seu link. Em seguida você poderá criar uma senha nova para sua conta.</span>
+        </section>
+        <div class="state" id="resetLoading"><div><div class="spinner"></div>Conferindo a segurança do link…</div></div>
+        <form id="resetForm" hidden>
+            <div class="account"><span aria-hidden="true">@</span><span><small>CONTA ENCONTRADA</small><strong id="resetEmail">••••@••••</strong></span></div>
+            <label><span>Nova senha</span><span class="password-control"><input type="password" id="newPassword" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres"><button type="button" data-password-target="newPassword">Mostrar</button></span></label>
+            <label><span>Repita a nova senha</span><span class="password-control"><input type="password" id="confirmPassword" minlength="8" autocomplete="new-password" required placeholder="Digite a mesma senha"><button type="button" data-password-target="confirmPassword">Mostrar</button></span></label>
+            <div class="rules" id="resetRules"><span data-rule="length">8 caracteres</span><span data-rule="letter">uma letra</span><span data-rule="number">um número</span></div>
+            <button class="primary" id="resetSubmit" type="submit">Salvar minha nova senha</button>
+            <p class="feedback" id="resetFeedback" role="status"></p>
+        </form>
+        <section class="success-card" id="resetSuccess" hidden>
+            <span class="hero-mark" aria-hidden="true">✓</span>
+            <h2>Senha alterada</h2>
+            <p>Sua conta já está protegida com a nova senha. Agora é só voltar ao King Master e continuar de onde parou.</p>
+            <a class="link" href="./">Entrar no King Master</a>
+        </section>
+        <section class="success-card" id="resetError" hidden>
+            <span class="hero-mark" aria-hidden="true">!</span>
+            <h2>Este link não é mais válido</h2>
+            <p id="resetErrorCopy">Por segurança, os links de recuperação expiram e só podem ser usados uma vez.</p>
+            <a class="link" href="./">Pedir um novo link</a>
+        </section>
+        <p class="footer">O King Master nunca pedirá sua senha por e-mail. Não compartilhe links de recuperação.</p>
+    </main>
+    <script src="firebase-config.js?v=20260831-firebase"></script>
+    <script type="module" src="password-reset.js?v=20260907-account-6"></script>
+</body>
+</html>

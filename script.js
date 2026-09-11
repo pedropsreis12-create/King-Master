@@ -1559,7 +1559,30 @@ function salvarMateriaCiclo(e) {
     } else { 
         appData.cycleItems.push({ id: Date.now(), color, subject, type, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 }); 
     }
-    saveAppData(); renderizarCiclo(); renderizarRevisoes(); fecharModal('cycleModal'); showToast('📚 Matéria guardada!');
+    saveAppData(); renderizarCiclo(); renderizarRevisoes(); fecharModal('cycleModal'); showToast('📚 Matéria salva!');
+}
+
+let buscaMateriasAtual = '';
+let filtroAgendamentoAtual = 'todos';
+let filtroRevisoesAtual = 'ativas';
+let filtroSimuladosAtual = 'todas';
+let filtroHistoricoAtual = { busca: '', periodo: 'tudo' };
+
+function pluralizar(total, singular, plural = `${singular}s`) {
+    return `${total} ${total === 1 ? singular : plural}`;
+}
+
+function corSegura(valor, fallback = 'var(--accent-color)') {
+    return /^#[0-9a-f]{3,8}$/i.test(String(valor || '')) ? valor : fallback;
+}
+
+function anexoSeguro(valor) {
+    return /^data:(image\/(png|jpeg|webp|gif)|application\/pdf);base64,/i.test(String(valor || '')) ? valor : '';
+}
+
+function filtrarMaterias(valor = '') {
+    buscaMateriasAtual = String(valor).trim().toLocaleLowerCase('pt-BR');
+    renderizarCiclo();
 }
 
 function renderizarCiclo() {
@@ -1567,16 +1590,35 @@ function renderizarCiclo() {
     const grid = document.getElementById('disciplinasGrid');
     if(!grid) return;
 
-    if(appData.cycleItems.length === 0) { 
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text-muted);background:var(--card-bg);border-radius:16px;border:1px dashed var(--border-color);">Nenhuma matéria registada. Comece adicionando a primeira matéria.</div>'; 
+    const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
+    const topicos = materias.flatMap(item => Array.isArray(item.topicos) ? item.topicos : []);
+    const dominados = topicos.filter(item => item.concluido || item.dominio?.dominio).length;
+    const definirTexto = (id, texto) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = texto; };
+    definirTexto('materiasTotal', materias.length);
+    definirTexto('materiasTopicos', topicos.length);
+    definirTexto('materiasDominados', dominados);
+    definirTexto('materiasDominio', topicos.length ? `${Math.round(dominados / topicos.length * 100)}%` : '0%');
+
+    const visiveis = materias.filter(item => !buscaMateriasAtual || `${item.subject || ''} ${item.type || ''}`.toLocaleLowerCase('pt-BR').includes(buscaMateriasAtual));
+    definirTexto('materiasResultado', pluralizar(visiveis.length, 'matéria'));
+
+    if(materias.length === 0) {
+        grid.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">▦</b><strong>Comece pela primeira matéria</strong><p>Crie uma matéria e depois adicione os tópicos que pretende estudar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">Adicionar matéria</button></div>';
         return; 
     }
+    if (!visiveis.length) {
+        grid.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">⌕</b><strong>Nenhuma matéria encontrada</strong><p>Tente outro termo ou limpe a busca para ver todas as matérias.</p><button type="button" class="cycle-btn" onclick="document.getElementById(\'materiasBusca\').value=\'\';filtrarMaterias(\'\')">Limpar busca</button></div>';
+        return;
+    }
 
-    grid.innerHTML = appData.cycleItems.map(i => {
+    grid.innerHTML = visiveis.map(i => {
         let exec = i.executedMin || 0; 
         let txtExec = exec >= 60 ? `${Math.floor(exec/60)}h${Math.floor(exec%60).toString().padStart(2,'0')}m` : `${Math.floor(exec%60)}m`;
         let concluidos = i.topicos ? i.topicos.filter(t => t.concluido).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
-        return `<div class="disc-card" style="border-left-color: ${i.color}; cursor: pointer;" onclick="abrirModalAssuntos(${i.id})"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;"><div><div class="disc-title" style="margin-bottom:2px;">${i.subject}</div><span style="font-size:.75rem;color:var(--text-muted);font-weight:600;">${i.type || 'Teórica'}</span></div><div style="display:flex;gap:12px;"><i onclick="event.stopPropagation(); editarMateriaCiclo(${i.id})" style="cursor:pointer;opacity:.4;font-style:normal;font-size:1.1rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.4'" title="Editar Matéria">✏️</i><i onclick="event.stopPropagation(); abrirModalDeletar('cycle', ${i.id}, 'Apagar Matéria?', 'Isto vai excluir a matéria e tópicos.')" style="cursor:pointer;opacity:.4;font-style:normal;font-size:1.1rem;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='.4'" title="Apagar Matéria">🗑️</i></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo Real</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div></div>`;
+        const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
+        const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
+        const tipo = escaparRevisaoHtml(i.type || 'Teórica');
+        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><button type="button" class="disc-title-button" onclick="abrirModalAssuntos(${i.id})">${nome}</button><span class="disc-type">${tipo}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria?', 'Isto vai excluir a matéria e seus tópicos.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div><button type="button" class="disc-open-row" onclick="abrirModalAssuntos(${i.id})"><span>Ver e organizar tópicos</span><span aria-hidden="true">›</span></button></article>`;
     }).join('');
 }
 
@@ -1591,7 +1633,7 @@ function abrirModalAssuntos(id) {
 function renderizarListaAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id), lista = document.getElementById('listaAssuntos');
     if (!mat.topicos || mat.topicos.length === 0) { lista.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: 30px;">Nenhum assunto.</p>'; return; }
-    lista.innerHTML = mat.topicos.map((t, i) => `<li class="${t.concluido ? 'completed' : ''}" style="justify-content: space-between; padding-right: 5px;"><span onclick="toggleTopico(${id}, ${i})" style="flex: 1;">${t.nome}</span><i onclick="deletarTopico(${id}, ${i})" style="cursor: pointer; font-style: normal; color: #ff3b30; font-size: 0.9rem; opacity: 0.7;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">🗑️</i></li>`).join('');
+    lista.innerHTML = mat.topicos.map((t, i) => { const nome = escaparRevisaoHtml(t.nome || 'Tópico'); return `<li class="${t.concluido ? 'completed' : ''}" style="justify-content:space-between;padding-right:5px;"><button type="button" onclick="toggleTopico(${id},${i})" style="flex:1;border:0;background:none;color:inherit;text-align:left;cursor:pointer;" aria-pressed="${Boolean(t.concluido)}">${nome}</button><button type="button" class="workspace-icon-button danger" onclick="deletarTopico(${id},${i})" aria-label="Excluir ${nome}" title="Excluir">×</button></li>`; }).join('');
 }
 
 function adicionarTopico(e) { e.preventDefault(); const id = parseInt(document.getElementById('assuntosMateriaId').value), nm = document.getElementById('novoTopicoInput').value, idx = appData.cycleItems.findIndex(m => m.id === id); if (idx > -1 && nm.trim()) { if (!appData.cycleItems[idx].topicos) appData.cycleItems[idx].topicos = []; appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false }); saveAppData(); document.getElementById('novoTopicoInput').value = ''; renderizarListaAssuntos(id); renderizarCiclo(); } }
@@ -1609,28 +1651,85 @@ function deletarTopico(id, tIdx) { const idx = appData.cycleItems.findIndex(m =>
 function abrirModalEditarHistorico(id) { const h = appData.historyItems.find(i => i.id === id); if(h) { document.getElementById('histEditId').value = h.id; document.getElementById('histSubject').value = h.materia; document.getElementById('histComment').value = h.comentario || ''; document.getElementById('editHistoryModal').classList.add('active'); } }
 function salvarEdicaoHistorico(e) { e.preventDefault(); const idx = appData.historyItems.findIndex(h => h.id === parseInt(document.getElementById('histEditId').value)); if(idx > -1) { appData.historyItems[idx].materia = document.getElementById('histSubject').value; appData.historyItems[idx].comentario = document.getElementById('histComment').value; saveAppData(); renderizarHistorico(); fecharModal('editHistoryModal'); showToast('✏️ Histórico atualizado!'); } }
 
+function filtrarHistorico(alteracao = {}) {
+    filtroHistoricoAtual = { ...filtroHistoricoAtual, ...alteracao };
+    document.querySelectorAll('[data-history-period]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.historyPeriod === filtroHistoricoAtual.periodo)));
+    renderizarHistorico();
+}
+
 function renderizarHistorico() {
-    toggleBotaoStopHistorico(); 
+    toggleBotaoStopHistorico();
     renderizarRaioX();
 
     const cont = document.getElementById('historyListContainer');
     if(!cont) return;
-    if(!appData.historyItems || appData.historyItems.length === 0) { cont.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; border: 1px dashed var(--border-color); border-radius: 24px;">Nenhuma sessão finalizada.</p>'; document.getElementById('hist-total-time').textContent = "0h00min"; return; }
-    
-    let totalSecs = 0, grupos = {}, html = '';
-    [...appData.historyItems].sort((a, b) => b.id - a.id).forEach(i => { totalSecs += i.tempoSegundos; if(!grupos[i.dataChave]) grupos[i.dataChave] = { itens: [], t: 0, hdr: i }; grupos[i.dataChave].itens.push(i); grupos[i.dataChave].t += i.tempoSegundos; });
-    const histTotal = document.getElementById('hist-total-time');
-    if(histTotal) histTotal.textContent = `${Math.floor(totalSecs/3600)}h${Math.floor((totalSecs%3600)/60).toString().padStart(2,'0')}min`;
-    
-    for(let k in grupos) {
-        const g = grupos[k];
-        html += `<div class="h-date-header"><div class="h-date-left"><span class="h-date-num">${g.hdr.diaNum}</span><div class="h-date-text"><span>${g.hdr.mesAno}</span><span>${g.hdr.diaStr}</span></div></div><div class="h-date-line"></div><div class="h-date-total">⏱ ${Math.floor(g.t/3600)}h${Math.floor((g.t%3600)/60).toString().padStart(2,'0')}min</div></div>`;
-        g.itens.forEach(s => {
-            let cor = s.tipo === 'Prática' ? '#ff9500' : (s.tipo === 'Teórica e Prática' ? '#007aff' : (s.tipo === 'Geral' ? '#515154' : 'var(--badge-purple)'));
-            html += `<div class="h-session-card" style="border-left-color: ${s.cor}; flex-direction: column; align-items: stretch; gap: 10px;"><div style="display: flex; justify-content: space-between; align-items: center; width: 100%;"><div class="hs-info"><b class="hs-title" style="color: ${s.cor};">${s.materia}</b></div><div class="hs-actions"><span class="hs-time">⏱ ${formatHistoryTime(s.tempoSegundos)}</span><div class="hs-stats"><span>0</span><span>0</span><span>0</span></div><span class="hs-badge" style="background-color: ${cor};">${s.tipo || 'TEORIA'}</span><div class="hs-icons"><i onclick="abrirModalEditarHistorico(${s.id})" title="Editar">✏️</i> <i onclick="abrirModalDeletar('history', ${s.id}, 'Deletar Registro?', 'A sessão será removida do histórico.')" title="Apagar">🗑️</i></div></div></div>${s.comentario ? `<div class="hs-comment-block" style="display: block;">"${s.comentario}"</div>` : ''}</div>`;
-        });
+    const todos = Array.isArray(appData.historyItems) ? appData.historyItems : [];
+    const busca = String(filtroHistoricoAtual.busca || '').trim().toLocaleLowerCase('pt-BR');
+    let limite = null;
+    if (filtroHistoricoAtual.periodo !== 'tudo') {
+        limite = new Date(); limite.setHours(0, 0, 0, 0);
+        limite.setDate(limite.getDate() - (Number(filtroHistoricoAtual.periodo) - 1));
     }
-    cont.innerHTML = html;
+    const itens = todos.filter(item => {
+        const corresponde = !busca || `${item.materia || ''} ${item.tipo || ''} ${item.comentario || ''}`.toLocaleLowerCase('pt-BR').includes(busca);
+        const data = dataISOParaLocal(dataHistoricoISO(item));
+        return corresponde && (!limite || (data && data >= limite));
+    }).sort((a, b) => b.id - a.id);
+
+    const totalSecs = itens.reduce((soma, item) => soma + (Number(item.tempoSegundos) || 0), 0);
+    const porMateria = itens.reduce((mapa, item) => {
+        const nome = item.materia || 'Estudo livre';
+        mapa[nome] = (mapa[nome] || 0) + (Number(item.tempoSegundos) || 0);
+        return mapa;
+    }, {});
+    const favorita = Object.keys(porMateria).sort((a, b) => porMateria[b] - porMateria[a])[0];
+    const definirTexto = (id, texto) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = texto; };
+    definirTexto('hist-total-time', formatShortTime(totalSecs));
+    definirTexto('hist-session-count', itens.length);
+    definirTexto('hist-session-average', itens.length ? formatShortTime(Math.round(totalSecs / itens.length)) : '0m');
+    definirTexto('hist-favorite-subject', favorita ? `Mais estudada: ${favorita}` : 'Nenhuma matéria ainda');
+    definirTexto('historicoResultado', pluralizar(itens.length, 'sessão', 'sessões'));
+
+    if (!todos.length) {
+        cont.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◴</b><strong>Seu histórico começa na primeira sessão</strong><p>Quando você concluir um cronômetro, o tempo e a matéria aparecerão aqui automaticamente.</p><button type="button" class="cycle-btn primary" onclick="showSection(\'dashboard\')">Iniciar uma sessão</button></div>';
+        return;
+    }
+    if (!itens.length) {
+        cont.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">⌕</b><strong>Nenhuma sessão neste recorte</strong><p>Altere o período ou a busca para reencontrar seus registros.</p><button type="button" class="cycle-btn" onclick="limparFiltrosHistorico()">Limpar filtros</button></div>';
+        return;
+    }
+
+    const grupos = {};
+    itens.forEach(item => {
+        const chave = dataHistoricoISO(item) || item.dataChave || 'sem-data';
+        if(!grupos[chave]) grupos[chave] = { itens: [], total: 0 };
+        grupos[chave].itens.push(item);
+        grupos[chave].total += Number(item.tempoSegundos) || 0;
+    });
+
+    cont.innerHTML = Object.entries(grupos).map(([chave, grupo]) => {
+        const data = dataISOParaLocal(chave);
+        const dia = data ? String(data.getDate()).padStart(2, '0') : '—';
+        const mesAno = data ? data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '').toUpperCase() : 'SEM DATA';
+        const diaSemana = data ? data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase() : '';
+        const sessoes = grupo.itens.map(sessao => {
+            const corMateria = corSegura(sessao.cor);
+            const corTipo = sessao.tipo === 'Prática' ? '#ff9500' : (sessao.tipo === 'Teórica e Prática' ? '#007aff' : (sessao.tipo === 'Geral' ? '#515154' : '#8657d6'));
+            const materia = escaparRevisaoHtml(sessao.materia || 'Estudo livre');
+            const tipo = escaparRevisaoHtml(sessao.tipo || 'Teoria');
+            const comentario = escaparRevisaoHtml(sessao.comentario || '');
+            return `<article class="h-session-card" style="border-left-color:${corMateria};"><div class="history-session-main"><div class="hs-info"><b class="hs-title" style="color:${corMateria};">${materia}</b></div><div class="history-session-meta"><span class="hs-time">⏱ ${formatHistoryTime(Number(sessao.tempoSegundos) || 0)}</span><span class="hs-badge" style="background-color:${corTipo};">${tipo}</span><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="abrirModalEditarHistorico(${sessao.id})" aria-label="Editar sessão de ${materia}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('history', ${sessao.id}, 'Excluir registro?', 'A sessão será removida do histórico.')" aria-label="Excluir sessão de ${materia}" title="Excluir">×</button></div></div></div>${comentario ? `<div class="history-session-note">${comentario}</div>` : ''}</article>`;
+        }).join('');
+        return `<div class="h-date-header"><div class="h-date-left"><span class="h-date-num">${dia}</span><div class="h-date-text"><span>${mesAno}</span><span>${diaSemana}</span></div></div><div class="h-date-line"></div><div class="h-date-total">⏱ ${formatShortTime(grupo.total)}</div></div>${sessoes}`;
+    }).join('');
+}
+
+function limparFiltrosHistorico() {
+    filtroHistoricoAtual = { busca: '', periodo: 'tudo' };
+    const busca = document.getElementById('historicoBusca');
+    if (busca) busca.value = '';
+    document.querySelectorAll('[data-history-period]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.historyPeriod === 'tudo')));
+    renderizarHistorico();
 }
 
 function renderizarRaioX() {
@@ -1705,16 +1804,19 @@ function renderizarRaioX() {
         let pct = (item.min / totalMinutosExecutados) * 100;
         let tempoTexto = item.min >= 60 ? `${Math.floor(item.min/60)}h ${Math.floor(item.min%60)}m` : `${Math.floor(item.min)}m`;
         let taxaTexto = item.taxa >= 0 ? `${Math.round(item.taxa * 100)}% de Acerto` : "Sem questões cadastradas";
-        
-        barHtml += `<div class="lifetime-segment" style="width: ${pct}%; background-color: ${item.cor};" title="${item.nome}: ${tempoTexto} | ${taxaTexto}"></div>`;
+        const nomeSeguro = escaparRevisaoHtml(item.nome);
+        const cor = corSegura(item.cor, '#515154');
+        const corOriginal = corSegura(item.corOriginal, '#515154');
+
+        barHtml += `<div class="lifetime-segment" style="width:${pct}%;background-color:${cor};" title="${nomeSeguro}: ${tempoTexto} | ${taxaTexto}"></div>`;
         
         legendHtml += `
-            <div class="legend-item" title="${pct.toFixed(1)}% do tempo investido" style="border-left: 3px solid ${item.cor}; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px; min-width: 200px;">
+            <div class="legend-item" title="${pct.toFixed(1)}% do tempo investido" style="border-left:3px solid ${cor};display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:10px;min-width:200px;">
                 <div style="display:flex; align-items: center; gap: 6px;">
-                    <div class="legend-dot" style="background-color: ${item.corOriginal};"></div>
-                    <span style="font-weight: 800; color: var(--text-main); font-size: 0.85rem;">${item.icon} ${item.nome}</span>
+                    <div class="legend-dot" style="background-color:${corOriginal};"></div>
+                    <span style="font-weight:800;color:var(--text-main);font-size:.85rem;">${item.icon} ${nomeSeguro}</span>
                 </div>
-                <span style="font-size: 0.75rem; color: ${item.cor}; font-weight: 700; margin-left: 16px;">${item.tag ? item.tag.trim() : ''}</span>
+                <span style="font-size:.75rem;color:${cor};font-weight:700;margin-left:16px;">${item.tag ? item.tag.trim() : ''}</span>
                 <span style="font-size: 0.7rem; color: var(--text-muted); margin-left: 16px;">⏱ ${tempoTexto} investidos • 🎯 ${taxaTexto}</span>
             </div>
         `;
@@ -1911,6 +2013,12 @@ function toggleAgendamentoStatus(id) {
     }
 }
 
+function filtrarAgendamento(filtro = 'todos') {
+    filtroAgendamentoAtual = ['todos', 'hoje', 'proximos', 'concluidos'].includes(filtro) ? filtro : 'todos';
+    document.querySelectorAll('[data-agenda-filter]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.agendaFilter === filtroAgendamentoAtual)));
+    renderizarAgendamento();
+}
+
 function editarAgendamentoItem(id) {
     const item = appData.agendamentoItems.find(i => i.id === id);
     if(item) {
@@ -1931,13 +2039,24 @@ function renderizarAgendamento() {
     renderizarResumoAgendamento();
     if (!list) return;
 
-    if (!appData.agendamentoItems || appData.agendamentoItems.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; border: 1px dashed var(--border-color); border-radius: 16px;">Nada agendado. Organize suas prioridades!</p>';
-        if(highlight) highlight.style.display = 'none';
-        return;
-    }
+    const todos = Array.isArray(appData.agendamentoItems) ? appData.agendamentoItems : [];
+    const hoje = dataLocalISO();
+    const agora = new Date();
+    const pendentesHoje = todos.filter(item => !item.completed && item.date === hoje).length;
+    const atrasados = todos.filter(item => !item.completed && item.date && item.date < hoje).length;
+    const concluidos = todos.filter(item => item.completed).length;
+    const definirTexto = (id, texto) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = texto; };
+    definirTexto('agendaHojeTotal', pendentesHoje);
+    definirTexto('agendaAtrasadosTotal', atrasados);
+    definirTexto('agendaConcluidosTotal', concluidos);
 
-    let itens = [...appData.agendamentoItems].sort((a, b) => {
+    const filtrados = todos.filter(item => {
+        if (filtroAgendamentoAtual === 'hoje') return !item.completed && item.date === hoje;
+        if (filtroAgendamentoAtual === 'proximos') return !item.completed && item.date > hoje;
+        if (filtroAgendamentoAtual === 'concluidos') return item.completed;
+        return true;
+    });
+    let itens = [...filtrados].sort((a, b) => {
         const dtA = new Date(`${a.date}T${a.time}`);
         const dtB = new Date(`${b.date}T${b.time}`);
         return dtA - dtB;
@@ -1945,39 +2064,39 @@ function renderizarAgendamento() {
 
     itens.sort((a, b) => (a.completed === b.completed) ? 0 : a.completed ? 1 : -1);
 
-    let html = '';
-    itens.forEach(item => {
-        const d = new Date(`${item.date}T12:00:00`);
-        const corUrgencia = item.completed ? 'var(--border-color)' : 'var(--accent-color)';
-        
-        html += `
-        <div class="agenda-card ${item.completed ? 'completed' : ''}" style="--urgency-color: ${corUrgencia};">
-            <div class="agenda-actions" style="margin-right: 10px;">
-                <i class="btn-check-agenda" onclick="toggleAgendamentoStatus(${item.id})">${item.completed ? '✅' : '⬜'}</i>
-            </div>
-            <div class="agenda-date-box" style="min-width: 85px;">
-                <span style="font-size: 1.2rem;">${item.time}</span>
-                <span style="font-size: 0.65rem; opacity: 0.7; text-transform: uppercase;">${d.toLocaleDateString('pt-PT', {day:'2-digit', month:'short'})}</span>
-            </div>
-            <div class="agenda-info">
-                <div class="agenda-title" style="font-size: 1rem; font-weight: 800;">${item.title}</div>
-                <div class="agenda-subject"><span class="agenda-badge">${item.type}</span></div>
-                ${item.description ? `<div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; font-style: italic;">${item.description}</div>` : ''}
-            </div>
-            <div class="agenda-actions">
-                <i onclick="editarAgendamentoItem(${item.id})" style="cursor:pointer;" title="Editar">✏️</i>
-                <i onclick="abrirModalDeletar('agendamentoTab', ${item.id}, 'Remover?', 'Deseja apagar este compromisso?')" style="cursor:pointer;" title="Apagar">🗑️</i>
-            </div>
-        </div>`;
-    });
+    definirTexto('agendaResultado', pluralizar(itens.length, 'compromisso'));
+    if (!todos.length) {
+        list.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◷</b><strong>Sua agenda está livre</strong><p>Adicione apenas os compromissos que realmente precisam de horário ou data.</p><button type="button" class="cycle-btn primary" onclick="abrirModalAgendamento()">Criar compromisso</button></div>';
+    } else if (!itens.length) {
+        const textos = { hoje: ['Nada pendente hoje', 'Seu dia está livre ou tudo já foi concluído.'], proximos: ['Nenhum compromisso futuro', 'Você pode planejar o próximo bloco quando quiser.'], concluidos: ['Nada concluído ainda', 'Marque um compromisso como feito para encontrá-lo aqui.'] };
+        const mensagem = textos[filtroAgendamentoAtual] || ['Nenhum resultado', 'Escolha outro filtro para ver seus compromissos.'];
+        list.innerHTML = `<div class="workspace-empty"><b aria-hidden="true">✓</b><strong>${mensagem[0]}</strong><p>${mensagem[1]}</p><button type="button" class="cycle-btn" onclick="filtrarAgendamento('todos')">Ver todos</button></div>`;
+    } else {
+        list.innerHTML = itens.map(item => {
+            const data = dataISOParaLocal(item.date);
+            const dataTexto = data ? data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : 'Sem data';
+            const dataHora = item.date ? new Date(`${item.date}T${item.time || '23:59'}`) : null;
+            const atrasado = !item.completed && dataHora && dataHora < agora;
+            const titulo = escaparRevisaoHtml(item.title || 'Compromisso');
+            const tipo = escaparRevisaoHtml(item.type || 'Estudo');
+            const descricao = escaparRevisaoHtml(item.description || '');
+            const corUrgencia = item.completed ? 'var(--border-color)' : (atrasado ? '#ff3b30' : 'var(--accent-color)');
+            return `<article class="agenda-card agenda-card-pro ${item.completed ? 'completed' : ''}" style="--urgency-color:${corUrgencia};"><button type="button" class="agenda-check" onclick="toggleAgendamentoStatus(${item.id})" aria-label="${item.completed ? 'Reabrir' : 'Concluir'} ${titulo}" aria-pressed="${item.completed}">${item.completed ? '✓' : '○'}</button><div class="agenda-card-copy"><h3>${titulo}</h3><div class="agenda-card-meta"><span>${item.time || 'Sem hora'}</span><span>${dataTexto}</span><span>${tipo}</span>${atrasado ? '<span class="overdue">Atrasado</span>' : ''}</div>${descricao ? `<p>${descricao}</p>` : ''}</div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarAgendamentoItem(${item.id})" aria-label="Editar ${titulo}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('agendamentoTab', ${item.id}, 'Remover compromisso?', 'Deseja apagar este compromisso?')" aria-label="Apagar ${titulo}" title="Apagar">×</button></div></article>`;
+        }).join('');
+    }
 
-    list.innerHTML = html;
-    
-    const proximo = itens.find(i => !i.completed);
-    if(proximo && highlight) {
-        highlight.style.display = 'block';
-        highlight.innerHTML = `<h3 style="margin:0; font-size:0.75rem; color:var(--text-muted); text-transform: uppercase; font-weight: 700;">PRÓXIMO NA LISTA</h3>
-                               <div style="font-size:1.3rem; font-weight:800; margin-top:5px; color: var(--text-main);">${proximo.time} - ${proximo.title}</div>`;
+    const pendentes = todos.filter(item => !item.completed).sort((a, b) => new Date(`${a.date || '9999-12-31'}T${a.time || '23:59'}`) - new Date(`${b.date || '9999-12-31'}T${b.time || '23:59'}`));
+    const proximo = pendentes.find(item => new Date(`${item.date}T${item.time || '23:59'}`) >= agora) || pendentes[0];
+    if (highlight) {
+        if (!proximo) {
+            highlight.hidden = true;
+        } else {
+            highlight.hidden = false;
+            const data = dataISOParaLocal(proximo.date);
+            const dataTexto = proximo.date === hoje ? 'Hoje' : (data ? data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : 'Sem data');
+            const vencido = proximo.date && new Date(`${proximo.date}T${proximo.time || '23:59'}`) < agora;
+            highlight.innerHTML = `<span class="workspace-kicker">${vencido ? 'PRECISA REPLANEJAR' : 'PRÓXIMA AÇÃO'}</span><p>${escaparRevisaoHtml(proximo.title || 'Compromisso')}</p><small>${[dataTexto, proximo.time, proximo.type].filter(Boolean).map(escaparRevisaoHtml).join(' • ')}</small>`;
+        }
     }
 }
 
@@ -2258,6 +2377,12 @@ function renderDashboardRevisoes() {
     }).join('');
 }
 
+function filtrarRevisoes(filtro = 'ativas') {
+    filtroRevisoesAtual = ['ativas', 'hoje', 'fracas', 'concluidas', 'todas'].includes(filtro) ? filtro : 'ativas';
+    document.querySelectorAll('[data-review-filter]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.reviewFilter === filtroRevisoesAtual)));
+    renderizarRevisoes();
+}
+
 function renderizarRevisoes() {
     const lista = document.getElementById('revisoesList');
     if (!lista) return;
@@ -2276,7 +2401,9 @@ function renderizarRevisoes() {
     document.getElementById('rev-semana').textContent = appData.revisoesItems.filter(naSemana).length;
 
     if (!appData.revisoesItems.length) {
-        lista.innerHTML = '<p style="text-align:center;color:var(--text-muted);padding:40px;border:1px dashed var(--border-color);border-radius:16px;">Nenhuma revisão registada.</p>';
+        const resultado = document.getElementById('revisoesResultado');
+        if (resultado) resultado.textContent = '0 revisões';
+        lista.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">↻</b><strong>Nenhuma revisão cadastrada</strong><p>Adicione um assunto que precisa voltar ao foco ou registre um simulado para criar revisões automaticamente.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRevisao()">Criar revisão</button></div>';
         renderDashboardRevisoes();
         return;
     }
@@ -2291,7 +2418,29 @@ function renderizarRevisoes() {
         return dataA.localeCompare(dataB) || (b.criadoEm || b.id) - (a.criadoEm || a.id);
     });
 
-    lista.innerHTML = ordenados.map(item => {
+    const visiveis = ordenados.filter(item => {
+        if (filtroRevisoesAtual === 'ativas') return pendente(item);
+        if (filtroRevisoesAtual === 'hoje') return pendente(item) && dataItem(item) && dataItem(item) <= hoje;
+        if (filtroRevisoesAtual === 'fracas') return item.status === 'fraco';
+        if (filtroRevisoesAtual === 'concluidas') return item.status === 'revisado';
+        return true;
+    });
+    const resultado = document.getElementById('revisoesResultado');
+    if (resultado) resultado.textContent = pluralizar(visiveis.length, 'revisão', 'revisões');
+    if (!visiveis.length) {
+        const mensagens = {
+            hoje: ['Nada para revisar hoje', 'Sua fila com data está em dia. As demais revisões continuam em Ativas.'],
+            fracas: ['Nenhum assunto marcado como fraco', 'Quando uma revisão ainda não estiver firme, marque uma nova data.'],
+            concluidas: ['Nenhuma revisão concluída', 'As revisões finalizadas aparecerão aqui.'],
+            ativas: ['Sua fila ativa está vazia', 'Crie uma revisão quando um conteúdo precisar voltar ao foco.']
+        };
+        const mensagem = mensagens[filtroRevisoesAtual] || ['Nenhuma revisão neste filtro', 'Escolha outra visualização.'];
+        lista.innerHTML = `<div class="workspace-empty"><b aria-hidden="true">✓</b><strong>${mensagem[0]}</strong><p>${mensagem[1]}</p><button type="button" class="cycle-btn" onclick="filtrarRevisoes('todas')">Ver todas</button></div>`;
+        renderDashboardRevisoes();
+        return;
+    }
+
+    lista.innerHTML = visiveis.map(item => {
         const estaAtrasada = atrasada(item);
         const revisado = item.status === 'revisado';
         const aindaFraco = item.status === 'fraco';
@@ -2304,7 +2453,7 @@ function renderizarRevisoes() {
         const cor = revisado ? '#34c759' : (aindaFraco ? '#ff9500' : (estaAtrasada ? '#ff3b30' : 'var(--accent-color)'));
         const tagsHtml = (item.tags || []).map(tag => `<span class="revision-tag-chip small">${escaparRevisaoHtml(tag)}</span>`).join('');
         const datasExtras = `${dataEstudoTexto ? `<span class="revision-badge">Estudou: ${dataEstudoTexto}</span>` : ''}${ultimaRevisaoTexto ? `<span class="revision-badge">Última revisão: ${ultimaRevisaoTexto}</span>` : ''}`;
-        const acoesDeFluxo = !revisado ? `<button class="cycle-btn" onclick="marcarRevisao(${item.id},'revisado')">Marcar revisado</button><button class="cycle-btn weak-action" onclick="abrirReagendamentoRevisao(${item.id})">Marcar nova data</button>` : '';
+        const acoesDeFluxo = !revisado ? `<button class="cycle-btn" onclick="marcarRevisao(${item.id},'revisado')">Concluir revisão</button><button class="cycle-btn weak-action" onclick="abrirReagendamentoRevisao(${item.id})">Ainda está fraco</button>` : '';
         return `<article class="revision-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="revision-card-main"><div class="revision-card-title">${escaparRevisaoHtml(item.materia)}</div><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div>${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge ${statusClasse}">${statusTexto}</span><span class="revision-badge">${origemTexto}</span><span class="revision-badge">Revisar: ${dataTexto}</span>${datasExtras}</div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão será removida da sua lista.')">Excluir</button></div></article>`;
     }).join('');
     renderDashboardRevisoes();
@@ -2848,7 +2997,7 @@ function abrirModalSimulado() {
     document.getElementById('simArea').value = "Linguagens, Códigos e suas Tecnologias";
     document.getElementById('simFileName').textContent = "Selecionar Arquivo do Computador";
     document.getElementById('simAttachmentData').value = "";
-    document.getElementById('simuladoModalTitle').textContent = "Registar Simulado";
+    document.getElementById('simuladoModalTitle').textContent = "Registrar simulado";
     document.getElementById('simDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('simuladoModal').classList.add('active');
 }
@@ -2899,100 +3048,90 @@ function salvarSimulado(e) {
     renderizarSimulados();
     renderizarRevisoes();
     fecharModal('simuladoModal');
-    showToast(revisaoCriada ? '🎯 Simulado registado e revisão criada para a área mais fraca!' : '🎯 Simulado registado!');
+    showToast(revisaoCriada ? '🎯 Simulado salvo e revisão criada para a área mais fraca!' : '🎯 Simulado salvo!');
+}
+
+function filtrarSimulados(area = 'todas') {
+    filtroSimuladosAtual = area || 'todas';
+    renderizarSimulados();
 }
 
 function renderizarSimulados() {
     const list = document.getElementById('listaSimulados');
+    const trend = document.getElementById('simuladosTrend');
     if (!list) return;
+    const todos = Array.isArray(appData.simuladosItems) ? appData.simuladosItems : [];
+    const areas = [...new Set(todos.map(item => item.area || 'Geral'))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    const seletor = document.getElementById('simuladoAreaFilter');
+    if (seletor) {
+        seletor.innerHTML = '<option value="todas">Todas as áreas</option>' + areas.map(area => `<option value="${escaparRevisaoHtml(area)}">${escaparRevisaoHtml(area)}</option>`).join('');
+        if (!areas.includes(filtroSimuladosAtual)) filtroSimuladosAtual = 'todas';
+        seletor.value = filtroSimuladosAtual;
+    }
 
-    if (!appData.simuladosItems || appData.simuladosItems.length === 0) {
-        document.getElementById('sim-media-acertos').textContent = "0%";
-        document.getElementById('sim-tempo-questao').textContent = "0m 00s";
-        document.getElementById('sim-ponto-forte').textContent = "-";
-        
-        const fracoDisplay = document.getElementById('sim-ponto-fraco');
-        if(fracoDisplay) fracoDisplay.textContent = "-";
-        
-        appData.piorAreaGargalo = null; 
-        
-        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; border: 1px dashed var(--border-color); border-radius: 16px;">Nenhum simulado arquivado. A arena aguarda dados.</p>';
+    const totalAcertos = todos.reduce((soma, item) => soma + (Number(item.acertos) || 0), 0);
+    const totalQuestoes = todos.reduce((soma, item) => soma + (Number(item.total) || (Number(item.acertos) || 0) + (Number(item.erros) || 0)), 0);
+    const totalTempo = todos.reduce((soma, item) => soma + (Number(item.tempoMin) || 0), 0);
+    const areasMap = todos.reduce((mapa, item) => {
+        const area = item.area || 'Geral';
+        if (!mapa[area]) mapa[area] = { acertos: 0, total: 0 };
+        mapa[area].acertos += Number(item.acertos) || 0;
+        mapa[area].total += Number(item.total) || (Number(item.acertos) || 0) + (Number(item.erros) || 0);
+        return mapa;
+    }, {});
+    const areasOrdenadas = Object.keys(areasMap).filter(area => areasMap[area].total > 0).sort((a, b) => (areasMap[b].acertos / areasMap[b].total) - (areasMap[a].acertos / areasMap[a].total));
+    const forte = areasOrdenadas[0] || '-';
+    const fraca = areasOrdenadas.at(-1) || '-';
+    const tempoQuestao = totalQuestoes ? Math.round(totalTempo * 60 / totalQuestoes) : 0;
+    document.getElementById('sim-media-acertos').textContent = totalQuestoes ? `${Math.round(totalAcertos / totalQuestoes * 100)}%` : '0%';
+    document.getElementById('sim-tempo-questao').textContent = `${Math.floor(tempoQuestao / 60)}m ${String(tempoQuestao % 60).padStart(2, '0')}s`;
+    document.getElementById('sim-ponto-forte').textContent = forte === '-' ? forte : forte.split(',')[0].split(' e ')[0];
+    document.getElementById('sim-ponto-fraco').textContent = fraca === '-' ? fraca : fraca.split(',')[0].split(' e ')[0];
+    appData.piorAreaGargalo = fraca === '-' ? null : fraca;
+
+    const recentes = [...todos].sort((a, b) => new Date(a.date) - new Date(b.date)).slice(-6);
+    if (trend) {
+        trend.innerHTML = recentes.length ? recentes.map(item => {
+            const total = Number(item.total) || (Number(item.acertos) || 0) + (Number(item.erros) || 0) || 1;
+            const percentual = Math.round((Number(item.acertos) || 0) / total * 100);
+            const data = dataISOParaLocal(item.date);
+            return `<div class="trend-column" title="${escaparRevisaoHtml(item.title || 'Simulado')}: ${percentual}%"><strong>${percentual}%</strong><i style="height:${Math.max(4, percentual)}%"></i><small>${data ? data.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }).replace('.','') : '—'}</small></div>`;
+        }).join('') : '<div class="workspace-empty"><strong>O gráfico aparece após o primeiro simulado</strong><p>Use os resultados para enxergar evolução, não para se comparar com outras pessoas.</p></div>';
+    }
+    const legenda = document.getElementById('simTrendCaption');
+    if (legenda) {
+        if (recentes.length < 2) legenda.textContent = recentes.length ? 'Primeiro registro' : 'Sem dados';
+        else {
+            const nota = item => Math.round((Number(item.acertos) || 0) / (Number(item.total) || (Number(item.acertos) || 0) + (Number(item.erros) || 0) || 1) * 100);
+            const diferenca = nota(recentes.at(-1)) - nota(recentes.at(-2));
+            legenda.textContent = diferenca === 0 ? 'Estável' : `${diferenca > 0 ? '+' : ''}${diferenca} p.p.`;
+        }
+    }
+
+    const visiveis = [...todos].filter(item => filtroSimuladosAtual === 'todas' || (item.area || 'Geral') === filtroSimuladosAtual).sort((a, b) => new Date(b.date) - new Date(a.date));
+    const resultado = document.getElementById('simuladosResultado');
+    if (resultado) resultado.textContent = pluralizar(visiveis.length, 'simulado');
+    if (!todos.length) {
+        list.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◎</b><strong>Registre seu primeiro simulado</strong><p>Informe acertos, erros e tempo para descobrir sua tendência e o próximo foco.</p><button type="button" class="cycle-btn primary" onclick="abrirModalSimulado()">Registrar simulado</button></div>';
         return;
     }
-
-    let totalAcertosGeral = 0, totalQuestoesGeral = 0, totalTempoMinGeral = 0;
-    let areasMap = {}; let html = '';
-    const itensOrdenados = [...appData.simuladosItems].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    itensOrdenados.forEach(sim => {
-        let acertos = sim.acertos || 0; let erros = sim.erros || 0;
-        let total = sim.total || (acertos + erros > 0 ? acertos + erros : 1);
-        let area = sim.area || "Geral";
-
-        totalAcertosGeral += acertos; totalQuestoesGeral += total; totalTempoMinGeral += sim.tempoMin;
-        if(!areasMap[area]) areasMap[area] = { acertos: 0, total: 0 };
-        areasMap[area].acertos += acertos; areasMap[area].total += total;
-
-        const tempoPorQuestaoSegundos = Math.floor((sim.tempoMin * 60) / total);
-        const minQ = Math.floor(tempoPorQuestaoSegundos / 60);
-        const segQ = tempoPorQuestaoSegundos % 60;
-        const tempoStr = `${minQ}m ${segQ.toString().padStart(2, '0')}s`;
-
-        let percAcerto = Math.round((acertos / total) * 100);
-        let corDesempenho = percAcerto >= 70 ? '#34c759' : (percAcerto >= 50 ? '#ff9500' : '#ff3b30');
-        
-        let anexoBtn = sim.attachment ? `<a href="${sim.attachment}" download="${sim.title}_anexo" class="btn-anexo">📄 Ver Anexo</a>` : '';
-
-        html += `
-        <div class="agenda-card" style="--urgency-color: ${corDesempenho}; flex-direction: column; align-items: stretch; cursor: default; gap: 15px;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; width: 100%;">
-                <div style="display: flex; flex-direction: column; gap: 8px;">
-                    <div class="agenda-title" style="font-size: 1.3rem; letter-spacing: -0.5px;">${sim.title} ${anexoBtn}</div>
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-                        <span style="background: var(--bg-body); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; color: var(--text-main); text-transform: uppercase;">📚 ${area}</span>
-                        <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">🕒 Tempo: ${Math.floor(sim.tempoMin/60)}h ${sim.tempoMin%60}m • 🎯 Tempo/Questão: ${tempoStr}</span>
-                    </div>
-                </div>
-                <div class="agenda-actions" style="margin: 0;">
-                    <i onclick="editarSimulado(${sim.id})" title="Editar Registo" style="font-size: 1.2rem;">✏️</i>
-                    <i onclick="abrirModalDeletar('simulado', ${sim.id}, 'Apagar Simulado?', 'O desempenho será eliminado.')" title="Excluir" style="font-size: 1.2rem;">🗑️</i>
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; text-align: center; background: var(--bg-body); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color);">
-                <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Questões</span><span style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">${total}</span></div>
-                <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-size: 0.7rem; color: #34c759; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Acertos</span><span style="font-size: 1.5rem; font-weight: 800; color: #34c759;">${acertos}</span></div>
-                <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-size: 0.7rem; color: #ff3b30; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Erros</span><span style="font-size: 1.5rem; font-weight: 800; color: #ff3b30;">${erros}</span></div>
-                <div style="display: flex; flex-direction: column; gap: 5px;"><span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Aproveitamento</span><span style="font-size: 1.5rem; font-weight: 800; color: ${corDesempenho};">${percAcerto}%</span></div>
-            </div>
-        </div>`;
-    });
-
-    list.innerHTML = html;
-    
-    if (totalQuestoesGeral > 0) {
-        document.getElementById('sim-media-acertos').textContent = `${Math.round((totalAcertosGeral / totalQuestoesGeral) * 100)}%`;
-        const mQG = Math.floor(Math.floor((totalTempoMinGeral * 60) / totalQuestoesGeral) / 60);
-        const sQG = Math.floor((totalTempoMinGeral * 60) / totalQuestoesGeral) % 60;
-        document.getElementById('sim-tempo-questao').textContent = `${mQG}m ${sQG.toString().padStart(2, '0')}s`;
-        
-        let maxPerc = -1, minPerc = 101, pontoForte = "-", pontoFraco = "-";
-        
-        for (let key in areasMap) { 
-            let aproveitamento = areasMap[key].acertos / areasMap[key].total;
-            if(aproveitamento > maxPerc) { maxPerc = aproveitamento; pontoForte = key; }
-            if(aproveitamento < minPerc) { minPerc = aproveitamento; pontoFraco = key; }
-        }
-        
-        let formatadoForte = pontoForte.split(',')[0].split(' e ')[0];
-        let formatadoFraco = pontoFraco.split(',')[0].split(' e ')[0];
-
-        document.getElementById('sim-ponto-forte').textContent = formatadoForte;
-        
-        const fracoDisplay = document.getElementById('sim-ponto-fraco');
-        if(fracoDisplay) fracoDisplay.textContent = formatadoFraco;
-        
-        appData.piorAreaGargalo = pontoFraco; 
+    if (!visiveis.length) {
+        list.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">⌕</b><strong>Nenhum simulado nesta área</strong><p>Escolha outra área para consultar os resultados.</p><button type="button" class="cycle-btn" onclick="filtrarSimulados(\'todas\')">Ver todos</button></div>';
+        return;
     }
+    list.innerHTML = visiveis.map(sim => {
+        const acertos = Number(sim.acertos) || 0;
+        const erros = Number(sim.erros) || 0;
+        const total = Number(sim.total) || acertos + erros || 1;
+        const percentual = Math.round(acertos / total * 100);
+        const cor = percentual >= 70 ? '#34c759' : (percentual >= 50 ? '#ff9500' : '#ff3b30');
+        const segundosQuestao = Math.floor((Number(sim.tempoMin) || 0) * 60 / total);
+        const titulo = escaparRevisaoHtml(sim.title || 'Simulado');
+        const area = escaparRevisaoHtml(sim.area || 'Geral');
+        const data = dataISOParaLocal(sim.date);
+        const anexo = anexoSeguro(sim.attachment);
+        return `<article class="agenda-card result-card" style="--urgency-color:${cor};"><div class="result-card-header"><div class="result-card-title"><h3>${titulo}</h3><p>${area} • ${data ? data.toLocaleDateString('pt-BR') : 'Sem data'} • ${formatShortTime((Number(sim.tempoMin) || 0) * 60)}</p></div><div class="result-score">${percentual}%</div></div><div class="result-card-metrics"><div><small>Questões</small><strong>${total}</strong></div><div><small>Acertos</small><strong style="color:#34c759">${acertos}</strong></div><div><small>Erros</small><strong style="color:#ff3b30">${erros}</strong></div><div><small>Por questão</small><strong>${Math.floor(segundosQuestao / 60)}m${String(segundosQuestao % 60).padStart(2,'0')}s</strong></div></div><div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${titulo}_anexo">↗ Ver anexo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarSimulado(${sim.id})" aria-label="Editar ${titulo}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('simulado', ${sim.id}, 'Apagar simulado?', 'O desempenho será eliminado.')" aria-label="Apagar ${titulo}" title="Apagar">×</button></div></div></article>`;
+    }).join('');
 }
 
 function abrirModalRedacao() {
@@ -3000,7 +3139,7 @@ function abrirModalRedacao() {
     document.getElementById('redEditId').value = "";
     document.getElementById('redFileName').textContent = "Selecionar Arquivo do Computador";
     document.getElementById('redAttachmentData').value = "";
-    document.getElementById('redacaoModalTitle').textContent = "Registar Redação";
+    document.getElementById('redacaoModalTitle').textContent = "Registrar redação";
     document.getElementById('redDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('redacaoModal').classList.add('active');
 }
@@ -3041,57 +3180,71 @@ function salvarRedacao(e) {
     } else {
         appData.redacaoItems.push({ id: Date.now(), theme, date, c1, c2, c3, c4, c5, attachment });
     }
-    saveAppData(); renderizarRedacoes(); fecharModal('redacaoModal'); showToast('✍️ Redação arquivada no Laboratório!');
+    saveAppData(); renderizarRedacoes(); fecharModal('redacaoModal'); showToast('✍️ Redação salva!');
 }
 
 function renderizarRedacoes() {
     const list = document.getElementById('listaRedacoes');
     if (!list) return;
 
-    if (!appData.redacaoItems || appData.redacaoItems.length === 0) {
-        document.getElementById('red-media').textContent = "0"; document.getElementById('red-forte').textContent = "-"; document.getElementById('red-gargalo').textContent = "-";
-        list.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 40px; border: 1px dashed var(--border-color); border-radius: 16px;">Nenhum texto registado. Comece a escrever.</p>';
+    const itens = [...(Array.isArray(appData.redacaoItems) ? appData.redacaoItems : [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const competencias = [
+        { chave: 'c1', sigla: 'C1', nome: 'Escrita' },
+        { chave: 'c2', sigla: 'C2', nome: 'Tema' },
+        { chave: 'c3', sigla: 'C3', nome: 'Ideias' },
+        { chave: 'c4', sigla: 'C4', nome: 'Coesão' },
+        { chave: 'c5', sigla: 'C5', nome: 'Intervenção' }
+    ];
+    const totalDaRedacao = redacao => competencias.reduce((soma, competencia) => soma + (Number(redacao[competencia.chave]) || 0), 0);
+    const medias = competencias.map(competencia => ({ ...competencia, media: itens.length ? Math.round(itens.reduce((soma, item) => soma + (Number(item[competencia.chave]) || 0), 0) / itens.length) : 0 }));
+    const mediaGlobal = itens.length ? Math.round(itens.reduce((soma, item) => soma + totalDaRedacao(item), 0) / itens.length) : 0;
+    const ordenadas = [...medias].sort((a, b) => b.media - a.media);
+    document.getElementById('red-media').textContent = mediaGlobal;
+    document.getElementById('red-forte').textContent = itens.length ? ordenadas[0].sigla : '-';
+    document.getElementById('red-gargalo').textContent = itens.length ? ordenadas.at(-1).sigla : '-';
+    const resultado = document.getElementById('redacoesResultado');
+    if (resultado) resultado.textContent = pluralizar(itens.length, 'redação', 'redações');
+
+    const graficoCompetencias = document.getElementById('redCompetencyChart');
+    if (graficoCompetencias) {
+        graficoCompetencias.innerHTML = itens.length ? medias.map(competencia => {
+            const percentual = Math.round(competencia.media / 200 * 100);
+            const cor = percentual >= 75 ? '#34c759' : (percentual >= 55 ? 'var(--accent-color)' : '#ff9500');
+            return `<div class="competency-row" title="${competencia.sigla} — ${competencia.nome}: ${competencia.media} de 200"><b>${competencia.sigla}</b><div class="competency-track"><i style="width:${percentual}%;--competency-color:${cor}"></i></div><span>${competencia.media}/200</span></div>`;
+        }).join('') : '<div class="workspace-empty"><strong>As competências aparecem aqui</strong><p>Cadastre uma redação corrigida com as notas C1 a C5.</p></div>';
+    }
+
+    const recentes = [...itens].reverse().slice(-6);
+    const tendencia = document.getElementById('redacoesTrend');
+    if (tendencia) {
+        tendencia.innerHTML = recentes.length ? recentes.map(redacao => {
+            const total = totalDaRedacao(redacao);
+            const data = dataISOParaLocal(redacao.date);
+            return `<div class="trend-column" title="${escaparRevisaoHtml(redacao.theme || 'Redação')}: ${total} pontos"><strong>${total}</strong><i style="height:${Math.max(4, Math.round(total / 10))}%"></i><small>${data ? data.toLocaleDateString('pt-BR', { day:'2-digit', month:'short' }).replace('.','') : '—'}</small></div>`;
+        }).join('') : '<div class="workspace-empty"><strong>O gráfico aparece após a primeira correção</strong><p>Cada nova redação ajuda a revelar sua tendência.</p></div>';
+    }
+    const legenda = document.getElementById('redTrendCaption');
+    if (legenda) {
+        if (recentes.length < 2) legenda.textContent = recentes.length ? 'Primeiro texto' : 'Sem dados';
+        else {
+            const diferenca = totalDaRedacao(recentes.at(-1)) - totalDaRedacao(recentes.at(-2));
+            legenda.textContent = diferenca === 0 ? 'Estável' : `${diferenca > 0 ? '+' : ''}${diferenca} pontos`;
+        }
+    }
+
+    if (!itens.length) {
+        list.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">✎</b><strong>Registre sua primeira redação corrigida</strong><p>As notas por competência vão mostrar com clareza onde manter e onde melhorar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRedacao()">Registrar redação</button></div>';
         return;
     }
 
-    let html = ''; let somaNotas = 0;
-    let compAcumuladas = { 'C1 (Escrita)': 0, 'C2 (Tema)': 0, 'C3 (Ideias)': 0, 'C4 (Coesão)': 0, 'C5 (Intervenção)': 0 };
-    const itensOrdenados = [...appData.redacaoItems].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    itensOrdenados.forEach(red => {
-        const total = red.c1 + red.c2 + red.c3 + red.c4 + red.c5; somaNotas += total;
-        compAcumuladas['C1 (Escrita)'] += red.c1; compAcumuladas['C2 (Tema)'] += red.c2; compAcumuladas['C3 (Ideias)'] += red.c3; compAcumuladas['C4 (Coesão)'] += red.c4; compAcumuladas['C5 (Intervenção)'] += red.c5;
-
-        let corDesempenho = total >= 900 ? '#34c759' : (total >= 700 ? '#ff9500' : '#ff3b30');
-        let anexoBtn = red.attachment ? `<a href="${red.attachment}" download="${red.theme}_redacao" class="btn-anexo" style="margin-left:10px;">📄 Ver Arquivo</a>` : '';
-
-        html += `
-        <div class="agenda-card" style="--urgency-color: ${corDesempenho}; flex-direction: column; align-items: stretch; cursor: default;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%;">
-                <div>
-                    <div class="agenda-title" style="font-size: 1.2rem; display:flex; align-items:center;">${red.theme} ${anexoBtn}</div>
-                    <div class="agenda-subject" style="margin-top: 5px;">📅 ${new Date(red.date).toLocaleDateString('pt-PT')}</div>
-                </div>
-                <div style="font-size: 1.8rem; font-weight: 800; color: ${corDesempenho};">${total}</div>
-                <div class="agenda-actions">
-                    <i onclick="editarRedacao(${red.id})" title="Editar Registo">✏️</i>
-                    <i onclick="abrirModalDeletar('redacao', ${red.id}, 'Apagar Redação?', 'O registo será eliminado.')" title="Excluir">🗑️</i>
-                </div>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; text-align: center; background: var(--bg-body); padding: 10px; border-radius: 10px; border: 1px solid var(--border-color);">
-                <div><div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">C1</div><div style="font-size: 1rem; font-weight: 800; color: var(--text-main);">${red.c1}</div></div>
-                <div><div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">C2</div><div style="font-size: 1rem; font-weight: 800; color: var(--text-main);">${red.c2}</div></div>
-                <div><div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">C3</div><div style="font-size: 1rem; font-weight: 800; color: var(--text-main);">${red.c3}</div></div>
-                <div><div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">C4</div><div style="font-size: 1rem; font-weight: 800; color: var(--text-main);">${red.c4}</div></div>
-                <div><div style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">C5</div><div style="font-size: 1rem; font-weight: 800; color: var(--text-main);">${red.c5}</div></div>
-            </div>
-        </div>`;
-    });
-
-    list.innerHTML = html;
-    document.getElementById('red-media').textContent = Math.round(somaNotas / itensOrdenados.length);
-    document.getElementById('red-forte').textContent = Object.keys(compAcumuladas).reduce((a, b) => compAcumuladas[a] > compAcumuladas[b] ? a : b).split(' ')[0]; 
-    document.getElementById('red-gargalo').textContent = Object.keys(compAcumuladas).reduce((a, b) => compAcumuladas[a] < compAcumuladas[b] ? a : b).split(' ')[0];
+    list.innerHTML = itens.map(redacao => {
+        const total = totalDaRedacao(redacao);
+        const cor = total >= 900 ? '#34c759' : (total >= 700 ? '#ff9500' : '#ff3b30');
+        const tema = escaparRevisaoHtml(redacao.theme || 'Redação sem tema');
+        const data = dataISOParaLocal(redacao.date);
+        const anexo = anexoSeguro(redacao.attachment);
+        return `<article class="agenda-card result-card" style="--urgency-color:${cor};"><div class="result-card-header"><div class="result-card-title"><h3>${tema}</h3><p>${data ? data.toLocaleDateString('pt-BR') : 'Sem data'}</p></div><div class="result-score">${total}</div></div><div class="result-card-metrics five">${competencias.map(competencia => `<div><small>${competencia.sigla}</small><strong>${Number(redacao[competencia.chave]) || 0}</strong></div>`).join('')}</div><div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${tema}_redacao">↗ Ver arquivo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarRedacao(${redacao.id})" aria-label="Editar ${tema}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('redacao', ${redacao.id}, 'Apagar redação?', 'O registro será eliminado.')" aria-label="Apagar ${tema}" title="Apagar">×</button></div></div></article>`;
+    }).join('');
 }
 
 // ==========================================
@@ -3117,15 +3270,36 @@ function handleFileSelect(e, labelId, hiddenDataId) {
 
 function alternarAbasHub(aba) {
     const ciclo = aba === 'ciclo';
-    document.getElementById('aba-ciclo-content').style.display = ciclo ? 'block' : 'none';
-    document.getElementById('aba-dominio-content').style.display = ciclo ? 'none' : 'block';
-    document.getElementById('tab-ciclo').classList.toggle('primary', ciclo);
-    document.getElementById('tab-dominio').classList.toggle('primary', !ciclo);
+    const painelCiclo = document.getElementById('aba-ciclo-content');
+    const painelDominio = document.getElementById('aba-dominio-content');
+    const tabCiclo = document.getElementById('tab-ciclo');
+    const tabDominio = document.getElementById('tab-dominio');
+    if (!painelCiclo || !painelDominio || !tabCiclo || !tabDominio) return;
+    painelCiclo.hidden = !ciclo;
+    painelDominio.hidden = ciclo;
+    tabCiclo.setAttribute('aria-selected', String(ciclo));
+    tabDominio.setAttribute('aria-selected', String(!ciclo));
+    tabCiclo.tabIndex = ciclo ? 0 : -1;
+    tabDominio.tabIndex = ciclo ? -1 : 0;
     if (!ciclo) renderizarMapaDominio();
 }
 
+function navegarAbasHub(event) {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const abas = [...event.currentTarget.querySelectorAll('[role="tab"]')];
+    const atual = Math.max(0, abas.indexOf(document.activeElement));
+    let proxima = event.key === 'Home' ? 0 : (event.key === 'End' ? abas.length - 1 : (atual + (event.key === 'ArrowRight' ? 1 : -1) + abas.length) % abas.length);
+    event.preventDefault();
+    abas[proxima].focus();
+    alternarAbasHub(abas[proxima].id === 'tab-ciclo' ? 'ciclo' : 'dominio');
+}
+
 function toggleMapaCard(id) {
-    document.getElementById(`mapa-body-${id}`)?.classList.toggle('open');
+    const corpo = document.getElementById(`mapa-body-${id}`);
+    const botao = document.querySelector(`[data-mapa-toggle="${id}"]`);
+    if (!corpo) return;
+    const aberto = corpo.classList.toggle('open');
+    botao?.setAttribute('aria-expanded', String(aberto));
 }
 
 function toggleTopicoDominio(materiaId, topicoIndex, etapa) {
@@ -3145,7 +3319,7 @@ function renderizarMapaDominio() {
     if (!container) return;
     let total = 0, completos = 0;
     if (!appData.cycleItems.length) {
-        container.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--text-muted);padding:35px;border:1px dashed var(--border-color);border-radius:16px;">Adicione matérias e tópicos para montar o mapa.</p>';
+        container.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◎</b><strong>Seu mapa ainda está vazio</strong><p>Adicione uma matéria e seus tópicos para acompanhar teoria, prática e domínio.</p><button type="button" class="cycle-btn primary" onclick="alternarAbasHub(\'ciclo\');abrirModalCiclo()">Adicionar matéria</button></div>';
         document.getElementById('global-mapa-pct').textContent = '0%';
         return;
     }
@@ -3157,9 +3331,13 @@ function renderizarMapaDominio() {
         const pct = topicos.length ? Math.round(concluidos / topicos.length * 100) : 0;
         const linhas = topicos.length ? topicos.map((topico, index) => {
             const d = topico.dominio || {};
-            return `<div class="mapa-topic-row"><span class="mapa-topic-name">${topico.nome}</span><div class="mapa-tpd-group"><button class="tpd-btn ${d.teoria ? 'active' : ''}" style="${d.teoria ? `background:${materia.color}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'teoria')">T</button><button class="tpd-btn ${d.pratica ? 'active' : ''}" style="${d.pratica ? `background:${materia.color}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'pratica')">P</button><button class="tpd-btn ${d.dominio ? 'active' : ''}" style="${d.dominio ? `background:${materia.color}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'dominio')">D</button></div></div>`;
-        }).join('') : '<p style="padding:20px;color:var(--text-muted);font-size:.85rem;">Nenhum tópico nesta matéria.</p>';
-        return `<article class="mapa-card"><div class="mapa-card-header" onclick="toggleMapaCard(${materia.id})"><div class="mapa-title-area"><div class="mapa-title">${materia.subject}</div><div class="mapa-progress-bg"><div class="mapa-progress-fill" style="width:${pct}%;background:${materia.color}"></div></div></div><span class="mapa-pct">${pct}%</span></div><div class="mapa-body open" id="mapa-body-${materia.id}">${linhas}</div></article>`;
+            const cor = corSegura(materia.color);
+            const nome = escaparRevisaoHtml(topico.nome || 'Tópico');
+            return `<div class="mapa-topic-row"><span class="mapa-topic-name">${nome}</span><div class="mapa-tpd-group" aria-label="Progresso de ${nome}"><button type="button" class="tpd-btn ${d.teoria ? 'active' : ''}" style="${d.teoria ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'teoria')" aria-pressed="${Boolean(d.teoria)}" title="Teoria estudada">T</button><button type="button" class="tpd-btn ${d.pratica ? 'active' : ''}" style="${d.pratica ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'pratica')" aria-pressed="${Boolean(d.pratica)}" title="Prática realizada">P</button><button type="button" class="tpd-btn ${d.dominio ? 'active' : ''}" style="${d.dominio ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'dominio')" aria-pressed="${Boolean(d.dominio)}" title="Tópico dominado">D</button></div></div>`;
+        }).join('') : '<div class="workspace-empty"><strong>Nenhum tópico nesta matéria</strong><p>Abra a matéria e adicione o primeiro tópico.</p></div>';
+        const cor = corSegura(materia.color);
+        const nomeMateria = escaparRevisaoHtml(materia.subject || 'Matéria');
+        return `<article class="mapa-card"><button type="button" class="mapa-card-toggle" data-mapa-toggle="${materia.id}" aria-expanded="true" aria-controls="mapa-body-${materia.id}" onclick="toggleMapaCard(${materia.id})"><div class="mapa-title-area"><div class="mapa-title">${nomeMateria}</div><div class="mapa-progress-bg"><div class="mapa-progress-fill" style="width:${pct}%;background:${cor}"></div></div></div><span class="mapa-pct">${pct}%</span><span class="mapa-arrow" aria-hidden="true">⌃</span></button><div class="mapa-body open" id="mapa-body-${materia.id}">${linhas}</div></article>`;
     }).join('');
     document.getElementById('global-mapa-pct').textContent = total ? `${Math.round(completos / total * 100)}%` : '0%';
 }

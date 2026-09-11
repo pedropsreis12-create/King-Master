@@ -13,10 +13,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260911-navigation-1">
+    <link rel="stylesheet" href="style.css?v=20260911-workspaces-1">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
-    <link rel="stylesheet" href="usability.css?v=20260911-navigation-1">
+    <link rel="stylesheet" href="usability.css?v=20260911-workspaces-1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -331,42 +331,82 @@
 
         <!-- HUB DE MATÉRIAS -->
         <section id="planejamento" class="content-section">
-            <div class="cycle-header-actions">
-                <h1>Hub de Matérias</h1>
+            <div class="workspace-heading">
+                <div>
+                    <span class="workspace-kicker">ORGANIZE O QUE PRECISA APRENDER</span>
+                    <h1>Matérias</h1>
+                    <p>Cadastre conteúdos, acompanhe tópicos e veja onde seu domínio ainda precisa avançar.</p>
+                </div>
                 <div class="cycle-btn-group">
-                    <button class="cycle-btn" onclick="abrirModalDeletar('clearCycle', null, 'Apagar tudo?', 'Todas as matérias e tópicos serão removidos.')">Limpar Tudo</button>
-                    <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova Matéria</button>
+                    <button class="cycle-btn subtle-danger" onclick="abrirModalDeletar('clearCycle', null, 'Apagar tudo?', 'Todas as matérias e tópicos serão removidos.')">Limpar matérias</button>
+                    <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
                 </div>
             </div>
-            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">As Minhas Disciplinas</h3>
-            <div class="disciplinas-grid" id="disciplinasGrid"></div>
+            <div class="workspace-tabs" role="tablist" aria-label="Visualização das matérias" onkeydown="navegarAbasHub(event)">
+                <button type="button" id="tab-ciclo" role="tab" aria-selected="true" aria-controls="aba-ciclo-content" tabindex="0" onclick="alternarAbasHub('ciclo')"><span aria-hidden="true">▦</span> Minhas matérias</button>
+                <button type="button" id="tab-dominio" role="tab" aria-selected="false" aria-controls="aba-dominio-content" tabindex="-1" onclick="alternarAbasHub('dominio')"><span aria-hidden="true">◎</span> Mapa de domínio</button>
+            </div>
+            <div id="aba-ciclo-content" class="workspace-tab-panel" role="tabpanel" aria-labelledby="tab-ciclo" tabindex="0">
+                <div class="workspace-metric-strip" aria-label="Resumo das matérias">
+                    <article><small>Matérias</small><strong id="materiasTotal">0</strong><span>cadastradas</span></article>
+                    <article><small>Tópicos</small><strong id="materiasTopicos">0</strong><span>no seu plano</span></article>
+                    <article><small>Dominados</small><strong id="materiasDominados">0</strong><span>concluídos</span></article>
+                    <article><small>Domínio geral</small><strong id="materiasDominio">0%</strong><span>dos tópicos</span></article>
+                </div>
+                <div class="workspace-toolbar">
+                    <label class="workspace-search"><span aria-hidden="true">⌕</span><input type="search" id="materiasBusca" placeholder="Buscar matéria" aria-label="Buscar matéria" oninput="filtrarMaterias(this.value)"></label>
+                    <span class="workspace-result-count" id="materiasResultado" aria-live="polite">0 matérias</span>
+                </div>
+                <div class="disciplinas-grid" id="disciplinasGrid"></div>
+            </div>
+            <div id="aba-dominio-content" class="workspace-tab-panel" role="tabpanel" aria-labelledby="tab-dominio" tabindex="0" hidden>
+                <div class="domain-overview widget">
+                    <div><span class="workspace-kicker">VISÃO DO CONTEÚDO</span><h2>Seu mapa de domínio</h2><p>Marque teoria, prática e domínio conforme você evolui em cada tópico.</p></div>
+                    <strong id="global-mapa-pct">0%</strong>
+                    <div class="domain-legend" aria-label="Legenda"><span><b>T</b> Teoria</span><span><b>P</b> Prática</span><span><b>D</b> Domínio</span></div>
+                </div>
+                <div class="domain-map-grid" id="mapaContainer"></div>
+            </div>
         </section>
 
         <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
         <section id="agendamento" class="content-section">
-            <div class="cycle-header-actions">
+            <div class="workspace-heading">
                 <div>
-                    <h1>Planeador de Rotina</h1>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -20px;">blocos e compromissos do dia</p>
+                    <span class="workspace-kicker">PLANEJE SEM SOBRECARGA</span>
+                    <h1>Agenda</h1>
+                    <p>Veja o que vence hoje, o que vem depois e o que já foi concluído.</p>
                 </div>
-                <button class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo Compromisso</button>
+                <button class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button>
             </div>
-            <div class="widget" style="padding: 20px; margin-bottom: 30px; border-left: 5px solid #ff9500;" id="agendamentoHighlight">
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Organize o seu dia e avance nas prioridades.</p>
+            <div class="workspace-metric-strip agenda-summary" aria-label="Resumo da agenda">
+                <article><small>Hoje</small><strong id="agendaHojeTotal">0</strong><span>pendentes</span></article>
+                <article><small>Atrasados</small><strong id="agendaAtrasadosTotal">0</strong><span>pedem ajuste</span></article>
+                <article><small>Concluídos</small><strong id="agendaConcluidosTotal">0</strong><span>no total</span></article>
             </div>
-            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">Cronograma do Dia</h3>
-            <div class="agenda-list" id="agendamentoList"></div>
+            <div class="next-action-card widget" id="agendamentoHighlight"><span class="workspace-kicker">PRÓXIMA AÇÃO</span><p>Organize o seu dia e avance nas prioridades.</p></div>
+            <div class="workspace-toolbar">
+                <div class="filter-chips" aria-label="Filtrar agenda">
+                    <button type="button" data-agenda-filter="todos" aria-pressed="true" onclick="filtrarAgendamento('todos')">Todos</button>
+                    <button type="button" data-agenda-filter="hoje" aria-pressed="false" onclick="filtrarAgendamento('hoje')">Hoje</button>
+                    <button type="button" data-agenda-filter="proximos" aria-pressed="false" onclick="filtrarAgendamento('proximos')">Próximos</button>
+                    <button type="button" data-agenda-filter="concluidos" aria-pressed="false" onclick="filtrarAgendamento('concluidos')">Concluídos</button>
+                </div>
+                <span class="workspace-result-count" id="agendaResultado" aria-live="polite">0 compromissos</span>
+            </div>
+            <div class="agenda-list workspace-list" id="agendamentoList"></div>
         </section>
 
         <section id="revisoes" class="content-section">
-            <div class="cycle-header-actions">
+            <div class="workspace-heading">
                 <div>
+                    <span class="workspace-kicker">RETOME NO MOMENTO CERTO</span>
                     <h1>Revisões</h1>
-                    <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: -20px;">lista manual de pontos que precisam de novo foco</p>
+                    <p>Priorize assuntos atrasados ou ainda fracos sem perder de vista o restante.</p>
                 </div>
                 <div class="cycle-btn-group">
-                    <button class="cycle-btn" onclick="abrirModalTagsRevisao()">Gerir Tags</button>
-                    <button class="cycle-btn primary" onclick="abrirModalRevisao()">+ Nova Revisão</button>
+                    <button class="cycle-btn" onclick="abrirModalTagsRevisao()">Gerenciar tags</button>
+                    <button class="cycle-btn primary" onclick="abrirModalRevisao()">+ Nova revisão</button>
                 </div>
             </div>
             <div class="stats-grid revision-summary-grid">
@@ -374,7 +414,17 @@
                 <div class="stat-card"><div class="stat-label">Atrasadas</div><div class="stat-value" id="rev-atrasadas" style="color:#ff3b30;">0</div></div>
                 <div class="stat-card"><div class="stat-label">Essa Semana</div><div class="stat-value" id="rev-semana" style="color:var(--accent-color);">0</div></div>
             </div>
-            <div class="revision-list" id="revisoesList"></div>
+            <div class="workspace-toolbar">
+                <div class="filter-chips" aria-label="Filtrar revisões">
+                    <button type="button" data-review-filter="ativas" aria-pressed="true" onclick="filtrarRevisoes('ativas')">Ativas</button>
+                    <button type="button" data-review-filter="hoje" aria-pressed="false" onclick="filtrarRevisoes('hoje')">Para hoje</button>
+                    <button type="button" data-review-filter="fracas" aria-pressed="false" onclick="filtrarRevisoes('fracas')">Ainda fracas</button>
+                    <button type="button" data-review-filter="concluidas" aria-pressed="false" onclick="filtrarRevisoes('concluidas')">Concluídas</button>
+                    <button type="button" data-review-filter="todas" aria-pressed="false" onclick="filtrarRevisoes('todas')">Todas</button>
+                </div>
+                <span class="workspace-result-count" id="revisoesResultado" aria-live="polite">0 revisões</span>
+            </div>
+            <div class="revision-list workspace-list" id="revisoesList"></div>
         </section>
 
         <section id="caderno-erros" class="content-section error-notebook-section">
@@ -423,61 +473,90 @@
         </section>
 
         <section id="simulados" class="content-section">
-            <div class="cycle-header-actions">
-                <h1>Módulo de Guerra: Simulados</h1>
-                <button class="cycle-btn primary" onclick="abrirModalSimulado()">+ Registar Simulado</button>
+            <div class="workspace-heading">
+                <div>
+                    <span class="workspace-kicker">TREINE, COMPARE, AJUSTE</span>
+                    <h1>Simulados</h1>
+                    <p>Compare resultados ao longo do tempo e transforme a área mais fraca em foco de revisão.</p>
+                </div>
+                <button class="cycle-btn primary" onclick="abrirModalSimulado()">+ Registrar simulado</button>
             </div>
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 30px;">
+            <div class="stats-grid performance-summary-grid">
                 <div class="stat-card">
-                    <div class="stat-label">Média de Acertos Global</div>
+                    <div class="stat-label">Média de acertos</div>
                     <div class="stat-value" id="sim-media-acertos" style="color: var(--text-main);">0%</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Tempo Médio / Questão</div>
+                    <div class="stat-label">Tempo por questão</div>
                     <div class="stat-value" id="sim-tempo-questao" style="color: var(--accent-color);">0m 00s</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Área Mais Forte</div>
+                    <div class="stat-label">Área mais forte</div>
                     <div class="stat-value" id="sim-ponto-forte" style="color: #34c759;">-</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-label">Área Mais Fraca (Focar)</div>
+                    <div class="stat-label">Próximo foco</div>
                     <div class="stat-value" id="sim-ponto-fraco" style="color: #ff3b30;">-</div>
                 </div>
             </div>
-            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">Histórico de Testes</h3>
-            <div class="agenda-list" id="listaSimulados"></div>
+            <div class="learning-insight widget">
+                <div class="learning-insight-heading"><div><span class="workspace-kicker">EVOLUÇÃO RECENTE</span><h2>Precisão nos últimos simulados</h2></div><strong id="simTrendCaption">Sem dados</strong></div>
+                <div class="mini-trend-chart" id="simuladosTrend" aria-label="Evolução da precisão nos simulados"></div>
+            </div>
+            <div class="workspace-toolbar">
+                <label class="workspace-select"><span>Área</span><select id="simuladoAreaFilter" onchange="filtrarSimulados(this.value)"><option value="todas">Todas as áreas</option></select></label>
+                <span class="workspace-result-count" id="simuladosResultado" aria-live="polite">0 simulados</span>
+            </div>
+            <div class="agenda-list workspace-list" id="listaSimulados"></div>
         </section>
 
         <!-- Redação e Histórico continuam iguais -->
         <section id="redacao" class="content-section">
-            <div class="cycle-header-actions">
-                <h1>Laboratório de Redação</h1>
-                <button class="cycle-btn primary" onclick="abrirModalRedacao()">+ Registar Texto</button>
+            <div class="workspace-heading">
+                <div>
+                    <span class="workspace-kicker">EVOLUA POR COMPETÊNCIA</span>
+                    <h1>Redação</h1>
+                    <p>Acompanhe sua nota, compare as cinco competências e enxergue o próximo ponto de melhoria.</p>
+                </div>
+                <button class="cycle-btn primary" onclick="abrirModalRedacao()">+ Registrar redação</button>
             </div>
-            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+            <div class="stats-grid writing-summary-grid">
                 <div class="stat-card"><div class="stat-label">Média Global</div><div class="stat-value" id="red-media" style="color: var(--text-main);">0</div></div>
-                <div class="stat-card"><div class="stat-label">Maior Força</div><div class="stat-value" id="red-forte" style="color: #34c759;">-</div></div>
-                <div class="stat-card"><div class="stat-label">Gargalo Crítico (Focar)</div><div class="stat-value" id="red-gargalo" style="color: #ff3b30;">-</div></div>
+                <div class="stat-card"><div class="stat-label">Maior força</div><div class="stat-value" id="red-forte" style="color: #34c759;">-</div></div>
+                <div class="stat-card"><div class="stat-label">Próximo foco</div><div class="stat-value" id="red-gargalo" style="color: #ff3b30;">-</div></div>
             </div>
-            <h3 style="margin-bottom: 20px; font-size: 1.3rem; color: var(--text-main);">Histórico Analítico</h3>
-            <div class="agenda-list" id="listaRedacoes"></div>
+            <div class="learning-insight-grid">
+                <div class="learning-insight widget">
+                    <div class="learning-insight-heading"><div><span class="workspace-kicker">NOTA TOTAL</span><h2>Evolução recente</h2></div><strong id="redTrendCaption">Sem dados</strong></div>
+                    <div class="mini-trend-chart score-trend" id="redacoesTrend" aria-label="Evolução das notas de redação"></div>
+                </div>
+                <div class="learning-insight widget">
+                    <div class="learning-insight-heading"><div><span class="workspace-kicker">MÉDIA POR COMPETÊNCIA</span><h2>Onde concentrar esforço</h2></div></div>
+                    <div class="competency-bars" id="redCompetencyChart" aria-label="Média nas cinco competências"></div>
+                </div>
+            </div>
+            <div class="section-list-heading"><div><span class="workspace-kicker">TEXTOS REGISTRADOS</span><h2>Histórico de redações</h2></div><span class="workspace-result-count" id="redacoesResultado">0 redações</span></div>
+            <div class="agenda-list workspace-list" id="listaRedacoes"></div>
         </section>
 
         <section id="historico" class="content-section">
-            <div class="cycle-header-actions">
-                <h1>Histórico de Sessões</h1>
+            <div class="workspace-heading">
+                <div>
+                    <span class="workspace-kicker">ENTENDA SUA CONSTÂNCIA</span>
+                    <h1>Histórico</h1>
+                    <p>Encontre sessões, compare sua dedicação e veja quais matérias receberam mais tempo.</p>
+                </div>
                 <div style="display: flex; gap: 10px;">
                     <button class="cycle-btn" id="btnPauseHistory" onclick="toggleTimer()" style="display:none; align-items: center; gap: 8px;"><span style="font-size:1.2rem;">⏸</span> Pausar</button>
                     <button class="cycle-btn btn-danger" id="btnStopHistory" onclick="encerrarSessaoDashboard()" style="display:none; align-items: center; gap: 8px;"><span style="font-size:1.2rem;">⏹</span> Encerrar Sessão</button>
                 </div>
             </div>
-            <div class="widget" style="margin-bottom: 40px; padding: 30px;">
-                <div class="widget-title" style="margin-bottom: 25px;">Raio-X de Dedicação (Tempo Vitalício)</div>
+            <div class="widget lifetime-panel">
+                <div class="section-list-heading"><div><span class="workspace-kicker">DISTRIBUIÇÃO DO FOCO</span><h2>Tempo por matéria</h2></div></div>
                 <div class="lifetime-grid">
                     <div class="lifetime-total">
-                        <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Horas de Voo Acumuladas</span>
-                        <div id="lifetime-total-time" style="font-size: 3rem; font-weight: 800; color: var(--accent-color); line-height: 1.1; margin-top: 5px;">0h 00m</div>
+                        <span>Tempo total acumulado</span>
+                        <div id="lifetime-total-time">0h 00m</div>
                     </div>
                     <div class="lifetime-breakdown">
                         <div class="lifetime-bar" id="lifetime-bar"></div>
@@ -487,8 +566,17 @@
             </div>
             <div class="history-stats-grid">
                 <div class="h-stat-card"><span class="h-stat-label">Tempo de Estudo</span><span class="h-stat-value" id="hist-total-time">0h00min</span></div>
-                <div class="h-stat-card"><span class="h-stat-label">Desempenho Global</span><div class="h-stat-sub"><span style="color: var(--accent-color);">0 Acertos</span><span class="red">0 Erros</span></div><span class="h-stat-value">0%</span></div>
-                <div class="h-stat-card"><span class="h-stat-label">Progresso do Ciclo</span><div class="h-stat-sub"><span style="color: var(--accent-color);">Foco contínuo</span></div><span class="h-stat-value">Ativo</span></div>
+                <div class="h-stat-card"><span class="h-stat-label">Sessões concluídas</span><span class="h-stat-value" id="hist-session-count">0</span><span class="h-stat-hint">registros no período</span></div>
+                <div class="h-stat-card"><span class="h-stat-label">Média por sessão</span><span class="h-stat-value" id="hist-session-average">0m</span><span class="h-stat-hint" id="hist-favorite-subject">Nenhuma matéria ainda</span></div>
+            </div>
+            <div class="workspace-toolbar history-toolbar">
+                <label class="workspace-search"><span aria-hidden="true">⌕</span><input type="search" id="historicoBusca" placeholder="Buscar matéria ou anotação" aria-label="Buscar no histórico" oninput="filtrarHistorico({ busca: this.value })"></label>
+                <div class="filter-chips" aria-label="Período do histórico">
+                    <button type="button" data-history-period="7" aria-pressed="false" onclick="filtrarHistorico({ periodo: '7' })">7 dias</button>
+                    <button type="button" data-history-period="30" aria-pressed="false" onclick="filtrarHistorico({ periodo: '30' })">30 dias</button>
+                    <button type="button" data-history-period="tudo" aria-pressed="true" onclick="filtrarHistorico({ periodo: 'tudo' })">Tudo</button>
+                </div>
+                <span class="workspace-result-count" id="historicoResultado" aria-live="polite">0 sessões</span>
             </div>
             <div class="history-timeline" id="historyListContainer"></div>
         </section>
@@ -497,7 +585,7 @@
             <div class="profile-heading">
                 <div>
                     <h1>Meu Perfil</h1>
-                    <p>Sua ascensão da formação básica ao mais alto comando do conhecimento.</p>
+                    <p>Personalize sua identidade, escolha o visual conquistado e acompanhe sua evolução.</p>
                 </div>
                 <div class="profile-heading-actions">
                     <button type="button" class="rank-mode-toggle" id="rankVisualModeToggle" aria-pressed="false" onclick="alternarModoPatente()"><span aria-hidden="true">▣</span> Modo Militar</button>
@@ -613,7 +701,7 @@
                 </div>
             </div>
 
-            <h3 class="profile-section-title">Estatísticas do Império</h3>
+            <h3 class="profile-section-title">Seu progresso</h3>
             <div class="profile-stats-grid">
                 <article class="profile-stat-card"><span class="profile-stat-icon">🔥</span><span class="profile-stat-value" id="profileStreak">0 dias</span><span class="profile-stat-label">Ofensiva atual</span></article>
                 <article class="profile-stat-card"><span class="profile-stat-icon">⏱</span><span class="profile-stat-value" id="profileTotalTime">0m</span><span class="profile-stat-label">Tempo focado vitalício</span></article>
@@ -652,7 +740,7 @@
                             <option value="Livre">Livre</option>
                         </select>
                     </div>
-                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar</button></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar matéria</button></div>
                 </form>
             </div>
         </div>
@@ -708,7 +796,7 @@
         <div class="modal-overlay" id="simuladoModal">
             <div class="modal-box modal-wide">
                 <button type="button" class="modal-close" onclick="fecharModal('simuladoModal')" aria-label="Fechar">×</button>
-                <div class="cycle-modal-title" id="simuladoModalTitle">Registar Simulado</div>
+                <div class="cycle-modal-title" id="simuladoModalTitle">Registrar simulado</div>
                 <form id="formAddSimulado" onsubmit="salvarSimulado(event)">
                     <input type="hidden" id="simEditId"><input type="hidden" id="simAttachmentData">
                     <div class="cycle-form-group"><label class="cycle-label">Nome do simulado</label><input class="cycle-input" id="simTitle" required autocomplete="off"></div>
@@ -716,7 +804,7 @@
                     <div class="cycle-form-group"><label class="cycle-label">Área</label><select class="cycle-input" id="simArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div>
                     <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label">Questões</label><input type="number" class="cycle-input" id="simTotal" min="1" value="45" required></div><div class="cycle-form-group"><label class="cycle-label">Acertos</label><input type="number" class="cycle-input" id="simAcertos" min="0" value="0" required></div><div class="cycle-form-group"><label class="cycle-label">Erros</label><input type="number" class="cycle-input" id="simErros" min="0" value="0" required></div></div>
                     <label class="file-upload-btn" for="simFile"><span>📎</span><span id="simFileName">Selecionar Arquivo do Computador</span></label><input class="file-input-hidden" id="simFile" type="file" onchange="handleFileSelect(event, 'simFileName', 'simAttachmentData')">
-                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar simulado</button></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar simulado</button></div>
                 </form>
             </div>
         </div>
@@ -752,7 +840,7 @@
                         <div class="revision-tags-label-row"><label class="cycle-label">Tags</label><button type="button" onclick="abrirModalTagsRevisao()">+ Criar tag</button></div>
                         <div class="revision-tag-selector" id="revisaoTagsSelecao"></div>
                     </div>
-                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar revisão</button></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar revisão</button></div>
                 </form>
             </div>
         </div>
@@ -863,7 +951,7 @@
         <div class="modal-overlay" id="redacaoModal">
             <div class="modal-box modal-wide">
                 <button type="button" class="modal-close" onclick="fecharModal('redacaoModal')" aria-label="Fechar">×</button>
-                <div class="cycle-modal-title" id="redacaoModalTitle">Registar Redação</div>
+                <div class="cycle-modal-title" id="redacaoModalTitle">Registrar redação</div>
                 <form id="formAddRedacao" onsubmit="salvarRedacao(event)">
                     <input type="hidden" id="redEditId"><input type="hidden" id="redAttachmentData">
                     <div class="cycle-form-group"><label class="cycle-label">Tema da redação</label><input class="cycle-input" id="redTheme" required autocomplete="off"></div>
@@ -872,12 +960,12 @@
                         <div class="cycle-form-group"><label class="cycle-label">C1</label><input type="number" class="cycle-input" id="redC1" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C2</label><input type="number" class="cycle-input" id="redC2" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C3</label><input type="number" class="cycle-input" id="redC3" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C4</label><input type="number" class="cycle-input" id="redC4" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C5</label><input type="number" class="cycle-input" id="redC5" min="0" max="200" step="40" required></div>
                     </div>
                     <label class="file-upload-btn" for="redFile"><span>📎</span><span id="redFileName">Selecionar Arquivo do Computador</span></label><input class="file-input-hidden" id="redFile" type="file" onchange="handleFileSelect(event, 'redFileName', 'redAttachmentData')">
-                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Guardar redação</button></div>
+                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar redação</button></div>
                 </form>
             </div>
         </div>
 
-        <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Guardar</button></div></form></div></div>
+        <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Salvar sessão</button></div></form></div></div>
 
         <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronómetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
 
@@ -923,7 +1011,7 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260911-navigation-1"></script>
+    <script src="script.js?v=20260911-workspaces-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260907-account-5"></script>
     <script src="productivity.js?v=20260907-account-6"></script>

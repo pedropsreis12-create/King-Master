@@ -13,6 +13,7 @@ const defaultAppData = {
     redacaoItems: [],
     revisoesItems: [],
     revisaoTags: [],
+    cadernoErrosItems: [],
     dailyGoalMinutes: 240,
     lastWeekStart: '', 
     themeColor: '', 
@@ -64,6 +65,7 @@ if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!appData.revisoesItems) appData.revisoesItems = [];
 if (!appData.revisaoTags) appData.revisaoTags = [];
+if (!Array.isArray(appData.cadernoErrosItems)) appData.cadernoErrosItems = [];
 if (!appData.xpLoginDates) appData.xpLoginDates = [];
 if (!Number.isFinite(Number(appData.xpResetOffset))) appData.xpResetOffset = 0;
 if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
@@ -286,6 +288,7 @@ function showSection(sectionId) {
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
     if(sectionId === 'revisoes') renderizarRevisoes();
+    if(sectionId === 'caderno-erros') renderizarCadernoErros();
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
@@ -447,6 +450,11 @@ function confirmarDelecao() {
         appData.revisoesItems = appData.revisoesItems.filter(i => i.id !== id);
         saveAppData(); renderizarRevisoes();
         showToast('🗑️ Revisão removida!');
+    }
+    else if (tipo === 'cadernoErro') {
+        appData.cadernoErrosItems = appData.cadernoErrosItems.filter(i => i.id !== id);
+        saveAppData(); renderizarCadernoErros();
+        showToast('Erro removido do caderno.');
     }
 }
 
@@ -2251,6 +2259,290 @@ function renderizarRevisoes() {
     renderDashboardRevisoes();
 }
 
+const CADERNO_ERROS_TIPOS = {
+    conteudo: { nome: 'Lacuna de conteúdo', curto: 'Conteúdo', icone: '◇' },
+    interpretacao: { nome: 'Interpretação', curto: 'Interpretação', icone: '⌕' },
+    calculo: { nome: 'Cálculo ou execução', curto: 'Cálculo', icone: '±' },
+    atencao: { nome: 'Atenção', curto: 'Atenção', icone: '!' },
+    estrategia: { nome: 'Estratégia ou tempo', curto: 'Estratégia', icone: '⌁' }
+};
+const CADERNO_ERROS_INTERVALOS = [1, 3, 7, 14, 30];
+const CADERNO_ERROS_MATERIAS = ['Matemática', 'Português', 'Literatura', 'Redação', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Filosofia', 'Sociologia', 'Inglês', 'Espanhol'];
+let cadernoErrosFiltros = { busca: '', materia: 'todas', tipo: 'todos', status: 'ativos' };
+let cadernoErroEmRevisaoId = null;
+
+function normalizarItemCadernoErro(item) {
+    const agora = Date.now();
+    const tipo = CADERNO_ERROS_TIPOS[item?.tipo] ? item.tipo : 'conteudo';
+    const etapa = Math.max(0, Math.min(CADERNO_ERROS_INTERVALOS.length, Number(item?.etapaRevisao) || 0));
+    const status = item?.status === 'dominado' || etapa >= CADERNO_ERROS_INTERVALOS.length ? 'dominado' : 'aprendendo';
+    return {
+        id: Number(item?.id) || agora,
+        materia: String(item?.materia || 'Sem matéria').slice(0, 50),
+        assunto: String(item?.assunto || 'Assunto não informado').slice(0, 80),
+        origem: String(item?.origem || '').slice(0, 80),
+        tipo,
+        questao: String(item?.questao || '').slice(0, 1200),
+        minhaResposta: String(item?.minhaResposta || '').slice(0, 700),
+        respostaCorreta: String(item?.respostaCorreta || '').slice(0, 900),
+        causa: String(item?.causa || '').slice(0, 500),
+        regra: String(item?.regra || '').slice(0, 240),
+        etapaRevisao: etapa,
+        proximaRevisao: status === 'dominado' ? '' : (item?.proximaRevisao || dataLocalISO()),
+        status,
+        revisoes: Math.max(0, Number(item?.revisoes) || 0),
+        historicoRevisoes: Array.isArray(item?.historicoRevisoes) ? item.historicoRevisoes.slice(-12) : [],
+        criadoEm: Number(item?.criadoEm) || agora,
+        atualizadoEm: Number(item?.atualizadoEm) || Number(item?.criadoEm) || agora,
+        ultimaRevisaoEm: Number(item?.ultimaRevisaoEm) || null
+    };
+}
+
+function obterItensCadernoErros() {
+    appData.cadernoErrosItems = (Array.isArray(appData.cadernoErrosItems) ? appData.cadernoErrosItems : []).map(normalizarItemCadernoErro);
+    return appData.cadernoErrosItems;
+}
+
+function obterFilaErrosDevidos() {
+    const hoje = dataLocalISO();
+    return obterItensCadernoErros()
+        .filter(item => item.status !== 'dominado' && (!item.proximaRevisao || item.proximaRevisao <= hoje))
+        .sort((a, b) => (a.proximaRevisao || '').localeCompare(b.proximaRevisao || '') || a.etapaRevisao - b.etapaRevisao || a.atualizadoEm - b.atualizadoEm);
+}
+
+function dataCadernoErroComDias(dias) {
+    const data = new Date();
+    data.setHours(12, 0, 0, 0);
+    data.setDate(data.getDate() + dias);
+    return dataLocalISO(data);
+}
+
+function formatarDataCadernoErro(valor) {
+    if (!valor) return 'Sem nova revisão';
+    const data = dataISOParaLocal(valor);
+    if (!data) return 'Data a definir';
+    const hoje = dataISOParaLocal(dataLocalISO());
+    const diferenca = Math.round((data - hoje) / 86400000);
+    if (diferenca < 0) return `${Math.abs(diferenca)}d atrasada`;
+    if (diferenca === 0) return 'Revisar hoje';
+    if (diferenca === 1) return 'Revisar amanhã';
+    return `Revisar em ${data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}`;
+}
+
+function abrirModalCadernoErro(id = null) {
+    const form = document.getElementById('errorNotebookForm');
+    if (!form) return;
+    form.reset();
+    const item = id ? obterItensCadernoErros().find(registro => registro.id === Number(id)) : null;
+    document.getElementById('errorNotebookEditId').value = item?.id || '';
+    document.getElementById('errorNotebookModalTitle').textContent = item ? 'Editar registro' : 'Registrar um erro';
+    const materias = [...new Set([...CADERNO_ERROS_MATERIAS, ...appData.cycleItems.map(materia => materia.subject), ...obterItensCadernoErros().map(registro => registro.materia)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    document.getElementById('errorSubjectOptions').innerHTML = materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}"></option>`).join('');
+    if (item) {
+        document.getElementById('errorSubjectInput').value = item.materia;
+        document.getElementById('errorTopicInput').value = item.assunto;
+        document.getElementById('errorSourceInput').value = item.origem;
+        document.getElementById('errorTypeInput').value = item.tipo;
+        document.getElementById('errorQuestionInput').value = item.questao;
+        document.getElementById('errorAttemptInput').value = item.minhaResposta;
+        document.getElementById('errorCorrectInput').value = item.respostaCorreta;
+        document.getElementById('errorCauseInput').value = item.causa;
+        document.getElementById('errorRuleInput').value = item.regra;
+    }
+    document.getElementById('errorNotebookModal').classList.add('active');
+    setTimeout(() => document.getElementById('errorSubjectInput')?.focus(), 80);
+}
+
+function salvarCadernoErro(event) {
+    event.preventDefault();
+    const id = Number(document.getElementById('errorNotebookEditId').value) || null;
+    const dados = {
+        materia: document.getElementById('errorSubjectInput').value.trim(),
+        assunto: document.getElementById('errorTopicInput').value.trim(),
+        origem: document.getElementById('errorSourceInput').value.trim(),
+        tipo: document.getElementById('errorTypeInput').value,
+        questao: document.getElementById('errorQuestionInput').value.trim(),
+        minhaResposta: document.getElementById('errorAttemptInput').value.trim(),
+        respostaCorreta: document.getElementById('errorCorrectInput').value.trim(),
+        causa: document.getElementById('errorCauseInput').value.trim(),
+        regra: document.getElementById('errorRuleInput').value.trim(),
+        atualizadoEm: Date.now()
+    };
+    if (!dados.materia || !dados.assunto || !dados.questao || !dados.respostaCorreta || !dados.causa || !dados.regra) return;
+    if (id) {
+        const indice = obterItensCadernoErros().findIndex(item => item.id === id);
+        if (indice < 0) return;
+        appData.cadernoErrosItems[indice] = normalizarItemCadernoErro({ ...appData.cadernoErrosItems[indice], ...dados });
+    } else {
+        appData.cadernoErrosItems.push(normalizarItemCadernoErro({ id: Date.now(), ...dados, etapaRevisao: 0, proximaRevisao: dataLocalISO(), status: 'aprendendo', criadoEm: Date.now() }));
+    }
+    saveAppData();
+    renderizarCadernoErros();
+    fecharModal('errorNotebookModal');
+    showToast(id ? 'Registro atualizado.' : 'Erro guardado e pronto para revisão.');
+}
+
+function atualizarFiltrosCadernoErros() {
+    cadernoErrosFiltros = {
+        busca: document.getElementById('errorSearchInput')?.value.trim() || '',
+        materia: document.getElementById('errorSubjectFilter')?.value || 'todas',
+        tipo: document.getElementById('errorTypeFilter')?.value || 'todos',
+        status: document.getElementById('errorStatusFilter')?.value || 'ativos'
+    };
+    renderizarCadernoErros();
+}
+
+function renderizarCadernoErros() {
+    const lista = document.getElementById('errorNotebookList');
+    if (!lista) return;
+    const itens = obterItensCadernoErros();
+    const devidos = obterFilaErrosDevidos();
+    const ativos = itens.filter(item => item.status !== 'dominado');
+    const dominados = itens.filter(item => item.status === 'dominado');
+    const contagemTipos = itens.reduce((acc, item) => ({ ...acc, [item.tipo]: (acc[item.tipo] || 0) + 1 }), {});
+    const tipoRecorrente = Object.entries(contagemTipos).sort((a, b) => b[1] - a[1])[0];
+
+    document.getElementById('errorStatDue').textContent = devidos.length;
+    document.getElementById('errorStatActive').textContent = ativos.length;
+    document.getElementById('errorStatMastered').textContent = dominados.length;
+    document.getElementById('errorReviewCountBadge').textContent = devidos.length;
+    document.getElementById('errorStatPattern').textContent = tipoRecorrente ? CADERNO_ERROS_TIPOS[tipoRecorrente[0]].curto : '—';
+    document.getElementById('errorStatPatternHint').textContent = tipoRecorrente ? `${tipoRecorrente[1]} ${tipoRecorrente[1] === 1 ? 'registro' : 'registros'} com essa causa` : 'registre para descobrir';
+
+    const filtroMateria = document.getElementById('errorSubjectFilter');
+    if (filtroMateria) {
+        const valorAtual = cadernoErrosFiltros.materia;
+        const materias = [...new Set(itens.map(item => item.materia).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+        filtroMateria.innerHTML = '<option value="todas">Todas as matérias</option>' + materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}">${escaparRevisaoHtml(materia)}</option>`).join('');
+        filtroMateria.value = materias.includes(valorAtual) ? valorAtual : 'todas';
+        cadernoErrosFiltros.materia = filtroMateria.value;
+    }
+
+    const hoje = dataLocalISO();
+    const busca = normalizarRevisaoTexto(cadernoErrosFiltros.busca);
+    const filtrados = itens.filter(item => {
+        const correspondeBusca = !busca || normalizarRevisaoTexto([item.materia, item.assunto, item.questao, item.causa, item.regra, item.origem].join(' ')).includes(busca);
+        const correspondeMateria = cadernoErrosFiltros.materia === 'todas' || item.materia === cadernoErrosFiltros.materia;
+        const correspondeTipo = cadernoErrosFiltros.tipo === 'todos' || item.tipo === cadernoErrosFiltros.tipo;
+        const correspondeStatus = cadernoErrosFiltros.status === 'todos'
+            || (cadernoErrosFiltros.status === 'ativos' && item.status !== 'dominado')
+            || (cadernoErrosFiltros.status === 'dominados' && item.status === 'dominado')
+            || (cadernoErrosFiltros.status === 'devidos' && item.status !== 'dominado' && (!item.proximaRevisao || item.proximaRevisao <= hoje));
+        return correspondeBusca && correspondeMateria && correspondeTipo && correspondeStatus;
+    }).sort((a, b) => {
+        const prioridade = item => item.status === 'dominado' ? 3 : ((!item.proximaRevisao || item.proximaRevisao <= hoje) ? 0 : 1);
+        return prioridade(a) - prioridade(b) || (a.proximaRevisao || '9999-12-31').localeCompare(b.proximaRevisao || '9999-12-31') || b.atualizadoEm - a.atualizadoEm;
+    });
+
+    document.getElementById('errorResultsCount').textContent = `${filtrados.length} ${filtrados.length === 1 ? 'registro' : 'registros'}`;
+    if (!itens.length) {
+        lista.innerHTML = '<div class="error-empty-state"><span aria-hidden="true">↯</span><h3>Seu primeiro erro pode virar seu próximo acerto</h3><p>Registre uma questão que te confundiu. O King Master transforma a correção em revisões curtas e espaçadas.</p><button type="button" class="cycle-btn primary" onclick="abrirModalCadernoErro()">Registrar primeiro erro</button></div>';
+        return;
+    }
+    if (!filtrados.length) {
+        lista.innerHTML = '<div class="error-empty-state compact"><span aria-hidden="true">⌕</span><h3>Nenhum registro encontrado</h3><p>Tente retirar um filtro ou buscar outro termo.</p><button type="button" class="cycle-btn" onclick="limparFiltrosCadernoErros()">Limpar filtros</button></div>';
+        return;
+    }
+
+    lista.innerHTML = filtrados.map(item => {
+        const tipo = CADERNO_ERROS_TIPOS[item.tipo];
+        const dominado = item.status === 'dominado';
+        const devido = !dominado && (!item.proximaRevisao || item.proximaRevisao <= hoje);
+        const progresso = Array.from({ length: CADERNO_ERROS_INTERVALOS.length }, (_, indice) => `<i class="${indice < item.etapaRevisao ? 'done' : ''}"></i>`).join('');
+        const origem = item.origem ? `<span class="error-card-source">${escaparRevisaoHtml(item.origem)}</span>` : '';
+        const dataClasse = dominado ? 'mastered' : (devido ? 'due' : 'scheduled');
+        const dataTexto = dominado ? 'Dominado' : formatarDataCadernoErro(item.proximaRevisao);
+        return `<article class="error-card ${dominado ? 'mastered' : ''}">
+            <div class="error-card-rail"><span>${tipo.icone}</span></div>
+            <div class="error-card-body">
+                <div class="error-card-top"><div><span class="error-card-subject">${escaparRevisaoHtml(item.materia)}</span><i>•</i><span>${escaparRevisaoHtml(item.assunto)}</span></div><span class="error-card-date ${dataClasse}">${dataTexto}</span></div>
+                <h3>${escaparRevisaoHtml(item.questao)}</h3>
+                <div class="error-card-diagnosis"><span><small>CAUSA</small>${escaparRevisaoHtml(item.causa)}</span><span><small>REGRA ANTI-ERRO</small>${escaparRevisaoHtml(item.regra)}</span></div>
+                <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
+            </div>
+        </article>`;
+    }).join('');
+}
+
+function limparFiltrosCadernoErros() {
+    const busca = document.getElementById('errorSearchInput');
+    const materia = document.getElementById('errorSubjectFilter');
+    const tipo = document.getElementById('errorTypeFilter');
+    const status = document.getElementById('errorStatusFilter');
+    if (busca) busca.value = '';
+    if (materia) materia.value = 'todas';
+    if (tipo) tipo.value = 'todos';
+    if (status) status.value = 'ativos';
+    cadernoErrosFiltros = { busca: '', materia: 'todas', tipo: 'todos', status: 'ativos' };
+    renderizarCadernoErros();
+}
+
+function iniciarRevisaoCadernoErros(id = null) {
+    const itens = obterItensCadernoErros();
+    const fila = obterFilaErrosDevidos();
+    const item = id ? itens.find(registro => registro.id === Number(id)) : fila[0];
+    if (!item) return showToast('Sua fila está em dia. Volte quando houver uma revisão.', false);
+    cadernoErroEmRevisaoId = item.id;
+    const tipo = CADERNO_ERROS_TIPOS[item.tipo];
+    const posicao = id ? 'REVISÃO LIVRE' : `1 DE ${fila.length} PARA HOJE`;
+    document.getElementById('errorReviewPosition').textContent = posicao;
+    document.getElementById('errorReviewStage').textContent = item.status === 'dominado' ? 'Treino de manutenção' : `Etapa ${Math.min(item.etapaRevisao + 1, CADERNO_ERROS_INTERVALOS.length)} de ${CADERNO_ERROS_INTERVALOS.length}`;
+    document.getElementById('errorReviewSubject').textContent = item.materia;
+    document.getElementById('errorReviewTopic').textContent = item.assunto;
+    document.getElementById('errorReviewQuestion').textContent = item.questao;
+    const tentativa = document.querySelector('#errorReviewPreviousAttempt p');
+    tentativa.textContent = item.minhaResposta || 'Você não registrou uma resposta anterior.';
+    document.getElementById('errorReviewCorrect').textContent = item.respostaCorreta;
+    document.getElementById('errorReviewCause').textContent = `${tipo.nome}: ${item.causa}`;
+    document.getElementById('errorReviewRule').textContent = item.regra;
+    document.getElementById('errorRecallInput').value = '';
+    document.getElementById('errorReviewAnswer').hidden = true;
+    document.getElementById('errorRevealButton').hidden = false;
+    document.getElementById('errorReviewModal').classList.add('active');
+    setTimeout(() => document.getElementById('errorRecallInput')?.focus(), 80);
+}
+
+function revelarCorrecaoCadernoErro() {
+    document.getElementById('errorRevealButton').hidden = true;
+    document.getElementById('errorReviewAnswer').hidden = false;
+    requestAnimationFrame(() => document.getElementById('errorReviewAnswer')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+}
+
+function avaliarRevisaoCadernoErro(resultado) {
+    const item = obterItensCadernoErros().find(registro => registro.id === cadernoErroEmRevisaoId);
+    if (!item || !['again', 'almost', 'remembered'].includes(resultado)) return;
+    let dias = 1;
+    if (resultado === 'again') {
+        item.etapaRevisao = 0;
+        item.status = 'aprendendo';
+    } else if (resultado === 'almost') {
+        item.etapaRevisao = Math.max(0, item.etapaRevisao - 1);
+        item.status = 'aprendendo';
+        dias = CADERNO_ERROS_INTERVALOS[item.etapaRevisao];
+    } else {
+        item.etapaRevisao = Math.min(CADERNO_ERROS_INTERVALOS.length, item.etapaRevisao + 1);
+        item.status = item.etapaRevisao >= CADERNO_ERROS_INTERVALOS.length ? 'dominado' : 'aprendendo';
+        dias = CADERNO_ERROS_INTERVALOS[Math.min(item.etapaRevisao, CADERNO_ERROS_INTERVALOS.length - 1)];
+    }
+    item.proximaRevisao = item.status === 'dominado' ? '' : dataCadernoErroComDias(dias);
+    item.revisoes += 1;
+    item.ultimaRevisaoEm = Date.now();
+    item.atualizadoEm = Date.now();
+    item.historicoRevisoes = [...item.historicoRevisoes, { em: Date.now(), resultado, etapa: item.etapaRevisao }].slice(-12);
+    saveAppData();
+    renderizarCadernoErros();
+
+    const proximo = obterFilaErrosDevidos().find(registro => registro.id !== item.id);
+    if (proximo) {
+        iniciarRevisaoCadernoErros(proximo.id);
+        showToast(resultado === 'remembered' ? 'Boa recuperação. Próximo registro.' : 'Diagnóstico salvo. Próximo registro.');
+    } else {
+        fecharModal('errorReviewModal');
+        cadernoErroEmRevisaoId = null;
+        showToast(item.status === 'dominado' ? '✓ Erro dominado após várias recuperações.' : `Próxima revisão: ${formatarDataCadernoErro(item.proximaRevisao)}.`);
+    }
+}
+
 function abrirModalSimulado() {
     document.getElementById('formAddSimulado').reset();
     document.getElementById('simEditId').value = "";
@@ -2630,5 +2922,6 @@ restoreTimerSession();
 renderizarAgenda();
 renderizarAgendamento();
 renderizarRevisoes();
+renderizarCadernoErros();
 renderizarSimulados();
 renderizarRedacoes();

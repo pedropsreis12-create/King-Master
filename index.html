@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260907-calm-agenda-1">
+    <link rel="stylesheet" href="style.css?v=20260911-error-notebook-1">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
     <link rel="stylesheet" href="usability.css?v=20260907-account-6">
@@ -112,6 +112,7 @@
             <button class="menu-btn" onclick="showSection('planejamento')">Hub de Matérias</button>
             <button class="menu-btn" onclick="showSection('agendamento')">Agendamento Diário</button>
             <button class="menu-btn" onclick="showSection('revisoes')">Revisões</button>
+            <button class="menu-btn" onclick="showSection('caderno-erros')">Caderno de Erros</button>
             <button class="menu-btn" onclick="showSection('simulados')">Simulados ENEM</button>
             <button class="menu-btn" onclick="showSection('redacao')">Lab. de Redação</button>
             <button class="menu-btn" onclick="showSection('historico')">Histórico de Sessões</button>
@@ -354,6 +355,51 @@
                 <div class="stat-card"><div class="stat-label">Essa Semana</div><div class="stat-value" id="rev-semana" style="color:var(--accent-color);">0</div></div>
             </div>
             <div class="revision-list" id="revisoesList"></div>
+        </section>
+
+        <section id="caderno-erros" class="content-section error-notebook-section">
+            <div class="error-notebook-heading">
+                <div>
+                    <span class="error-notebook-kicker">APRENDER COM O QUE QUASE TE PEGOU</span>
+                    <h1>Caderno de Erros</h1>
+                    <p>Registre a causa, tente de novo sem olhar e volte no momento certo.</p>
+                </div>
+                <div class="cycle-btn-group">
+                    <button class="cycle-btn error-review-button" type="button" onclick="iniciarRevisaoCadernoErros()"><span aria-hidden="true">↻</span> Revisar agora <b id="errorReviewCountBadge">0</b></button>
+                    <button class="cycle-btn primary" type="button" onclick="abrirModalCadernoErro()">+ Registrar erro</button>
+                </div>
+            </div>
+
+            <div class="error-method-strip" aria-label="Método de revisão do caderno de erros">
+                <span><b>1</b><strong>Registre</strong><small>o que aconteceu</small></span>
+                <i aria-hidden="true">›</i>
+                <span><b>2</b><strong>Diagnostique</strong><small>a causa real</small></span>
+                <i aria-hidden="true">›</i>
+                <span><b>3</b><strong>Recupere</strong><small>sem ver a resposta</small></span>
+                <i aria-hidden="true">›</i>
+                <span><b>4</b><strong>Espaçe</strong><small>até dominar</small></span>
+            </div>
+
+            <div class="error-notebook-stats" aria-label="Resumo do caderno de erros">
+                <article><span class="error-stat-icon due" aria-hidden="true">↻</span><div><small>PARA REVISAR</small><strong id="errorStatDue">0</strong><em>hoje ou atrasados</em></div></article>
+                <article><span class="error-stat-icon active" aria-hidden="true">◎</span><div><small>EM APRENDIZADO</small><strong id="errorStatActive">0</strong><em>em repetição espaçada</em></div></article>
+                <article><span class="error-stat-icon mastered" aria-hidden="true">✓</span><div><small>DOMINADOS</small><strong id="errorStatMastered">0</strong><em>lembrados várias vezes</em></div></article>
+                <article class="error-stat-pattern"><span class="error-stat-icon pattern" aria-hidden="true">⌁</span><div><small>PADRÃO MAIS COMUM</small><strong id="errorStatPattern">—</strong><em id="errorStatPatternHint">registre para descobrir</em></div></article>
+            </div>
+
+            <div class="widget error-notebook-workspace">
+                <div class="error-workspace-heading">
+                    <div><span>SEU MAPA DE AJUSTES</span><h2>Erros registrados</h2></div>
+                    <span id="errorResultsCount" aria-live="polite">0 registros</span>
+                </div>
+                <div class="error-filter-bar">
+                    <label class="error-search-field"><span aria-hidden="true">⌕</span><input id="errorSearchInput" type="search" placeholder="Buscar por matéria, assunto ou questão" oninput="atualizarFiltrosCadernoErros()" aria-label="Buscar no caderno de erros"></label>
+                    <label><span class="sr-only">Filtrar por matéria</span><select class="cycle-input" id="errorSubjectFilter" onchange="atualizarFiltrosCadernoErros()"><option value="todas">Todas as matérias</option></select></label>
+                    <label><span class="sr-only">Filtrar por causa</span><select class="cycle-input" id="errorTypeFilter" onchange="atualizarFiltrosCadernoErros()"><option value="todos">Todas as causas</option><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="estrategia">Estratégia ou tempo</option></select></label>
+                    <label><span class="sr-only">Filtrar por status</span><select class="cycle-input" id="errorStatusFilter" onchange="atualizarFiltrosCadernoErros()"><option value="ativos">Em aprendizado</option><option value="devidos">Para revisar</option><option value="dominados">Dominados</option><option value="todos">Todos</option></select></label>
+                </div>
+                <div class="error-notebook-list" id="errorNotebookList" aria-live="polite"></div>
+            </div>
         </section>
 
         <section id="simulados" class="content-section">
@@ -691,6 +737,66 @@
             </div>
         </div>
 
+        <div class="modal-overlay" id="errorNotebookModal">
+            <div class="modal-box modal-wide error-editor-modal">
+                <button type="button" class="modal-close" onclick="fecharModal('errorNotebookModal')" aria-label="Fechar">×</button>
+                <div class="error-modal-heading">
+                    <span class="error-notebook-kicker">DIAGNÓSTICO CURTO, APRENDIZADO LONGO</span>
+                    <div class="cycle-modal-title" id="errorNotebookModalTitle">Registrar um erro</div>
+                    <p>Guarde apenas o que ajuda você a reconhecer e vencer esse erro na próxima questão.</p>
+                </div>
+                <form id="errorNotebookForm" onsubmit="salvarCadernoErro(event)">
+                    <input type="hidden" id="errorNotebookEditId">
+                    <fieldset class="error-form-step">
+                        <legend><b>1</b><span><strong>Onde aconteceu?</strong><small>Localize o padrão sem burocracia.</small></span></legend>
+                        <div class="form-grid two">
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorSubjectInput">Matéria</label><input class="cycle-input" id="errorSubjectInput" list="errorSubjectOptions" maxlength="50" placeholder="Ex.: Matemática" autocomplete="off" required><datalist id="errorSubjectOptions"></datalist></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorTopicInput">Assunto</label><input class="cycle-input" id="errorTopicInput" maxlength="80" placeholder="Ex.: Função do 2º grau" autocomplete="off" required></div>
+                        </div>
+                        <div class="form-grid two">
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorSourceInput">Origem <span>(opcional)</span></label><input class="cycle-input" id="errorSourceInput" maxlength="80" placeholder="Ex.: ENEM 2022, questão 137" autocomplete="off"></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorTypeInput">Causa principal</label><select class="cycle-input" id="errorTypeInput" required><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="estrategia">Estratégia ou tempo</option></select></div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="error-form-step">
+                        <legend><b>2</b><span><strong>O que deu errado?</strong><small>Compare sua tentativa com a resposta certa.</small></span></legend>
+                        <div class="cycle-form-group"><label class="cycle-label" for="errorQuestionInput">Questão ou ponto que te pegou</label><textarea class="cycle-input" id="errorQuestionInput" rows="3" maxlength="1200" placeholder="Cole o enunciado ou escreva a ideia central da questão." required></textarea></div>
+                        <div class="form-grid two">
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta</label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta</label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme." required></textarea></div>
+                        </div>
+                    </fieldset>
+                    <fieldset class="error-form-step">
+                        <legend><b>3</b><span><strong>Como evitar a repetição?</strong><small>Transforme o erro em uma ação concreta.</small></span></legend>
+                        <div class="cycle-form-group"><label class="cycle-label" for="errorCauseInput">Por que eu errei?</label><textarea class="cycle-input" id="errorCauseInput" rows="2" maxlength="500" placeholder="Ex.: confundi grandezas diretamente e inversamente proporcionais." required></textarea></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="errorRuleInput">Regra anti-erro</label><input class="cycle-input" id="errorRuleInput" maxlength="240" placeholder="Ex.: antes da conta, verificar o que aumenta e o que diminui." required></div>
+                    </fieldset>
+                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('errorNotebookModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar no caderno</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="errorReviewModal">
+            <div class="modal-box modal-wide error-review-modal">
+                <button type="button" class="modal-close" onclick="fecharModal('errorReviewModal')" aria-label="Fechar revisão">×</button>
+                <div class="error-review-topline"><span id="errorReviewPosition">REVISÃO ATIVA</span><span id="errorReviewStage">Etapa 1 de 5</span></div>
+                <div class="error-review-context"><span id="errorReviewSubject">Matéria</span><i aria-hidden="true">•</i><span id="errorReviewTopic">Assunto</span></div>
+                <h2 id="errorReviewQuestion">Questão</h2>
+                <div class="error-review-attempt" id="errorReviewPreviousAttempt"><small>SUA TENTATIVA ANTERIOR</small><p></p></div>
+                <label class="error-recall-field" for="errorRecallInput"><strong>Tente responder sem olhar</strong><small>Escrever força a recuperação da memória. Sua resposta não será salva.</small><textarea class="cycle-input" id="errorRecallInput" rows="4" placeholder="Reconstrua a resposta ou o caminho da solução..."></textarea></label>
+                <button type="button" class="cycle-btn primary error-reveal-button" id="errorRevealButton" onclick="revelarCorrecaoCadernoErro()">Revelar correção</button>
+                <section class="error-review-answer" id="errorReviewAnswer" hidden aria-live="polite">
+                    <div><small>RESPOSTA CORRETA</small><p id="errorReviewCorrect"></p></div>
+                    <div><small>CAUSA DIAGNOSTICADA</small><p id="errorReviewCause"></p></div>
+                    <blockquote><small>REGRA ANTI-ERRO</small><strong id="errorReviewRule"></strong></blockquote>
+                    <div class="error-review-rating">
+                        <p>Como foi lembrar sem olhar?</p>
+                        <div><button type="button" class="error-rating again" onclick="avaliarRevisaoCadernoErro('again')"><span>×</span><strong>Errei de novo</strong><small>volta amanhã</small></button><button type="button" class="error-rating almost" onclick="avaliarRevisaoCadernoErro('almost')"><span>~</span><strong>Quase consegui</strong><small>reforço em breve</small></button><button type="button" class="error-rating remembered" onclick="avaliarRevisaoCadernoErro('remembered')"><span>✓</span><strong>Lembrei sozinho</strong><small>avança um nível</small></button></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
         <div class="modal-overlay" id="reagendarRevisaoModal">
             <div class="modal-box" style="width: 430px;">
                 <button type="button" class="modal-close" onclick="fecharModal('reagendarRevisaoModal')" aria-label="Fechar">×</button>
@@ -780,7 +886,7 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260907-calm-agenda-1"></script>
+    <script src="script.js?v=20260911-error-notebook-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260907-account-5"></script>
     <script src="productivity.js?v=20260907-account-6"></script>

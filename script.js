@@ -452,8 +452,13 @@ function confirmarDelecao() {
         showToast('🗑️ Revisão removida!');
     }
     else if (tipo === 'cadernoErro') {
+        const removido = appData.cadernoErrosItems.find(i => i.id === id);
         appData.cadernoErrosItems = appData.cadernoErrosItems.filter(i => i.id !== id);
         saveAppData(); renderizarCadernoErros();
+        (removido?.imagens || []).forEach(imagem => {
+            cadernoErroImagemCache.delete(imagem.id);
+            window.kingCloud?.deleteErrorImage?.(imagem.id).catch(() => {});
+        });
         showToast('Erro removido do caderno.');
     }
 }
@@ -2270,6 +2275,9 @@ const CADERNO_ERROS_INTERVALOS = [1, 3, 7, 14, 30];
 const CADERNO_ERROS_MATERIAS = ['Matemática', 'Português', 'Literatura', 'Redação', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Filosofia', 'Sociologia', 'Inglês', 'Espanhol'];
 let cadernoErrosFiltros = { busca: '', materia: 'todas', tipo: 'todos', status: 'ativos' };
 let cadernoErroEmRevisaoId = null;
+let cadernoErroImagensRascunho = [];
+let cadernoErroImagensOriginais = [];
+const cadernoErroImagemCache = new Map();
 
 function normalizarItemCadernoErro(item) {
     const agora = Date.now();
@@ -2287,6 +2295,13 @@ function normalizarItemCadernoErro(item) {
         respostaCorreta: String(item?.respostaCorreta || '').slice(0, 900),
         causa: String(item?.causa || '').slice(0, 500),
         regra: String(item?.regra || '').slice(0, 240),
+        imagens: (Array.isArray(item?.imagens) ? item.imagens : []).filter(imagem => imagem?.id).slice(0, 4).map(imagem => ({
+            id: String(imagem.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 90),
+            name: String(imagem.name || 'Imagem da questão').slice(0, 100),
+            type: ['image/png', 'image/jpeg', 'image/webp'].includes(imagem.type) ? imagem.type : 'image/webp',
+            width: Math.max(1, Math.min(2400, Number(imagem.width) || 1)),
+            height: Math.max(1, Math.min(2400, Number(imagem.height) || 1))
+        })).filter(imagem => imagem.id),
         etapaRevisao: etapa,
         proximaRevisao: status === 'dominado' ? '' : (item?.proximaRevisao || dataLocalISO()),
         status,
@@ -2329,11 +2344,210 @@ function formatarDataCadernoErro(valor) {
     return `Revisar em ${data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}`;
 }
 
+function definirStatusImagemCadernoErro(mensagem = '', erro = false) {
+    const status = document.getElementById('errorImageStatus');
+    if (!status) return;
+    status.textContent = mensagem;
+    status.classList.toggle('error', erro);
+}
+
+function identificadorImagemCadernoErro() {
+    return `img_${crypto.randomUUID?.() || `${Date.now()}_${Math.random().toString(36).slice(2)}`}`.replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
+function carregarArquivoImagem(file) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const imagem = new Image();
+        imagem.onload = () => { URL.revokeObjectURL(url); resolve(imagem); };
+        imagem.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler uma das imagens.')); };
+        imagem.src = url;
+    });
+}
+
+async function otimizarImagemCadernoErro(file) {
+    if (!file?.type?.startsWith('image/')) throw new Error('Selecione apenas imagens.');
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Use imagens PNG, JPG ou WebP.');
+    if (file.size > 12 * 1024 * 1024) throw new Error('Cada imagem pode ter no máximo 12 MB antes da otimização.');
+    const imagem = await carregarArquivoImagem(file);
+    const limite = 1800;
+    let escala = Math.min(1, limite / Math.max(imagem.naturalWidth, imagem.naturalHeight));
+    let largura = Math.max(1, Math.round(imagem.naturalWidth * escala));
+    let altura = Math.max(1, Math.round(imagem.naturalHeight * escala));
+    const canvas = document.createElement('canvas');
+    const contexto = canvas.getContext('2d', { alpha: false });
+    if (!contexto) throw new Error('Seu navegador não conseguiu preparar a imagem.');
+    let qualidade = .88;
+    let dataUrl = '';
+    for (let tentativa = 0; tentativa < 8; tentativa += 1) {
+        canvas.width = largura;
+        canvas.height = altura;
+        contexto.fillStyle = '#ffffff';
+        contexto.fillRect(0, 0, largura, altura);
+        contexto.drawImage(imagem, 0, 0, largura, altura);
+        dataUrl = canvas.toDataURL('image/webp', qualidade);
+        if (dataUrl.length <= 680000) break;
+        largura = Math.max(480, Math.round(largura * .82));
+        altura = Math.max(320, Math.round(altura * .82));
+        qualidade = Math.max(.58, qualidade - .06);
+    }
+    if (!dataUrl || dataUrl.length > 680000) throw new Error('A imagem ficou grande demais. Recorte-a e tente novamente.');
+    return { id: identificadorImagemCadernoErro(), name: file.name || 'Imagem da questão', type: 'image/webp', width: largura, height: altura, dataUrl, nova: true };
+}
+
+async function processarImagensCadernoErro(files) {
+    const imagens = [...(files || [])].filter(file => file?.type?.startsWith('image/'));
+    if (!imagens.length) return definirStatusImagemCadernoErro('Nenhuma imagem compatível foi encontrada.', true);
+    const vagas = 4 - cadernoErroImagensRascunho.length;
+    if (vagas <= 0) return definirStatusImagemCadernoErro('Você já anexou o limite de 4 imagens.', true);
+    definirStatusImagemCadernoErro('Otimizando as imagens para a nuvem…');
+    try {
+        for (const file of imagens.slice(0, vagas)) cadernoErroImagensRascunho.push(await otimizarImagemCadernoErro(file));
+        renderizarPreviaImagensCadernoErro();
+        definirStatusImagemCadernoErro(`${Math.min(imagens.length, vagas)} ${Math.min(imagens.length, vagas) === 1 ? 'imagem pronta' : 'imagens prontas'} para salvar.`);
+        if (imagens.length > vagas) showToast(`O limite é de 4 imagens por registro. ${imagens.length - vagas} não ${imagens.length - vagas === 1 ? 'foi adicionada' : 'foram adicionadas'}.`, true);
+    } catch (error) {
+        definirStatusImagemCadernoErro(error.message || 'Não foi possível preparar a imagem.', true);
+    }
+}
+
+function selecionarImagensCadernoErro(event) {
+    processarImagensCadernoErro(event.target.files);
+    event.target.value = '';
+}
+
+function colarImagensCadernoErro(event) {
+    const imagens = [...(event.clipboardData?.items || [])].filter(item => item.type.startsWith('image/')).map(item => item.getAsFile()).filter(Boolean);
+    if (!imagens.length) return;
+    event.preventDefault();
+    processarImagensCadernoErro(imagens);
+}
+
+function prepararDropImagensCadernoErro(event) {
+    event.preventDefault();
+    event.currentTarget.classList.add('dragging');
+}
+
+function encerrarDropImagensCadernoErro(event) {
+    if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('dragging');
+}
+
+function receberDropImagensCadernoErro(event) {
+    event.preventDefault();
+    event.currentTarget.classList.remove('dragging');
+    processarImagensCadernoErro(event.dataTransfer?.files);
+}
+
+function removerImagemCadernoErro(indice) {
+    cadernoErroImagensRascunho.splice(Number(indice), 1);
+    renderizarPreviaImagensCadernoErro();
+    definirStatusImagemCadernoErro('Imagem retirada. A alteração será confirmada ao salvar.');
+}
+
+function criarBotaoImagemCadernoErro(imagem, indice = null, removivel = false) {
+    const figura = document.createElement('figure');
+    figura.className = 'error-image-thumb';
+    const botao = document.createElement('button');
+    botao.type = 'button';
+    botao.className = 'error-image-open';
+    botao.dataset.imageId = imagem.id;
+    botao.setAttribute('aria-label', `Abrir ${imagem.name}`);
+    botao.onclick = () => abrirImagemCadernoErro(imagem.id);
+    const img = document.createElement('img');
+    img.alt = imagem.name;
+    img.loading = 'lazy';
+    if (imagem.dataUrl) {
+        img.src = imagem.dataUrl;
+        botao.classList.add('loaded');
+    }
+    const placeholder = document.createElement('span');
+    placeholder.className = 'error-image-placeholder';
+    placeholder.textContent = '▧';
+    botao.append(img, placeholder);
+    const legenda = document.createElement('figcaption');
+    legenda.textContent = imagem.name;
+    figura.append(botao, legenda);
+    if (removivel) {
+        const remover = document.createElement('button');
+        remover.type = 'button';
+        remover.className = 'error-image-remove';
+        remover.setAttribute('aria-label', `Remover ${imagem.name}`);
+        remover.textContent = '×';
+        remover.onclick = () => removerImagemCadernoErro(indice);
+        figura.append(remover);
+    }
+    return figura;
+}
+
+function renderizarPreviaImagensCadernoErro() {
+    const container = document.getElementById('errorImagePreview');
+    const contador = document.getElementById('errorImageCounter');
+    if (contador) contador.textContent = `${cadernoErroImagensRascunho.length}/4`;
+    if (!container) return;
+    container.replaceChildren(...cadernoErroImagensRascunho.map((imagem, indice) => criarBotaoImagemCadernoErro(imagem, indice, true)));
+    carregarImagensCadernoErro(container);
+}
+
+async function obterImagemCadernoErro(imageId) {
+    const rascunho = cadernoErroImagensRascunho.find(imagem => imagem.id === imageId && imagem.dataUrl);
+    if (rascunho) return rascunho;
+    if (cadernoErroImagemCache.has(imageId)) return cadernoErroImagemCache.get(imageId);
+    if (!window.kingCloud?.getErrorImage) throw new Error('A nuvem de imagens ainda está sendo preparada.');
+    const imagem = await window.kingCloud.getErrorImage(imageId);
+    cadernoErroImagemCache.set(imageId, imagem);
+    return imagem;
+}
+
+function carregarImagensCadernoErro(container = document) {
+    container.querySelectorAll('.error-image-open:not(.loaded):not(.loading)').forEach(botao => {
+        botao.classList.add('loading');
+        obterImagemCadernoErro(botao.dataset.imageId).then(imagem => {
+            const img = botao.querySelector('img');
+            if (img) img.src = imagem.dataUrl;
+            botao.classList.remove('loading');
+            botao.classList.add('loaded');
+        }).catch(() => {
+            botao.classList.remove('loading');
+            botao.classList.add('failed');
+            const placeholder = botao.querySelector('.error-image-placeholder');
+            if (placeholder) placeholder.textContent = '!';
+        });
+    });
+}
+
+async function abrirImagemCadernoErro(imageId) {
+    const modal = document.getElementById('errorImageViewerModal');
+    const conteudo = document.getElementById('errorImageViewerContent');
+    const carregando = document.getElementById('errorImageViewerLoading');
+    const legenda = document.getElementById('errorImageViewerCaption');
+    if (!modal || !conteudo || !carregando || !legenda) return;
+    modal.classList.add('active');
+    conteudo.hidden = true;
+    conteudo.removeAttribute('src');
+    carregando.hidden = false;
+    carregando.textContent = 'Carregando imagem…';
+    legenda.textContent = '';
+    try {
+        const imagem = await obterImagemCadernoErro(imageId);
+        conteudo.src = imagem.dataUrl;
+        conteudo.alt = imagem.name;
+        conteudo.hidden = false;
+        carregando.hidden = true;
+        legenda.textContent = imagem.name;
+    } catch (error) {
+        carregando.textContent = error.message || 'Não foi possível abrir a imagem.';
+    }
+}
+
 function abrirModalCadernoErro(id = null) {
     const form = document.getElementById('errorNotebookForm');
     if (!form) return;
     form.reset();
     const item = id ? obterItensCadernoErros().find(registro => registro.id === Number(id)) : null;
+    cadernoErroImagensRascunho = (item?.imagens || []).map(imagem => ({ ...imagem, nova: false }));
+    cadernoErroImagensOriginais = (item?.imagens || []).map(imagem => imagem.id);
+    definirStatusImagemCadernoErro('');
+    renderizarPreviaImagensCadernoErro();
     document.getElementById('errorNotebookEditId').value = item?.id || '';
     document.getElementById('errorNotebookModalTitle').textContent = item ? 'Editar registro' : 'Registrar um erro';
     const materias = [...new Set([...CADERNO_ERROS_MATERIAS, ...appData.cycleItems.map(materia => materia.subject), ...obterItensCadernoErros().map(registro => registro.materia)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -2353,9 +2567,11 @@ function abrirModalCadernoErro(id = null) {
     setTimeout(() => document.getElementById('errorSubjectInput')?.focus(), 80);
 }
 
-function salvarCadernoErro(event) {
+async function salvarCadernoErro(event) {
     event.preventDefault();
-    const id = Number(document.getElementById('errorNotebookEditId').value) || null;
+    const idEditado = Number(document.getElementById('errorNotebookEditId').value) || null;
+    const idRegistro = idEditado || Date.now();
+    const submit = document.querySelector('#errorNotebookForm button[type="submit"]');
     const dados = {
         materia: document.getElementById('errorSubjectInput').value.trim(),
         assunto: document.getElementById('errorTopicInput').value.trim(),
@@ -2369,17 +2585,43 @@ function salvarCadernoErro(event) {
         atualizadoEm: Date.now()
     };
     if (!dados.materia || !dados.assunto || !dados.questao || !dados.respostaCorreta || !dados.causa || !dados.regra) return;
-    if (id) {
-        const indice = obterItensCadernoErros().findIndex(item => item.id === id);
-        if (indice < 0) return;
-        appData.cadernoErrosItems[indice] = normalizarItemCadernoErro({ ...appData.cadernoErrosItems[indice], ...dados });
-    } else {
-        appData.cadernoErrosItems.push(normalizarItemCadernoErro({ id: Date.now(), ...dados, etapaRevisao: 0, proximaRevisao: dataLocalISO(), status: 'aprendendo', criadoEm: Date.now() }));
+    if (submit) { submit.disabled = true; submit.textContent = cadernoErroImagensRascunho.some(imagem => imagem.nova) ? 'Enviando imagens…' : 'Salvando…'; }
+    try {
+        const imagensSalvas = [];
+        for (const imagem of cadernoErroImagensRascunho) {
+            if (!imagem.nova) {
+                imagensSalvas.push({ id: imagem.id, name: imagem.name, type: imagem.type, width: imagem.width, height: imagem.height });
+                continue;
+            }
+            if (!window.kingCloud?.saveErrorImage) throw new Error('A nuvem de imagens ainda não está disponível. Aguarde um instante e tente novamente.');
+            definirStatusImagemCadernoErro(`Enviando ${imagensSalvas.length + 1} de ${cadernoErroImagensRascunho.length}…`);
+            const salva = await window.kingCloud.saveErrorImage({ ...imagem, errorId: idRegistro });
+            imagensSalvas.push(salva);
+            cadernoErroImagemCache.set(salva.id, { ...salva, dataUrl: imagem.dataUrl });
+        }
+        dados.imagens = imagensSalvas;
+        if (idEditado) {
+            const indice = obterItensCadernoErros().findIndex(item => item.id === idEditado);
+            if (indice < 0) return;
+            appData.cadernoErrosItems[indice] = normalizarItemCadernoErro({ ...appData.cadernoErrosItems[indice], ...dados });
+        } else {
+            appData.cadernoErrosItems.push(normalizarItemCadernoErro({ id: idRegistro, ...dados, etapaRevisao: 0, proximaRevisao: dataLocalISO(), status: 'aprendendo', criadoEm: Date.now() }));
+        }
+        saveAppData();
+        const removidas = cadernoErroImagensOriginais.filter(imageId => !imagensSalvas.some(imagem => imagem.id === imageId));
+        removidas.forEach(imageId => {
+            cadernoErroImagemCache.delete(imageId);
+            window.kingCloud?.deleteErrorImage?.(imageId).catch(() => {});
+        });
+        renderizarCadernoErros();
+        fecharModal('errorNotebookModal');
+        showToast(idEditado ? 'Registro atualizado.' : 'Erro guardado e pronto para revisão.');
+    } catch (error) {
+        definirStatusImagemCadernoErro(error.message || 'Não foi possível salvar as imagens.', true);
+        showToast('Não foi possível salvar o registro com as imagens. Seus campos continuam aqui para tentar novamente.', true);
+    } finally {
+        if (submit) { submit.disabled = false; submit.textContent = 'Salvar no caderno'; }
     }
-    saveAppData();
-    renderizarCadernoErros();
-    fecharModal('errorNotebookModal');
-    showToast(id ? 'Registro atualizado.' : 'Erro guardado e pronto para revisão.');
 }
 
 function atualizarFiltrosCadernoErros() {
@@ -2390,6 +2632,11 @@ function atualizarFiltrosCadernoErros() {
         status: document.getElementById('errorStatusFilter')?.value || 'ativos'
     };
     renderizarCadernoErros();
+}
+
+function htmlMiniaturasCadernoErro(imagens = [], contexto = 'card') {
+    if (!imagens.length) return '';
+    return `<div class="error-saved-images ${contexto}">${imagens.map(imagem => `<button type="button" class="error-image-open" data-image-id="${escaparRevisaoHtml(imagem.id)}" onclick="abrirImagemCadernoErro(this.dataset.imageId)" aria-label="Abrir ${escaparRevisaoHtml(imagem.name)}"><img alt="${escaparRevisaoHtml(imagem.name)}" loading="lazy"><span class="error-image-placeholder" aria-hidden="true">▧</span></button>`).join('')}</div>`;
 }
 
 function renderizarCadernoErros() {
@@ -2452,16 +2699,18 @@ function renderizarCadernoErros() {
         const origem = item.origem ? `<span class="error-card-source">${escaparRevisaoHtml(item.origem)}</span>` : '';
         const dataClasse = dominado ? 'mastered' : (devido ? 'due' : 'scheduled');
         const dataTexto = dominado ? 'Dominado' : formatarDataCadernoErro(item.proximaRevisao);
+        const imagens = htmlMiniaturasCadernoErro(item.imagens, 'card');
         return `<article class="error-card ${dominado ? 'mastered' : ''}">
             <div class="error-card-rail"><span>${tipo.icone}</span></div>
             <div class="error-card-body">
                 <div class="error-card-top"><div><span class="error-card-subject">${escaparRevisaoHtml(item.materia)}</span><i>•</i><span>${escaparRevisaoHtml(item.assunto)}</span></div><span class="error-card-date ${dataClasse}">${dataTexto}</span></div>
-                <h3>${escaparRevisaoHtml(item.questao)}</h3>
+                <h3>${escaparRevisaoHtml(item.questao)}</h3>${imagens}
                 <div class="error-card-diagnosis"><span><small>CAUSA</small>${escaparRevisaoHtml(item.causa)}</span><span><small>REGRA ANTI-ERRO</small>${escaparRevisaoHtml(item.regra)}</span></div>
                 <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
             </div>
         </article>`;
     }).join('');
+    carregarImagensCadernoErro(lista);
 }
 
 function limparFiltrosCadernoErros() {
@@ -2490,6 +2739,10 @@ function iniciarRevisaoCadernoErros(id = null) {
     document.getElementById('errorReviewSubject').textContent = item.materia;
     document.getElementById('errorReviewTopic').textContent = item.assunto;
     document.getElementById('errorReviewQuestion').textContent = item.questao;
+    const imagensRevisao = document.getElementById('errorReviewImages');
+    imagensRevisao.innerHTML = htmlMiniaturasCadernoErro(item.imagens, 'review');
+    imagensRevisao.hidden = !item.imagens.length;
+    carregarImagensCadernoErro(imagensRevisao);
     const tentativa = document.querySelector('#errorReviewPreviousAttempt p');
     tentativa.textContent = item.minhaResposta || 'Você não registrou uma resposta anterior.';
     document.getElementById('errorReviewCorrect').textContent = item.respostaCorreta;

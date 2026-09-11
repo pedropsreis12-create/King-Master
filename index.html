@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260911-error-notebook-1">
+    <link rel="stylesheet" href="style.css?v=20260911-error-images-1">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
     <link rel="stylesheet" href="usability.css?v=20260907-account-6">
@@ -760,7 +760,14 @@
                     </fieldset>
                     <fieldset class="error-form-step">
                         <legend><b>2</b><span><strong>O que deu errado?</strong><small>Compare sua tentativa com a resposta certa.</small></span></legend>
-                        <div class="cycle-form-group"><label class="cycle-label" for="errorQuestionInput">Questão ou ponto que te pegou</label><textarea class="cycle-input" id="errorQuestionInput" rows="3" maxlength="1200" placeholder="Cole o enunciado ou escreva a ideia central da questão." required></textarea></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="errorQuestionInput">Questão ou ponto que te pegou</label><textarea class="cycle-input" id="errorQuestionInput" rows="3" maxlength="1200" placeholder="Cole o enunciado ou escreva a ideia central da questão." onpaste="colarImagensCadernoErro(event)" required></textarea></div>
+                        <div class="error-image-attach" id="errorImageDropzone" ondragover="prepararDropImagensCadernoErro(event)" ondragleave="encerrarDropImagensCadernoErro(event)" ondrop="receberDropImagensCadernoErro(event)">
+                            <input type="file" id="errorImageInput" accept="image/png,image/jpeg,image/webp" multiple hidden onchange="selecionarImagensCadernoErro(event)">
+                            <label for="errorImageInput" class="error-image-picker"><span aria-hidden="true">▧</span><strong>Anexar imagens da questão</strong><small>Escolha, cole ou arraste até 4 imagens • PNG, JPG ou WebP</small></label>
+                            <span class="error-image-counter" id="errorImageCounter">0/4</span>
+                        </div>
+                        <div class="error-image-preview" id="errorImagePreview"></div>
+                        <p class="error-image-status" id="errorImageStatus" role="status"></p>
                         <div class="form-grid two">
                             <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta</label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
                             <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta</label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme." required></textarea></div>
@@ -782,6 +789,7 @@
                 <div class="error-review-topline"><span id="errorReviewPosition">REVISÃO ATIVA</span><span id="errorReviewStage">Etapa 1 de 5</span></div>
                 <div class="error-review-context"><span id="errorReviewSubject">Matéria</span><i aria-hidden="true">•</i><span id="errorReviewTopic">Assunto</span></div>
                 <h2 id="errorReviewQuestion">Questão</h2>
+                <div class="error-review-images" id="errorReviewImages"></div>
                 <div class="error-review-attempt" id="errorReviewPreviousAttempt"><small>SUA TENTATIVA ANTERIOR</small><p></p></div>
                 <label class="error-recall-field" for="errorRecallInput"><strong>Tente responder sem olhar</strong><small>Escrever força a recuperação da memória. Sua resposta não será salva.</small><textarea class="cycle-input" id="errorRecallInput" rows="4" placeholder="Reconstrua a resposta ou o caminho da solução..."></textarea></label>
                 <button type="button" class="cycle-btn primary error-reveal-button" id="errorRevealButton" onclick="revelarCorrecaoCadernoErro()">Revelar correção</button>
@@ -794,6 +802,15 @@
                         <div><button type="button" class="error-rating again" onclick="avaliarRevisaoCadernoErro('again')"><span>×</span><strong>Errei de novo</strong><small>volta amanhã</small></button><button type="button" class="error-rating almost" onclick="avaliarRevisaoCadernoErro('almost')"><span>~</span><strong>Quase consegui</strong><small>reforço em breve</small></button><button type="button" class="error-rating remembered" onclick="avaliarRevisaoCadernoErro('remembered')"><span>✓</span><strong>Lembrei sozinho</strong><small>avança um nível</small></button></div>
                     </div>
                 </section>
+            </div>
+        </div>
+
+        <div class="modal-overlay error-image-viewer" id="errorImageViewerModal">
+            <div class="modal-box error-image-viewer-box">
+                <button type="button" class="modal-close" onclick="fecharModal('errorImageViewerModal')" aria-label="Fechar imagem">×</button>
+                <div class="error-image-viewer-loading" id="errorImageViewerLoading">Carregando imagem…</div>
+                <img id="errorImageViewerContent" alt="Imagem anexada à questão" hidden>
+                <p id="errorImageViewerCaption"></p>
             </div>
         </div>
 
@@ -886,12 +903,12 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260911-error-notebook-1"></script>
+    <script src="script.js?v=20260911-error-images-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260907-account-5"></script>
     <script src="productivity.js?v=20260907-account-6"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260907-account-6"></script>
+    <script type="module" src="cloud-sync.js?v=20260911-error-images-1"></script>
 </body>
 </html>

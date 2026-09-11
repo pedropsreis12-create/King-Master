@@ -2,10 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, script, style] = await Promise.all([
+const [html, script, style, cloud, rules] = await Promise.all([
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../script.js', import.meta.url), 'utf8'),
-    readFile(new URL('../style.css', import.meta.url), 'utf8')
+    readFile(new URL('../style.css', import.meta.url), 'utf8'),
+    readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8'),
+    readFile(new URL('../firestore.rules', import.meta.url), 'utf8')
 ]);
 
 test('error notebook is a first-class saved section with a guided entry form', () => {
@@ -37,4 +39,26 @@ test('errors can be searched, filtered by cause and used comfortably on small sc
     assert.match(html, /id="errorStatusFilter"/);
     assert.match(style, /@media \(max-width: 760px\)[\s\S]+\.error-review-rating > div \{ grid-template-columns: 1fr; \}/);
     assert.match(script, /escaparRevisaoHtml\(item\.questao\)/);
+});
+
+test('question images support file selection, paste and drag without bloating the progress document', () => {
+    assert.match(html, /id="errorImageInput"[^>]+accept="image\/png,image\/jpeg,image\/webp"[^>]+multiple/);
+    assert.match(html, /onpaste="colarImagensCadernoErro\(event\)"/);
+    assert.match(html, /ondrop="receberDropImagensCadernoErro\(event\)"/);
+    assert.match(html, /id="errorReviewImages"/);
+    assert.match(script, /cadernoErroImagensRascunho\.length/);
+    assert.match(script, /canvas\.toDataURL\('image\/webp'/);
+  assert.match(script, /dados\.imagens\s*=\s*imagensSalvas/);
+    assert.doesNotMatch(script, /dados\.imagens\s*=\s*cadernoErroImagensRascunho/);
+});
+
+test('question image bytes stay in private per-user cloud documents', () => {
+    assert.match(cloud, /'users', currentUser\.uid, 'errorImages'/);
+    assert.match(cloud, /async function saveErrorImage/);
+    assert.match(cloud, /async function getErrorImage/);
+    assert.match(cloud, /async function deleteErrorImage/);
+    assert.match(cloud, /image\.dataUrl\.length > 720000/);
+    assert.match(rules, /match \/errorImages\/\{imageId\}/);
+    assert.match(rules, /request\.auth\.uid == userId/);
+    assert.match(rules, /request\.resource\.data\.dataUrl\.size\(\) <= 720000/);
 });

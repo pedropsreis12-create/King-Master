@@ -614,6 +614,45 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         }, error => updateCloudUi('error', user, `A atualização em tempo real parou: ${error.message}`));
     }
 
+    function errorImageDocument(imageId) {
+        if (!currentUser?.uid) throw new Error('Entre na sua conta antes de anexar imagens.');
+        const safeId = String(imageId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 90);
+        if (!safeId) throw new Error('A imagem não recebeu um identificador válido.');
+        return firestoreSdk.doc(db, 'users', currentUser.uid, 'errorImages', safeId);
+    }
+
+    async function saveErrorImage(image) {
+        if (!currentUser?.uid) throw new Error('Entre na sua conta antes de anexar imagens.');
+        if (!image?.dataUrl || !/^data:image\/(png|jpeg|webp);base64,/i.test(image.dataUrl)) throw new Error('Formato de imagem inválido.');
+        if (image.dataUrl.length > 720000) throw new Error('A imagem continua grande demais após a otimização.');
+        await appCheckSdk.getToken(appCheck, false);
+        const metadata = {
+            ownerUid: currentUser.uid,
+            errorId: String(image.errorId || '').slice(0, 40),
+            name: String(image.name || 'Imagem da questão').slice(0, 100),
+            contentType: String(image.type || 'image/webp').slice(0, 30),
+            width: Math.max(1, Math.min(2400, Number(image.width) || 1)),
+            height: Math.max(1, Math.min(2400, Number(image.height) || 1)),
+            dataUrl: image.dataUrl,
+            updatedAt: firestoreSdk.serverTimestamp()
+        };
+        await firestoreSdk.setDoc(errorImageDocument(image.id), metadata);
+        return { id: String(image.id), name: metadata.name, type: metadata.contentType, width: metadata.width, height: metadata.height };
+    }
+
+    async function getErrorImage(imageId) {
+        const snapshot = await firestoreSdk.getDoc(errorImageDocument(imageId));
+        if (!snapshot.exists()) throw new Error('Imagem não encontrada na nuvem.');
+        const data = snapshot.data();
+        if (!/^data:image\/(png|jpeg|webp);base64,/i.test(data?.dataUrl || '')) throw new Error('A imagem salva está inválida.');
+        return { id: String(imageId), name: data.name || 'Imagem da questão', type: data.contentType || 'image/webp', width: data.width || 1, height: data.height || 1, dataUrl: data.dataUrl };
+    }
+
+    async function deleteErrorImage(imageId) {
+        await appCheckSdk.getToken(appCheck, false);
+        await firestoreSdk.deleteDoc(errorImageDocument(imageId));
+    }
+
     window.addEventListener('king-master-data-changed', () => {
         if (!currentUser || applyingRemote) return;
         clearTimeout(uploadTimer);
@@ -710,7 +749,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             }
         },
         signOut: () => authSdk.signOut(auth),
-        syncNow: () => currentUser ? reconcile(currentUser) : startSignIn(googleProvider, 'do Google').catch(error => updateCloudUi('error', null, describeAuthError(error)))
+        syncNow: () => currentUser ? reconcile(currentUser) : startSignIn(googleProvider, 'do Google').catch(error => updateCloudUi('error', null, describeAuthError(error))),
+        saveErrorImage,
+        getErrorImage,
+        deleteErrorImage
     };
     } catch (error) {
         finishGeminiInitialization();

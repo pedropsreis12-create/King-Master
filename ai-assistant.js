@@ -27,7 +27,11 @@ function limparTextoIa(texto = '', limite = 100) {
 
 function garantirMemoriaIa() {
     if (!Array.isArray(appData.aiConversation)) appData.aiConversation = [];
-    appData.aiConversation = appData.aiConversation.filter(item => item && ['user', 'assistant'].includes(item.role) && typeof item.text === 'string').slice(-36);
+    const anterior = appData.aiConversation.length;
+    const dias = [1, 7, 30].includes(Number(appData.aiSettings?.retentionDays)) ? Number(appData.aiSettings.retentionDays) : 7;
+    const limite = Date.now() - dias * 86400000;
+    appData.aiConversation = appData.aiConversation.filter(item => item && ['user', 'assistant'].includes(item.role) && typeof item.text === 'string' && (!Number(item.timestamp) || Number(item.timestamp) >= limite)).slice(-24);
+    return appData.aiConversation.length !== anterior;
 }
 
 function horarioMensagemIa(timestamp) {
@@ -163,7 +167,7 @@ function renderizarConversaIa() {
 function registrarMensagemIa(role, text) {
     garantirMemoriaIa();
     appData.aiConversation.push({ role, text: String(text).slice(0, LIMITE_RESPOSTA_IA), timestamp: Date.now() });
-    appData.aiConversation = appData.aiConversation.slice(-36);
+    appData.aiConversation = appData.aiConversation.slice(-24);
     renderizarConversaIa();
 }
 
@@ -221,7 +225,7 @@ async function processarEntradaIa(texto) {
     if (estadoIaQg.processando) return;
     const comando = String(texto).trim().slice(0, 2000);
     if (!comando) return;
-    const historico = appData.aiConversation.slice(-16).map(item => ({ role: item.role, text: item.text }));
+    const historico = appData.aiConversation.slice(-8).map(item => ({ role: item.role, text: item.text }));
     registrarMensagemIa('user', comando);
     estadoIaQg.processando = true;
     estadoIaQg.controller = new AbortController();
@@ -238,7 +242,7 @@ async function processarEntradaIa(texto) {
                 await esperarConexaoIa(window.kingGeminiReady, estadoIaQg.controller.signal);
             }
             if (!window.kingGemini?.available) throw new Error('A conexão com o Gemini não está disponível. Atualize a página ou confira sua conexão.');
-            resultado = await window.kingGemini.send(comando, contextoGeminiIa(), {
+            resultado = await window.kingGemini.send(comando, contextoGeminiIa(comando), {
                 history: historico,
                 signal: estadoIaQg.controller.signal,
                 onStatus: mensagem => mostrarPensamentoIa(true, mensagem),
@@ -303,12 +307,15 @@ function descreverErroGeminiIa(error) {
     return 'Não consegui receber a resposta do Gemini. Confira sua conexão e tente novamente. Nenhuma ação foi executada.';
 }
 
-function contextoGeminiIa() {
+function contextoGeminiIa(pedido = '') {
     const gamificacao = calcularGamificacao();
     const hoje = dataLocalISO(new Date());
     const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
     const historico = Array.isArray(appData.historyItems) ? appData.historyItems : [];
     const minutosHoje = Math.round(historico.filter(item => dataHistoricoISO(item) === hoje).reduce((total, item) => total + (Number(item.tempoSegundos) || 0), 0) / 60);
+    const pedidoNormal = normalizarIa(pedido);
+    const citadas = pedidoNormal ? materias.filter(item => pedidoNormal.includes(normalizarIa(item.subject))) : [];
+    const materiasDoContexto = citadas.length ? [...new Map([...citadas, ...materias.slice(0, 8)].map(item => [item.id, item])).values()] : materias.slice(0, 20);
     return {
         agora: new Date().toISOString(),
         dataLocal: hoje,
@@ -323,21 +330,21 @@ function contextoGeminiIa() {
             minutosNestaSemana: Math.round((appData.weeklyChart || []).reduce((total, segundos) => total + (Number(segundos) || 0), 0) / 60),
             metaDiariaMinutos: appData.dailyGoalMinutes || 60
         },
-        materias: materias.slice(0, 60).map(item => ({
+        materias: materiasDoContexto.map(item => ({
             nome: item.subject,
             tipo: item.type,
             minutos: item.executedMin || 0,
             acertos: item.acertos || 0,
             erros: item.erros || 0,
-            topicos: (item.topicos || []).slice(0, 30).map(topico => ({ nome: topico.nome, concluido: Boolean(topico.concluido) })),
+            topicos: (item.topicos || []).slice(0, citadas.includes(item) ? 30 : 12).map(topico => ({ nome: topico.nome, concluido: Boolean(topico.concluido) })),
             totalTopicos: (item.topicos || []).length
         })),
         totalMaterias: materias.length,
-        sessoesRecentes: [...historico].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 12).map(item => ({ materia: item.materia, assunto: item.assunto || '', data: dataHistoricoISO(item), minutos: Math.round((item.tempoSegundos || 0) / 60) })),
-        revisoesPendentes: appData.revisoesItems.filter(item => item.status !== 'revisado').sort((a, b) => String(a.dataAlvo).localeCompare(String(b.dataAlvo))).slice(0, 20).map(item => ({ materia: materias.find(materia => String(materia.id) === String(item.materia))?.subject, assunto: item.assunto, data: item.dataAlvo })),
-        agendamentos: appData.agendamentoItems.filter(item => !item.completed && item.date >= hoje).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 20).map(item => ({ titulo: item.title, data: item.date, hora: item.time })),
+        sessoesRecentes: [...historico].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 6).map(item => ({ materia: item.materia, assunto: item.assunto || '', data: dataHistoricoISO(item), minutos: Math.round((item.tempoSegundos || 0) / 60) })),
+        revisoesPendentes: appData.revisoesItems.filter(item => item.status !== 'revisado').sort((a, b) => String(a.dataAlvo).localeCompare(String(b.dataAlvo))).slice(0, 10).map(item => ({ materia: materias.find(materia => String(materia.id) === String(item.materia))?.subject || item.materia, assunto: item.assunto, data: item.dataAlvo })),
+        agendamentos: appData.agendamentoItems.filter(item => !item.completed && item.date >= hoje).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 10).map(item => ({ titulo: item.title, data: item.date, hora: item.time })),
         simuladosRecentes: [...(appData.simuladosItems || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3).map(item => ({ titulo: item.title, data: item.date, acertos: item.acertos, total: item.total })),
-        recorte: 'Até 60 matérias, 30 tópicos por matéria, 12 sessões, 20 revisões e 20 compromissos. Zero questões significa ausência de avaliação, não dificuldade comprovada.',
+        recorte: 'Contexto compacto para responder rápido: até 20 matérias (priorizando as citadas), 12 tópicos por matéria, 6 sessões, 10 revisões e 10 compromissos. Zero questões significa ausência de avaliação, não dificuldade comprovada.',
         visual: { modo: appData.visualMode || 'classic', carreira: appData.rankVisualMode || 'aura' }
     };
 }
@@ -877,7 +884,7 @@ function desfazerUltimaAcaoIa() {
     if (!registro?.data) return;
     const conversa = Array.isArray(appData.aiConversation) ? [...appData.aiConversation] : [];
     conversa.push({ role: 'assistant', text: `Desfiz ${registro.label}. Seus dados anteriores foram restaurados.`, timestamp: Date.now() });
-    const restaurado = { ...registro.data, aiConversation: conversa.slice(-36), lastModifiedAt: Date.now() + 1 };
+    const restaurado = { ...registro.data, aiConversation: conversa.slice(-24), lastModifiedAt: Date.now() + 1 };
     estadoIaQg.desfazer = null;
     window.kingMasterCloudBridge?.importData?.(restaurado);
 }
@@ -909,6 +916,25 @@ function ouvirComandoIa() {
     reconhecimento.start();
 }
 
+function aplicarRetencaoConversaIa() {
+    const alterada = garantirMemoriaIa();
+    renderizarConversaIa();
+    return alterada;
+}
+
+function limparConversaIa() {
+    if (estadoIaQg.processando) estadoIaQg.controller?.abort();
+    estadoIaQg.pendente = null;
+    estadoIaQg.desfazer = null;
+    appData.aiConversation = [];
+    renderizarConversaIa();
+    saveAppData();
+    showToast('Conversa do Gemini apagada.');
+}
+
+window.aplicarRetencaoConversaIa = aplicarRetencaoConversaIa;
+window.limparConversaIa = limparConversaIa;
+
 document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && document.getElementById('aiQgPanel')?.classList.contains('open')) toggleIaQg(false);
     if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase('pt-BR') === 'k') {
@@ -916,5 +942,6 @@ document.addEventListener('keydown', event => {
     }
 });
 
-garantirMemoriaIa();
+const conversaIaExpirada = garantirMemoriaIa();
 renderizarConversaIa();
+if (conversaIaExpirada) setTimeout(() => { try { saveAppData(); } catch { /* A limpeza será persistida na próxima alteração. */ } }, 0);

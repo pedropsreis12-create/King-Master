@@ -91,6 +91,17 @@ test('preserves long tutor answers and sends current data with local date', () =
     assert.match(data.recorte, /ausência de avaliação/);
 });
 
+test('conversation retention removes expired messages and keeps recent context', () => {
+    const h = uiHarness();
+    h.appData.aiSettings = { retentionDays: 1 };
+    h.appData.aiConversation = [
+        { role: 'user', text: 'antiga', timestamp: Date.now() - 2 * 86400000 },
+        { role: 'assistant', text: 'recente', timestamp: Date.now() - 1000 }
+    ];
+    h.window.aplicarRetencaoConversaIa();
+    assert.deepEqual(h.appData.aiConversation.map(item => item.text), ['recente']);
+});
+
 test('bulk topics are added together, without duplicates; ambiguous subject is rejected', () => {
     const h = uiHarness();
     h.appData.cycleItems.push({ id: 1, subject: 'Física', topicos: [{ nome: 'Cinemática' }] }, { id: 2, subject: 'Física moderna', topicos: [] });
@@ -136,7 +147,8 @@ test('restores conversation, streams text and bounds history without repeated co
     const first = await h.gemini.send('Explique frações', { marker: 'current-context' }, { history, onText: text => chunks.push(text) });
     assert.equal(first.text, 'Uma explicação de teste.');
     assert.equal(chunks.length, 2);
-    assert.equal(h.records.requests[0].request.contents.length, 17);
+    assert.equal(h.records.requests[0].request.contents.length, 9);
+    assert.equal(h.records.requests[0].config.model, 'gemini-3.7-flash');
     assert.equal(h.records.requests[0].config.generationConfig.thinkingConfig.thinkingLevel, 'MEDIUM');
     await h.gemini.send('Agora simplifique', { marker: 'updated-context' }, { history: [{ role: 'user', text: 'Explique frações' }, { role: 'assistant', text: first.text }] });
     assert.equal(h.records.requests.length, 2);
@@ -150,6 +162,8 @@ test('tool successes survive final response failure and repeated calls execute o
     const result = await h.gemini.send('Adicione Física', {});
     assert.equal(h.records.tools.length, 1);
     assert.equal(h.records.saves, 1);
+    assert.equal(h.records.requests[0].config.model, 'gemini-3.5-flash-lite');
+    assert.equal(h.records.requests[0].config.generationConfig.maxOutputTokens, 1400);
     assert.equal(result.actions.length, 1);
     assert.match(result.text, /Salvo/);
     assert.match(result.text, /já foram salvas/);

@@ -1,7 +1,9 @@
-/* Recursos de rotina: onboarding, missões, backup, acessibilidade e PWA. */
+/* Recursos de rotina: onboarding, missões, desempenho adaptativo, acessibilidade e PWA. */
 (() => {
-    let pendingBackup = null;
     let installPrompt = null;
+    let runtimeMotionOverride = null;
+    let motionSampled = false;
+    let motionObserver = null;
     const todayIso = () => dataLocalISO(new Date());
     const weekdayIndex = () => { const day = new Date().getDay(); return day === 0 ? 6 : day - 1; };
     const completedToday = () => appData.historyItems.filter(item => dataHistoricoISO(item) === todayIso() && Number(item.tempoSegundos) > 0);
@@ -26,61 +28,92 @@
         }).join('');
     }
 
+    function detectedMotionLevel() {
+        if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return 'reduced';
+        const cores = Number(navigator.hardwareConcurrency) || 0;
+        const memory = Number(navigator.deviceMemory) || 0;
+        const saveData = Boolean(navigator.connection?.saveData);
+        const compactTouch = window.matchMedia?.('(max-width: 820px) and (pointer: coarse)').matches;
+        if ((memory && memory <= 2) || (cores && cores <= 2)) return 'off';
+        const pressure = Number(saveData) + Number(memory > 0 && memory <= 4) + Number(cores > 0 && cores <= 4) + Number(compactTouch && cores > 0 && cores <= 8);
+        return pressure >= 2 ? 'reduced' : 'full';
+    }
+
+    function resolvedMotionLevel() {
+        const choice = appData.accessibility.motionMode || 'auto';
+        return choice === 'auto' ? (runtimeMotionOverride || detectedMotionLevel()) : choice;
+    }
+
+    function motionLevelLabel(level) {
+        return { full: 'Efeitos completos neste aparelho', reduced: 'Efeitos leves para manter a navegação fluida', off: 'Efeitos decorativos desativados' }[level] || '';
+    }
+
+    function refreshMotionSurfaces() {
+        if (!('IntersectionObserver' in window)) return;
+        if (!motionObserver) motionObserver = new IntersectionObserver(entries => entries.forEach(entry => entry.target.classList.toggle('motion-outside-view', !entry.isIntersecting)), { rootMargin: '180px 0px' });
+        document.querySelectorAll('.profile-hero,.profile-rank-scene,.frame-vault,.widget,.ai-qg-panel').forEach(element => {
+            if (element.dataset.motionObserved) return;
+            element.dataset.motionObserved = 'true';
+            motionObserver.observe(element);
+        });
+    }
+
     function applyAccessibility() {
         const prefs = appData.accessibility;
+        const motionLevel = resolvedMotionLevel();
         document.documentElement.dataset.fontScale = prefs.fontScale;
+        document.documentElement.dataset.motionChoice = prefs.motionMode;
+        document.documentElement.dataset.motionLevel = motionLevel;
         document.documentElement.classList.toggle('high-contrast', prefs.highContrast);
-        document.documentElement.classList.toggle('reduce-motion', prefs.reduceMotion);
+        document.documentElement.classList.toggle('reduce-motion', motionLevel !== 'full');
+        document.documentElement.classList.toggle('motion-off', motionLevel === 'off');
         const scale = document.getElementById('fontScaleSelect');
         if (scale) scale.value = prefs.fontScale;
         document.getElementById('contrastToggleBtn')?.setAttribute('aria-pressed', String(prefs.highContrast));
-        document.getElementById('motionToggleBtn')?.setAttribute('aria-pressed', String(prefs.reduceMotion));
+        const motionSelect = document.getElementById('motionModeSelect');
+        if (motionSelect) motionSelect.value = prefs.motionMode;
+        const hint = document.getElementById('motionModeHint');
+        if (hint) hint.textContent = prefs.motionMode === 'auto' ? `Automático: ${motionLevelLabel(motionLevel).toLocaleLowerCase('pt-BR')}` : motionLevelLabel(motionLevel);
+        refreshMotionSurfaces();
     }
 
     function savePreference(key, value) {
         appData.accessibility[key] = value;
+        if (key === 'motionMode') runtimeMotionOverride = null;
         applyAccessibility();
         saveAppData();
     }
 
-    function exportBackup() {
-        const payload = JSON.stringify({ format: 'king-master-backup', version: 2, exportedAt: new Date().toISOString(), data: window.kingMasterCloudBridge.exportData() }, null, 2);
-        const url = URL.createObjectURL(new Blob([payload], { type: 'application/json' }));
-        const link = document.createElement('a');
-        link.href = url; link.download = `king-master-backup-${todayIso()}.json`; link.click();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        showToast('✓ Backup exportado para o seu dispositivo');
+    function syncStudySettingsUi() {
+        document.getElementById('autoReviewToggleBtn')?.setAttribute('aria-pressed', String(appData.studyLogging.autoReview !== false));
+        const delay = document.getElementById('autoReviewDelaySelect');
+        if (delay) delay.value = String(appData.studyLogging.reviewDelayDays || 1);
+        const retention = document.getElementById('aiRetentionSelect');
+        if (retention) retention.value = String(appData.aiSettings.retentionDays || 7);
     }
 
-    function validBackup(value) {
-        const data = value?.format === 'king-master-backup' ? value.data : value;
-        if (!data || typeof data !== 'object') return null;
-        const lists = ['weeklyChart','cycleItems','historyItems','agendamentoItems','simuladosItems','redacaoItems','revisoesItems'];
-        return lists.every(key => Array.isArray(data[key])) && data.weeklyChart.length === 7 ? data : null;
+    function sampleMotionPerformance() {
+        if (motionSampled || appData.accessibility.motionMode !== 'auto' || document.hidden) return;
+        motionSampled = true;
+        let frames = 0;
+        let start = 0;
+        const frame = timestamp => {
+            if (!start) start = timestamp;
+            frames += 1;
+            const elapsed = timestamp - start;
+            if (elapsed < 1800) return requestAnimationFrame(frame);
+            const fps = frames / (elapsed / 1000);
+            if (fps < 24) runtimeMotionOverride = 'off';
+            else if (fps < 46 && resolvedMotionLevel() === 'full') runtimeMotionOverride = 'reduced';
+            if (runtimeMotionOverride) applyAccessibility();
+        };
+        requestAnimationFrame(frame);
     }
 
-    function selectBackup() { document.getElementById('backupImportInput')?.click(); }
-    function cancelBackup() { pendingBackup = null; fecharModal('backupConfirmModal'); const input = document.getElementById('backupImportInput'); if (input) input.value = ''; }
-    function confirmBackup() {
-        if (!pendingBackup) return cancelBackup();
-        const data = { ...pendingBackup, lastModifiedAt: Date.now() };
-        pendingBackup = null;
-        window.kingMasterCloudBridge.importData(data);
-    }
-
-    async function readBackup(event) {
-        const file = event.target.files?.[0];
-        if (!file) return;
-        if (file.size > 8 * 1024 * 1024) { showToast('O backup ultrapassa o limite de 8 MB.', true); return cancelBackup(); }
-        try {
-            const data = validBackup(JSON.parse(await file.text()));
-            if (!data) throw new Error('invalid');
-            pendingBackup = data;
-            const subjects = data.cycleItems.length;
-            const sessions = data.historyItems.length;
-            document.getElementById('backupConfirmMessage').textContent = `O arquivo contém ${subjects} matéria(s) e ${sessions} sessão(ões). Ele substituirá os dados atuais e será enviado à sua nuvem.`;
-            document.getElementById('backupConfirmModal').classList.add('active');
-        } catch { showToast('Este arquivo não é um backup válido do King Master.', true); cancelBackup(); }
+    function scheduleMotionSample() {
+        const start = () => sampleMotionPerformance();
+        if ('requestIdleCallback' in window) requestIdleCallback(start, { timeout: 2500 });
+        else setTimeout(start, 1600);
     }
 
     function maybeShowOnboarding() {
@@ -135,25 +168,24 @@
         reminder.lastShown = todayIso(); saveAppData();
     }
 
-    window.exportarBackup = exportBackup;
-    window.selecionarBackup = selectBackup;
-    window.cancelarImportacaoBackup = cancelBackup;
-    window.confirmarImportacaoBackup = confirmBackup;
     window.concluirOnboarding = completeOnboarding;
 
-    document.getElementById('backupImportInput')?.addEventListener('change', readBackup);
     document.getElementById('fontScaleSelect')?.addEventListener('change', event => savePreference('fontScale', event.target.value));
     document.getElementById('contrastToggleBtn')?.addEventListener('click', () => savePreference('highContrast', !appData.accessibility.highContrast));
-    document.getElementById('motionToggleBtn')?.addEventListener('click', () => savePreference('reduceMotion', !appData.accessibility.reduceMotion));
+    document.getElementById('motionModeSelect')?.addEventListener('change', event => savePreference('motionMode', event.target.value));
+    document.getElementById('autoReviewToggleBtn')?.addEventListener('click', () => { appData.studyLogging.autoReview = !appData.studyLogging.autoReview; syncStudySettingsUi(); saveAppData(); });
+    document.getElementById('autoReviewDelaySelect')?.addEventListener('change', event => { appData.studyLogging.reviewDelayDays = Number(event.target.value) || 1; syncStudySettingsUi(); saveAppData(); });
+    document.getElementById('aiRetentionSelect')?.addEventListener('change', event => { appData.aiSettings.retentionDays = Number(event.target.value) || 7; window.aplicarRetencaoConversaIa?.(); syncStudySettingsUi(); saveAppData(); });
     document.getElementById('reminderTime')?.addEventListener('change', event => { appData.reminder.time = event.target.value || '19:00'; syncReminderUi(); saveAppData(); });
     document.getElementById('reminderToggleBtn')?.addEventListener('click', setReminderEnabled);
     window.addEventListener('beforeinstallprompt', event => { event.preventDefault(); installPrompt = event; document.getElementById('installAppBtn').hidden = false; });
     document.getElementById('installAppBtn')?.addEventListener('click', async () => { if (!installPrompt) return; await installPrompt.prompt(); installPrompt = null; document.getElementById('installAppBtn').hidden = true; });
     window.addEventListener('appinstalled', () => { installPrompt = null; document.getElementById('installAppBtn').hidden = true; showToast('✓ King Master instalado'); });
-    window.addEventListener('king-master-data-changed', () => { renderDailyMissions(); applyAccessibility(); syncReminderUi(); });
+    window.addEventListener('king-master-data-changed', () => { renderDailyMissions(); applyAccessibility(); syncReminderUi(); syncStudySettingsUi(); });
     window.addEventListener('king-master-auth-ready', () => setTimeout(maybeShowOnboarding, 250));
     window.addEventListener('resize', () => { if (window.innerWidth > 1100) fecharMenuMovel(); }, { passive: true });
     window.addEventListener('orientationchange', fecharMenuMovel, { passive: true });
-    registerPwa(); applyAccessibility(); syncReminderUi(); renderDailyMissions(); checkReminder();
+    document.addEventListener('visibilitychange', () => document.documentElement.classList.toggle('motion-page-hidden', document.hidden));
+    registerPwa(); applyAccessibility(); syncReminderUi(); syncStudySettingsUi(); renderDailyMissions(); checkReminder(); scheduleMotionSample();
     setInterval(checkReminder, 30000);
 })();

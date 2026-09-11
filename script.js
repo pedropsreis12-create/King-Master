@@ -32,7 +32,11 @@ const defaultAppData = {
     selectedFrames: { militar: '', aura: '' },
     frameVaultOpen: false,
     onboardingCompleted: false,
-    accessibility: { fontScale: 'normal', highContrast: false, reduceMotion: false },
+    accessibility: { fontScale: 'normal', highContrast: false, motionMode: 'auto' },
+    studyLogging: { autoReview: true, reviewDelayDays: 1 },
+    aiSettings: { retentionDays: 7 },
+    aiConversation: [],
+    pendingStudySession: null,
     reminder: { enabled: false, time: '19:00', lastShown: '' },
     lastModifiedAt: 0
 };
@@ -82,7 +86,19 @@ if (typeof appData.selectedFrames.militar !== 'string') appData.selectedFrames.m
 if (typeof appData.selectedFrames.aura !== 'string') appData.selectedFrames.aura = '';
 if (typeof appData.frameVaultOpen !== 'boolean') appData.frameVaultOpen = false;
 if (!appData.accessibility || typeof appData.accessibility !== 'object') appData.accessibility = { ...defaultAppData.accessibility };
+if (!appData.accessibility.motionMode) appData.accessibility.motionMode = appData.accessibility.reduceMotion ? 'reduced' : 'auto';
 appData.accessibility = { ...defaultAppData.accessibility, ...appData.accessibility };
+if (!['auto', 'full', 'reduced', 'off'].includes(appData.accessibility.motionMode)) appData.accessibility.motionMode = 'auto';
+delete appData.accessibility.reduceMotion;
+if (!appData.studyLogging || typeof appData.studyLogging !== 'object') appData.studyLogging = { ...defaultAppData.studyLogging };
+appData.studyLogging = { ...defaultAppData.studyLogging, ...appData.studyLogging };
+appData.studyLogging.autoReview = appData.studyLogging.autoReview !== false;
+appData.studyLogging.reviewDelayDays = [1, 3, 7, 14, 30].includes(Number(appData.studyLogging.reviewDelayDays)) ? Number(appData.studyLogging.reviewDelayDays) : 1;
+if (!appData.aiSettings || typeof appData.aiSettings !== 'object') appData.aiSettings = { ...defaultAppData.aiSettings };
+appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
+appData.aiSettings.retentionDays = [1, 7, 30].includes(Number(appData.aiSettings.retentionDays)) ? Number(appData.aiSettings.retentionDays) : 7;
+if (!Array.isArray(appData.aiConversation)) appData.aiConversation = [];
+if (!appData.pendingStudySession || typeof appData.pendingStudySession !== 'object') appData.pendingStudySession = null;
 if (!appData.reminder || typeof appData.reminder !== 'object') appData.reminder = { ...defaultAppData.reminder };
 appData.reminder = { ...defaultAppData.reminder, ...appData.reminder };
 if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
@@ -1309,6 +1325,7 @@ function restoreTimerSession() {
     updateProgress();
     toggleBotaoStopHistorico();
     persistTimerCheckpoint();
+    if (appData.pendingStudySession && Number(appData.pendingStudySession.seconds) >= 5) setTimeout(abrirRegistroSessaoPendente, 350);
 }
 
 function updateProgress() {
@@ -1333,22 +1350,162 @@ function toggleBotaoStopHistorico() {
     if(document.getElementById('btnPauseHistory')) { document.getElementById('btnPauseHistory').style.display = show ? 'flex' : 'none'; document.getElementById('btnPauseHistory').innerHTML = isRunning ? '<span style="font-size:1.2rem;">⏸</span> Pausar' : '<span style="font-size:1.2rem;">▶</span> Retomar'; }
 }
 
-function registrarSessao(segundos) {
-    if(segundos < 5) return; 
+function dataFuturaRegistro(dias = 1) {
+    const data = new Date();
+    data.setHours(12, 0, 0, 0);
+    data.setDate(data.getDate() + Math.max(1, Number(dias) || 1));
+    return dataLocalISO(data);
+}
+
+function criarRevisaoAutomaticaRegistro(materia, assunto, dias = 1, origem = 'sessao-automatica') {
+    const materiaSegura = String(materia || 'Estudo Livre').trim();
+    const assuntoSeguro = String(assunto || '').trim();
+    if (!assuntoSeguro) return false;
+    const dataAlvo = dataFuturaRegistro(dias);
+    const duplicada = appData.revisoesItems.some(item => item.status !== 'revisado'
+        && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materiaSegura)
+        && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(assuntoSeguro)
+        && item.dataAlvo === dataAlvo);
+    if (duplicada) return false;
+    appData.revisoesItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), materia: materiaSegura, assunto: assuntoSeguro,
+        dataEstudo: dataLocalISO(new Date()), dataAlvo, origem, tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
+    return true;
+}
+
+function atualizarTopicoAposEstudo(materia, assunto) {
+    if (!materia || !assunto) return null;
+    if (!Array.isArray(materia.topicos)) materia.topicos = [];
+    let topico = materia.topicos.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(assunto));
+    if (!topico) {
+        topico = { nome: String(assunto).trim().slice(0, 100), concluido: true };
+        materia.topicos.push(topico);
+    }
+    topico.concluido = true;
+    topico.ultimoEstudoEm = Date.now();
+    topico.vezesEstudado = (Number(topico.vezesEstudado) || 0) + 1;
+    return topico;
+}
+
+function criarItemHistoricoRegistro({ segundos = 0, materia = 'Estudo Livre', assunto = '', cor = '#515154', tipo = 'Livre', comentario = '', atividade = 'estudo', registroRapido = false }) {
     const d = new Date();
-    const activeSubjId = document.getElementById('activeSubjectSelect').value;
-    let nome = 'Estudo Livre', cor = '#515154', tipo = 'Livre';
-    
-    if (activeSubjId) {
-        const idx = appData.cycleItems.findIndex(i => i.id == activeSubjId);
-        if (idx > -1) { nome = appData.cycleItems[idx].subject; cor = appData.cycleItems[idx].color; tipo = appData.cycleItems[idx].type || 'Teórica'; appData.cycleItems[idx].executedMin = (appData.cycleItems[idx].executedMin || 0) + (segundos / 60); }
-    } else { cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)]; }
-    
-    appData.historyItems.push({ id: Date.now(), dataISO: dataLocalISO(d), dataChave: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`, diaNum: d.getDate().toString().padStart(2, '0'), mesAno: `${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`, diaStr: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][d.getDay()], materia: nome, assunto: '', tempoSegundos: segundos, cor: cor, tipo: tipo, comentario: '' });
+    return { id: Date.now() + Math.floor(Math.random() * 1000), dataISO: dataLocalISO(d), dataChave: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
+        diaNum: d.getDate().toString().padStart(2, '0'), mesAno: `${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`,
+        diaStr: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'][d.getDay()], materia, assunto, tempoSegundos: Number(segundos) || 0, cor, tipo, comentario, atividade, registroRapido };
+}
+
+function registrarSessao(segundos, detalhes = null) {
+    if(segundos < 5) return;
+    const activeSubjId = detalhes?.subjectId ?? document.getElementById('activeSubjectSelect').value;
+    let nome = 'Estudo Livre', cor = '#515154', tipo = 'Livre', materia = null;
+    if (activeSubjId) materia = appData.cycleItems.find(item => String(item.id) === String(activeSubjId)) || null;
+    if (materia) {
+        nome = materia.subject; cor = materia.color; tipo = materia.type || 'Teórica';
+        materia.executedMin = (materia.executedMin || 0) + (segundos / 60);
+    } else cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)];
+
+    const assunto = String(detalhes?.assunto || '').trim();
+    const comentario = String(detalhes?.comentario || '').trim();
+    const atividade = ['estudo', 'simulado', 'redacao'].includes(detalhes?.atividade) ? detalhes.atividade : 'estudo';
+    appData.historyItems.push(criarItemHistoricoRegistro({ segundos, materia: nome, assunto, cor, tipo, comentario, atividade }));
+    if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
+    if (detalhes?.autoReview) criarRevisaoAutomaticaRegistro(nome, assunto, detalhes.reviewDelayDays, `sessao-${atividade}`);
+
+    if (atividade === 'simulado' && detalhes?.simulado) {
+        const sim = detalhes.simulado;
+        appData.simuladosItems.push({ id: Date.now() + 2, title: sim.title || `${nome} — sessão`, date: dataLocalISO(new Date()),
+            tempoMin: Math.max(1, Math.round(segundos / 60)), area: sim.area || 'Geral', total: sim.total, acertos: sim.acertos, erros: sim.erros, attachment: '' });
+    }
+    if (atividade === 'redacao' && detalhes?.redacao) {
+        const red = detalhes.redacao;
+        appData.redacaoItems.push({ id: Date.now() + 3, theme: red.theme, date: dataLocalISO(new Date()), c1: red.scores[0], c2: red.scores[1], c3: red.scores[2], c4: red.scores[3], c5: red.scores[4], attachment: '', aguardandoCorrecao: red.scores.every(valor => valor === 0) });
+    }
+
     currentSeconds = 0; // Histórico e rascunho são salvos na mesma escrita, sem duplicar na recuperação.
+    appData.pendingStudySession = null;
     saveAppData(); renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico(); 
-    showToast('✅ Sessão guardada no histórico!');
+    if (typeof renderizarRevisoes === 'function') renderizarRevisoes();
+    if (atividade === 'simulado' && typeof renderizarSimulados === 'function') renderizarSimulados();
+    if (atividade === 'redacao' && typeof renderizarRedacoes === 'function') renderizarRedacoes();
+    showToast(detalhes?.autoReview ? '✓ Sessão salva e revisão agendada.' : '✓ Sessão salva no histórico.');
     mostrarFraseMotivacional();
+}
+
+function atualizarTopicosRegistroSessao() {
+    const select = document.getElementById('sessionSubject');
+    const datalist = document.getElementById('sessionTopicOptions');
+    if (!select || !datalist) return;
+    const materia = appData.cycleItems.find(item => String(item.id) === String(select.value));
+    datalist.innerHTML = (materia?.topicos || []).map(topico => `<option value="${escaparRevisaoHtml(topico.nome)}"></option>`).join('');
+}
+
+function atualizarTipoRegistroSessao() {
+    const tipo = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
+    const simulado = document.getElementById('sessionSimuladoFields');
+    const redacao = document.getElementById('sessionRedacaoFields');
+    simulado.hidden = tipo !== 'simulado';
+    redacao.hidden = tipo !== 'redacao';
+    document.getElementById('sessionSimTitle').required = tipo === 'simulado';
+    document.getElementById('sessionSimTotal').required = tipo === 'simulado';
+    document.getElementById('sessionEssayTheme').required = tipo === 'redacao';
+}
+
+function atualizarRevisaoRegistroSessao() {
+    const checkbox = document.getElementById('sessionAutoReview');
+    const prazo = document.getElementById('sessionReviewDelay');
+    if (prazo) prazo.disabled = !checkbox?.checked;
+}
+
+function abrirRegistroSessaoPendente() {
+    const pendente = appData.pendingStudySession;
+    if (!pendente || Number(pendente.seconds) < 5) return;
+    const form = document.getElementById('sessionCompleteForm');
+    if (!form || typeof form.reset !== 'function') return;
+    form.reset();
+    document.getElementById('sessionCompleteTime').textContent = formatHistoryTime(pendente.seconds);
+    const select = document.getElementById('sessionSubject');
+    select.innerHTML = '<option value="">Estudo Livre</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
+    select.value = appData.cycleItems.some(item => String(item.id) === String(pendente.subjectId)) ? String(pendente.subjectId) : '';
+    document.getElementById('sessionAutoReview').checked = appData.studyLogging.autoReview !== false;
+    document.getElementById('sessionReviewDelay').value = String(appData.studyLogging.reviewDelayDays || 1);
+    atualizarTopicosRegistroSessao(); atualizarTipoRegistroSessao(); atualizarRevisaoRegistroSessao();
+    document.getElementById('sessionCompleteModal').classList.add('active');
+    setTimeout(() => document.getElementById('sessionTopic')?.focus(), 120);
+}
+
+function prepararRegistroSessao(segundos = currentSeconds, origem = 'manual') {
+    if (Number(segundos) < 5) return false;
+    clearInterval(timerInterval); isRunning = false; playPauseBtn.textContent = '▶';
+    appData.pendingStudySession = { seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: Date.now() };
+    saveAppData(); updateProgress(); toggleBotaoStopHistorico(); abrirRegistroSessaoPendente();
+    return true;
+}
+
+function adiarRegistroSessao() {
+    fecharModal('sessionCompleteModal');
+    showToast('A sessão continua protegida. Você pode retomá-la ou registrá-la depois.');
+}
+
+function salvarRegistroSessao(event) {
+    event.preventDefault();
+    const pendente = appData.pendingStudySession;
+    if (!pendente || Number(pendente.seconds) < 5) return fecharModal('sessionCompleteModal');
+    const atividade = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
+    const assunto = document.getElementById('sessionTopic').value.trim();
+    const comentario = document.getElementById('sessionNotes').value.trim();
+    if (!assunto || !comentario) return showToast('Preencha o assunto e o resumo da sessão.', true);
+    const detalhes = { subjectId: document.getElementById('sessionSubject').value, assunto, comentario, atividade,
+        autoReview: document.getElementById('sessionAutoReview').checked, reviewDelayDays: Number(document.getElementById('sessionReviewDelay').value) || 1 };
+    if (atividade === 'simulado') {
+        const total = Math.max(1, Number(document.getElementById('sessionSimTotal').value) || 1);
+        const acertos = Math.max(0, Number(document.getElementById('sessionSimHits').value) || 0);
+        const erros = Math.max(0, Number(document.getElementById('sessionSimErrors').value) || 0);
+        if (acertos + erros > total) return showToast('Acertos e erros não podem ultrapassar o total de questões.', true);
+        detalhes.simulado = { title: document.getElementById('sessionSimTitle').value.trim(), area: document.getElementById('sessionSimArea').value, total, acertos, erros };
+    }
+    if (atividade === 'redacao') {
+        detalhes.redacao = { theme: document.getElementById('sessionEssayTheme').value.trim(), scores: [...document.querySelectorAll('.session-essay-score')].map(input => Math.max(0, Math.min(200, Number(input.value) || 0))) };
+    }
+    fecharModal('sessionCompleteModal'); stopAlarm(); registrarSessao(Number(pendente.seconds), detalhes); updateProgress(); toggleBotaoStopHistorico(); document.title = 'King Master';
 }
 
 function toggleTimer() {
@@ -1360,6 +1517,7 @@ function toggleTimer() {
         saveAppData(); 
         updateProgress(); 
     } else {
+        if (appData.pendingStudySession) appData.pendingStudySession = null;
         let target = getTargetSeconds();
         if (currentMode === 'descanso' && currentSeconds <= 0) currentSeconds = target;
         if (target <= 0 && currentMode === 'descanso') return showToast('⚠️ Defina um tempo maior que zero.', true);
@@ -1396,8 +1554,12 @@ function tickTimer() {
                     if (target > 0 && currentSeconds >= target && !alarmTriggered) { 
                         alarmTriggered = true; 
                         document.title = "⏰ META ATINGIDA! - King Master";
+                        clearInterval(timerInterval);
+                        isRunning = false;
+                        playPauseBtn.textContent = '▶';
                         triggerAlarm(); 
-                        showToast('🎯 Meta de tempo atingida! O cronômetro continua rodando.');
+                        showToast('🎯 Meta atingida! Registre o que você estudou.');
+                        setTimeout(() => { stopAlarm(); prepararRegistroSessao(currentSeconds, 'meta'); }, 1600);
                     }
                 } else { 
                     currentSeconds -= deltaSecs;
@@ -1460,12 +1622,12 @@ function stopAlarm() {
 
 function abrirConfirmReset() { document.getElementById('confirmResetModal').classList.add('active'); }
 function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
-function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) registrarSessao(currentSeconds); else showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
+function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) prepararRegistroSessao(currentSeconds, 'manual'); else { showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; } }
 function setDescansoTime(mins) { descansoTempoAtual = mins; document.getElementById('btn-descanso-5').classList.remove('primary'); document.getElementById('btn-descanso-10').classList.remove('primary'); document.getElementById(`btn-descanso-${mins}`).classList.add('primary'); executarResetTimer(); }
 
 function setMode(mode) {
     tickTimer();
-    if (currentMode === 'estudo' && currentSeconds >= 5) registrarSessao(currentSeconds);
+    if (mode !== currentMode && currentMode === 'estudo' && currentSeconds >= 5) { prepararRegistroSessao(currentSeconds, 'troca-modo'); return; }
     currentMode = mode;
     alarmTriggered = false;
     document.getElementById('btn-estudo').classList.remove('active'); document.getElementById('btn-descanso').classList.remove('active'); document.getElementById(`btn-${mode}`).classList.add('active');
@@ -1563,6 +1725,7 @@ function salvarMateriaCiclo(e) {
 }
 
 let buscaMateriasAtual = '';
+let buscaAssuntosAtual = '';
 let filtroAgendamentoAtual = 'todos';
 let filtroRevisoesAtual = 'ativas';
 let filtroSimuladosAtual = 'todas';
@@ -1625,15 +1788,39 @@ function renderizarCiclo() {
 function abrirModalAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id); if (!mat) return;
     document.getElementById('assuntosMateriaId').value = id; document.getElementById('assuntosModalTitle').textContent = mat.subject;
+    buscaAssuntosAtual = '';
+    document.getElementById('assuntosBuscaInput').value = '';
     let segs = 0; appData.historyItems.forEach(h => { if(h.materia.trim().toLowerCase() === mat.subject.trim().toLowerCase()) segs += h.tempoSegundos; });
     document.getElementById('assuntosModalTimeValue').textContent = `${Math.floor(segs/3600)}h ${Math.floor((segs%3600)/60).toString().padStart(2,'0')}m`;
     renderizarListaAssuntos(id); document.getElementById('assuntosModal').classList.add('active');
 }
 
+function filtrarAssuntos(valor = '') {
+    buscaAssuntosAtual = String(valor).trim().toLocaleLowerCase('pt-BR');
+    const id = Number(document.getElementById('assuntosMateriaId').value);
+    renderizarListaAssuntos(id);
+}
+
 function renderizarListaAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id), lista = document.getElementById('listaAssuntos');
-    if (!mat.topicos || mat.topicos.length === 0) { lista.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: 30px;">Nenhum assunto.</p>'; return; }
-    lista.innerHTML = mat.topicos.map((t, i) => { const nome = escaparRevisaoHtml(t.nome || 'Tópico'); return `<li class="${t.concluido ? 'completed' : ''}" style="justify-content:space-between;padding-right:5px;"><button type="button" onclick="toggleTopico(${id},${i})" style="flex:1;border:0;background:none;color:inherit;text-align:left;cursor:pointer;" aria-pressed="${Boolean(t.concluido)}">${nome}</button><button type="button" class="workspace-icon-button danger" onclick="deletarTopico(${id},${i})" aria-label="Excluir ${nome}" title="Excluir">×</button></li>`; }).join('');
+    if (!mat || !lista) return;
+    const topicos = Array.isArray(mat.topicos) ? mat.topicos : [];
+    const estudados = topicos.filter(item => item.concluido || Number(item.vezesEstudado) > 0).length;
+    const revisoes = appData.revisoesItems.filter(item => item.status !== 'revisado' && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(mat.subject)).length;
+    document.getElementById('assuntosTotalValue').textContent = topicos.length;
+    document.getElementById('assuntosEstudadosValue').textContent = estudados;
+    document.getElementById('assuntosRevisoesValue').textContent = revisoes;
+    const visiveis = topicos.map((topico, index) => ({ topico, index })).filter(({ topico }) => !buscaAssuntosAtual || normalizarRevisaoTexto(topico.nome).includes(normalizarRevisaoTexto(buscaAssuntosAtual)));
+    document.getElementById('assuntosBuscaResultado').textContent = buscaAssuntosAtual ? `${visiveis.length} encontrado${visiveis.length === 1 ? '' : 's'}` : 'Todos';
+    if (!topicos.length) { lista.innerHTML = '<li class="topics-empty"><strong>Nenhum conteúdo cadastrado</strong><small>Adicione o primeiro tópico acima para começar seu mapa de estudos.</small></li>'; return; }
+    if (!visiveis.length) { lista.innerHTML = '<li class="topics-empty"><strong>Nenhum tópico encontrado</strong><small>Tente outro termo ou adicione este conteúdo à matéria.</small></li>'; return; }
+    lista.innerHTML = visiveis.map(({ topico: t, index: i }) => {
+        const nome = escaparRevisaoHtml(t.nome || 'Tópico');
+        const vezes = Number(t.vezesEstudado) || 0;
+        const ultimaData = t.ultimoEstudoEm ? new Date(t.ultimoEstudoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : '';
+        const meta = vezes ? `${vezes} ${vezes === 1 ? 'registro' : 'registros'}${ultimaData ? ` • último em ${ultimaData}` : ''}` : 'Ainda não registrado como estudado';
+        return `<li class="topic-organizer-item ${t.concluido ? 'completed' : ''}"><button type="button" class="topic-check-button" onclick="toggleTopico(${id},${i})" aria-pressed="${Boolean(t.concluido)}" aria-label="${t.concluido ? 'Reabrir' : 'Marcar como concluído'} ${nome}">${t.concluido ? '✓' : '○'}</button><div class="topic-organizer-copy"><strong>${nome}</strong><small>${meta}</small></div><button type="button" class="topic-studied-button" onclick="registrarTopicoEstudado(${id},${i})">Estudei hoje</button><button type="button" class="workspace-icon-button danger" onclick="deletarTopico(${id},${i})" aria-label="Excluir ${nome}" title="Excluir">×</button></li>`;
+    }).join('');
 }
 
 function adicionarTopico(e) { e.preventDefault(); const id = parseInt(document.getElementById('assuntosMateriaId').value), nm = document.getElementById('novoTopicoInput').value, idx = appData.cycleItems.findIndex(m => m.id === id); if (idx > -1 && nm.trim()) { if (!appData.cycleItems[idx].topicos) appData.cycleItems[idx].topicos = []; appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false }); saveAppData(); document.getElementById('novoTopicoInput').value = ''; renderizarListaAssuntos(id); renderizarCiclo(); } }
@@ -1647,6 +1834,19 @@ function toggleTopico(id, tIdx) {
 }
 
 function deletarTopico(id, tIdx) { const idx = appData.cycleItems.findIndex(m => m.id === id); if (idx > -1) { appData.cycleItems[idx].topicos.splice(tIdx, 1); saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); showToast('🗑️ Assunto removido!'); } }
+
+function registrarTopicoEstudado(id, tIdx) {
+    const materia = appData.cycleItems.find(item => item.id === id);
+    const topico = materia?.topicos?.[tIdx];
+    if (!materia || !topico) return;
+    atualizarTopicoAposEstudo(materia, topico.nome);
+    appData.historyItems.push(criarItemHistoricoRegistro({ materia: materia.subject, assunto: topico.nome, cor: materia.color, tipo: materia.type || 'Teórica',
+        comentario: 'Registro rápido pelo organizador de tópicos.', atividade: 'estudo', registroRapido: true }));
+    const revisaoCriada = appData.studyLogging.autoReview !== false
+        ? criarRevisaoAutomaticaRegistro(materia.subject, topico.nome, appData.studyLogging.reviewDelayDays, 'topico-rapido') : false;
+    saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarRevisoes();
+    showToast(revisaoCriada ? '✓ Estudo registrado e revisão agendada.' : '✓ Estudo registrado para hoje.');
+}
 
 function abrirModalEditarHistorico(id) { const h = appData.historyItems.find(i => i.id === id); if(h) { document.getElementById('histEditId').value = h.id; document.getElementById('histSubject').value = h.materia; document.getElementById('histComment').value = h.comentario || ''; document.getElementById('editHistoryModal').classList.add('active'); } }
 function salvarEdicaoHistorico(e) { e.preventDefault(); const idx = appData.historyItems.findIndex(h => h.id === parseInt(document.getElementById('histEditId').value)); if(idx > -1) { appData.historyItems[idx].materia = document.getElementById('histSubject').value; appData.historyItems[idx].comentario = document.getElementById('histComment').value; saveAppData(); renderizarHistorico(); fecharModal('editHistoryModal'); showToast('✏️ Histórico atualizado!'); } }
@@ -1671,7 +1871,7 @@ function renderizarHistorico() {
         limite.setDate(limite.getDate() - (Number(filtroHistoricoAtual.periodo) - 1));
     }
     const itens = todos.filter(item => {
-        const corresponde = !busca || `${item.materia || ''} ${item.tipo || ''} ${item.comentario || ''}`.toLocaleLowerCase('pt-BR').includes(busca);
+        const corresponde = !busca || `${item.materia || ''} ${item.assunto || ''} ${item.tipo || ''} ${item.comentario || ''}`.toLocaleLowerCase('pt-BR').includes(busca);
         const data = dataISOParaLocal(dataHistoricoISO(item));
         return corresponde && (!limite || (data && data >= limite));
     }).sort((a, b) => b.id - a.id);
@@ -1716,9 +1916,11 @@ function renderizarHistorico() {
             const corMateria = corSegura(sessao.cor);
             const corTipo = sessao.tipo === 'Prática' ? '#ff9500' : (sessao.tipo === 'Teórica e Prática' ? '#007aff' : (sessao.tipo === 'Geral' ? '#515154' : '#8657d6'));
             const materia = escaparRevisaoHtml(sessao.materia || 'Estudo livre');
+            const assunto = escaparRevisaoHtml(sessao.assunto || 'Sessão livre');
             const tipo = escaparRevisaoHtml(sessao.tipo || 'Teoria');
             const comentario = escaparRevisaoHtml(sessao.comentario || '');
-            return `<article class="h-session-card" style="border-left-color:${corMateria};"><div class="history-session-main"><div class="hs-info"><b class="hs-title" style="color:${corMateria};">${materia}</b></div><div class="history-session-meta"><span class="hs-time">⏱ ${formatHistoryTime(Number(sessao.tempoSegundos) || 0)}</span><span class="hs-badge" style="background-color:${corTipo};">${tipo}</span><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="abrirModalEditarHistorico(${sessao.id})" aria-label="Editar sessão de ${materia}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('history', ${sessao.id}, 'Excluir registro?', 'A sessão será removida do histórico.')" aria-label="Excluir sessão de ${materia}" title="Excluir">×</button></div></div></div>${comentario ? `<div class="history-session-note">${comentario}</div>` : ''}</article>`;
+            const atividade = sessao.registroRapido ? 'Registro rápido' : ({ simulado: 'Simulado', redacao: 'Redação' }[sessao.atividade] || 'Estudo');
+            return `<article class="h-session-card" style="border-left-color:${corMateria};"><div class="history-session-main"><div class="hs-info"><b class="hs-title" style="color:${corMateria};">${materia}</b><small>${assunto}</small></div><div class="history-session-meta"><span class="hs-time">${sessao.registroRapido ? '✓ Sem cronômetro' : `⏱ ${formatHistoryTime(Number(sessao.tempoSegundos) || 0)}`}</span><span class="hs-badge" style="background-color:${corTipo};">${atividade}</span><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="abrirModalEditarHistorico(${sessao.id})" aria-label="Editar sessão de ${materia}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('history', ${sessao.id}, 'Excluir registro?', 'A sessão será removida do histórico.')" aria-label="Excluir sessão de ${materia}" title="Excluir">×</button></div></div></div>${comentario ? `<div class="history-session-note">${comentario}</div>` : ''}</article>`;
         }).join('');
         return `<div class="h-date-header"><div class="h-date-left"><span class="h-date-num">${dia}</span><div class="h-date-text"><span>${mesAno}</span><span>${diaSemana}</span></div></div><div class="h-date-line"></div><div class="h-date-total">⏱ ${formatShortTime(grupo.total)}</div></div>${sessoes}`;
     }).join('');
@@ -3176,9 +3378,9 @@ function salvarRedacao(e) {
 
     if (idEdit) {
         const idx = appData.redacaoItems.findIndex(i => i.id == idEdit);
-        if (idx > -1) appData.redacaoItems[idx] = { ...appData.redacaoItems[idx], theme, date, c1, c2, c3, c4, c5, attachment };
+        if (idx > -1) appData.redacaoItems[idx] = { ...appData.redacaoItems[idx], theme, date, c1, c2, c3, c4, c5, attachment, aguardandoCorrecao: false };
     } else {
-        appData.redacaoItems.push({ id: Date.now(), theme, date, c1, c2, c3, c4, c5, attachment });
+        appData.redacaoItems.push({ id: Date.now(), theme, date, c1, c2, c3, c4, c5, attachment, aguardandoCorrecao: false });
     }
     saveAppData(); renderizarRedacoes(); fecharModal('redacaoModal'); showToast('✍️ Redação salva!');
 }
@@ -3196,25 +3398,26 @@ function renderizarRedacoes() {
         { chave: 'c5', sigla: 'C5', nome: 'Intervenção' }
     ];
     const totalDaRedacao = redacao => competencias.reduce((soma, competencia) => soma + (Number(redacao[competencia.chave]) || 0), 0);
-    const medias = competencias.map(competencia => ({ ...competencia, media: itens.length ? Math.round(itens.reduce((soma, item) => soma + (Number(item[competencia.chave]) || 0), 0) / itens.length) : 0 }));
-    const mediaGlobal = itens.length ? Math.round(itens.reduce((soma, item) => soma + totalDaRedacao(item), 0) / itens.length) : 0;
+    const corrigidas = itens.filter(item => !item.aguardandoCorrecao);
+    const medias = competencias.map(competencia => ({ ...competencia, media: corrigidas.length ? Math.round(corrigidas.reduce((soma, item) => soma + (Number(item[competencia.chave]) || 0), 0) / corrigidas.length) : 0 }));
+    const mediaGlobal = corrigidas.length ? Math.round(corrigidas.reduce((soma, item) => soma + totalDaRedacao(item), 0) / corrigidas.length) : 0;
     const ordenadas = [...medias].sort((a, b) => b.media - a.media);
     document.getElementById('red-media').textContent = mediaGlobal;
-    document.getElementById('red-forte').textContent = itens.length ? ordenadas[0].sigla : '-';
-    document.getElementById('red-gargalo').textContent = itens.length ? ordenadas.at(-1).sigla : '-';
+    document.getElementById('red-forte').textContent = corrigidas.length ? ordenadas[0].sigla : '-';
+    document.getElementById('red-gargalo').textContent = corrigidas.length ? ordenadas.at(-1).sigla : '-';
     const resultado = document.getElementById('redacoesResultado');
     if (resultado) resultado.textContent = pluralizar(itens.length, 'redação', 'redações');
 
     const graficoCompetencias = document.getElementById('redCompetencyChart');
     if (graficoCompetencias) {
-        graficoCompetencias.innerHTML = itens.length ? medias.map(competencia => {
+        graficoCompetencias.innerHTML = corrigidas.length ? medias.map(competencia => {
             const percentual = Math.round(competencia.media / 200 * 100);
             const cor = percentual >= 75 ? '#34c759' : (percentual >= 55 ? 'var(--accent-color)' : '#ff9500');
             return `<div class="competency-row" title="${competencia.sigla} — ${competencia.nome}: ${competencia.media} de 200"><b>${competencia.sigla}</b><div class="competency-track"><i style="width:${percentual}%;--competency-color:${cor}"></i></div><span>${competencia.media}/200</span></div>`;
         }).join('') : '<div class="workspace-empty"><strong>As competências aparecem aqui</strong><p>Cadastre uma redação corrigida com as notas C1 a C5.</p></div>';
     }
 
-    const recentes = [...itens].reverse().slice(-6);
+    const recentes = [...corrigidas].reverse().slice(-6);
     const tendencia = document.getElementById('redacoesTrend');
     if (tendencia) {
         tendencia.innerHTML = recentes.length ? recentes.map(redacao => {
@@ -3239,11 +3442,12 @@ function renderizarRedacoes() {
 
     list.innerHTML = itens.map(redacao => {
         const total = totalDaRedacao(redacao);
+        const pendente = Boolean(redacao.aguardandoCorrecao);
         const cor = total >= 900 ? '#34c759' : (total >= 700 ? '#ff9500' : '#ff3b30');
         const tema = escaparRevisaoHtml(redacao.theme || 'Redação sem tema');
         const data = dataISOParaLocal(redacao.date);
         const anexo = anexoSeguro(redacao.attachment);
-        return `<article class="agenda-card result-card" style="--urgency-color:${cor};"><div class="result-card-header"><div class="result-card-title"><h3>${tema}</h3><p>${data ? data.toLocaleDateString('pt-BR') : 'Sem data'}</p></div><div class="result-score">${total}</div></div><div class="result-card-metrics five">${competencias.map(competencia => `<div><small>${competencia.sigla}</small><strong>${Number(redacao[competencia.chave]) || 0}</strong></div>`).join('')}</div><div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${tema}_redacao">↗ Ver arquivo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarRedacao(${redacao.id})" aria-label="Editar ${tema}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('redacao', ${redacao.id}, 'Apagar redação?', 'O registro será eliminado.')" aria-label="Apagar ${tema}" title="Apagar">×</button></div></div></article>`;
+        return `<article class="agenda-card result-card" style="--urgency-color:${pendente ? 'var(--accent-color)' : cor};"><div class="result-card-header"><div class="result-card-title"><h3>${tema}</h3><p>${data ? data.toLocaleDateString('pt-BR') : 'Sem data'}</p></div><div class="result-score${pendente ? ' pending' : ''}">${pendente ? 'Aguardando correção' : total}</div></div>${pendente ? '<p class="result-pending-note">Quando receber as notas, edite este registro para completar C1 a C5.</p>' : `<div class="result-card-metrics five">${competencias.map(competencia => `<div><small>${competencia.sigla}</small><strong>${Number(redacao[competencia.chave]) || 0}</strong></div>`).join('')}</div>`}<div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${tema}_redacao">↗ Ver arquivo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarRedacao(${redacao.id})" aria-label="Editar ${tema}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('redacao', ${redacao.id}, 'Apagar redação?', 'O registro será eliminado.')" aria-label="Apagar ${tema}" title="Apagar">×</button></div></div></article>`;
     }).join('');
 }
 
@@ -3344,11 +3548,14 @@ function renderizarMapaDominio() {
 
 document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
-    document.querySelectorAll('.modal-overlay.active').forEach(modal => modal.classList.remove('active'));
+    document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+        if (modal.dataset.keepOpen === 'true') adiarRegistroSessao();
+        else modal.classList.remove('active');
+    });
     if (document.getElementById('settingsPanel')?.classList.contains('active')) toggleSettings();
 });
 document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('mousedown', event => {
-    if (event.target === overlay) overlay.classList.remove('active');
+    if (event.target === overlay && overlay.dataset.keepOpen !== 'true') overlay.classList.remove('active');
 }));
 
 // INICIALIZAÇÃO DO APP

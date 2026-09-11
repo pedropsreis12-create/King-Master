@@ -13,10 +13,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260911-workspaces-1">
-    <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
-    <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
-    <link rel="stylesheet" href="usability.css?v=20260911-workspaces-1">
+    <link rel="stylesheet" href="style.css?v=20260911-adaptive-study-1">
+    <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
+    <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
+    <link rel="stylesheet" href="usability.css?v=20260911-adaptive-study-1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -192,16 +192,20 @@
                 <p class="cloud-account-note">Depois de entrar, cada alteração é salva automaticamente e acompanha você em qualquer dispositivo.</p>
             </div>
             <div class="settings-group">
-                <h3><span>↥</span> Backup de Segurança</h3>
-                <div class="settings-action-grid"><button type="button" class="cycle-btn" onclick="exportarBackup()">Exportar dados</button><button type="button" class="cycle-btn" onclick="selecionarBackup()">Importar backup</button></div>
-                <input type="file" id="backupImportInput" accept="application/json,.json" hidden>
-                <p class="cloud-account-note">A nuvem continua automática. O arquivo é uma cópia extra sob seu controle.</p>
-            </div>
-            <div class="settings-group">
                 <h3><span>◉</span> Acessibilidade</h3>
                 <label class="settings-select-row"><span><strong>Tamanho do texto</strong><small>Aumenta a leitura em todo o site</small></span><select id="fontScaleSelect"><option value="normal">Normal</option><option value="large">Grande</option><option value="xlarge">Muito grande</option></select></label>
                 <button class="settings-theme-toggle toggle-btn" id="contrastToggleBtn" type="button"><span><strong>Contraste reforçado</strong><small>Contornos e textos mais nítidos</small></span><i></i></button>
-                <button class="settings-theme-toggle toggle-btn" id="motionToggleBtn" type="button"><span><strong>Movimento suave</strong><small>Mantém o visual e reduz efeitos intensos</small></span><i></i></button>
+                <label class="settings-select-row motion-quality-row"><span><strong>Efeitos e animações</strong><small id="motionModeHint">O site escolhe a melhor qualidade para este aparelho</small></span><select id="motionModeSelect"><option value="auto">Automático</option><option value="full">Ativados</option><option value="reduced">Reduzidos</option><option value="off">Desativados</option></select></label>
+            </div>
+            <div class="settings-group">
+                <h3><span>↻</span> Registro de Estudos</h3>
+                <button class="settings-theme-toggle toggle-btn" id="autoReviewToggleBtn" type="button"><span><strong>Revisão automática</strong><small>Vem marcada ao concluir uma sessão</small></span><i></i></button>
+                <label class="settings-select-row"><span><strong>Primeira revisão</strong><small>Prazo sugerido depois do estudo</small></span><select id="autoReviewDelaySelect"><option value="1">No dia seguinte</option><option value="3">Depois de 3 dias</option><option value="7">Depois de 7 dias</option><option value="14">Depois de 14 dias</option><option value="30">Depois de 30 dias</option></select></label>
+            </div>
+            <div class="settings-group">
+                <h3><span>✦</span> Gemini do QG</h3>
+                <label class="settings-select-row"><span><strong>Apagar conversas</strong><small>Mensagens antigas somem automaticamente</small></span><select id="aiRetentionSelect"><option value="1">Depois de 24 horas</option><option value="7">Depois de 7 dias</option><option value="30">Depois de 30 dias</option></select></label>
+                <button type="button" class="cycle-btn settings-full-button" onclick="limparConversaIa()">Limpar conversa agora</button>
             </div>
             <div class="settings-group">
                 <h3><span>▣</span> Aplicativo e Lembretes</h3>
@@ -746,23 +750,32 @@
         </div>
 
         <div class="modal-overlay" id="assuntosModal">
-            <div class="modal-box" style="width: 700px; max-width: 95%;">
+            <div class="modal-box topics-organizer-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('assuntosModal')" aria-label="Fechar">×</button>
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px;">
+                <div class="topics-organizer-heading">
                     <div>
-                        <h3 id="assuntosModalTitle" style="color: var(--text-main); font-weight: 800; margin: 0; font-size: 1.6rem; text-transform: uppercase;">Assuntos</h3>
-                        <div style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; background: rgba(var(--accent-rgb), 0.1); color: var(--accent-color); padding: 6px 14px; border-radius: 8px; font-size: 0.9rem; font-weight: 700; border: 1px solid rgba(var(--accent-rgb), 0.2);">
-                            <span>⏱ Tempo Total Histórico:</span>
+                        <span class="workspace-kicker">ORGANIZADOR DE CONTEÚDOS</span>
+                        <h3 id="assuntosModalTitle">Assuntos</h3>
+                        <p>Pesquise um conteúdo e registre em um toque quando estudá-lo.</p>
+                    </div>
+                    <div class="topics-time-pill">
+                            <span>Tempo estudado</span>
                             <span id="assuntosModalTimeValue">0h 00m</span>
-                        </div>
                     </div>
                 </div>
-                <form id="formAddTopico" style="display: flex; gap: 12px; margin-bottom: 25px;" onsubmit="adicionarTopico(event)">
+                <div class="topics-organizer-stats" aria-label="Resumo da matéria">
+                    <span><strong id="assuntosTotalValue">0</strong><small>cadastrados</small></span>
+                    <span><strong id="assuntosEstudadosValue">0</strong><small>estudados</small></span>
+                    <span><strong id="assuntosRevisoesValue">0</strong><small>revisões pendentes</small></span>
+                </div>
+                <label class="topics-search" for="assuntosBuscaInput"><span aria-hidden="true">⌕</span><input type="search" id="assuntosBuscaInput" placeholder="Pesquisar tópico já cadastrado" autocomplete="off" oninput="filtrarAssuntos(this.value)"><kbd id="assuntosBuscaResultado">Todos</kbd></label>
+                <form id="formAddTopico" class="topics-add-form" onsubmit="adicionarTopico(event)">
                     <input type="hidden" id="assuntosMateriaId">
-                    <input type="text" id="novoTopicoInput" class="cycle-input" required style="flex: 1; font-size: 1rem;" autocomplete="off">
-                    <button type="submit" class="cycle-btn primary" style="font-size: 1.2rem; width: 50px; padding: 0; display:flex; align-items:center; justify-content:center;">+</button>
+                    <input type="text" id="novoTopicoInput" class="cycle-input" required placeholder="Novo tópico ou conteúdo" autocomplete="off">
+                    <button type="submit" class="cycle-btn primary">Adicionar</button>
                 </form>
-                <ul class="task-list" id="listaAssuntos" style="max-height: 400px; overflow-y: auto; padding-right: 15px; margin: 0; list-style: none; gap: 10px; display: flex; flex-direction: column;"></ul>
+                <div class="topics-list-heading"><strong>Conteúdos</strong><small>“Estudei hoje” também agenda sua revisão padrão</small></div>
+                <ul class="task-list topics-organizer-list" id="listaAssuntos"></ul>
             </div>
         </div>
 
@@ -965,12 +978,37 @@
             </div>
         </div>
 
+        <div class="modal-overlay session-complete-overlay" id="sessionCompleteModal" data-keep-open="true">
+            <div class="modal-box session-complete-modal">
+                <button type="button" class="modal-close" onclick="adiarRegistroSessao()" aria-label="Voltar ao cronômetro">×</button>
+                <div class="session-complete-heading"><span class="session-complete-icon" aria-hidden="true">✓</span><div><span class="workspace-kicker">SESSÃO CONCLUÍDA</span><div class="cycle-modal-title">Registre o que avançou</div><p>O tempo já está protegido. Complete este resumo para transformar foco em histórico útil.</p></div><strong id="sessionCompleteTime">0m</strong></div>
+                <form id="sessionCompleteForm" onsubmit="salvarRegistroSessao(event)">
+                    <div class="form-grid two">
+                        <div class="cycle-form-group"><label class="cycle-label" for="sessionSubject">Matéria</label><select class="cycle-input" id="sessionSubject" onchange="atualizarTopicosRegistroSessao()" required></select></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="sessionTopic">Tópico ou assunto estudado</label><input class="cycle-input" id="sessionTopic" list="sessionTopicOptions" placeholder="Pesquise ou escreva um tópico" autocomplete="off" required><datalist id="sessionTopicOptions"></datalist></div>
+                    </div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="sessionNotes">Resumo da sessão</label><textarea class="cycle-input" id="sessionNotes" rows="3" maxlength="700" placeholder="O que você aprendeu, praticou ou ainda precisa reforçar?" required></textarea></div>
+                    <fieldset class="session-kind-fieldset"><legend>O que foi feito?</legend><div class="session-kind-options"><label><input type="radio" name="sessionKind" value="estudo" checked onchange="atualizarTipoRegistroSessao()"><span><b>▦</b><strong>Estudo</strong><small>Teoria ou exercícios</small></span></label><label><input type="radio" name="sessionKind" value="simulado" onchange="atualizarTipoRegistroSessao()"><span><b>◎</b><strong>Simulado</strong><small>Questões e resultado</small></span></label><label><input type="radio" name="sessionKind" value="redacao" onchange="atualizarTipoRegistroSessao()"><span><b>✎</b><strong>Redação</strong><small>Tema e competências</small></span></label></div></fieldset>
+                    <section class="session-kind-details" id="sessionSimuladoFields" hidden>
+                        <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTitle">Nome do simulado</label><input class="cycle-input" id="sessionSimTitle" maxlength="80" placeholder="Ex.: ENEM 2024 — Natureza"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimArea">Área</label><select class="cycle-input" id="sessionSimArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div></div>
+                        <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTotal">Questões</label><input type="number" class="cycle-input" id="sessionSimTotal" min="1" value="45"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimHits">Acertos</label><input type="number" class="cycle-input" id="sessionSimHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimErrors">Erros</label><input type="number" class="cycle-input" id="sessionSimErrors" min="0" value="0"></div></div>
+                    </section>
+                    <section class="session-kind-details" id="sessionRedacaoFields" hidden>
+                        <div class="cycle-form-group"><label class="cycle-label" for="sessionEssayTheme">Tema da redação</label><input class="cycle-input" id="sessionEssayTheme" maxlength="140" placeholder="Tema trabalhado nesta sessão"></div>
+                        <p class="session-detail-help">Se já tiver a correção, preencha as competências. Caso contrário, deixe em branco.</p>
+                        <div class="form-grid five"><div class="cycle-form-group"><label class="cycle-label">C1</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C2</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C3</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C4</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C5</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div></div>
+                    </section>
+                    <div class="session-review-card"><label><input type="checkbox" id="sessionAutoReview" checked onchange="atualizarRevisaoRegistroSessao()"><span><strong>Agendar revisão automática</strong><small>Você pode desligar só para esta sessão.</small></span></label><select class="cycle-input" id="sessionReviewDelay"><option value="1">Amanhã</option><option value="3">Em 3 dias</option><option value="7">Em 7 dias</option><option value="14">Em 14 dias</option><option value="30">Em 30 dias</option></select></div>
+                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="adiarRegistroSessao()">Continuar depois</button><button type="submit" class="cycle-btn primary">Salvar registro</button></div>
+                </form>
+            </div>
+        </div>
+
         <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Salvar sessão</button></div></form></div></div>
 
         <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronómetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
 
         <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registo?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
-        <div class="modal-overlay" id="backupConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="cancelarImportacaoBackup()" aria-label="Fechar">×</button><div class="cycle-modal-title">Restaurar este backup?</div><p class="modal-message" id="backupConfirmMessage">Os dados atuais serão substituídos e enviados para sua nuvem.</p><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="cancelarImportacaoBackup()">Cancelar</button><button class="cycle-btn primary" type="button" onclick="confirmarImportacaoBackup()">Restaurar backup</button></div></div></div>
         <div class="modal-overlay onboarding-modal" id="onboardingModal"><div class="modal-box onboarding-box"><div class="onboarding-mark">KM</div><div class="cycle-modal-title">Seu QG está pronto</div><p class="modal-message">Três passos para começar sem se perder entre as ferramentas.</p><div class="onboarding-steps"><span><b>1</b><strong>Adicione suas matérias</strong><small>Monte o conteúdo que realmente estuda.</small></span><span><b>2</b><strong>Inicie um bloco</strong><small>O cronômetro salva o tempo e o XP.</small></span><span><b>3</b><strong>Revise seu avanço</strong><small>Use gráficos, missões e revisões.</small></span></div><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="concluirOnboarding(false)">Explorar primeiro</button><button class="cycle-btn primary" type="button" onclick="concluirOnboarding(true)">Adicionar primeira matéria</button></div></div></div>
 
     </main>
@@ -1011,12 +1049,12 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260911-workspaces-1"></script>
+    <script src="script.js?v=20260911-adaptive-study-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
-    <script src="ai-assistant.js?v=20260907-account-5"></script>
-    <script src="productivity.js?v=20260907-account-6"></script>
+    <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>
+    <script src="productivity.js?v=20260911-adaptive-study-1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260911-navigation-1"></script>
+    <script type="module" src="cloud-sync.js?v=20260911-adaptive-study-1"></script>
 </body>
 </html>

@@ -84,13 +84,19 @@ test('rest timer is restored with its preset and never awards study time', () =>
     assert.equal(h.run('currentSeconds'), 597);
     assert.equal(h.run('isRunning'), false);
 });
-test('ending a session clears its draft in the same save as history, without duplicate XP', () => {
+test('ending a session protects the draft until the required study summary is saved', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(6500); h.run('encerrarSessaoDashboard()');
-    const saved = JSON.parse(h.storage.get('qg_pedro_data'));
+    let saved = JSON.parse(h.storage.get('qg_pedro_data'));
+    assert.equal(saved.historyItems.length, 0);
+    assert.equal(saved.pendingStudySession.seconds, 6);
+    assert.equal(saved.timerState.seconds, 6);
+    assert.equal(saved.totalStudySeconds, 106);
+    h.run('registrarSessao(6)');
+    saved = JSON.parse(h.storage.get('qg_pedro_data'));
     assert.equal(saved.historyItems.length, 1);
     assert.equal(saved.historyItems[0].tempoSegundos, 6);
+    assert.equal(saved.pendingStudySession, null);
     assert.equal(saved.timerState.seconds, 0);
-    assert.equal(saved.totalStudySeconds, 106);
     h.run('restoreTimerSession(); encerrarSessaoDashboard()');
     assert.equal(h.ctx.appData.historyItems.length, 1);
 });

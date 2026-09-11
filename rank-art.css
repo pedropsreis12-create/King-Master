@@ -140,5 +140,8 @@ html[data-visual="classic"] #perfil .profile-hero:has(.has-scenery) .profile-ref
     .rank-world-particles i:nth-child(n+19) { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-    .rank-world *, .avatar-energy *, .avatar-energy::before, .avatar-energy::after { animation: none !important; }
+    html:not([data-motion-choice="full"]) .rank-world *,
+    html:not([data-motion-choice="full"]) .avatar-energy *,
+    html:not([data-motion-choice="full"]) .avatar-energy::before,
+    html:not([data-motion-choice="full"]) .avatar-energy::after { animation: none !important; }
 }

@@ -84,7 +84,7 @@
 .study-insights.is-overlay .study-insights-ring { width: min(100%, 138px); }
 .study-insights.is-overlay .study-insights-close { display: block; width: 30px; height: 30px; flex: 0 0 30px; border: 0; border-radius: 8px; background: var(--hover-bg); color: var(--text-main); font-size: 1.2rem; cursor: pointer; }
 .study-insights button:focus-visible, .study-insights select:focus-visible, .study-insights-toggle:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { .study-insights-arc { transition: none; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion-choice="full"]) .study-insights-arc { transition: none; } }
 @media (max-width: 400px) {
     .study-insights.is-overlay { padding: 12px; }
     .study-insights-body { gap: 10px; }

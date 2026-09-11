@@ -339,15 +339,15 @@ Não use consultar_progresso ou listar_materias quando o contexto já responde �
 Nunca afirme que mudou algo sem uma ferramenta retornar ok=true. Se uma ferramenta falhar, explique o que falta ou corrija os argumentos; não esconda falhas parciais. Para exclusão use somente solicitar_exclusao_materia e aguarde os botões de confirmação do usuário. Não pode mudar XP real ou alterar o código do site. Reconheça esses limites sem recusar as partes que consegue fazer.
 Depois de executar ações, diga o resultado concreto em poucas linhas. Para um pedido de ensino, ensine o conteúdo e aproveite perguntas de acompanhamento para avançar. Evite slogans e elogios vazios.
 Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos curtos com moderação; evite tabelas. Escreva fórmulas em texto simples e Unicode, como H₂O, Na⁺, x², 1/2 e →. Não use LaTeX, delimitadores de dólar nem comandos de formatação matemática: o chat não possui renderizador de LaTeX.`;
-    const criarModelo = thinkingLevel => aiSdk.getGenerativeModel(firebaseAI, {
-        model: 'gemini-3.6-flash',
-        generationConfig: { maxOutputTokens: 3072, thinkingConfig: { thinkingLevel } },
+    const criarModelo = (model, thinkingLevel, maxOutputTokens) => aiSdk.getGenerativeModel(firebaseAI, {
+        model,
+        generationConfig: { maxOutputTokens, thinkingConfig: { thinkingLevel } },
         tools: [ferramentasGemini],
         systemInstruction
-    }, { timeout: 30000 });
+    }, { timeout: 22000 });
     const modelosGemini = {
-        rapido: criarModelo(aiSdk.ThinkingLevel.LOW),
-        tutor: criarModelo(aiSdk.ThinkingLevel.MEDIUM)
+        rapido: criarModelo('gemini-3.5-flash-lite', aiSdk.ThinkingLevel.MINIMAL || aiSdk.ThinkingLevel.LOW, 1400),
+        tutor: criarModelo('gemini-3.7-flash', aiSdk.ThinkingLevel.MEDIUM, 2800)
     };
 
     function historicoCompacto(history = []) {
@@ -355,8 +355,8 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         let tamanho = 0;
         for (const item of [...history].reverse()) {
             if (!['user', 'assistant'].includes(item?.role) || typeof item.text !== 'string') continue;
-            const text = item.text.slice(0, 10000);
-            if (mensagens.length >= 16 || tamanho + text.length > 24000) break;
+            const text = item.text.slice(0, 6000);
+            if (mensagens.length >= 8 || tamanho + text.length > 12000) break;
             mensagens.unshift({ role: item.role === 'assistant' ? 'model' : 'user', parts: [{ text }] });
             tamanho += text.length;
         }
@@ -386,7 +386,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             const controller = new AbortController();
             const cancelar = () => controller.abort();
             let expirou = false;
-            const timer = setTimeout(() => { expirou = true; controller.abort(); }, 50000);
+            const timer = setTimeout(() => { expirou = true; controller.abort(); }, 35000);
             if (options.signal?.aborted) cancelar();
             options.signal?.addEventListener('abort', cancelar, { once: true });
             const verificarCancelamento = () => {
@@ -410,7 +410,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                     options.onStatus?.(round ? 'Finalizando as ações…' : 'Preparando sua resposta…');
                     // O ChatSession deste SDK usa role:function, rejeitado pelo backend atual.
                     // A API pública permite enviar o papel user mantendo as partes originais.
-                    const result = await modelo.generateContentStream({ contents }, { signal: controller.signal, timeout: 30000 });
+                    const result = await modelo.generateContentStream({ contents }, { signal: controller.signal, timeout: 22000 });
                     // A promessa agregada pode falhar antes que o iterador seja consumido.
                     result.response.catch(() => {});
                     textoParcial = '';

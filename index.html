@@ -13,10 +13,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260911-error-images-1">
+    <link rel="stylesheet" href="style.css?v=20260911-navigation-1">
     <link rel="stylesheet" href="rank-art.css?v=20260906-worlds-3">
     <link rel="stylesheet" href="study-insights.css?v=20260906-worlds-2">
-    <link rel="stylesheet" href="usability.css?v=20260907-account-6">
+    <link rel="stylesheet" href="usability.css?v=20260911-navigation-1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -104,19 +104,31 @@
     </section>
 
     <button id="navReveal" class="nav-reveal" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menu lateral"><span aria-hidden="true">›</span><small>MENU</small></button>
-    <nav id="mainNavigation">
+    <nav id="mainNavigation" aria-label="Navegação principal">
         <h2>King Master</h2>
         <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-expanded="false" aria-label="Abrir menu de navegação" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><strong>Menu</strong></button>
         <div class="nav-tabs" aria-label="Áreas do King Master">
-            <button class="menu-btn active" onclick="showSection('dashboard')">Painel Diário</button>
-            <button class="menu-btn" onclick="showSection('planejamento')">Hub de Matérias</button>
-            <button class="menu-btn" onclick="showSection('agendamento')">Agendamento Diário</button>
-            <button class="menu-btn" onclick="showSection('revisoes')">Revisões</button>
-            <button class="menu-btn" onclick="showSection('caderno-erros')">Caderno de Erros</button>
-            <button class="menu-btn" onclick="showSection('simulados')">Simulados ENEM</button>
-            <button class="menu-btn" onclick="showSection('redacao')">Lab. de Redação</button>
-            <button class="menu-btn" onclick="showSection('historico')">Histórico de Sessões</button>
-            <button class="menu-btn" onclick="showSection('perfil')">Meu Perfil</button>
+            <div class="nav-cluster">
+                <span class="nav-cluster-label">Agora</span>
+                <button type="button" class="menu-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span class="nav-item-icon" aria-hidden="true">⌂</span><span class="nav-item-label"><strong>Hoje</strong><small>Foco e progresso</small></span></button>
+                <button type="button" class="menu-btn" data-section="agendamento" aria-controls="agendamento" onclick="showSection('agendamento')"><span class="nav-item-icon" aria-hidden="true">◷</span><span class="nav-item-label"><strong>Agenda</strong><small>Seu próximo bloco</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
+            </div>
+            <div class="nav-cluster">
+                <span class="nav-cluster-label">Aprender</span>
+                <button type="button" class="menu-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Matérias</strong><small>Conteúdo e domínio</small></span></button>
+                <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Revisões</strong><small>Voltar no tempo certo</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="caderno-erros" aria-controls="caderno-erros" onclick="showSection('caderno-erros')"><span class="nav-item-icon" aria-hidden="true">⌁</span><span class="nav-item-label"><strong>Caderno de Erros</strong><small>Corrigir padrões</small></span><span class="nav-count urgent" id="navErrorBadge" hidden>0</span></button>
+            </div>
+            <div class="nav-cluster">
+                <span class="nav-cluster-label">Evolução</span>
+                <button type="button" class="menu-btn" data-section="simulados" aria-controls="simulados" onclick="showSection('simulados')"><span class="nav-item-icon" aria-hidden="true">◎</span><span class="nav-item-label"><strong>Simulados</strong><small>Resultados e gargalos</small></span></button>
+                <button type="button" class="menu-btn" data-section="redacao" aria-controls="redacao" onclick="showSection('redacao')"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Redação</strong><small>Notas por competência</small></span></button>
+                <button type="button" class="menu-btn" data-section="historico" aria-controls="historico" onclick="showSection('historico')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Histórico</strong><small>Sessões e dedicação</small></span></button>
+            </div>
+            <div class="nav-cluster nav-cluster-account">
+                <span class="nav-cluster-label">Conta</span>
+                <button type="button" class="menu-btn" data-section="perfil" aria-controls="perfil" onclick="showSection('perfil')"><span class="nav-item-icon" aria-hidden="true">♙</span><span class="nav-item-label"><strong>Meu Perfil</strong><small>Patente e aparência</small></span></button>
+            </div>
         </div>
         <div class="nav-tools">
             <button type="button" class="nav-xp-badge" onclick="showSection('perfil')" aria-label="Abrir Meu Perfil">
@@ -136,6 +148,14 @@
             </div>
         </div>
     </nav>
+
+    <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
+        <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Hoje</small></button>
+        <button type="button" class="dock-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span aria-hidden="true">▦</span><small>Matérias</small></button>
+        <button type="button" class="dock-btn" data-section="agendamento" aria-controls="agendamento" onclick="showSection('agendamento')"><span aria-hidden="true">◷</span><small>Agenda</small></button>
+        <button type="button" class="dock-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span aria-hidden="true">↻</span><small>Revisar</small></button>
+        <button type="button" class="dock-btn dock-more" id="dockMoreButton" aria-controls="mainNavigation" aria-expanded="false" onclick="toggleMobileNav()"><span aria-hidden="true">•••</span><small>Mais</small></button>
+    </div>
 
     <div class="settings-panel" id="settingsPanel">
             <div class="settings-header">
@@ -903,12 +923,12 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260911-error-images-1"></script>
+    <script src="script.js?v=20260911-navigation-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260907-account-5"></script>
     <script src="productivity.js?v=20260907-account-6"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260911-error-images-1"></script>
+    <script type="module" src="cloud-sync.js?v=20260911-navigation-1"></script>
 </body>
 </html>

@@ -104,6 +104,7 @@ function saveAppData() {
     window.dispatchEvent(new CustomEvent('king-master-data-changed', { detail: { updatedAt: appData.lastModifiedAt } }));
     if (timerPersistenceReady) persistTimerCheckpoint();
     updateDashboardStats(); 
+    atualizarIndicadoresNavegacao();
 }
 
 window.kingMasterCloudBridge = {
@@ -126,8 +127,9 @@ window.kingMasterCloudBridge = {
 };
 
 function fecharMenuMovel() {
-    const menu = document.querySelector('nav');
+    const menu = document.getElementById('mainNavigation');
     const botao = document.getElementById('mobileNavToggle');
+    const botaoMais = document.getElementById('dockMoreButton');
     menu?.classList.remove('mobile-open');
     document.documentElement.classList.remove('mobile-menu-open');
     document.body.classList.remove('mobile-menu-open');
@@ -137,11 +139,13 @@ function fecharMenuMovel() {
         const icone = botao.querySelector('span');
         if (icone) icone.textContent = '☰';
     }
+    botaoMais?.setAttribute('aria-expanded', 'false');
 }
 
 function toggleMobileNav() {
-    const menu = document.querySelector('nav');
+    const menu = document.getElementById('mainNavigation');
     const botao = document.getElementById('mobileNavToggle');
+    const botaoMais = document.getElementById('dockMoreButton');
     if (!menu || !botao) return;
     const aberto = menu.classList.toggle('mobile-open');
     document.documentElement.classList.toggle('mobile-menu-open', aberto);
@@ -150,6 +154,7 @@ function toggleMobileNav() {
     botao.setAttribute('aria-label', aberto ? 'Fechar menu de navegação' : 'Abrir menu de navegação');
     const icone = botao.querySelector('span');
     if (icone) icone.textContent = aberto ? '×' : '☰';
+    botaoMais?.setAttribute('aria-expanded', String(aberto));
 }
 
 const FRASES_MOTIVACIONAIS = [
@@ -268,20 +273,41 @@ function mostrarFraseMotivacional() {
 }
 
 function showSection(sectionId) {
+    const secao = document.getElementById(sectionId);
+    if (!secao?.classList.contains('content-section')) return;
     fecharMenuMovel();
     document.getElementById('settingsPanel')?.classList.remove('active');
     document.getElementById('settingsToggleBtn')?.setAttribute('aria-expanded', 'false');
-    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.content-section').forEach(s => {
+        const ativa = s.id === sectionId;
+        s.classList.toggle('active', ativa);
+        s.setAttribute('aria-hidden', String(!ativa));
+    });
     let abaAtiva = null;
-    document.querySelectorAll('.menu-btn:not(.toggle-btn)').forEach(b => { 
-        b.classList.remove('active'); 
-        if(b.getAttribute('onclick')?.includes(sectionId)) {
-            b.classList.add('active');
+    document.querySelectorAll('.menu-btn[data-section]').forEach(b => {
+        const ativa = b.dataset.section === sectionId;
+        b.classList.toggle('active', ativa);
+        if (ativa) {
+            b.setAttribute('aria-current', 'page');
             if (b.closest('.nav-tabs')) abaAtiva = b;
+        } else {
+            b.removeAttribute('aria-current');
         }
     });
-    if (abaAtiva && window.innerWidth > 1100) requestAnimationFrame(() => abaAtiva.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }));
-    document.getElementById(sectionId).classList.add('active');
+    const secoesDock = new Set(['dashboard', 'planejamento', 'agendamento', 'revisoes']);
+    document.querySelectorAll('.dock-btn[data-section]').forEach(b => {
+        const ativa = b.dataset.section === sectionId;
+        b.classList.toggle('active', ativa);
+        if (ativa) b.setAttribute('aria-current', 'page');
+        else b.removeAttribute('aria-current');
+    });
+    const botaoMais = document.getElementById('dockMoreButton');
+    botaoMais?.classList.toggle('active', !secoesDock.has(sectionId));
+    if (abaAtiva && window.innerWidth > 1100) requestAnimationFrame(() => abaAtiva.scrollIntoView({ behavior: 'smooth', block: 'nearest' }));
+    sessionStorage.setItem('kingMasterActiveSection', sectionId);
+    const tituloAba = abaAtiva?.querySelector('strong')?.textContent || 'King Master';
+    document.title = `${tituloAba} · King Master`;
+    document.querySelector('main')?.scrollTo?.({ top: 0, behavior: 'auto' });
     
     if(sectionId === 'historico') renderizarHistorico();
     if(sectionId === 'planejamento') renderizarCiclo();
@@ -292,6 +318,26 @@ function showSection(sectionId) {
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
+    atualizarIndicadoresNavegacao();
+}
+
+function atualizarIndicadoresNavegacao() {
+    const hoje = typeof dataLocalISO === 'function' ? dataLocalISO() : new Date().toISOString().slice(0, 10);
+    const compromissosHoje = (Array.isArray(appData.agendamentoItems) ? appData.agendamentoItems : [])
+        .filter(item => !item.completed && item.date === hoje).length;
+    const revisoesDevidas = (Array.isArray(appData.revisoesItems) ? appData.revisoesItems : [])
+        .filter(item => ['pendente', 'fraco'].includes(item.status) && (!item.dataAlvo || item.dataAlvo <= hoje)).length;
+    const errosDevidos = (Array.isArray(appData.cadernoErrosItems) ? appData.cadernoErrosItems : [])
+        .filter(item => item?.status !== 'dominado' && (!item?.proximaRevisao || item.proximaRevisao <= hoje)).length;
+    const aplicar = (id, total) => {
+        const badge = document.getElementById(id);
+        if (!badge) return;
+        badge.textContent = total > 99 ? '99+' : String(total);
+        badge.hidden = total < 1;
+    };
+    aplicar('navAgendaBadge', compromissosHoje);
+    aplicar('navReviewBadge', revisoesDevidas);
+    aplicar('navErrorBadge', errosDevidos);
 }
 
 function toggleSettings() {
@@ -3178,3 +3224,6 @@ renderizarRevisoes();
 renderizarCadernoErros();
 renderizarSimulados();
 renderizarRedacoes();
+atualizarIndicadoresNavegacao();
+const secaoInicial = sessionStorage.getItem('kingMasterActiveSection');
+showSection(document.getElementById(secaoInicial)?.classList.contains('content-section') ? secaoInicial : 'dashboard');

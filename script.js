@@ -1834,24 +1834,106 @@ function atualizarSeletorDeMaterias() {
 
 function toggleCustomSelect() { const wrap = document.querySelector('.custom-select-wrapper'); if(wrap) wrap.classList.toggle('open'); }
 document.addEventListener('click', e => { if (!e.target.closest('.custom-select-wrapper')) document.querySelector('.custom-select-wrapper')?.classList.remove('open'); });
-function limparSelecaoPresets() { document.querySelectorAll('.color-preset').forEach(el => el.classList.remove('selected')); }
-function selecionarCorPreset(el, cor) { limparSelecaoPresets(); el.classList.add('selected'); document.getElementById('cycleColor').value = cor; }
+function limparSelecaoPresets() {
+    document.querySelectorAll('#cycleModal .color-preset').forEach(el => {
+        el.classList.remove('selected');
+        el.setAttribute('aria-pressed', 'false');
+    });
+}
+
+function selecionarCorPreset(el, cor) {
+    limparSelecaoPresets();
+    el.classList.add('selected');
+    el.setAttribute('aria-pressed', 'true');
+    document.getElementById('cycleColor').value = cor;
+    atualizarPreviewMateria();
+}
+
+function formatarCargaMateria(blocos) {
+    const quantidade = Math.min(30, Math.max(0, Number(blocos) || 0));
+    if (!quantidade) return { resumo: 'Fora da organização automática', detalhe: 'Defina uma carga se quiser usar o cronograma.' };
+    const minutosBloco = Math.max(1, Number(appData.studySchedule?.settings?.blockMinutes) || 50);
+    const minutos = quantidade * minutosBloco;
+    const horas = Math.floor(minutos / 60);
+    const restante = minutos % 60;
+    const tempo = horas ? `${horas}h${restante ? String(restante).padStart(2, '0') : ''}` : `${restante} min`;
+    const nomeBloco = quantidade === 1 ? 'bloco' : 'blocos';
+    return { resumo: `${quantidade} ${nomeBloco} · ${tempo} por semana`, detalhe: `${quantidade} ${nomeBloco} planejado${quantidade === 1 ? '' : 's'} · cerca de ${tempo} por semana.` };
+}
+
+function normalizarListaTopicosMateria(valor) {
+    const vistos = new Set();
+    return String(valor || '').split(/[\n;]+/).map(item => item.trim()).filter(item => {
+        const chave = item.toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+        if (!chave || vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+    }).slice(0, 60);
+}
+
+function atualizarContagemTopicosMateria() {
+    const topicos = normalizarListaTopicosMateria(document.getElementById('cycleInitialTopics')?.value);
+    const total = topicos.length;
+    const contador = document.getElementById('cycleTopicCount');
+    const resumo = document.getElementById('cycleTopicSummary');
+    if (contador) contador.textContent = `${total} ${total === 1 ? 'tópico' : 'tópicos'}`;
+    if (resumo) resumo.textContent = total ? `${total} ${total === 1 ? 'tópico pronto' : 'tópicos prontos'} para adicionar` : 'Você também pode adicioná-los depois';
+}
+
+function ajustarCargaMateria(delta) {
+    const input = document.getElementById('cycleWeeklyBlocks');
+    if (!input) return;
+    input.value = String(Math.min(30, Math.max(0, (Number(input.value) || 0) + Number(delta || 0))));
+    atualizarPreviewMateria();
+}
+
+function atualizarPreviewMateria() {
+    const nome = document.getElementById('cycleSubject')?.value.trim() || 'Nova matéria';
+    const tipo = document.getElementById('cycleType')?.value || 'Teórica';
+    const icone = document.getElementById('cycleIcon')?.value || '●';
+    const cor = document.getElementById('cycleColor')?.value || '#007aff';
+    const prioridade = Number(document.getElementById('cyclePriority')?.value) || 2;
+    const blocos = Math.min(30, Math.max(0, Number(document.getElementById('cycleWeeklyBlocks')?.value) || 0));
+    const carga = formatarCargaMateria(blocos);
+    const nomesPrioridade = { 1: 'baixa', 2: 'normal', 3: 'alta' };
+    const preview = document.getElementById('cycleLivePreview');
+    if (preview) preview.style.setProperty('--subject-preview', cor);
+    const mark = document.getElementById('cyclePreviewMark');
+    if (mark) { mark.textContent = icone; mark.style.color = cor; mark.style.borderColor = `${cor}55`; mark.style.background = `${cor}18`; }
+    const valores = { cyclePreviewIcon: icone, cyclePreviewName: nome, cyclePreviewType: tipo, cyclePreviewPriority: `Prioridade ${nomesPrioridade[prioridade]}`, cyclePreviewLoad: carga.detalhe, cyclePlanSummary: carga.resumo };
+    Object.entries(valores).forEach(([id, valor]) => { const el = document.getElementById(id); if (el) el.textContent = valor; });
+}
+
+function selecionarPresetDaCor(cor) {
+    limparSelecaoPresets();
+    const preset = [...document.querySelectorAll('#cycleModal .color-preset')].find(el => (el.dataset.color || '').toLowerCase() === String(cor || '').toLowerCase());
+    if (preset) { preset.classList.add('selected'); preset.setAttribute('aria-pressed', 'true'); }
+}
 
 function abrirModalCiclo() { 
     const modal = document.getElementById('cycleModal');
     const form = document.getElementById('formAddCycle');
     if (!modal || !form) return showToast('Não foi possível abrir o cadastro de matéria.', true);
     form.reset();
-    document.getElementById('cycleModalTitle').textContent = "Adicionar Matéria";
+    document.getElementById('cycleModalKicker').textContent = 'NOVA ÁREA DE ESTUDO';
+    document.getElementById('cycleModalTitle').textContent = 'Adicionar matéria';
+    document.getElementById('cycleModalSubtitle').textContent = 'Comece pelo essencial. A organização semanal e os tópicos são opcionais.';
+    document.getElementById('cycleSaveButton').textContent = 'Criar matéria';
+    document.getElementById('cycleSaveHint').textContent = 'Somente o nome é obrigatório.';
     document.getElementById('cycleEditId').value = "";
     document.getElementById('cycleColor').value = '#007aff';
     document.getElementById('cycleIcon').value = '●';
     document.getElementById('cyclePriority').value = '2';
     document.getElementById('cycleWeeklyBlocks').value = '0';
     document.getElementById('cycleConsecutive').checked = false;
-    const firstPreset = document.querySelector('.color-preset');
-    limparSelecaoPresets();
-    if(firstPreset) firstPreset.classList.add('selected');
+    document.getElementById('cycleInitialTopics').value = '';
+    document.getElementById('cycleInitialTopics').placeholder = 'Escreva os conteúdos que deseja estudar';
+    document.getElementById('cycleTopicsHelp').textContent = 'Tópicos repetidos serão ignorados.';
+    document.getElementById('cyclePlanDetails').open = false;
+    document.getElementById('cycleTopicsDetails').open = false;
+    selecionarPresetDaCor('#007aff');
+    atualizarContagemTopicosMateria();
+    atualizarPreviewMateria();
     modal.classList.add('active');
     setTimeout(() => document.getElementById('cycleSubject')?.focus(), 50);
 }
@@ -1859,17 +1941,32 @@ function abrirModalCiclo() {
 function editarMateriaCiclo(id) {
     const mat = appData.cycleItems.find(m => m.id === id);
     if (!mat) return;
-    document.getElementById('cycleModalTitle').textContent = "Editar Matéria";
+    const form = document.getElementById('formAddCycle');
+    if (!form) return;
+    form.reset();
+    document.getElementById('cycleModalKicker').textContent = 'AJUSTAR ÁREA DE ESTUDO';
+    document.getElementById('cycleModalTitle').textContent = 'Editar matéria';
+    document.getElementById('cycleModalSubtitle').textContent = 'Atualize a identidade ou acrescente novos tópicos sem perder seu progresso.';
+    document.getElementById('cycleSaveButton').textContent = 'Salvar alterações';
+    document.getElementById('cycleSaveHint').textContent = 'Seu histórico e seus tópicos atuais serão preservados.';
     document.getElementById('cycleEditId').value = mat.id;
     document.getElementById('cycleSubject').value = mat.subject;
     document.getElementById('cycleType').value = mat.type || 'Teórica';
-    document.getElementById('cycleColor').value = mat.color;
+    document.getElementById('cycleColor').value = mat.color || '#007aff';
     document.getElementById('cycleIcon').value = mat.schedule?.icon || '●';
     document.getElementById('cyclePriority').value = String(mat.schedule?.priority || 2);
     document.getElementById('cycleWeeklyBlocks').value = String(mat.schedule?.weeklyBlocks || 0);
     document.getElementById('cycleConsecutive').checked = Boolean(mat.schedule?.consecutive);
-    limparSelecaoPresets();
+    document.getElementById('cycleInitialTopics').value = '';
+    document.getElementById('cycleInitialTopics').placeholder = 'Acrescente somente os novos conteúdos';
+    document.getElementById('cycleTopicsHelp').textContent = `${(mat.topicos || []).length} tópico${(mat.topicos || []).length === 1 ? '' : 's'} já cadastrado${(mat.topicos || []).length === 1 ? '' : 's'}; repetidos serão ignorados.`;
+    document.getElementById('cyclePlanDetails').open = Number(mat.schedule?.weeklyBlocks) > 0;
+    document.getElementById('cycleTopicsDetails').open = false;
+    selecionarPresetDaCor(mat.color || '#007aff');
+    atualizarContagemTopicosMateria();
+    atualizarPreviewMateria();
     document.getElementById('cycleModal').classList.add('active');
+    setTimeout(() => document.getElementById('cycleSubject')?.focus(), 50);
 }
 
 function salvarMateriaCiclo(e) {
@@ -1879,6 +1976,8 @@ function salvarMateriaCiclo(e) {
     const subject = document.getElementById('cycleSubject').value.trim();
     const type = document.getElementById('cycleType').value;
     const schedule = { icon: document.getElementById('cycleIcon').value || '●', priority: Math.min(3, Math.max(1, Number(document.getElementById('cyclePriority').value) || 2)), weeklyBlocks: Math.min(30, Math.max(0, Number(document.getElementById('cycleWeeklyBlocks').value) || 0)), consecutive: document.getElementById('cycleConsecutive').checked };
+    const novosTopicos = normalizarListaTopicosMateria(document.getElementById('cycleInitialTopics').value);
+    let quantidadeTopicosAdicionados = novosTopicos.length;
     if (!subject) return showToast('Digite o nome da matéria.', true);
     const duplicada = appData.cycleItems.some(item => item.id != idEdit && (item.subject || '').trim().toLocaleLowerCase('pt-BR') === subject.toLocaleLowerCase('pt-BR'));
     if (duplicada) return showToast('Essa matéria já está cadastrada.', true);
@@ -1886,12 +1985,17 @@ function salvarMateriaCiclo(e) {
     if (idEdit) { 
         const idx = appData.cycleItems.findIndex(i => i.id == idEdit); 
         if (idx > -1) { 
-            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, schedule, targetMin: 0 };
+            const atuais = Array.isArray(appData.cycleItems[idx].topicos) ? appData.cycleItems[idx].topicos : [];
+            const chavesAtuais = new Set(atuais.map(item => String(item.nome || '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ')));
+            const adicionados = novosTopicos.filter(nome => !chavesAtuais.has(nome.toLocaleLowerCase('pt-BR').replace(/\s+/g, ' '))).map(nome => ({ nome, concluido: false }));
+            quantidadeTopicosAdicionados = adicionados.length;
+            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, schedule, topicos: [...atuais, ...adicionados] };
         } 
     } else { 
-        appData.cycleItems.push({ id: Date.now(), color, subject, type, schedule, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 });
+        appData.cycleItems.push({ id: Date.now(), color, subject, type, schedule, targetMin: 0, executedMin: 0, topicos: novosTopicos.map(nome => ({ nome, concluido: false })), questoes: 0, acertos: 0, erros: 0 });
     }
-    saveAppData(); renderizarCiclo(); renderizarRevisoes(); fecharModal('cycleModal'); showToast('📚 Matéria salva!');
+    saveAppData(); renderizarCiclo(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
+    showToast(quantidadeTopicosAdicionados ? `📚 Matéria salva com ${quantidadeTopicosAdicionados} ${quantidadeTopicosAdicionados === 1 ? 'tópico' : 'tópicos'}!` : '📚 Matéria salva!');
 }
 
 let buscaMateriasAtual = '';

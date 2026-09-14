@@ -104,3 +104,26 @@ test('topic organizer searches existing content and supports one-tap study loggi
   assert.match(script, /function registrarTopicoEstudado/);
   assert.match(script, /registroRapido: true/);
 });
+
+test('subject creation starts simple and progressively reveals planning tools', () => {
+  assert.match(html, /class="modal-box subject-editor-modal"/);
+  assert.match(html, /id="cycleSubject"[^>]+required[^>]+maxlength="50"/);
+  assert.match(html, /id="cyclePlanDetails"/);
+  assert.match(html, /id="cycleTopicsDetails"/);
+  assert.match(html, /id="cycleLivePreview"[^>]+aria-live="polite"/);
+  assert.match(html, /id="cycleWeeklyBlocks"[^>]+min="0"[^>]+max="30"/);
+  assert.match(html, /aria-label="Diminuir um bloco"/);
+  assert.match(html, /aria-label="Adicionar um bloco"/);
+  assert.match(html, /id="cycleInitialTopics"[^>]+maxlength="1600"/);
+  assert.match(html, /id="cycleTopicCount"[^>]+aria-live="polite"/);
+});
+
+test('subject creation previews choices and preserves existing progress while appending unique topics', () => {
+  assert.match(script, /function atualizarPreviewMateria\(\)/);
+  assert.match(script, /function ajustarCargaMateria\(delta\)/);
+  assert.match(script, /function normalizarListaTopicosMateria\(valor\)/);
+  assert.match(script, /vistos\.has\(chave\)/);
+  assert.match(script, /topicos: \[\.\.\.atuais, \.\.\.adicionados\]/);
+  assert.doesNotMatch(script, /\.\.\.appData\.cycleItems\[idx\][^\n]+targetMin: 0/);
+  assert.match(script, /window\.KingSchedule\?\.render\(\)/);
+});

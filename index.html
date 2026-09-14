@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260914-schedule-v3">
+    <link rel="stylesheet" href="style.css?v=20260914-subject-editor-v1">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260911-adaptive-study-1">
@@ -796,45 +796,107 @@
 
         <!-- MODAIS -->
         <div class="modal-overlay" id="cycleModal">
-            <div class="modal-box">
-                <button type="button" class="modal-close" onclick="fecharModal('cycleModal')" aria-label="Fechar">×</button>
-                <div class="cycle-modal-title" id="cycleModalTitle">Adicionar Matéria</div>
+            <div class="modal-box subject-editor-modal">
+                <button type="button" class="modal-close" onclick="fecharModal('cycleModal')" aria-label="Fechar cadastro de matéria">×</button>
+                <header class="subject-editor-heading">
+                    <div class="subject-editor-heading-mark" id="cyclePreviewMark" aria-hidden="true">●</div>
+                    <div>
+                        <span class="workspace-kicker" id="cycleModalKicker">NOVA ÁREA DE ESTUDO</span>
+                        <div class="cycle-modal-title" id="cycleModalTitle">Adicionar matéria</div>
+                        <p id="cycleModalSubtitle">Comece pelo essencial. A organização semanal e os tópicos são opcionais.</p>
+                    </div>
+                </header>
                 <form id="formAddCycle" onsubmit="salvarMateriaCiclo(event)">
                     <input type="hidden" id="cycleEditId" value="">
-                    <div class="cycle-form-group">
-                        <label class="cycle-label" style="text-align: center;">Cor de Identificação</label>
-                        <div class="color-preset-group">
-                            <button type="button" class="color-preset" style="background: #007aff;" onclick="selecionarCorPreset(this, '#007aff')"></button>
-                            <button type="button" class="color-preset" style="background: #34c759;" onclick="selecionarCorPreset(this, '#34c759')"></button>
-                            <button type="button" class="color-preset" style="background: #ff9500;" onclick="selecionarCorPreset(this, '#ff9500')"></button>
-                            <button type="button" class="color-preset" style="background: #af52de;" onclick="selecionarCorPreset(this, '#af52de')"></button>
-                            <button type="button" class="color-preset" style="background: #ff3b30;" onclick="selecionarCorPreset(this, '#ff3b30')"></button>
-                            <input type="color" id="cycleColor" class="cycle-color-picker" value="#007aff" onchange="limparSelecaoPresets()">
+                    <div class="subject-editor-layout">
+                        <div class="subject-editor-fields">
+                            <section class="subject-editor-section">
+                                <div class="subject-editor-section-title"><span>01</span><div><strong>Identidade</strong><small>Como esta matéria vai aparecer no seu painel.</small></div></div>
+                                <div class="cycle-form-group">
+                                    <label class="cycle-label" for="cycleSubject">Nome da matéria</label>
+                                    <input type="text" id="cycleSubject" class="cycle-input" required autocomplete="off" maxlength="50" placeholder="Ex.: a matéria que você está estudando" oninput="atualizarPreviewMateria()">
+                                </div>
+                                <div class="form-grid two subject-identity-grid">
+                                    <div class="cycle-form-group">
+                                        <label class="cycle-label" for="cycleType">Tipo de estudo</label>
+                                        <select id="cycleType" class="cycle-input" required onchange="atualizarPreviewMateria()">
+                                            <option value="Teórica">Teórica</option>
+                                            <option value="Prática">Prática</option>
+                                            <option value="Teórica e Prática">Teórica e prática</option>
+                                            <option value="Revisão">Revisão</option>
+                                            <option value="Mista">Mista</option>
+                                            <option value="Livre">Livre</option>
+                                        </select>
+                                    </div>
+                                    <div class="cycle-form-group">
+                                        <label class="cycle-label" for="cycleIcon">Símbolo</label>
+                                        <select id="cycleIcon" class="cycle-input" onchange="atualizarPreviewMateria()"><option value="●">● Essencial</option><option value="∑">∑ Exatas</option><option value="✦">✦ Destaque</option><option value="⌘">⌘ Tecnologia</option><option value="◈">◈ Ciências</option><option value="✎">✎ Linguagens</option><option value="◎">◎ Humanas</option><option value="⚗">⚗ Laboratório</option></select>
+                                    </div>
+                                </div>
+                                <fieldset class="subject-color-fieldset">
+                                    <legend class="cycle-label">Cor de identificação</legend>
+                                    <div class="color-preset-group">
+                                        <button type="button" class="color-preset" data-color="#007aff" style="--preset-color:#007aff" onclick="selecionarCorPreset(this, '#007aff')" aria-label="Azul"></button>
+                                        <button type="button" class="color-preset" data-color="#5e5ce6" style="--preset-color:#5e5ce6" onclick="selecionarCorPreset(this, '#5e5ce6')" aria-label="Índigo"></button>
+                                        <button type="button" class="color-preset" data-color="#af52de" style="--preset-color:#af52de" onclick="selecionarCorPreset(this, '#af52de')" aria-label="Roxo"></button>
+                                        <button type="button" class="color-preset" data-color="#ff375f" style="--preset-color:#ff375f" onclick="selecionarCorPreset(this, '#ff375f')" aria-label="Rosa"></button>
+                                        <button type="button" class="color-preset" data-color="#ff9500" style="--preset-color:#ff9500" onclick="selecionarCorPreset(this, '#ff9500')" aria-label="Laranja"></button>
+                                        <button type="button" class="color-preset" data-color="#34c759" style="--preset-color:#34c759" onclick="selecionarCorPreset(this, '#34c759')" aria-label="Verde"></button>
+                                        <button type="button" class="color-preset" data-color="#00a6a6" style="--preset-color:#00a6a6" onclick="selecionarCorPreset(this, '#00a6a6')" aria-label="Turquesa"></button>
+                                        <label class="subject-custom-color" title="Escolher outra cor"><input type="color" id="cycleColor" class="cycle-color-picker" value="#007aff" oninput="limparSelecaoPresets();atualizarPreviewMateria()"><span aria-hidden="true">＋</span><span class="sr-only">Escolher outra cor</span></label>
+                                    </div>
+                                </fieldset>
+                            </section>
+
+                            <details class="subject-editor-disclosure" id="cyclePlanDetails">
+                                <summary><span class="subject-editor-section-title"><span>02</span><span><strong>Plano semanal <em>opcional</em></strong><small id="cyclePlanSummary">Fora da organização automática</small></span></span><b aria-hidden="true">⌄</b></summary>
+                                <div class="subject-editor-disclosure-body">
+                                    <div class="form-grid two subject-plan-grid">
+                                        <div class="cycle-form-group">
+                                            <label class="cycle-label" for="cyclePriority">Prioridade</label>
+                                            <select id="cyclePriority" class="cycle-input" onchange="atualizarPreviewMateria()"><option value="1">Baixa</option><option value="2" selected>Normal</option><option value="3">Alta</option></select>
+                                            <small class="field-help">Ajuda o cronograma a decidir o que vem primeiro.</small>
+                                        </div>
+                                        <div class="cycle-form-group">
+                                            <label class="cycle-label" for="cycleWeeklyBlocks">Blocos por semana</label>
+                                            <div class="subject-number-stepper">
+                                                <button type="button" onclick="ajustarCargaMateria(-1)" aria-label="Diminuir um bloco">−</button>
+                                                <input type="number" id="cycleWeeklyBlocks" min="0" max="30" value="0" inputmode="numeric" oninput="atualizarPreviewMateria()" aria-describedby="cycleWeeklyHelp">
+                                                <button type="button" onclick="ajustarCargaMateria(1)" aria-label="Adicionar um bloco">＋</button>
+                                            </div>
+                                            <small class="field-help" id="cycleWeeklyHelp">Zero deixa a matéria fora da organização automática.</small>
+                                        </div>
+                                    </div>
+                                    <label class="subject-consecutive-option"><input type="checkbox" id="cycleConsecutive"><span aria-hidden="true"></span><strong>Manter blocos juntos</strong><small>Quando houver espaço, cria uma sessão contínua.</small></label>
+                                </div>
+                            </details>
+
+                            <details class="subject-editor-disclosure" id="cycleTopicsDetails">
+                                <summary><span class="subject-editor-section-title"><span>03</span><span><strong>Primeiros tópicos <em>opcional</em></strong><small id="cycleTopicSummary">Você também pode adicioná-los depois</small></span></span><b aria-hidden="true">⌄</b></summary>
+                                <div class="subject-editor-disclosure-body">
+                                    <div class="cycle-form-group subject-topics-field">
+                                        <label class="cycle-label" for="cycleInitialTopics">Um tópico por linha</label>
+                                        <textarea id="cycleInitialTopics" class="cycle-input" rows="5" maxlength="1600" placeholder="Escreva os conteúdos que deseja estudar" oninput="atualizarContagemTopicosMateria()"></textarea>
+                                        <div class="subject-field-footer"><small class="field-help" id="cycleTopicsHelp">Tópicos repetidos serão ignorados.</small><strong id="cycleTopicCount" aria-live="polite">0 tópicos</strong></div>
+                                    </div>
+                                </div>
+                            </details>
                         </div>
+
+                        <aside class="subject-live-preview" id="cycleLivePreview" style="--subject-preview:#007aff" aria-live="polite">
+                            <span class="subject-preview-kicker">PRÉVIA NO PAINEL</span>
+                            <div class="subject-preview-card">
+                                <span class="subject-preview-glow" aria-hidden="true"></span>
+                                <div class="subject-preview-icon" id="cyclePreviewIcon" aria-hidden="true">●</div>
+                                <div class="subject-preview-copy"><strong id="cyclePreviewName">Nova matéria</strong><span id="cyclePreviewType">Teórica</span></div>
+                                <span class="subject-preview-priority" id="cyclePreviewPriority">Prioridade normal</span>
+                                <div class="subject-preview-track"><span></span></div>
+                                <p id="cyclePreviewLoad">Defina uma carga se quiser usar o cronograma.</p>
+                            </div>
+                            <div class="subject-preview-tip"><span aria-hidden="true">✦</span><p><strong>Você mantém o controle</strong>A matéria pode existir sem entrar no cronograma.</p></div>
+                        </aside>
                     </div>
-                    <div class="cycle-form-group"><label class="cycle-label">Nome da Matéria</label><input type="text" id="cycleSubject" class="cycle-input" required autocomplete="off"></div>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Tipo de Estudo</label>
-                        <select id="cycleType" class="cycle-input" required style="cursor: pointer;">
-                            <option value="Teórica">Teórica</option>
-                            <option value="Prática">Prática</option>
-                            <option value="Teórica e Prática">Teórica e Prática</option>
-                            <option value="Revisão">Revisão</option>
-                            <option value="Mista">Mista</option>
-                            <option value="Livre">Livre</option>
-                        </select>
-                    </div>
-                    <div class="subject-schedule-fields">
-                        <div class="form-grid two">
-                            <div class="cycle-form-group"><label class="cycle-label" for="cycleIcon">Ícone</label><select id="cycleIcon" class="cycle-input"><option value="●">● Essencial</option><option value="∑">∑ Exatas</option><option value="✦">✦ Destaque</option><option value="⌘">⌘ Tecnologia</option><option value="◈">◈ Ciências</option><option value="✎">✎ Linguagens</option><option value="◎">◎ Humanas</option><option value="⚗">⚗ Laboratório</option></select></div>
-                            <div class="cycle-form-group"><label class="cycle-label" for="cyclePriority">Prioridade</label><select id="cyclePriority" class="cycle-input"><option value="1">Baixa</option><option value="2" selected>Normal</option><option value="3">Alta</option></select></div>
-                        </div>
-                        <div class="form-grid two">
-                            <div class="cycle-form-group"><label class="cycle-label" for="cycleWeeklyBlocks">Blocos por semana</label><input type="number" id="cycleWeeklyBlocks" class="cycle-input" min="0" max="30" value="0"><small class="field-help">Use 0 para não incluir na organização automática.</small></div>
-                            <label class="schedule-inline-check"><input type="checkbox" id="cycleConsecutive"><span><strong>Manter blocos juntos</strong><small>Quando possível, agrupa os blocos em sequências.</small></span></label>
-                        </div>
-                    </div>
-                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar matéria</button></div>
+                    <footer class="subject-editor-footer"><p id="cycleSaveHint">Somente o nome é obrigatório.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('cycleModal')">Cancelar</button><button type="submit" class="cycle-btn primary" id="cycleSaveButton">Criar matéria</button></div></footer>
                 </form>
             </div>
         </div>
@@ -1164,7 +1226,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
     <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260914-schedule-v3"></script>
+    <script src="script.js?v=20260914-subject-editor-v1"></script>
     <script src="schedule.js?v=20260914-schedule-v3"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>

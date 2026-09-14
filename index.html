@@ -65,6 +65,7 @@
             <div class="auth-gate-copy"><p>Conta obrigatória</p><h1 id="authGateTitle">Continue sua preparação</h1><span>Entre para recuperar tempo, matérias, cores, molduras e todo o seu histórico.</span></div>
             <div class="auth-provider-grid">
                 <button type="button" class="auth-provider google" id="authGoogleBtn"><b>G</b> Continuar com Google</button>
+                <button type="button" class="auth-provider-fallback" id="authGoogleRedirectBtn" hidden>Entrar pelo redirecionamento seguro</button>
             </div>
             <div class="auth-divider"><span>ou use seu cadastro</span></div>
             <div class="auth-tabs" role="tablist" aria-label="Acesso por e-mail">
@@ -88,6 +89,7 @@
                 <button type="button" class="auth-forgot" id="authForgotBtn">Esqueci minha senha</button>
             </form>
             <p class="auth-feedback" id="authFeedback" role="status">Verificando sua conta…</p>
+            <button type="button" class="auth-cloud-retry" id="authCloudRetryBtn" hidden>Carregar meus dados novamente</button>
             <small class="auth-privacy">Seus dados ficam vinculados à sua conta e protegidos pelas regras do Firebase.</small>
             </div>
             <section class="auth-recovery" id="authRecoveryPanel" aria-labelledby="authRecoveryTitle" hidden>
@@ -1233,6 +1235,6 @@
     <script src="productivity.js?v=20260911-adaptive-study-1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260911-adaptive-study-1"></script>
+    <script type="module" src="cloud-sync.js?v=20260914-auth-fix-1"></script>
 </body>
 </html>

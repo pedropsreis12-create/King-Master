@@ -25,6 +25,8 @@ const authHumanCheck = document.getElementById('authHumanCheck');
 const authSubmitButton = document.getElementById('authSubmitBtn');
 const authForgotButton = document.getElementById('authForgotBtn');
 const authGoogleButton = document.getElementById('authGoogleBtn');
+const authGoogleRedirectButton = document.getElementById('authGoogleRedirectBtn');
+const authCloudRetryButton = document.getElementById('authCloudRetryBtn');
 const authGateCard = document.getElementById('authGateCard');
 const authPrimary = document.getElementById('authPrimary');
 const authRecoveryPanel = document.getElementById('authRecoveryPanel');
@@ -45,7 +47,7 @@ function setAuthFeedback(message, type = '') {
 }
 
 function setAuthBusy(busy) {
-    [authSubmitButton, authGoogleButton, authForgotButton, authHumanCheck, authRecoveryBackButton].forEach(button => { if (button) button.disabled = busy; });
+    [authSubmitButton, authGoogleButton, authGoogleRedirectButton, authCloudRetryButton, authForgotButton, authHumanCheck, authRecoveryBackButton].forEach(button => { if (button) button.disabled = busy; });
     if (authRecoverySendButton) authRecoverySendButton.disabled = busy || Date.now() < recoveryCooldownUntil;
 }
 
@@ -511,18 +513,33 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         if (['auth/invalid-credential','auth/wrong-password','auth/user-not-found'].includes(code)) return 'E-mail ou senha incorretos.';
         if (code === 'auth/too-many-requests') return 'Muitas tentativas. Aguarde um pouco antes de tentar novamente.';
         if (code === 'auth/popup-closed-by-user') return 'A janela de acesso foi fechada antes de concluir.';
+        if (code === 'auth/popup-blocked') return 'O navegador bloqueou a janela do Google. Permita pop-ups ou use o redirecionamento seguro abaixo.';
+        if (code === 'auth/cancelled-popup-request') return 'Já existe uma tentativa de acesso aberta. Conclua ou feche a janela do Google.';
+        if (code === 'auth/web-storage-unsupported') return 'Este navegador bloqueou o armazenamento necessário para entrar. Tente pelo Chrome ou Safari atualizado.';
+        if (code === 'auth/user-disabled') return 'Esta conta foi desativada. Use outra conta ou recupere o acesso.';
+        if (code === 'auth/internal-error') return 'O serviço de acesso oscilou. Aguarde alguns segundos e tente novamente.';
         return 'O login não foi concluído.';
     }
 
-    async function startSignIn(provider, label) {
+    const popupFallbackCodes = new Set(['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/network-request-failed']);
+
+    async function startSignIn(provider, label, method = 'popup') {
         if (provider === googleProvider) provider.setCustomParameters({ prompt: 'select_account' });
         setAuthBusy(true); setAuthFeedback(`Abrindo o acesso seguro ${label}…`);
         updateCloudUi('syncing', null, `Abrindo o acesso seguro ${label}…`);
         try {
+            if (method === 'redirect') {
+                await authSdk.signInWithRedirect(auth, provider);
+                return;
+            }
             await authSdk.signInWithPopup(auth, provider);
         } catch (error) {
-            if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment'].includes(error?.code)) {
-                await authSdk.signInWithRedirect(auth, provider);
+            if (popupFallbackCodes.has(error?.code)) {
+                if (authGoogleRedirectButton) authGoogleRedirectButton.hidden = false;
+                setAuthFeedback(error?.code === 'auth/network-request-failed'
+                    ? 'A janela do Google não conseguiu concluir neste navegador. Verifique a conexão ou tente o redirecionamento seguro abaixo.'
+                    : describeAuthError(error), 'error');
+                updateCloudUi('error', null, 'O acesso pelo Google precisa de uma nova tentativa.');
                 return;
             }
             throw error;
@@ -678,6 +695,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         } catch (error) { setAuthFeedback(describeAuthError(error), 'error'); }
         finally { setAuthBusy(false); }
     });
+
+    authGoogleRedirectButton?.addEventListener('click', () => {
+        startSignIn(googleProvider, 'do Google', 'redirect').catch(error => setAuthFeedback(describeAuthError(error), 'error'));
+    });
     authForgotButton?.addEventListener('click', () => showRecovery(true));
     authRecoverySendButton?.addEventListener('click', async () => {
         const email = authRecoveryEmail?.value.trim() || '';
@@ -714,6 +735,36 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     });
     authGoogleButton?.addEventListener('click', () => startSignIn(googleProvider, 'do Google').catch(error => setAuthFeedback(describeAuthError(error), 'error')));
 
+    async function finishAccountLoading(user) {
+        setAuthBusy(true);
+        if (authCloudRetryButton) authCloudRetryButton.hidden = true;
+        setAuthFeedback('Sincronizando sua conta…');
+        try {
+            const status = await reconcile(user);
+            if (status === 'reloading') return;
+            listenRemote(user);
+            unlockApplication(user);
+            setAuthFeedback('Conta sincronizada.', 'success');
+        } catch (error) {
+            const identity = readIdentity();
+            updateCloudUi('error', user, 'Sua conta entrou, mas a nuvem está temporariamente indisponível.');
+            if (identity?.uid === user.uid && localSnapshot()) {
+                unlockApplication(user);
+                window.showToast?.('☁ Conta reconhecida. Seus dados deste aparelho estão disponíveis; a nuvem tentará reconectar.', true);
+            } else {
+                lockApplication('Sua conta foi reconhecida, mas não foi possível carregar seus dados da nuvem. Tente novamente.');
+                if (authCloudRetryButton) authCloudRetryButton.hidden = false;
+            }
+            console.warn('Falha ao carregar os dados da conta após a autenticação.', error?.code || error?.message || error);
+        } finally {
+            setAuthBusy(false);
+        }
+    }
+
+    authCloudRetryButton?.addEventListener('click', () => {
+        if (currentUser) finishAccountLoading(currentUser);
+    });
+
     authSdk.onAuthStateChanged(auth, async user => {
         currentUser = user;
         if (!user) {
@@ -727,16 +778,11 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             lockApplication('Entre com Google ou seu cadastro para continuar.');
             return;
         }
-        setAuthBusy(true); setAuthFeedback('Sincronizando sua conta…');
-        try {
-            const status = await reconcile(user);
-            if (status === 'reloading') return;
-            listenRemote(user); unlockApplication(user);
-            setAuthFeedback('Conta sincronizada.', 'success');
-        } catch (error) {
-            updateCloudUi('error', user, error.message);
-            lockApplication('Não foi possível carregar seus dados. Confira a conexão e tente novamente.');
-        } finally { setAuthBusy(false); }
+        await finishAccountLoading(user);
+    });
+
+    window.addEventListener('online', () => {
+        if (currentUser && document.documentElement.classList.contains('auth-pending')) finishAccountLoading(currentUser);
     });
 
     window.kingCloud = {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail] = await Promise.all([
+const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail, firebase] = await Promise.all([
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8'),
     readFile(new URL('../script.js', import.meta.url), 'utf8'),
@@ -10,8 +10,22 @@ const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail]
     readFile(new URL('../recuperar.html', import.meta.url), 'utf8'),
     readFile(new URL('../password-reset.js', import.meta.url), 'utf8'),
     readFile(new URL('../vite.config.js', import.meta.url), 'utf8'),
-    readFile(new URL('../email-templates/password-reset.html', import.meta.url), 'utf8')
+    readFile(new URL('../email-templates/password-reset.html', import.meta.url), 'utf8'),
+    readFile(new URL('../firebase.json', import.meta.url), 'utf8')
 ]);
+
+test('email/password access is declared for the Firebase project', () => {
+    assert.equal(JSON.parse(firebase).auth.providers.emailPassword, true);
+});
+
+test('Google login offers an explicit fallback and cloud loading can be retried', () => {
+    assert.match(html, /id="authGoogleRedirectBtn"[^>]+hidden/);
+    assert.match(html, /id="authCloudRetryBtn"[^>]+hidden/);
+    assert.match(cloud, /popupFallbackCodes/);
+    assert.match(cloud, /signInWithRedirect/);
+    assert.match(cloud, /finishAccountLoading/);
+    assert.match(cloud, /identity\?\.uid === user\.uid/);
+});
 
 test('account creation requires matching strong passwords and a human verification token', () => {
     assert.match(html, /id="authPasswordConfirm"[^>]+minlength="8"/);

@@ -34,6 +34,8 @@ const defaultAppData = {
     onboardingCompleted: false,
     accessibility: { fontScale: 'normal', highContrast: false, motionMode: 'auto' },
     studyLogging: { autoReview: true, reviewDelayDays: 1 },
+    studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
+    activeScheduleBlock: null,
     aiSettings: { retentionDays: 7 },
     aiConversation: [],
     pendingStudySession: null,
@@ -94,6 +96,12 @@ if (!appData.studyLogging || typeof appData.studyLogging !== 'object') appData.s
 appData.studyLogging = { ...defaultAppData.studyLogging, ...appData.studyLogging };
 appData.studyLogging.autoReview = appData.studyLogging.autoReview !== false;
 appData.studyLogging.reviewDelayDays = [1, 3, 7, 14, 30].includes(Number(appData.studyLogging.reviewDelayDays)) ? Number(appData.studyLogging.reviewDelayDays) : 1;
+if (!appData.studySchedule || typeof appData.studySchedule !== 'object') appData.studySchedule = { ...defaultAppData.studySchedule };
+if (!appData.studySchedule.settings || typeof appData.studySchedule.settings !== 'object') appData.studySchedule.settings = { ...defaultAppData.studySchedule.settings };
+appData.studySchedule.settings = { ...defaultAppData.studySchedule.settings, ...appData.studySchedule.settings };
+if (!appData.studySchedule.weeks || typeof appData.studySchedule.weeks !== 'object' || Array.isArray(appData.studySchedule.weeks)) appData.studySchedule.weeks = {};
+if (!Array.isArray(appData.studySchedule.suggestions)) appData.studySchedule.suggestions = [];
+if (!appData.activeScheduleBlock || typeof appData.activeScheduleBlock !== 'object') appData.activeScheduleBlock = null;
 if (!appData.aiSettings || typeof appData.aiSettings !== 'object') appData.aiSettings = { ...defaultAppData.aiSettings };
 appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
 appData.aiSettings.retentionDays = [1, 7, 30].includes(Number(appData.aiSettings.retentionDays)) ? Number(appData.aiSettings.retentionDays) : 7;
@@ -310,7 +318,7 @@ function showSection(sectionId) {
             b.removeAttribute('aria-current');
         }
     });
-    const secoesDock = new Set(['dashboard', 'planejamento', 'agendamento', 'revisoes']);
+    const secoesDock = new Set(['dashboard', 'planejamento', 'cronograma', 'revisoes']);
     document.querySelectorAll('.dock-btn[data-section]').forEach(b => {
         const ativa = b.dataset.section === sectionId;
         b.classList.toggle('active', ativa);
@@ -329,6 +337,7 @@ function showSection(sectionId) {
     if(sectionId === 'planejamento') renderizarCiclo();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
+    if(sectionId === 'cronograma') window.KingSchedule?.render();
     if(sectionId === 'revisoes') renderizarRevisoes();
     if(sectionId === 'caderno-erros') renderizarCadernoErros();
     if(sectionId === 'simulados') renderizarSimulados();
@@ -459,6 +468,7 @@ function confirmarDelecao() {
     fecharModalDeletar(); 
     
     if (tipo === 'cycle') { 
+        window.KingSchedule?.removeSubject(id);
         appData.cycleItems = appData.cycleItems.filter(i => i.id !== id); 
         saveAppData(); renderizarCiclo(); 
         showToast('🗑️ Matéria removida!'); 
@@ -484,6 +494,7 @@ function confirmarDelecao() {
         renderizarHistorico(); 
     }
     else if (tipo === 'clearCycle') { 
+        window.KingSchedule?.clearSubjects();
         appData.cycleItems = []; 
         saveAppData(); renderizarCiclo(); 
         showToast('🧹 Tudo apagado!'); 
@@ -1406,7 +1417,15 @@ function registrarSessao(segundos, detalhes = null) {
     const assunto = String(detalhes?.assunto || '').trim();
     const comentario = String(detalhes?.comentario || '').trim();
     const atividade = ['estudo', 'simulado', 'redacao'].includes(detalhes?.atividade) ? detalhes.atividade : 'estudo';
-    appData.historyItems.push(criarItemHistoricoRegistro({ segundos, materia: nome, assunto, cor, tipo, comentario, atividade }));
+    const pendenteCronograma = appData.pendingStudySession?.scheduleBlockId ? { ...appData.pendingStudySession } : null;
+    const metricas = atividade === 'estudo' ? detalhes?.study : atividade === 'simulado' ? detalhes?.simulado : null;
+    const questoes = Math.max(0, Number(metricas?.questoes ?? metricas?.total) || 0);
+    const acertos = Math.max(0, Number(metricas?.acertos) || 0);
+    const erros = Math.max(0, Number(metricas?.erros) || 0);
+    const historico = criarItemHistoricoRegistro({ segundos, materia: nome, assunto, cor, tipo, comentario, atividade });
+    Object.assign(historico, { questoes, acertos, erros });
+    appData.historyItems.push(historico);
+    if (materia && questoes) { materia.questoes = Number(materia.questoes || 0) + questoes; materia.acertos = Number(materia.acertos || 0) + acertos; materia.erros = Number(materia.erros || 0) + erros; }
     if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
     if (detalhes?.autoReview) criarRevisaoAutomaticaRegistro(nome, assunto, detalhes.reviewDelayDays, `sessao-${atividade}`);
 
@@ -1420,6 +1439,7 @@ function registrarSessao(segundos, detalhes = null) {
         appData.redacaoItems.push({ id: Date.now() + 3, theme: red.theme, date: dataLocalISO(new Date()), c1: red.scores[0], c2: red.scores[1], c3: red.scores[2], c4: red.scores[3], c5: red.scores[4], attachment: '', aguardandoCorrecao: red.scores.every(valor => valor === 0) });
     }
 
+    if (pendenteCronograma) window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade });
     currentSeconds = 0; // Histórico e rascunho são salvos na mesma escrita, sem duplicar na recuperação.
     appData.pendingStudySession = null;
     saveAppData(); renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico(); 
@@ -1442,8 +1462,10 @@ function atualizarTipoRegistroSessao() {
     const tipo = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
     const simulado = document.getElementById('sessionSimuladoFields');
     const redacao = document.getElementById('sessionRedacaoFields');
+    const estudo = document.getElementById('sessionStudyFields');
     simulado.hidden = tipo !== 'simulado';
     redacao.hidden = tipo !== 'redacao';
+    if (estudo) estudo.hidden = tipo !== 'estudo';
     document.getElementById('sessionSimTitle').required = tipo === 'simulado';
     document.getElementById('sessionSimTotal').required = tipo === 'simulado';
     document.getElementById('sessionEssayTheme').required = tipo === 'redacao';
@@ -1475,7 +1497,7 @@ function abrirRegistroSessaoPendente() {
 function prepararRegistroSessao(segundos = currentSeconds, origem = 'manual') {
     if (Number(segundos) < 5) return false;
     clearInterval(timerInterval); isRunning = false; playPauseBtn.textContent = '▶';
-    appData.pendingStudySession = { seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: Date.now() };
+    appData.pendingStudySession = { seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: Date.now(), scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false };
     saveAppData(); updateProgress(); toggleBotaoStopHistorico(); abrirRegistroSessaoPendente();
     return true;
 }
@@ -1495,6 +1517,13 @@ function salvarRegistroSessao(event) {
     if (!assunto || !comentario) return showToast('Preencha o assunto e o resumo da sessão.', true);
     const detalhes = { subjectId: document.getElementById('sessionSubject').value, assunto, comentario, atividade,
         autoReview: document.getElementById('sessionAutoReview').checked, reviewDelayDays: Number(document.getElementById('sessionReviewDelay').value) || 1 };
+    if (atividade === 'estudo') {
+        const questoes = Math.max(0, Number(document.getElementById('sessionStudyQuestions').value) || 0);
+        const acertos = Math.max(0, Number(document.getElementById('sessionStudyHits').value) || 0);
+        const erros = Math.max(0, Number(document.getElementById('sessionStudyErrors').value) || 0);
+        if (acertos + erros > questoes) return showToast('Acertos e erros não podem ultrapassar o total de questões.', true);
+        detalhes.study = { questoes, acertos, erros };
+    }
     if (atividade === 'simulado') {
         const total = Math.max(1, Number(document.getElementById('sessionSimTotal').value) || 1);
         const acertos = Math.max(0, Number(document.getElementById('sessionSimHits').value) || 0);
@@ -1684,6 +1713,10 @@ function abrirModalCiclo() {
     document.getElementById('cycleModalTitle').textContent = "Adicionar Matéria";
     document.getElementById('cycleEditId').value = "";
     document.getElementById('cycleColor').value = '#007aff';
+    document.getElementById('cycleIcon').value = '●';
+    document.getElementById('cyclePriority').value = '2';
+    document.getElementById('cycleWeeklyBlocks').value = '0';
+    document.getElementById('cycleConsecutive').checked = false;
     const firstPreset = document.querySelector('.color-preset');
     limparSelecaoPresets();
     if(firstPreset) firstPreset.classList.add('selected');
@@ -1699,6 +1732,10 @@ function editarMateriaCiclo(id) {
     document.getElementById('cycleSubject').value = mat.subject;
     document.getElementById('cycleType').value = mat.type || 'Teórica';
     document.getElementById('cycleColor').value = mat.color;
+    document.getElementById('cycleIcon').value = mat.schedule?.icon || '●';
+    document.getElementById('cyclePriority').value = String(mat.schedule?.priority || 2);
+    document.getElementById('cycleWeeklyBlocks').value = String(mat.schedule?.weeklyBlocks || 0);
+    document.getElementById('cycleConsecutive').checked = Boolean(mat.schedule?.consecutive);
     limparSelecaoPresets();
     document.getElementById('cycleModal').classList.add('active');
 }
@@ -1709,6 +1746,7 @@ function salvarMateriaCiclo(e) {
     const color = document.getElementById('cycleColor').value || '#007aff';
     const subject = document.getElementById('cycleSubject').value.trim();
     const type = document.getElementById('cycleType').value;
+    const schedule = { icon: document.getElementById('cycleIcon').value || '●', priority: Math.min(3, Math.max(1, Number(document.getElementById('cyclePriority').value) || 2)), weeklyBlocks: Math.min(30, Math.max(0, Number(document.getElementById('cycleWeeklyBlocks').value) || 0)), consecutive: document.getElementById('cycleConsecutive').checked };
     if (!subject) return showToast('Digite o nome da matéria.', true);
     const duplicada = appData.cycleItems.some(item => item.id != idEdit && (item.subject || '').trim().toLocaleLowerCase('pt-BR') === subject.toLocaleLowerCase('pt-BR'));
     if (duplicada) return showToast('Essa matéria já está cadastrada.', true);
@@ -1716,10 +1754,10 @@ function salvarMateriaCiclo(e) {
     if (idEdit) { 
         const idx = appData.cycleItems.findIndex(i => i.id == idEdit); 
         if (idx > -1) { 
-            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, targetMin: 0 }; 
+            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, schedule, targetMin: 0 };
         } 
     } else { 
-        appData.cycleItems.push({ id: Date.now(), color, subject, type, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 }); 
+        appData.cycleItems.push({ id: Date.now(), color, subject, type, schedule, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 });
     }
     saveAppData(); renderizarCiclo(); renderizarRevisoes(); fecharModal('cycleModal'); showToast('📚 Matéria salva!');
 }

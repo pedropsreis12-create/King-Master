@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260911-adaptive-study-1">
+    <link rel="stylesheet" href="schedule.css?v=20260913-schedule-1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -112,6 +113,7 @@
                 <span class="nav-cluster-label">Agora</span>
                 <button type="button" class="menu-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span class="nav-item-icon" aria-hidden="true">⌂</span><span class="nav-item-label"><strong>Hoje</strong><small>Foco e progresso</small></span></button>
                 <button type="button" class="menu-btn" data-section="agendamento" aria-controls="agendamento" onclick="showSection('agendamento')"><span class="nav-item-icon" aria-hidden="true">◷</span><span class="nav-item-label"><strong>Agenda</strong><small>Seu próximo bloco</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Cronograma</strong><small>Planeje sua semana</small></span></button>
             </div>
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Aprender</span>
@@ -152,7 +154,7 @@
     <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
         <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Hoje</small></button>
         <button type="button" class="dock-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span aria-hidden="true">▦</span><small>Matérias</small></button>
-        <button type="button" class="dock-btn" data-section="agendamento" aria-controls="agendamento" onclick="showSection('agendamento')"><span aria-hidden="true">◷</span><small>Agenda</small></button>
+        <button type="button" class="dock-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span aria-hidden="true">▤</span><small>Semana</small></button>
         <button type="button" class="dock-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span aria-hidden="true">↻</span><small>Revisar</small></button>
         <button type="button" class="dock-btn dock-more" id="dockMoreButton" aria-controls="mainNavigation" aria-expanded="false" onclick="toggleMobileNav()"><span aria-hidden="true">•••</span><small>Mais</small></button>
     </div>
@@ -331,6 +333,39 @@
                         </table>
                     </div>
             </div>
+        </section>
+
+        <!-- CRONOGRAMA SEMANAL -->
+        <section id="cronograma" class="content-section schedule-section">
+            <div class="workspace-heading schedule-heading">
+                <div>
+                    <span class="workspace-kicker">SEU PLANO, DO SEU JEITO</span>
+                    <h1>Cronograma</h1>
+                    <p>Distribua suas matérias pela semana, ajuste cada bloco e transforme o que foi concluído em progresso real.</p>
+                </div>
+                <div class="cycle-btn-group schedule-heading-actions">
+                    <button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()">⚙ Configurações</button>
+                    <button type="button" class="cycle-btn" onclick="KingSchedule.openBlock()">+ Novo bloco</button>
+                    <button type="button" class="cycle-btn primary" onclick="KingSchedule.organizeCurrentWeek()">Organizar semana</button>
+                </div>
+            </div>
+            <div class="schedule-week-toolbar widget">
+                <button type="button" class="schedule-week-arrow" onclick="KingSchedule.changeWeek(-1)" aria-label="Semana anterior">‹</button>
+                <button type="button" class="schedule-week-current" onclick="KingSchedule.goCurrentWeek()"><small id="scheduleWeekEyebrow">SEMANA ATUAL</small><strong id="scheduleWeekRange">—</strong></button>
+                <button type="button" class="schedule-week-arrow" onclick="KingSchedule.changeWeek(1)" aria-label="Próxima semana">›</button>
+                <button type="button" class="cycle-btn schedule-copy-button" onclick="KingSchedule.copyToNextWeek()">Copiar para a próxima semana</button>
+            </div>
+            <div class="schedule-summary" aria-label="Resumo semanal">
+                <article><span>Horas planejadas</span><strong id="schedulePlannedHours">0h</strong></article>
+                <article><span>Horas concluídas</span><strong id="scheduleCompletedHours">0h</strong></article>
+                <article><span>Blocos</span><strong id="scheduleBlockCount">0 / 0</strong></article>
+                <article><span>Progresso</span><strong id="scheduleProgressText">0%</strong><i><b id="scheduleProgressBar"></b></i></article>
+                <article><span>Matérias estudadas</span><strong id="scheduleSubjectsCount">0</strong></article>
+            </div>
+            <div class="schedule-notice" id="scheduleNotice" hidden role="status"></div>
+            <div class="schedule-suggestion widget" id="scheduleSuggestion" hidden></div>
+            <div class="schedule-mobile-days" id="scheduleMobileDays" role="tablist" aria-label="Escolher dia"></div>
+            <div class="schedule-board" id="scheduleBoard" aria-live="polite"></div>
         </section>
 
         <!-- HUB DE MATÉRIAS -->
@@ -744,6 +779,16 @@
                             <option value="Livre">Livre</option>
                         </select>
                     </div>
+                    <div class="subject-schedule-fields">
+                        <div class="form-grid two">
+                            <div class="cycle-form-group"><label class="cycle-label" for="cycleIcon">Ícone</label><select id="cycleIcon" class="cycle-input"><option value="●">● Essencial</option><option value="∑">∑ Exatas</option><option value="✦">✦ Destaque</option><option value="⌘">⌘ Tecnologia</option><option value="◈">◈ Ciências</option><option value="✎">✎ Linguagens</option><option value="◎">◎ Humanas</option><option value="⚗">⚗ Laboratório</option></select></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="cyclePriority">Prioridade</label><select id="cyclePriority" class="cycle-input"><option value="1">Baixa</option><option value="2" selected>Normal</option><option value="3">Alta</option></select></div>
+                        </div>
+                        <div class="form-grid two">
+                            <div class="cycle-form-group"><label class="cycle-label" for="cycleWeeklyBlocks">Blocos por semana</label><input type="number" id="cycleWeeklyBlocks" class="cycle-input" min="0" max="30" value="0"><small class="field-help">Use 0 para não incluir na organização automática.</small></div>
+                            <label class="schedule-inline-check"><input type="checkbox" id="cycleConsecutive"><span><strong>Manter blocos juntos</strong><small>Quando possível, agrupa os blocos em sequências.</small></span></label>
+                        </div>
+                    </div>
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar matéria</button></div>
                 </form>
             </div>
@@ -993,6 +1038,9 @@
                         <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTitle">Nome do simulado</label><input class="cycle-input" id="sessionSimTitle" maxlength="80" placeholder="Ex.: ENEM 2024 — Natureza"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimArea">Área</label><select class="cycle-input" id="sessionSimArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div></div>
                         <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTotal">Questões</label><input type="number" class="cycle-input" id="sessionSimTotal" min="1" value="45"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimHits">Acertos</label><input type="number" class="cycle-input" id="sessionSimHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimErrors">Erros</label><input type="number" class="cycle-input" id="sessionSimErrors" min="0" value="0"></div></div>
                     </section>
+                    <section class="session-kind-details" id="sessionStudyFields">
+                        <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionStudyQuestions">Questões feitas</label><input type="number" class="cycle-input" id="sessionStudyQuestions" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionStudyHits">Acertos</label><input type="number" class="cycle-input" id="sessionStudyHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionStudyErrors">Erros</label><input type="number" class="cycle-input" id="sessionStudyErrors" min="0" value="0"></div></div>
+                    </section>
                     <section class="session-kind-details" id="sessionRedacaoFields" hidden>
                         <div class="cycle-form-group"><label class="cycle-label" for="sessionEssayTheme">Tema da redação</label><input class="cycle-input" id="sessionEssayTheme" maxlength="140" placeholder="Tema trabalhado nesta sessão"></div>
                         <p class="session-detail-help">Se já tiver a correção, preencha as competências. Caso contrário, deixe em branco.</p>
@@ -1003,6 +1051,24 @@
                 </form>
             </div>
         </div>
+
+        <div class="modal-overlay" id="scheduleBlockModal">
+            <div class="modal-box schedule-modal-box">
+                <button type="button" class="modal-close" onclick="fecharModal('scheduleBlockModal')" aria-label="Fechar">×</button>
+                <span class="workspace-kicker">EDIÇÃO MANUAL</span><div class="cycle-modal-title" id="scheduleBlockModalTitle">Novo bloco</div>
+                <form id="scheduleBlockForm" onsubmit="KingSchedule.saveBlock(event)">
+                    <input type="hidden" id="scheduleBlockId"><input type="hidden" id="scheduleBlockWeek">
+                    <div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockSubject">Matéria</label><select class="cycle-input" id="scheduleBlockSubject" required></select></div>
+                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDay">Dia</label><select class="cycle-input" id="scheduleBlockDay" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStart">Horário</label><input type="time" class="cycle-input" id="scheduleBlockStart" required></div></div>
+                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDuration">Duração</label><input type="number" class="cycle-input" id="scheduleBlockDuration" min="5" max="240" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStatus">Status</label><select class="cycle-input" id="scheduleBlockStatus"><option value="pending">Não iniciado</option><option value="running">Em andamento</option><option value="missed">Não realizado</option><option value="completed" disabled>Concluído (registrado)</option></select></div></div>
+                    <div class="cycle-modal-actions schedule-block-actions"><button type="button" class="cycle-btn subtle-danger" id="scheduleDeleteBlock" onclick="KingSchedule.deleteEditingBlock()" hidden>Excluir bloco</button><button type="submit" class="cycle-btn primary">Salvar bloco</button></div>
+                </form>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="scheduleSettingsModal"><div class="modal-box schedule-settings-modal"><button type="button" class="modal-close" onclick="fecharModal('scheduleSettingsModal')" aria-label="Fechar">×</button><span class="workspace-kicker">CONFIGURAÇÕES DO CRONOGRAMA</span><div class="cycle-modal-title">Como sua semana funciona</div><form id="scheduleSettingsForm" onsubmit="KingSchedule.saveSettings(event)"><div class="schedule-settings-grid"><div class="cycle-form-group"><label class="cycle-label" for="scheduleStartTime">Horário inicial</label><input type="time" class="cycle-input" id="scheduleStartTime" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockMinutes">Bloco</label><input type="number" class="cycle-input" id="scheduleBlockMinutes" min="10" max="240" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa</label><input type="number" class="cycle-input" id="schedulePauseMinutes" min="0" max="90" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleClosingMinutes">Registro final</label><input type="number" class="cycle-input" id="scheduleClosingMinutes" min="0" max="60" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleMaxSubjects">Máximo desejado de matérias/dia</label><input type="number" class="cycle-input" id="scheduleMaxSubjects" min="1" max="6" required></div></div><fieldset class="schedule-day-options"><legend>Dias de estudo</legend><label><input type="checkbox" value="1"><span>SEG</span></label><label><input type="checkbox" value="2"><span>TER</span></label><label><input type="checkbox" value="3"><span>QUA</span></label><label><input type="checkbox" value="4"><span>QUI</span></label><label><input type="checkbox" value="5"><span>SEX</span></label><label><input type="checkbox" value="6"><span>SÁB</span></label></fieldset><div class="schedule-subject-plans-heading"><div><strong>Carga semanal</strong><small>Usa somente as matérias cadastradas no King Master.</small></div><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal');showSection('planejamento');abrirModalCiclo()">+ Matéria</button></div><div class="schedule-subject-plans" id="scheduleSubjectPlans"></div><div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar configurações</button></div></form></div></div>
+
+        <div class="modal-overlay" id="scheduleDayCloseModal"><div class="modal-box schedule-day-close-modal"><button type="button" class="modal-close" onclick="KingSchedule.closeDayLater()" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO FINAL</span><div class="cycle-modal-title">Registrar estudo de hoje</div><p class="modal-message">Confira o que avançou. Este resumo organiza o dia sem duplicar o progresso já salvo em cada bloco.</p><div class="schedule-day-close-summary" id="scheduleDayCloseSummary"></div><form onsubmit="KingSchedule.saveDayClose(event)"><input type="hidden" id="scheduleDayCloseWeek"><input type="hidden" id="scheduleDayCloseDay"><div class="cycle-form-group"><label class="cycle-label" for="scheduleDayCloseNotes">Observações do dia</label><textarea class="cycle-input" id="scheduleDayCloseNotes" rows="4" maxlength="700" placeholder="O que funcionou bem? O que precisa mudar amanhã?"></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingSchedule.closeDayLater()">Fazer depois</button><button type="submit" class="cycle-btn primary">Salvar progresso</button></div></form></div></div>
 
         <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Salvar sessão</button></div></form></div></div>
 
@@ -1049,7 +1115,9 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="script.js?v=20260911-adaptive-study-1"></script>
+    <script src="schedule-core.js?v=20260913-schedule-1"></script>
+    <script src="script.js?v=20260913-schedule-1"></script>
+    <script src="schedule.js?v=20260913-schedule-1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>
     <script src="productivity.js?v=20260911-adaptive-study-1"></script>

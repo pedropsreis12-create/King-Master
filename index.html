@@ -13,11 +13,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260911-adaptive-study-1">
+    <link rel="stylesheet" href="style.css?v=20260914-schedule-v3">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260911-adaptive-study-1">
-    <link rel="stylesheet" href="schedule.css?v=20260913-schedule-1">
+    <link rel="stylesheet" href="schedule.css?v=20260914-schedule-v3">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -309,6 +309,12 @@
                         <button class="control-btn-large btn-stop" id="endSessionBtnDash" onclick="encerrarSessaoDashboard()" title="Encerrar e Guardar no Histórico" style="display: none;">⏹</button>
                     </div>
                     <p id="timerSaveStatus" class="timer-save-status" role="status">● Salvamento automático do cronômetro</p>
+                    <div class="pending-session-card" id="pendingSessionCard" hidden>
+                        <span aria-hidden="true">↗</span>
+                        <div><strong>Existe uma sessão sem resumo</strong><small>Ela fica guardada, mas não abrirá sozinha.</small></div>
+                        <button type="button" onclick="abrirRegistroSessaoPendente()">Registrar</button>
+                        <button type="button" class="pending-session-dismiss" onclick="descartarRegistroSessao()" aria-label="Descartar sessão pendente">×</button>
+                    </div>
                 </div>
                 <div class="widget weekly-study-widget">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -339,33 +345,67 @@
         <section id="cronograma" class="content-section schedule-section">
             <div class="workspace-heading schedule-heading">
                 <div>
-                    <span class="workspace-kicker">SEU PLANO, DO SEU JEITO</span>
+                    <span class="workspace-kicker">CENTRAL DA SEMANA</span>
                     <h1>Cronograma</h1>
-                    <p>Distribua suas matérias pela semana, ajuste cada bloco e transforme o que foi concluído em progresso real.</p>
+                    <p>Veja o que importa agora, distribua seu esforço e reajuste a semana sem perder o controle.</p>
                 </div>
                 <div class="cycle-btn-group schedule-heading-actions">
-                    <button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()">⚙ Configurações</button>
-                    <button type="button" class="cycle-btn" onclick="KingSchedule.openBlock()">+ Novo bloco</button>
-                    <button type="button" class="cycle-btn primary" onclick="KingSchedule.organizeCurrentWeek()">Organizar semana</button>
+                    <button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()"><span aria-hidden="true">⚙</span> Planejar semana</button>
+                    <button type="button" class="cycle-btn primary" onclick="KingSchedule.openBlock()"><span aria-hidden="true">＋</span> Novo bloco</button>
                 </div>
             </div>
-            <div class="schedule-week-toolbar widget">
-                <button type="button" class="schedule-week-arrow" onclick="KingSchedule.changeWeek(-1)" aria-label="Semana anterior">‹</button>
-                <button type="button" class="schedule-week-current" onclick="KingSchedule.goCurrentWeek()"><small id="scheduleWeekEyebrow">SEMANA ATUAL</small><strong id="scheduleWeekRange">—</strong></button>
-                <button type="button" class="schedule-week-arrow" onclick="KingSchedule.changeWeek(1)" aria-label="Próxima semana">›</button>
-                <button type="button" class="cycle-btn schedule-copy-button" onclick="KingSchedule.copyToNextWeek()">Copiar para a próxima semana</button>
+
+            <div class="schedule-command-bar widget">
+                <div class="schedule-week-switcher">
+                    <button type="button" onclick="KingSchedule.changeWeek(-1)" aria-label="Semana anterior">‹</button>
+                    <button type="button" class="schedule-week-label" onclick="KingSchedule.goCurrentWeek()"><small id="scheduleWeekEyebrow">SEMANA ATUAL</small><strong id="scheduleWeekRange">—</strong></button>
+                    <button type="button" onclick="KingSchedule.changeWeek(1)" aria-label="Próxima semana">›</button>
+                </div>
+                <div class="schedule-command-actions">
+                    <button type="button" class="cycle-btn" id="scheduleReplanButton" onclick="KingSchedule.replanOverdue()" hidden>Replanejar atrasados</button>
+                    <button type="button" class="cycle-btn" onclick="KingSchedule.copyToNextWeek()">Copiar semana</button>
+                    <button type="button" class="cycle-btn schedule-organize-button" onclick="KingSchedule.organizeCurrentWeek()">Organizar automaticamente</button>
+                </div>
             </div>
-            <div class="schedule-summary" aria-label="Resumo semanal">
-                <article><span>Horas planejadas</span><strong id="schedulePlannedHours">0h</strong></article>
-                <article><span>Horas concluídas</span><strong id="scheduleCompletedHours">0h</strong></article>
-                <article><span>Blocos</span><strong id="scheduleBlockCount">0 / 0</strong></article>
-                <article><span>Progresso</span><strong id="scheduleProgressText">0%</strong><i><b id="scheduleProgressBar"></b></i></article>
-                <article><span>Matérias estudadas</span><strong id="scheduleSubjectsCount">0</strong></article>
+
+            <div class="schedule-overview-grid">
+                <article class="schedule-progress-card widget">
+                    <div class="schedule-progress-ring" id="scheduleProgressRing"><div><strong id="scheduleProgressText">0%</strong><small>concluído</small></div></div>
+                    <div class="schedule-progress-copy">
+                        <span class="workspace-kicker">RITMO DA SEMANA</span>
+                        <h2 id="scheduleProgressHeadline">Sua semana começa aqui</h2>
+                        <p id="scheduleProgressHint">Monte os blocos e deixe o King Master cuidar da visão geral.</p>
+                        <div><span><b id="scheduleBlockCount">0/0</b> blocos</span><span><b id="schedulePlannedHours">0h</b> planejadas</span><span><b id="scheduleCompletedHours">0h</b> feitas</span></div>
+                    </div>
+                </article>
+                <article class="schedule-next-card widget" id="scheduleNextCard">
+                    <div class="schedule-card-title"><div><span class="workspace-kicker">PRÓXIMA AÇÃO</span><h2>Seu próximo bloco</h2></div><span class="schedule-live-dot" aria-hidden="true"></span></div>
+                    <div id="scheduleNextBlock"></div>
+                </article>
+                <article class="schedule-balance-card widget">
+                    <div class="schedule-card-title"><div><span class="workspace-kicker">DISTRIBUIÇÃO</span><h2>Carga por matéria</h2></div><strong id="scheduleSubjectsCount">0</strong></div>
+                    <div class="schedule-balance-list" id="scheduleBalanceList"></div>
+                </article>
             </div>
+
             <div class="schedule-notice" id="scheduleNotice" hidden role="status"></div>
             <div class="schedule-suggestion widget" id="scheduleSuggestion" hidden></div>
-            <div class="schedule-mobile-days" id="scheduleMobileDays" role="tablist" aria-label="Escolher dia"></div>
-            <div class="schedule-board" id="scheduleBoard" aria-live="polite"></div>
+
+            <div class="schedule-day-strip widget" id="scheduleDayStrip" role="tablist" aria-label="Dias da semana"></div>
+            <div class="schedule-focus-layout">
+                <section class="schedule-agenda widget" aria-labelledby="scheduleSelectedDayTitle">
+                    <header class="schedule-agenda-heading">
+                        <div><span class="workspace-kicker" id="scheduleSelectedDayEyebrow">HOJE</span><h2 id="scheduleSelectedDayTitle">—</h2><p id="scheduleSelectedDaySummary">Dia livre para respirar ou reorganizar.</p></div>
+                        <button type="button" class="cycle-btn primary" onclick="KingSchedule.openBlock(null, KingSchedule.getSelectedDay())">＋ Adicionar neste dia</button>
+                    </header>
+                    <div class="schedule-timeline" id="scheduleTimeline" aria-live="polite"></div>
+                </section>
+                <aside class="schedule-day-panel widget">
+                    <div><span class="workspace-kicker">CHECK-IN DO DIA</span><h2>Feche o ciclo</h2><p>Quando terminar, transforme os blocos em um registro claro do que avançou.</p></div>
+                    <div class="schedule-day-metrics" id="scheduleDayMetrics"></div>
+                    <button type="button" class="cycle-btn" id="scheduleDayCloseButton" onclick="KingSchedule.openDayClose(KingSchedule.getSelectedDay())">Registrar resumo do dia</button>
+                </aside>
+            </div>
         </section>
 
         <!-- HUB DE MATÉRIAS -->
@@ -633,7 +673,12 @@
             </div>
 
             <div class="profile-identity-card widget">
-                <div class="profile-identity-cover" aria-hidden="true"></div>
+                <div class="profile-identity-cover" id="profileIdentityCover">
+                    <img id="profileBannerImage" alt="Banner do perfil">
+                    <span class="profile-cover-shade" aria-hidden="true"></span>
+                    <label class="profile-banner-edit" for="profileBannerInput"><span aria-hidden="true">▧</span> Alterar banner</label>
+                    <input class="profile-photo-input" type="file" id="profileBannerInput" accept="image/jpeg,image/png,image/webp" onchange="alterarBannerPerfil(event)">
+                </div>
                 <div class="profile-identity-main">
                     <div class="profile-identity-avatar-wrap">
                         <div class="profile-identity-avatar" aria-label="Foto do perfil">
@@ -852,16 +897,16 @@
         </div>
 
         <div class="modal-overlay" id="simuladoModal">
-            <div class="modal-box modal-wide">
+            <div class="modal-box modal-wide result-entry-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('simuladoModal')" aria-label="Fechar">×</button>
-                <div class="cycle-modal-title" id="simuladoModalTitle">Registrar simulado</div>
+                <span class="workspace-kicker">RAIO-X DA PROVA</span><div class="cycle-modal-title" id="simuladoModalTitle">Registrar simulado</div>
+                <p class="result-entry-intro">Guarde o resultado e feche com uma decisão prática para o próximo treino.</p>
                 <form id="formAddSimulado" onsubmit="salvarSimulado(event)">
                     <input type="hidden" id="simEditId"><input type="hidden" id="simAttachmentData">
-                    <div class="cycle-form-group"><label class="cycle-label">Nome do simulado</label><input class="cycle-input" id="simTitle" required autocomplete="off"></div>
-                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label">Data</label><input type="date" class="cycle-input" id="simDate" required></div><div class="cycle-form-group"><label class="cycle-label">Tempo total (minutos)</label><input type="number" class="cycle-input" id="simTempo" min="1" required></div></div>
-                    <div class="cycle-form-group"><label class="cycle-label">Área</label><select class="cycle-input" id="simArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div>
-                    <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label">Questões</label><input type="number" class="cycle-input" id="simTotal" min="1" value="45" required></div><div class="cycle-form-group"><label class="cycle-label">Acertos</label><input type="number" class="cycle-input" id="simAcertos" min="0" value="0" required></div><div class="cycle-form-group"><label class="cycle-label">Erros</label><input type="number" class="cycle-input" id="simErros" min="0" value="0" required></div></div>
-                    <label class="file-upload-btn" for="simFile"><span>📎</span><span id="simFileName">Selecionar Arquivo do Computador</span></label><input class="file-input-hidden" id="simFile" type="file" onchange="handleFileSelect(event, 'simFileName', 'simAttachmentData')">
+                    <section class="result-entry-section"><div class="result-entry-section-title"><span>01</span><div><strong>Identificação</strong><small>Qual prova você fez?</small></div></div><div class="cycle-form-group"><label class="cycle-label" for="simTitle">Nome do simulado</label><input class="cycle-input" id="simTitle" required autocomplete="off" placeholder="Ex.: ENEM 2023 — 1º dia"></div><div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="simDate">Data</label><input type="date" class="cycle-input" id="simDate" required></div><div class="cycle-form-group"><label class="cycle-label" for="simFormat">Formato</label><select class="cycle-input" id="simFormat" onchange="atualizarFormatoSimulado()"><option value="area">Uma área</option><option value="dia1">1º dia ENEM</option><option value="dia2">2º dia ENEM</option><option value="completo">ENEM completo</option><option value="personalizado">Personalizado</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="simTempo">Tempo total</label><div class="result-input-unit"><input type="number" class="cycle-input" id="simTempo" min="1" required><span>min</span></div></div></div><div class="cycle-form-group" id="simAreaGroup"><label class="cycle-label" for="simArea">Área principal</label><select class="cycle-input" id="simArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div></section>
+                    <section class="result-entry-section"><div class="result-entry-section-title"><span>02</span><div><strong>Resultado</strong><small>As questões em branco ficam separadas dos erros.</small></div><strong class="result-live-score" id="simLiveScore">0%</strong></div><div class="form-grid three result-number-grid"><label><span>Total</span><input type="number" class="cycle-input" id="simTotal" min="1" value="45" required oninput="atualizarResumoSimulado()"></label><label class="is-correct"><span>Acertos</span><input type="number" class="cycle-input" id="simAcertos" min="0" value="0" required oninput="atualizarResumoSimulado()"></label><label class="is-blank"><span>Em branco</span><input type="number" class="cycle-input" id="simBrancos" min="0" value="0" oninput="atualizarResumoSimulado()"></label></div><div class="result-calculated-line"><span>Erros calculados</span><strong id="simCalculatedErrors">45</strong></div></section>
+                    <section class="result-entry-section result-reflection"><div class="result-entry-section-title"><span>03</span><div><strong>Reflexão rápida</strong><small>O resultado vira uma ação, não só uma porcentagem.</small></div></div><div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="simPreparation">Como você se preparou?</label><select class="cycle-input" id="simPreparation"><option value="">Não informar</option><option>Revisão e questões</option><option>Principalmente teoria</option><option>Principalmente questões</option><option>Preparação insuficiente</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="simMainError">Maior causa dos erros</label><select class="cycle-input" id="simMainError"><option value="">Ainda não analisei</option><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="tempo">Tempo e estratégia</option></select></div></div><div class="cycle-form-group"><label class="cycle-label" for="simWeakTopics">Assuntos que mais pesaram <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="simWeakTopics" maxlength="180" placeholder="Ex.: Termodinâmica, geometria espacial"></div><div class="cycle-form-group"><label class="cycle-label" for="simNextStep">Próximo ajuste</label><input class="cycle-input" id="simNextStep" maxlength="180" placeholder="Ex.: Refazer os erros e revisar termodinâmica na quarta"></div><label class="result-review-toggle"><input type="checkbox" id="simCreateReview" checked><span><strong>Criar uma revisão do próximo foco</strong><small>Você poderá alterar a data na aba Revisões.</small></span></label></section>
+                    <label class="file-upload-btn result-file-button" for="simFile"><span>📎</span><span id="simFileName">Anexar prova, gabarito ou relatório</span></label><input class="file-input-hidden" id="simFile" type="file" onchange="handleFileSelect(event, 'simFileName', 'simAttachmentData')">
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar simulado</button></div>
                 </form>
             </div>
@@ -1007,17 +1052,16 @@
         </div>
 
         <div class="modal-overlay" id="redacaoModal">
-            <div class="modal-box modal-wide">
+            <div class="modal-box modal-wide result-entry-modal writing-entry-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('redacaoModal')" aria-label="Fechar">×</button>
-                <div class="cycle-modal-title" id="redacaoModalTitle">Registrar redação</div>
+                <span class="workspace-kicker">DIÁRIO DE ESCRITA</span><div class="cycle-modal-title" id="redacaoModalTitle">Registrar redação</div>
+                <p class="result-entry-intro">Salve agora e complete a correção depois. Nenhuma nota precisa ser inventada.</p>
                 <form id="formAddRedacao" onsubmit="salvarRedacao(event)">
                     <input type="hidden" id="redEditId"><input type="hidden" id="redAttachmentData">
-                    <div class="cycle-form-group"><label class="cycle-label">Tema da redação</label><input class="cycle-input" id="redTheme" required autocomplete="off"></div>
-                    <div class="cycle-form-group"><label class="cycle-label">Data</label><input type="date" class="cycle-input" id="redDate" required></div>
-                    <div class="form-grid five">
-                        <div class="cycle-form-group"><label class="cycle-label">C1</label><input type="number" class="cycle-input" id="redC1" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C2</label><input type="number" class="cycle-input" id="redC2" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C3</label><input type="number" class="cycle-input" id="redC3" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C4</label><input type="number" class="cycle-input" id="redC4" min="0" max="200" step="40" required></div><div class="cycle-form-group"><label class="cycle-label">C5</label><input type="number" class="cycle-input" id="redC5" min="0" max="200" step="40" required></div>
-                    </div>
-                    <label class="file-upload-btn" for="redFile"><span>📎</span><span id="redFileName">Selecionar Arquivo do Computador</span></label><input class="file-input-hidden" id="redFile" type="file" onchange="handleFileSelect(event, 'redFileName', 'redAttachmentData')">
+                    <section class="result-entry-section"><div class="result-entry-section-title"><span>01</span><div><strong>Texto</strong><small>Identifique o treino e o estágio atual.</small></div></div><div class="cycle-form-group"><label class="cycle-label" for="redTheme">Tema da redação</label><input class="cycle-input" id="redTheme" required autocomplete="off" placeholder="Digite o tema completo"></div><div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="redDate">Data</label><input type="date" class="cycle-input" id="redDate" required></div><div class="cycle-form-group"><label class="cycle-label" for="redTempo">Tempo de produção <span class="schedule-optional">opcional</span></label><div class="result-input-unit"><input type="number" class="cycle-input" id="redTempo" min="1" placeholder="90"><span>min</span></div></div></div><fieldset class="writing-status-options"><legend>Situação</legend><label><input type="radio" name="redStatus" value="draft" onchange="atualizarEstadoRedacao()"><span><b>◇</b><strong>Em produção</strong><small>Rascunho ou repertório</small></span></label><label><input type="radio" name="redStatus" value="awaiting" checked onchange="atualizarEstadoRedacao()"><span><b>◷</b><strong>Aguardando correção</strong><small>Texto concluído, sem notas</small></span></label><label><input type="radio" name="redStatus" value="corrected" onchange="atualizarEstadoRedacao()"><span><b>✓</b><strong>Corrigida</strong><small>Notas e devolutiva prontas</small></span></label></fieldset></section>
+                    <section class="result-entry-section writing-scores-section" id="redScoresSection" hidden><div class="result-entry-section-title"><span>02</span><div><strong>Competências do Enem</strong><small>Cada competência vale até 200 pontos.</small></div><strong class="result-live-score" id="redLiveTotal">0</strong></div><div class="writing-score-list"><label><span><b>C1</b><span><strong>Norma-padrão</strong><small>Domínio da escrita formal</small></span></span><select class="cycle-input red-score-input" id="redC1" onchange="atualizarTotalRedacao()"></select></label><label><span><b>C2</b><span><strong>Tema e repertório</strong><small>Compreensão da proposta</small></span></span><select class="cycle-input red-score-input" id="redC2" onchange="atualizarTotalRedacao()"></select></label><label><span><b>C3</b><span><strong>Argumentação</strong><small>Organização e defesa do ponto de vista</small></span></span><select class="cycle-input red-score-input" id="redC3" onchange="atualizarTotalRedacao()"></select></label><label><span><b>C4</b><span><strong>Coesão</strong><small>Mecanismos linguísticos</small></span></span><select class="cycle-input red-score-input" id="redC4" onchange="atualizarTotalRedacao()"></select></label><label><span><b>C5</b><span><strong>Intervenção</strong><small>Proposta detalhada e viável</small></span></span><select class="cycle-input red-score-input" id="redC5" onchange="atualizarTotalRedacao()"></select></label></div><div class="cycle-form-group"><label class="cycle-label" for="redEvaluator">Quem corrigiu? <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="redEvaluator" maxlength="80" placeholder="Professor, plataforma ou autocorreção"></div></section>
+                    <section class="result-entry-section result-reflection"><div class="result-entry-section-title"><span id="redReflectionStep">02</span><div><strong>Devolutiva prática</strong><small>Registre o que manter e o que fazer no próximo texto.</small></div></div><div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="redStrengths">O que funcionou bem? <span class="schedule-optional">opcional</span></label><textarea class="cycle-input" id="redStrengths" rows="3" maxlength="300" placeholder="Ex.: repertório bem conectado à tese"></textarea></div><div class="cycle-form-group"><label class="cycle-label" for="redNextFocus">Próximo foco <span class="schedule-optional">opcional</span></label><textarea class="cycle-input" id="redNextFocus" rows="3" maxlength="300" placeholder="Ex.: detalhar agente, ação e efeito na intervenção"></textarea></div></div></section>
+                    <label class="file-upload-btn result-file-button" for="redFile"><span>📎</span><span id="redFileName">Anexar redação ou folha de correção</span></label><input class="file-input-hidden" id="redFile" type="file" onchange="handleFileSelect(event, 'redFileName', 'redAttachmentData')">
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar redação</button></div>
                 </form>
             </div>
@@ -1036,37 +1080,41 @@
                     <fieldset class="session-kind-fieldset"><legend>O que foi feito?</legend><div class="session-kind-options"><label><input type="radio" name="sessionKind" value="estudo" checked onchange="atualizarTipoRegistroSessao()"><span><b>▦</b><strong>Estudo</strong><small>Teoria ou exercícios</small></span></label><label><input type="radio" name="sessionKind" value="simulado" onchange="atualizarTipoRegistroSessao()"><span><b>◎</b><strong>Simulado</strong><small>Questões e resultado</small></span></label><label><input type="radio" name="sessionKind" value="redacao" onchange="atualizarTipoRegistroSessao()"><span><b>✎</b><strong>Redação</strong><small>Tema e competências</small></span></label></div></fieldset>
                     <section class="session-kind-details" id="sessionSimuladoFields" hidden>
                         <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTitle">Nome do simulado</label><input class="cycle-input" id="sessionSimTitle" maxlength="80" placeholder="Ex.: ENEM 2024 — Natureza"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimArea">Área</label><select class="cycle-input" id="sessionSimArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div></div>
-                        <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTotal">Questões</label><input type="number" class="cycle-input" id="sessionSimTotal" min="1" value="45"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimHits">Acertos</label><input type="number" class="cycle-input" id="sessionSimHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimErrors">Erros</label><input type="number" class="cycle-input" id="sessionSimErrors" min="0" value="0"></div></div>
+                        <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTotal">Questões</label><input type="number" class="cycle-input" id="sessionSimTotal" min="1" value="45"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimHits">Acertos</label><input type="number" class="cycle-input" id="sessionSimHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimBlanks">Em branco</label><input type="number" class="cycle-input" id="sessionSimBlanks" min="0" value="0"></div></div>
+                        <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimMainError">Maior causa dos erros</label><select class="cycle-input" id="sessionSimMainError"><option value="">Ainda não analisei</option><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="tempo">Tempo e estratégia</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimNextStep">Próximo ajuste</label><input class="cycle-input" id="sessionSimNextStep" maxlength="180" placeholder="O que você fará diferente?"></div></div>
                     </section>
                     <section class="session-kind-details" id="sessionStudyFields">
                         <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionStudyQuestions">Questões feitas</label><input type="number" class="cycle-input" id="sessionStudyQuestions" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionStudyHits">Acertos</label><input type="number" class="cycle-input" id="sessionStudyHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionStudyErrors">Erros</label><input type="number" class="cycle-input" id="sessionStudyErrors" min="0" value="0"></div></div>
                     </section>
                     <section class="session-kind-details" id="sessionRedacaoFields" hidden>
-                        <div class="cycle-form-group"><label class="cycle-label" for="sessionEssayTheme">Tema da redação</label><input class="cycle-input" id="sessionEssayTheme" maxlength="140" placeholder="Tema trabalhado nesta sessão"></div>
+                        <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayTheme">Tema da redação</label><input class="cycle-input" id="sessionEssayTheme" maxlength="140" placeholder="Tema trabalhado nesta sessão"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayStatus">Situação</label><select class="cycle-input" id="sessionEssayStatus" onchange="atualizarTipoRegistroSessao()"><option value="awaiting">Aguardando correção</option><option value="corrected">Corrigida</option><option value="draft">Em produção</option></select></div></div>
                         <p class="session-detail-help">Se já tiver a correção, preencha as competências. Caso contrário, deixe em branco.</p>
                         <div class="form-grid five"><div class="cycle-form-group"><label class="cycle-label">C1</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C2</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C3</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C4</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C5</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="sessionEssayNextFocus">Próximo foco <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="sessionEssayNextFocus" maxlength="240" placeholder="Qual ajuste levar para a próxima redação?"></div>
                     </section>
                     <div class="session-review-card"><label><input type="checkbox" id="sessionAutoReview" checked onchange="atualizarRevisaoRegistroSessao()"><span><strong>Agendar revisão automática</strong><small>Você pode desligar só para esta sessão.</small></span></label><select class="cycle-input" id="sessionReviewDelay"><option value="1">Amanhã</option><option value="3">Em 3 dias</option><option value="7">Em 7 dias</option><option value="14">Em 14 dias</option><option value="30">Em 30 dias</option></select></div>
-                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="adiarRegistroSessao()">Continuar depois</button><button type="submit" class="cycle-btn primary">Salvar registro</button></div>
+                    <div class="cycle-modal-actions session-complete-actions"><button type="button" class="cycle-btn subtle-danger" onclick="descartarRegistroSessao()">Descartar</button><button type="button" class="cycle-btn" onclick="adiarRegistroSessao()">Salvar depois</button><button type="submit" class="cycle-btn primary">Salvar registro</button></div>
                 </form>
             </div>
         </div>
 
         <div class="modal-overlay" id="scheduleBlockModal">
-            <div class="modal-box schedule-modal-box">
+            <div class="modal-box schedule-modal-box schedule-sheet">
                 <button type="button" class="modal-close" onclick="fecharModal('scheduleBlockModal')" aria-label="Fechar">×</button>
-                <span class="workspace-kicker">EDIÇÃO MANUAL</span><div class="cycle-modal-title" id="scheduleBlockModalTitle">Novo bloco</div>
+                <span class="workspace-kicker">BLOCO DE FOCO</span><div class="cycle-modal-title" id="scheduleBlockModalTitle">Planejar estudo</div>
+                <p class="schedule-modal-intro">Defina uma intenção clara. Você poderá mover ou ajustar o bloco quando a semana mudar.</p>
                 <form id="scheduleBlockForm" onsubmit="KingSchedule.saveBlock(event)">
                     <input type="hidden" id="scheduleBlockId"><input type="hidden" id="scheduleBlockWeek">
-                    <div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockSubject">Matéria</label><select class="cycle-input" id="scheduleBlockSubject" required></select></div>
-                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDay">Dia</label><select class="cycle-input" id="scheduleBlockDay" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStart">Horário</label><input type="time" class="cycle-input" id="scheduleBlockStart" required></div></div>
-                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDuration">Duração</label><input type="number" class="cycle-input" id="scheduleBlockDuration" min="5" max="240" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStatus">Status</label><select class="cycle-input" id="scheduleBlockStatus"><option value="pending">Não iniciado</option><option value="running">Em andamento</option><option value="missed">Não realizado</option><option value="completed" disabled>Concluído (registrado)</option></select></div></div>
+                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockSubject">Matéria</label><select class="cycle-input" id="scheduleBlockSubject" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockKind">Tipo de foco</label><select class="cycle-input" id="scheduleBlockKind"><option value="teoria">Teoria</option><option value="questoes">Questões</option><option value="revisao">Revisão</option><option value="simulado">Simulado</option><option value="redacao">Redação</option></select></div></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockTopic">Objetivo do bloco <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="scheduleBlockTopic" maxlength="120" placeholder="Ex.: Função quadrática — lista 2"></div>
+                    <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDay">Dia</label><select class="cycle-input" id="scheduleBlockDay" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStart">Começa</label><input type="time" class="cycle-input" id="scheduleBlockStart" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDuration">Duração</label><select class="cycle-input" id="scheduleBlockDuration"><option value="25">25 min</option><option value="40">40 min</option><option value="50" selected>50 min</option><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option></select></div></div>
+                    <div class="cycle-form-group schedule-status-field"><label class="cycle-label" for="scheduleBlockStatus">Situação</label><select class="cycle-input" id="scheduleBlockStatus"><option value="pending">Planejado</option><option value="running">Em andamento</option><option value="missed">Não realizado</option><option value="completed" disabled>Concluído e registrado</option></select></div>
                     <div class="cycle-modal-actions schedule-block-actions"><button type="button" class="cycle-btn subtle-danger" id="scheduleDeleteBlock" onclick="KingSchedule.deleteEditingBlock()" hidden>Excluir bloco</button><button type="submit" class="cycle-btn primary">Salvar bloco</button></div>
                 </form>
             </div>
         </div>
 
-        <div class="modal-overlay" id="scheduleSettingsModal"><div class="modal-box schedule-settings-modal"><button type="button" class="modal-close" onclick="fecharModal('scheduleSettingsModal')" aria-label="Fechar">×</button><span class="workspace-kicker">CONFIGURAÇÕES DO CRONOGRAMA</span><div class="cycle-modal-title">Como sua semana funciona</div><form id="scheduleSettingsForm" onsubmit="KingSchedule.saveSettings(event)"><div class="schedule-settings-grid"><div class="cycle-form-group"><label class="cycle-label" for="scheduleStartTime">Horário inicial</label><input type="time" class="cycle-input" id="scheduleStartTime" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockMinutes">Bloco</label><input type="number" class="cycle-input" id="scheduleBlockMinutes" min="10" max="240" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa</label><input type="number" class="cycle-input" id="schedulePauseMinutes" min="0" max="90" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleClosingMinutes">Registro final</label><input type="number" class="cycle-input" id="scheduleClosingMinutes" min="0" max="60" step="5" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleMaxSubjects">Máximo desejado de matérias/dia</label><input type="number" class="cycle-input" id="scheduleMaxSubjects" min="1" max="6" required></div></div><fieldset class="schedule-day-options"><legend>Dias de estudo</legend><label><input type="checkbox" value="1"><span>SEG</span></label><label><input type="checkbox" value="2"><span>TER</span></label><label><input type="checkbox" value="3"><span>QUA</span></label><label><input type="checkbox" value="4"><span>QUI</span></label><label><input type="checkbox" value="5"><span>SEX</span></label><label><input type="checkbox" value="6"><span>SÁB</span></label></fieldset><div class="schedule-subject-plans-heading"><div><strong>Carga semanal</strong><small>Usa somente as matérias cadastradas no King Master.</small></div><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal');showSection('planejamento');abrirModalCiclo()">+ Matéria</button></div><div class="schedule-subject-plans" id="scheduleSubjectPlans"></div><div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar configurações</button></div></form></div></div>
+        <div class="modal-overlay" id="scheduleSettingsModal"><div class="modal-box schedule-settings-modal schedule-sheet"><button type="button" class="modal-close" onclick="fecharModal('scheduleSettingsModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ESTÚDIO DE PLANEJAMENTO</span><div class="cycle-modal-title">Desenhe uma semana possível</div><p class="schedule-modal-intro">Escolha seu ritmo e a carga de cada matéria. O organizador apenas distribui o que você decidir.</p><form id="scheduleSettingsForm" onsubmit="KingSchedule.saveSettings(event)"><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>01</span><div><strong>Ritmo base</strong><small>Os horários podem ser alterados depois em cada bloco.</small></div></div><div class="schedule-settings-grid"><div class="cycle-form-group"><label class="cycle-label" for="scheduleStartTime">Começar às</label><input type="time" class="cycle-input" id="scheduleStartTime" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockMinutes">Bloco padrão</label><select class="cycle-input" id="scheduleBlockMinutes"><option value="25">25 min</option><option value="40">40 min</option><option value="50">50 min</option><option value="60">1 hora</option><option value="90">1h30</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa</label><select class="cycle-input" id="schedulePauseMinutes"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleClosingMinutes">Fechamento</label><select class="cycle-input" id="scheduleClosingMinutes"><option value="0">Sem fechamento</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleMaxSubjects">Matérias por dia</label><select class="cycle-input" id="scheduleMaxSubjects"><option value="1">Até 1</option><option value="2">Até 2</option><option value="3">Até 3</option><option value="4">Até 4</option></select></div></div><fieldset class="schedule-day-options"><legend>Dias disponíveis</legend><label><input type="checkbox" value="1"><span><b>SEG</b><small>Segunda</small></span></label><label><input type="checkbox" value="2"><span><b>TER</b><small>Terça</small></span></label><label><input type="checkbox" value="3"><span><b>QUA</b><small>Quarta</small></span></label><label><input type="checkbox" value="4"><span><b>QUI</b><small>Quinta</small></span></label><label><input type="checkbox" value="5"><span><b>SEX</b><small>Sexta</small></span></label><label><input type="checkbox" value="6"><span><b>SÁB</b><small>Sábado</small></span></label></fieldset></section><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>02</span><div><strong>Carga por matéria</strong><small>Zero blocos mantém a matéria fora da organização automática.</small></div><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal');showSection('planejamento');abrirModalCiclo()">＋ Nova matéria</button></div><div class="schedule-subject-plans" id="scheduleSubjectPlans"></div></section><div class="schedule-settings-footer"><p><b>Sem surpresas:</b> a organização é previsível e nunca altera uma semana sem você pedir.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar e organizar</button></div></div></form></div></div>
 
         <div class="modal-overlay" id="scheduleDayCloseModal"><div class="modal-box schedule-day-close-modal"><button type="button" class="modal-close" onclick="KingSchedule.closeDayLater()" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO FINAL</span><div class="cycle-modal-title">Registrar estudo de hoje</div><p class="modal-message">Confira o que avançou. Este resumo organiza o dia sem duplicar o progresso já salvo em cada bloco.</p><div class="schedule-day-close-summary" id="scheduleDayCloseSummary"></div><form onsubmit="KingSchedule.saveDayClose(event)"><input type="hidden" id="scheduleDayCloseWeek"><input type="hidden" id="scheduleDayCloseDay"><div class="cycle-form-group"><label class="cycle-label" for="scheduleDayCloseNotes">Observações do dia</label><textarea class="cycle-input" id="scheduleDayCloseNotes" rows="4" maxlength="700" placeholder="O que funcionou bem? O que precisa mudar amanhã?"></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingSchedule.closeDayLater()">Fazer depois</button><button type="submit" class="cycle-btn primary">Salvar progresso</button></div></form></div></div>
 
@@ -1115,9 +1163,9 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
-    <script src="schedule-core.js?v=20260913-schedule-1"></script>
-    <script src="script.js?v=20260913-schedule-1"></script>
-    <script src="schedule.js?v=20260913-schedule-1"></script>
+    <script src="schedule-core.js?v=20260914-schedule-v3"></script>
+    <script src="script.js?v=20260914-schedule-v3"></script>
+    <script src="schedule.js?v=20260914-schedule-v3"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>
     <script src="productivity.js?v=20260911-adaptive-study-1"></script>

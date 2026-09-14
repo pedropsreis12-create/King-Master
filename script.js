@@ -28,6 +28,7 @@ const defaultAppData = {
     profileName: 'Estudante',
     profileBio: 'Construindo meu caminho até o ENEM, um foco de cada vez.',
     profilePhoto: '',
+    profileBanner: '',
     xpResetOffset: 0,
     selectedFrames: { militar: '', aura: '' },
     frameVaultOpen: false,
@@ -39,6 +40,7 @@ const defaultAppData = {
     aiSettings: { retentionDays: 7 },
     aiConversation: [],
     pendingStudySession: null,
+    resolvedStudySessionIds: [],
     reminder: { enabled: false, time: '19:00', lastShown: '' },
     lastModifiedAt: 0
 };
@@ -81,6 +83,7 @@ if (typeof appData.profileBio !== 'string') appData.profileBio = '';
 appData.profileName = appData.profileName.trim().slice(0, 32);
 appData.profileBio = appData.profileBio.trim().slice(0, 190);
 if (typeof appData.profilePhoto !== 'string') appData.profilePhoto = '';
+if (typeof appData.profileBanner !== 'string') appData.profileBanner = '';
 if (!appData.visualMode) appData.visualMode = 'futuristic';
 if (!['militar', 'aura'].includes(appData.rankVisualMode)) appData.rankVisualMode = 'militar';
 if (!appData.selectedFrames || typeof appData.selectedFrames !== 'object') appData.selectedFrames = { militar: '', aura: '' };
@@ -107,6 +110,22 @@ appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
 appData.aiSettings.retentionDays = [1, 7, 30].includes(Number(appData.aiSettings.retentionDays)) ? Number(appData.aiSettings.retentionDays) : 7;
 if (!Array.isArray(appData.aiConversation)) appData.aiConversation = [];
 if (!appData.pendingStudySession || typeof appData.pendingStudySession !== 'object') appData.pendingStudySession = null;
+if (!Array.isArray(appData.resolvedStudySessionIds)) appData.resolvedStudySessionIds = [];
+appData.resolvedStudySessionIds = appData.resolvedStudySessionIds.map(String).filter(Boolean).slice(-40);
+if (appData.pendingStudySession) {
+    const pendente = appData.pendingStudySession;
+    const materiaPendente = appData.cycleItems.find(item => String(item.id) === String(pendente.subjectId));
+    const duplicadaPorId = pendente.id && (appData.resolvedStudySessionIds.includes(String(pendente.id))
+        || appData.historyItems.some(item => String(item.sourceSessionId || '') === String(pendente.id)));
+    const criadaEm = Number(pendente.createdAt || 0);
+    const duplicadaLegada = !pendente.id && criadaEm > 0 && appData.historyItems.some(item => {
+        const idHistorico = Number(item.id || 0);
+        const mesmaDuracao = Math.abs(Number(item.tempoSegundos || 0) - Number(pendente.seconds || 0)) < 1;
+        const mesmaMateria = String(item.materia || '').trim().toLocaleLowerCase('pt-BR') === String(materiaPendente?.subject || 'Estudo Livre').trim().toLocaleLowerCase('pt-BR');
+        return mesmaDuracao && mesmaMateria && idHistorico >= criadaEm && idHistorico - criadaEm < 6 * 60 * 60 * 1000;
+    });
+    if (duplicadaPorId || duplicadaLegada) appData.pendingStudySession = null;
+}
 if (!appData.reminder || typeof appData.reminder !== 'object') appData.reminder = { ...defaultAppData.reminder };
 appData.reminder = { ...defaultAppData.reminder, ...appData.reminder };
 if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
@@ -878,6 +897,19 @@ function aplicarFotoPerfil() {
             imagem.classList.remove('has-photo');
         }
     });
+    const banner = document.getElementById('profileBannerImage');
+    const bannerCard = document.getElementById('profileIdentityCover');
+    const bannerSource = appData.profileBanner || appData.profilePhoto || '';
+    if (banner) {
+        if (bannerSource) {
+            banner.src = bannerSource;
+            banner.classList.add('has-banner');
+        } else {
+            banner.removeAttribute('src');
+            banner.classList.remove('has-banner');
+        }
+    }
+    bannerCard?.classList.toggle('has-banner', Boolean(bannerSource));
     document.querySelectorAll('.avatar-core, .profile-identity-avatar').forEach(el => el.setAttribute('aria-label', `Foto de perfil de ${appData.profileName}`));
 }
 
@@ -962,6 +994,46 @@ function alterarFotoPerfil(event) {
         saveAppData();
         aplicarIdentidadePerfil();
         showToast('✓ Foto atualizada e salva automaticamente');
+        URL.revokeObjectURL(enderecoTemporario);
+        input.value = '';
+    };
+    imagemOriginal.onerror = () => {
+        URL.revokeObjectURL(enderecoTemporario);
+        input.value = '';
+        showToast('Não foi possível abrir essa imagem.', true);
+    };
+    imagemOriginal.src = enderecoTemporario;
+}
+
+function alterarBannerPerfil(event) {
+    const input = event.target;
+    const arquivo = input.files?.[0];
+    if (!arquivo) return;
+    if (!arquivo.type.startsWith('image/') || arquivo.size > 15 * 1024 * 1024) {
+        showToast(arquivo.size > 15 * 1024 * 1024 ? 'O banner deve ter no máximo 15 MB.' : 'Escolha uma imagem válida.', true);
+        input.value = '';
+        return;
+    }
+    const enderecoTemporario = URL.createObjectURL(arquivo);
+    const imagemOriginal = new Image();
+    imagemOriginal.onload = () => {
+        const proporcao = 1280 / 420;
+        let origemX = 0, origemY = 0, largura = imagemOriginal.naturalWidth, altura = imagemOriginal.naturalHeight;
+        if (largura / altura > proporcao) {
+            largura = altura * proporcao;
+            origemX = (imagemOriginal.naturalWidth - largura) / 2;
+        } else {
+            altura = largura / proporcao;
+            origemY = (imagemOriginal.naturalHeight - altura) / 2;
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 420;
+        canvas.getContext('2d').drawImage(imagemOriginal, origemX, origemY, largura, altura, 0, 0, canvas.width, canvas.height);
+        appData.profileBanner = canvas.toDataURL('image/jpeg', 0.76);
+        saveAppData();
+        aplicarFotoPerfil();
+        showToast('✓ Banner atualizado e salvo na sua conta');
         URL.revokeObjectURL(enderecoTemporario);
         input.value = '';
     };
@@ -1336,7 +1408,7 @@ function restoreTimerSession() {
     updateProgress();
     toggleBotaoStopHistorico();
     persistTimerCheckpoint();
-    if (appData.pendingStudySession && Number(appData.pendingStudySession.seconds) >= 5) setTimeout(abrirRegistroSessaoPendente, 350);
+    renderizarAvisoSessaoPendente();
 }
 
 function updateProgress() {
@@ -1359,6 +1431,13 @@ function toggleBotaoStopHistorico() {
     const show = currentMode === 'estudo' && currentSeconds > 0;
     ['btnStopHistory', 'endSessionBtnDash'].forEach(id => { if(document.getElementById(id)) document.getElementById(id).style.display = show ? 'flex' : 'none'; });
     if(document.getElementById('btnPauseHistory')) { document.getElementById('btnPauseHistory').style.display = show ? 'flex' : 'none'; document.getElementById('btnPauseHistory').innerHTML = isRunning ? '<span style="font-size:1.2rem;">⏸</span> Pausar' : '<span style="font-size:1.2rem;">▶</span> Retomar'; }
+}
+
+function renderizarAvisoSessaoPendente() {
+    const card = document.getElementById('pendingSessionCard');
+    if (!card) return;
+    const pendente = appData.pendingStudySession;
+    card.hidden = !(pendente && Number(pendente.seconds) >= 5);
 }
 
 function dataFuturaRegistro(dias = 1) {
@@ -1406,6 +1485,16 @@ function criarItemHistoricoRegistro({ segundos = 0, materia = 'Estudo Livre', as
 
 function registrarSessao(segundos, detalhes = null) {
     if(segundos < 5) return;
+    if (!Array.isArray(appData.resolvedStudySessionIds)) appData.resolvedStudySessionIds = [];
+    const sessaoOrigem = detalhes?.pendingSession || appData.pendingStudySession || null;
+    const sourceSessionId = String(sessaoOrigem?.id || '');
+    if (sourceSessionId && (appData.resolvedStudySessionIds.includes(sourceSessionId)
+        || appData.historyItems.some(item => String(item.sourceSessionId || '') === sourceSessionId))) {
+        appData.pendingStudySession = null;
+        saveAppData();
+        renderizarAvisoSessaoPendente();
+        return showToast('Essa sessão já estava registrada. O lembrete antigo foi removido.');
+    }
     const activeSubjId = detalhes?.subjectId ?? document.getElementById('activeSubjectSelect').value;
     let nome = 'Estudo Livre', cor = '#515154', tipo = 'Livre', materia = null;
     if (activeSubjId) materia = appData.cycleItems.find(item => String(item.id) === String(activeSubjId)) || null;
@@ -1417,13 +1506,13 @@ function registrarSessao(segundos, detalhes = null) {
     const assunto = String(detalhes?.assunto || '').trim();
     const comentario = String(detalhes?.comentario || '').trim();
     const atividade = ['estudo', 'simulado', 'redacao'].includes(detalhes?.atividade) ? detalhes.atividade : 'estudo';
-    const pendenteCronograma = appData.pendingStudySession?.scheduleBlockId ? { ...appData.pendingStudySession } : null;
+    const pendenteCronograma = sessaoOrigem?.scheduleBlockId ? { ...sessaoOrigem } : null;
     const metricas = atividade === 'estudo' ? detalhes?.study : atividade === 'simulado' ? detalhes?.simulado : null;
     const questoes = Math.max(0, Number(metricas?.questoes ?? metricas?.total) || 0);
     const acertos = Math.max(0, Number(metricas?.acertos) || 0);
     const erros = Math.max(0, Number(metricas?.erros) || 0);
     const historico = criarItemHistoricoRegistro({ segundos, materia: nome, assunto, cor, tipo, comentario, atividade });
-    Object.assign(historico, { questoes, acertos, erros });
+    Object.assign(historico, { questoes, acertos, erros, sourceSessionId });
     appData.historyItems.push(historico);
     if (materia && questoes) { materia.questoes = Number(materia.questoes || 0) + questoes; materia.acertos = Number(materia.acertos || 0) + acertos; materia.erros = Number(materia.erros || 0) + erros; }
     if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
@@ -1432,20 +1521,27 @@ function registrarSessao(segundos, detalhes = null) {
     if (atividade === 'simulado' && detalhes?.simulado) {
         const sim = detalhes.simulado;
         appData.simuladosItems.push({ id: Date.now() + 2, title: sim.title || `${nome} — sessão`, date: dataLocalISO(new Date()),
-            tempoMin: Math.max(1, Math.round(segundos / 60)), area: sim.area || 'Geral', total: sim.total, acertos: sim.acertos, erros: sim.erros, attachment: '' });
+            tempoMin: Math.max(1, Math.round(segundos / 60)), area: sim.area || 'Geral', format: 'sessao', total: sim.total,
+            acertos: sim.acertos, brancos: sim.brancos || 0, erros: sim.erros, mainError: sim.mainError || '',
+            nextStep: sim.nextStep || '', attachment: '' });
     }
     if (atividade === 'redacao' && detalhes?.redacao) {
         const red = detalhes.redacao;
-        appData.redacaoItems.push({ id: Date.now() + 3, theme: red.theme, date: dataLocalISO(new Date()), c1: red.scores[0], c2: red.scores[1], c3: red.scores[2], c4: red.scores[3], c5: red.scores[4], attachment: '', aguardandoCorrecao: red.scores.every(valor => valor === 0) });
+        appData.redacaoItems.push({ id: Date.now() + 3, theme: red.theme, date: dataLocalISO(new Date()), tempoMin: Math.max(1, Math.round(segundos / 60)),
+            status: red.status || 'awaiting', c1: red.scores[0], c2: red.scores[1], c3: red.scores[2], c4: red.scores[3], c5: red.scores[4],
+            nextFocus: red.nextFocus || '', attachment: '', aguardandoCorrecao: red.status !== 'corrected' });
     }
 
+    appData.pendingStudySession = null;
+    if (sourceSessionId) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== sourceSessionId), sourceSessionId].slice(-40);
     if (pendenteCronograma) window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade });
     currentSeconds = 0; // Histórico e rascunho são salvos na mesma escrita, sem duplicar na recuperação.
-    appData.pendingStudySession = null;
+    appData.activeScheduleBlock = null;
     saveAppData(); renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico(); 
     if (typeof renderizarRevisoes === 'function') renderizarRevisoes();
     if (atividade === 'simulado' && typeof renderizarSimulados === 'function') renderizarSimulados();
     if (atividade === 'redacao' && typeof renderizarRedacoes === 'function') renderizarRedacoes();
+    renderizarAvisoSessaoPendente();
     showToast(detalhes?.autoReview ? '✓ Sessão salva e revisão agendada.' : '✓ Sessão salva no histórico.');
     mostrarFraseMotivacional();
 }
@@ -1469,6 +1565,12 @@ function atualizarTipoRegistroSessao() {
     document.getElementById('sessionSimTitle').required = tipo === 'simulado';
     document.getElementById('sessionSimTotal').required = tipo === 'simulado';
     document.getElementById('sessionEssayTheme').required = tipo === 'redacao';
+    const statusRedacao = document.getElementById('sessionEssayStatus')?.value || 'awaiting';
+    const grade = document.querySelector('.session-essay-score')?.closest('.form-grid');
+    if (grade) grade.hidden = tipo !== 'redacao' || statusRedacao !== 'corrected';
+    document.querySelectorAll('.session-essay-score').forEach(input => {
+        input.disabled = tipo !== 'redacao' || statusRedacao !== 'corrected';
+    });
 }
 
 function atualizarRevisaoRegistroSessao() {
@@ -1497,14 +1599,34 @@ function abrirRegistroSessaoPendente() {
 function prepararRegistroSessao(segundos = currentSeconds, origem = 'manual') {
     if (Number(segundos) < 5) return false;
     clearInterval(timerInterval); isRunning = false; playPauseBtn.textContent = '▶';
-    appData.pendingStudySession = { seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: Date.now(), scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false };
-    saveAppData(); updateProgress(); toggleBotaoStopHistorico(); abrirRegistroSessaoPendente();
+    const criadaEm = Date.now();
+    appData.pendingStudySession = { id: `sessao-${criadaEm}-${Math.random().toString(36).slice(2, 8)}`, seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: criadaEm, scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false };
+    saveAppData(); updateProgress(); toggleBotaoStopHistorico(); renderizarAvisoSessaoPendente(); abrirRegistroSessaoPendente();
     return true;
 }
 
 function adiarRegistroSessao() {
     fecharModal('sessionCompleteModal');
-    showToast('A sessão continua protegida. Você pode retomá-la ou registrá-la depois.');
+    if (appData.pendingStudySession) appData.pendingStudySession.deferredAt = Date.now();
+    saveAppData();
+    renderizarAvisoSessaoPendente();
+    showToast('A sessão continua protegida e não abrirá sozinha.');
+}
+
+function descartarRegistroSessao() {
+    const pendente = appData.pendingStudySession;
+    if (pendente?.id) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== String(pendente.id)), String(pendente.id)].slice(-40);
+    appData.pendingStudySession = null;
+    appData.activeScheduleBlock = null;
+    currentSeconds = 0;
+    clearInterval(timerInterval);
+    isRunning = false;
+    fecharModal('sessionCompleteModal');
+    saveAppData();
+    updateProgress();
+    toggleBotaoStopHistorico();
+    renderizarAvisoSessaoPendente();
+    showToast('Registro pendente descartado. Ele não aparecerá novamente.');
 }
 
 function salvarRegistroSessao(event) {
@@ -1527,13 +1649,23 @@ function salvarRegistroSessao(event) {
     if (atividade === 'simulado') {
         const total = Math.max(1, Number(document.getElementById('sessionSimTotal').value) || 1);
         const acertos = Math.max(0, Number(document.getElementById('sessionSimHits').value) || 0);
-        const erros = Math.max(0, Number(document.getElementById('sessionSimErrors').value) || 0);
-        if (acertos + erros > total) return showToast('Acertos e erros não podem ultrapassar o total de questões.', true);
-        detalhes.simulado = { title: document.getElementById('sessionSimTitle').value.trim(), area: document.getElementById('sessionSimArea').value, total, acertos, erros };
+        const brancos = Math.max(0, Number(document.getElementById('sessionSimBlanks').value) || 0);
+        if (acertos + brancos > total) return showToast('Acertos e questões em branco não podem ultrapassar o total.', true);
+        detalhes.simulado = { title: document.getElementById('sessionSimTitle').value.trim(), area: document.getElementById('sessionSimArea').value,
+            total, acertos, brancos, erros: Math.max(0, total - acertos - brancos),
+            mainError: document.getElementById('sessionSimMainError').value,
+            nextStep: document.getElementById('sessionSimNextStep').value.trim() };
     }
     if (atividade === 'redacao') {
-        detalhes.redacao = { theme: document.getElementById('sessionEssayTheme').value.trim(), scores: [...document.querySelectorAll('.session-essay-score')].map(input => Math.max(0, Math.min(200, Number(input.value) || 0))) };
+        const status = document.getElementById('sessionEssayStatus').value || 'awaiting';
+        const scores = status === 'corrected'
+            ? [...document.querySelectorAll('.session-essay-score')].map(input => Math.max(0, Math.min(200, Number(input.value) || 0)))
+            : [0, 0, 0, 0, 0];
+        detalhes.redacao = { theme: document.getElementById('sessionEssayTheme').value.trim(), status, scores,
+            nextFocus: document.getElementById('sessionEssayNextFocus').value.trim() };
     }
+    detalhes.pendingSession = { ...pendente };
+    appData.pendingStudySession = null;
     fecharModal('sessionCompleteModal'); stopAlarm(); registrarSessao(Number(pendente.seconds), detalhes); updateProgress(); toggleBotaoStopHistorico(); document.title = 'King Master';
 }
 
@@ -3231,64 +3363,115 @@ function avaliarRevisaoCadernoErro(resultado) {
     }
 }
 
+const SIMULADO_FORMATOS = {
+    area: { total: 45, area: '' },
+    dia1: { total: 90, area: '1º dia ENEM' },
+    dia2: { total: 90, area: '2º dia ENEM' },
+    completo: { total: 180, area: 'ENEM completo' },
+    personalizado: { total: 45, area: 'Geral' }
+};
+
+function selecionarAreaSimulado(valor) {
+    const select = document.getElementById('simArea');
+    const area = String(valor || 'Geral');
+    if (![...select.options].some(option => option.value === area)) select.add(new Option(area, area));
+    select.value = area;
+}
+
+function atualizarFormatoSimulado(aplicarPadrao = true) {
+    const formato = document.getElementById('simFormat').value || 'area';
+    const configuracao = SIMULADO_FORMATOS[formato] || SIMULADO_FORMATOS.personalizado;
+    document.getElementById('simAreaGroup').hidden = formato !== 'area' && formato !== 'personalizado';
+    if (aplicarPadrao) {
+        document.getElementById('simTotal').value = configuracao.total;
+        if (configuracao.area) selecionarAreaSimulado(configuracao.area);
+    }
+    atualizarResumoSimulado();
+}
+
+function atualizarResumoSimulado() {
+    const total = Math.max(1, Number(document.getElementById('simTotal')?.value) || 1);
+    const acertos = Math.max(0, Number(document.getElementById('simAcertos')?.value) || 0);
+    const brancos = Math.max(0, Number(document.getElementById('simBrancos')?.value) || 0);
+    const valido = acertos + brancos <= total;
+    document.getElementById('simCalculatedErrors').textContent = valido ? String(total - acertos - brancos) : '—';
+    document.getElementById('simLiveScore').textContent = valido ? `${Math.round(acertos / total * 100)}%` : 'Confira';
+}
+
 function abrirModalSimulado() {
     document.getElementById('formAddSimulado').reset();
-    document.getElementById('simEditId').value = "";
-    document.getElementById('simArea').value = "Linguagens, Códigos e suas Tecnologias";
-    document.getElementById('simFileName').textContent = "Selecionar Arquivo do Computador";
-    document.getElementById('simAttachmentData').value = "";
-    document.getElementById('simuladoModalTitle').textContent = "Registrar simulado";
-    document.getElementById('simDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('simEditId').value = '';
+    document.getElementById('simFormat').value = 'area';
+    selecionarAreaSimulado('Linguagens, Códigos e suas Tecnologias');
+    document.getElementById('simTotal').value = 45;
+    document.getElementById('simAcertos').value = 0;
+    document.getElementById('simBrancos').value = 0;
+    document.getElementById('simCreateReview').checked = true;
+    document.getElementById('simFileName').textContent = 'Anexar prova, gabarito ou relatório';
+    document.getElementById('simAttachmentData').value = '';
+    document.getElementById('simuladoModalTitle').textContent = 'Registrar simulado';
+    document.getElementById('simDate').value = dataLocalISO(new Date());
+    atualizarFormatoSimulado(false);
     document.getElementById('simuladoModal').classList.add('active');
 }
 
 function editarSimulado(id) {
     const sim = appData.simuladosItems.find(i => i.id === id);
-    if(sim) {
-        document.getElementById('simEditId').value = sim.id;
-        document.getElementById('simTitle').value = sim.title;
-        document.getElementById('simDate').value = sim.date;
-        document.getElementById('simTempo').value = sim.tempoMin;
-        document.getElementById('simArea').value = sim.area || "Linguagens, Códigos e suas Tecnologias";
-        document.getElementById('simTotal').value = sim.total || 45;
-        document.getElementById('simAcertos').value = sim.acertos || 0;
-        document.getElementById('simErros').value = sim.erros || 0;
-        document.getElementById('simAttachmentData').value = sim.attachment || "";
-        document.getElementById('simFileName').textContent = sim.attachment ? "Arquivo Anexado (Clique para trocar)" : "Selecionar Arquivo do Computador";
-        document.getElementById('simuladoModalTitle').textContent = "Editar Desempenho";
-        document.getElementById('simuladoModal').classList.add('active');
-    }
+    if (!sim) return;
+    document.getElementById('formAddSimulado').reset();
+    document.getElementById('simEditId').value = sim.id;
+    document.getElementById('simTitle').value = sim.title || '';
+    document.getElementById('simDate').value = sim.date || dataLocalISO(new Date());
+    document.getElementById('simTempo').value = sim.tempoMin || '';
+    document.getElementById('simFormat').value = SIMULADO_FORMATOS[sim.format] ? sim.format : 'area';
+    selecionarAreaSimulado(sim.area || 'Geral');
+    document.getElementById('simTotal').value = sim.total || 45;
+    document.getElementById('simAcertos').value = sim.acertos || 0;
+    document.getElementById('simBrancos').value = sim.brancos || 0;
+    document.getElementById('simPreparation').value = sim.preparation || '';
+    document.getElementById('simMainError').value = sim.mainError || '';
+    document.getElementById('simWeakTopics').value = sim.weakTopics || '';
+    document.getElementById('simNextStep').value = sim.nextStep || '';
+    document.getElementById('simCreateReview').checked = false;
+    document.getElementById('simAttachmentData').value = sim.attachment || '';
+    document.getElementById('simFileName').textContent = sim.attachment ? 'Arquivo anexado — clique para trocar' : 'Anexar prova, gabarito ou relatório';
+    document.getElementById('simuladoModalTitle').textContent = 'Editar simulado';
+    atualizarFormatoSimulado(false);
+    document.getElementById('simuladoModal').classList.add('active');
 }
 
 function salvarSimulado(e) {
     e.preventDefault();
     const idEdit = document.getElementById('simEditId').value;
-    const novoRegisto = !idEdit;
-    const title = document.getElementById('simTitle').value;
+    const title = document.getElementById('simTitle').value.trim();
     const date = document.getElementById('simDate').value;
-    const tempoMin = parseInt(document.getElementById('simTempo').value) || 0;
-    const area = document.getElementById('simArea').value;
-    const total = parseInt(document.getElementById('simTotal').value) || 1;
-    const acertos = parseInt(document.getElementById('simAcertos').value) || 0;
-    const erros = parseInt(document.getElementById('simErros').value) || 0;
-    const attachment = document.getElementById('simAttachmentData').value;
-
-    if (acertos + erros > total) {
-        return showToast('A soma de acertos e erros não pode ultrapassar o total de questões.', true);
-    }
-
+    const tempoMin = Math.max(1, Number(document.getElementById('simTempo').value) || 1);
+    const format = document.getElementById('simFormat').value || 'area';
+    const area = format === 'area' || format === 'personalizado' ? document.getElementById('simArea').value : SIMULADO_FORMATOS[format].area;
+    const total = Math.max(1, Number(document.getElementById('simTotal').value) || 1);
+    const acertos = Math.max(0, Number(document.getElementById('simAcertos').value) || 0);
+    const brancos = Math.max(0, Number(document.getElementById('simBrancos').value) || 0);
+    if (acertos + brancos > total) return showToast('Acertos e questões em branco não podem ultrapassar o total.', true);
+    const registro = {
+        title, date, tempoMin, format, area, total, acertos, brancos, erros: total - acertos - brancos,
+        preparation: document.getElementById('simPreparation').value,
+        mainError: document.getElementById('simMainError').value,
+        weakTopics: document.getElementById('simWeakTopics').value.trim(),
+        nextStep: document.getElementById('simNextStep').value.trim(),
+        attachment: document.getElementById('simAttachmentData').value
+    };
     if (idEdit) {
-        const idx = appData.simuladosItems.findIndex(i => i.id == idEdit);
-        if (idx > -1) appData.simuladosItems[idx] = { ...appData.simuladosItems[idx], title, date, tempoMin, area, total, acertos, erros, attachment };
-    } else {
-        appData.simuladosItems.push({ id: Date.now(), title, date, tempoMin, area, total, acertos, erros, attachment });
-    }
-    const revisaoCriada = novoRegisto ? criarRevisaoDoPiorSimulado() : false;
+        const index = appData.simuladosItems.findIndex(item => item.id == idEdit);
+        if (index > -1) appData.simuladosItems[index] = { ...appData.simuladosItems[index], ...registro };
+    } else appData.simuladosItems.push({ id: Date.now(), ...registro });
+    const revisaoCriada = document.getElementById('simCreateReview').checked
+        ? criarRevisaoAutomaticaRegistro(area, registro.nextStep || registro.weakTopics, 1, 'simulado-reflexao')
+        : false;
     saveAppData();
     renderizarSimulados();
     renderizarRevisoes();
     fecharModal('simuladoModal');
-    showToast(revisaoCriada ? '🎯 Simulado salvo e revisão criada para a área mais fraca!' : '🎯 Simulado salvo!');
+    showToast(revisaoCriada ? '🎯 Simulado salvo e próximo foco agendado.' : '🎯 Simulado salvo com seu diagnóstico.');
 }
 
 function filtrarSimulados(area = 'todas') {
@@ -3362,6 +3545,7 @@ function renderizarSimulados() {
     list.innerHTML = visiveis.map(sim => {
         const acertos = Number(sim.acertos) || 0;
         const erros = Number(sim.erros) || 0;
+        const brancos = Number(sim.brancos) || 0;
         const total = Number(sim.total) || acertos + erros || 1;
         const percentual = Math.round(acertos / total * 100);
         const cor = percentual >= 70 ? '#34c759' : (percentual >= 50 ? '#ff9500' : '#ff3b30');
@@ -3370,57 +3554,91 @@ function renderizarSimulados() {
         const area = escaparRevisaoHtml(sim.area || 'Geral');
         const data = dataISOParaLocal(sim.date);
         const anexo = anexoSeguro(sim.attachment);
-        return `<article class="agenda-card result-card" style="--urgency-color:${cor};"><div class="result-card-header"><div class="result-card-title"><h3>${titulo}</h3><p>${area} • ${data ? data.toLocaleDateString('pt-BR') : 'Sem data'} • ${formatShortTime((Number(sim.tempoMin) || 0) * 60)}</p></div><div class="result-score">${percentual}%</div></div><div class="result-card-metrics"><div><small>Questões</small><strong>${total}</strong></div><div><small>Acertos</small><strong style="color:#34c759">${acertos}</strong></div><div><small>Erros</small><strong style="color:#ff3b30">${erros}</strong></div><div><small>Por questão</small><strong>${Math.floor(segundosQuestao / 60)}m${String(segundosQuestao % 60).padStart(2,'0')}s</strong></div></div><div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${titulo}_anexo">↗ Ver anexo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarSimulado(${sim.id})" aria-label="Editar ${titulo}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('simulado', ${sim.id}, 'Apagar simulado?', 'O desempenho será eliminado.')" aria-label="Apagar ${titulo}" title="Apagar">×</button></div></div></article>`;
+        const formato = { area: 'Uma área', dia1: '1º dia', dia2: '2º dia', completo: 'ENEM completo', personalizado: 'Personalizado', sessao: 'Sessão de estudo' }[sim.format] || 'Simulado';
+        const causas = { conteudo: 'Lacuna de conteúdo', interpretacao: 'Interpretação', calculo: 'Cálculo ou execução', atencao: 'Atenção', tempo: 'Tempo e estratégia' };
+        const diagnostico = [sim.mainError ? causas[sim.mainError] || sim.mainError : '', sim.nextStep ? `Próximo: ${sim.nextStep}` : ''].filter(Boolean);
+        return `<article class="agenda-card result-card" style="--urgency-color:${cor};"><div class="result-card-header"><div class="result-card-title"><span class="result-format-chip">${escaparRevisaoHtml(formato)}</span><h3>${titulo}</h3><p>${area} • ${data ? data.toLocaleDateString('pt-BR') : 'Sem data'} • ${formatShortTime((Number(sim.tempoMin) || 0) * 60)}</p></div><div class="result-score">${percentual}%</div></div><div class="result-card-metrics ${brancos ? 'five' : ''}"><div><small>Questões</small><strong>${total}</strong></div><div><small>Acertos</small><strong style="color:#34c759">${acertos}</strong></div><div><small>Erros</small><strong style="color:#ff3b30">${erros}</strong></div>${brancos ? `<div><small>Em branco</small><strong>${brancos}</strong></div>` : ''}<div><small>Por questão</small><strong>${Math.floor(segundosQuestao / 60)}m${String(segundosQuestao % 60).padStart(2,'0')}s</strong></div></div>${diagnostico.length ? `<div class="result-action-note"><span>↗</span><p>${diagnostico.map(texto => escaparRevisaoHtml(texto)).join(' · ')}</p></div>` : ''}<div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${titulo}_anexo">↗ Ver anexo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarSimulado(${sim.id})" aria-label="Editar ${titulo}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('simulado', ${sim.id}, 'Apagar simulado?', 'O desempenho será eliminado.')" aria-label="Apagar ${titulo}" title="Apagar">×</button></div></div></article>`;
     }).join('');
+}
+
+function prepararNotasRedacao() {
+    const opcoes = [0, 40, 80, 120, 160, 200].map(valor => `<option value="${valor}">${valor} pontos</option>`).join('');
+    document.querySelectorAll('.red-score-input').forEach(select => {
+        if (!select.options.length) select.innerHTML = opcoes;
+    });
+}
+
+function atualizarTotalRedacao() {
+    const total = [...document.querySelectorAll('.red-score-input')].reduce((soma, select) => soma + (Number(select.value) || 0), 0);
+    const visor = document.getElementById('redLiveTotal');
+    if (visor) visor.textContent = String(total);
+}
+
+function atualizarEstadoRedacao() {
+    const status = document.querySelector('input[name="redStatus"]:checked')?.value || 'awaiting';
+    document.getElementById('redScoresSection').hidden = status !== 'corrected';
+    document.getElementById('redReflectionStep').textContent = status === 'corrected' ? '03' : '02';
+    atualizarTotalRedacao();
 }
 
 function abrirModalRedacao() {
     document.getElementById('formAddRedacao').reset();
-    document.getElementById('redEditId').value = "";
-    document.getElementById('redFileName').textContent = "Selecionar Arquivo do Computador";
-    document.getElementById('redAttachmentData').value = "";
-    document.getElementById('redacaoModalTitle').textContent = "Registrar redação";
-    document.getElementById('redDate').value = new Date().toISOString().split('T')[0];
+    prepararNotasRedacao();
+    document.getElementById('redEditId').value = '';
+    document.querySelector('input[name="redStatus"][value="awaiting"]').checked = true;
+    document.getElementById('redFileName').textContent = 'Anexar redação ou folha de correção';
+    document.getElementById('redAttachmentData').value = '';
+    document.getElementById('redacaoModalTitle').textContent = 'Registrar redação';
+    document.getElementById('redDate').value = dataLocalISO(new Date());
+    atualizarEstadoRedacao();
     document.getElementById('redacaoModal').classList.add('active');
 }
 
 function editarRedacao(id) {
     const item = appData.redacaoItems.find(i => i.id === id);
-    if(item) {
-        document.getElementById('redEditId').value = item.id;
-        document.getElementById('redTheme').value = item.theme;
-        document.getElementById('redDate').value = item.date;
-        document.getElementById('redC1').value = item.c1;
-        document.getElementById('redC2').value = item.c2;
-        document.getElementById('redC3').value = item.c3;
-        document.getElementById('redC4').value = item.c4;
-        document.getElementById('redC5').value = item.c5;
-        document.getElementById('redAttachmentData').value = item.attachment || "";
-        document.getElementById('redFileName').textContent = item.attachment ? "Arquivo Anexado (Clique para trocar)" : "Selecionar Arquivo do Computador";
-        document.getElementById('redacaoModalTitle').textContent = "Editar Redação";
-        document.getElementById('redacaoModal').classList.add('active');
-    }
+    if (!item) return;
+    document.getElementById('formAddRedacao').reset();
+    prepararNotasRedacao();
+    const status = item.status || (item.aguardandoCorrecao ? 'awaiting' : 'corrected');
+    document.getElementById('redEditId').value = item.id;
+    document.getElementById('redTheme').value = item.theme || '';
+    document.getElementById('redDate').value = item.date || dataLocalISO(new Date());
+    document.getElementById('redTempo').value = item.tempoMin || '';
+    document.querySelector(`input[name="redStatus"][value="${status}"]`).checked = true;
+    ['c1', 'c2', 'c3', 'c4', 'c5'].forEach(chave => document.getElementById(`red${chave.toUpperCase()}`).value = String(Number(item[chave]) || 0));
+    document.getElementById('redEvaluator').value = item.evaluator || '';
+    document.getElementById('redStrengths').value = item.strengths || '';
+    document.getElementById('redNextFocus').value = item.nextFocus || '';
+    document.getElementById('redAttachmentData').value = item.attachment || '';
+    document.getElementById('redFileName').textContent = item.attachment ? 'Arquivo anexado — clique para trocar' : 'Anexar redação ou folha de correção';
+    document.getElementById('redacaoModalTitle').textContent = 'Editar redação';
+    atualizarEstadoRedacao();
+    document.getElementById('redacaoModal').classList.add('active');
 }
 
 function salvarRedacao(e) {
     e.preventDefault();
     const idEdit = document.getElementById('redEditId').value;
-    const theme = document.getElementById('redTheme').value;
-    const date = document.getElementById('redDate').value;
-    const c1 = parseInt(document.getElementById('redC1').value) || 0;
-    const c2 = parseInt(document.getElementById('redC2').value) || 0;
-    const c3 = parseInt(document.getElementById('redC3').value) || 0;
-    const c4 = parseInt(document.getElementById('redC4').value) || 0;
-    const c5 = parseInt(document.getElementById('redC5').value) || 0;
-    const attachment = document.getElementById('redAttachmentData').value;
-
+    const status = document.querySelector('input[name="redStatus"]:checked')?.value || 'awaiting';
+    const notas = status === 'corrected'
+        ? ['redC1', 'redC2', 'redC3', 'redC4', 'redC5'].map(id => Math.max(0, Math.min(200, Number(document.getElementById(id).value) || 0)))
+        : [0, 0, 0, 0, 0];
+    const registro = {
+        theme: document.getElementById('redTheme').value.trim(), date: document.getElementById('redDate').value,
+        tempoMin: Math.max(0, Number(document.getElementById('redTempo').value) || 0), status,
+        c1: notas[0], c2: notas[1], c3: notas[2], c4: notas[3], c5: notas[4],
+        evaluator: document.getElementById('redEvaluator').value.trim(), strengths: document.getElementById('redStrengths').value.trim(),
+        nextFocus: document.getElementById('redNextFocus').value.trim(), attachment: document.getElementById('redAttachmentData').value,
+        aguardandoCorrecao: status !== 'corrected'
+    };
     if (idEdit) {
-        const idx = appData.redacaoItems.findIndex(i => i.id == idEdit);
-        if (idx > -1) appData.redacaoItems[idx] = { ...appData.redacaoItems[idx], theme, date, c1, c2, c3, c4, c5, attachment, aguardandoCorrecao: false };
-    } else {
-        appData.redacaoItems.push({ id: Date.now(), theme, date, c1, c2, c3, c4, c5, attachment, aguardandoCorrecao: false });
-    }
-    saveAppData(); renderizarRedacoes(); fecharModal('redacaoModal'); showToast('✍️ Redação salva!');
+        const index = appData.redacaoItems.findIndex(item => item.id == idEdit);
+        if (index > -1) appData.redacaoItems[index] = { ...appData.redacaoItems[index], ...registro };
+    } else appData.redacaoItems.push({ id: Date.now(), ...registro });
+    saveAppData();
+    renderizarRedacoes();
+    fecharModal('redacaoModal');
+    showToast(status === 'corrected' ? '✍️ Redação e devolutiva salvas.' : '✍️ Redação guardada para continuar depois.');
 }
 
 function renderizarRedacoes() {
@@ -3436,7 +3654,8 @@ function renderizarRedacoes() {
         { chave: 'c5', sigla: 'C5', nome: 'Intervenção' }
     ];
     const totalDaRedacao = redacao => competencias.reduce((soma, competencia) => soma + (Number(redacao[competencia.chave]) || 0), 0);
-    const corrigidas = itens.filter(item => !item.aguardandoCorrecao);
+    const statusDaRedacao = item => item.status || (item.aguardandoCorrecao ? 'awaiting' : 'corrected');
+    const corrigidas = itens.filter(item => statusDaRedacao(item) === 'corrected');
     const medias = competencias.map(competencia => ({ ...competencia, media: corrigidas.length ? Math.round(corrigidas.reduce((soma, item) => soma + (Number(item[competencia.chave]) || 0), 0) / corrigidas.length) : 0 }));
     const mediaGlobal = corrigidas.length ? Math.round(corrigidas.reduce((soma, item) => soma + totalDaRedacao(item), 0) / corrigidas.length) : 0;
     const ordenadas = [...medias].sort((a, b) => b.media - a.media);
@@ -3474,18 +3693,22 @@ function renderizarRedacoes() {
     }
 
     if (!itens.length) {
-        list.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">✎</b><strong>Registre sua primeira redação corrigida</strong><p>As notas por competência vão mostrar com clareza onde manter e onde melhorar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRedacao()">Registrar redação</button></div>';
+        list.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">✎</b><strong>Registre sua primeira redação</strong><p>Você pode guardar um rascunho, aguardar a correção ou analisar as cinco competências.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRedacao()">Registrar redação</button></div>';
         return;
     }
 
     list.innerHTML = itens.map(redacao => {
         const total = totalDaRedacao(redacao);
-        const pendente = Boolean(redacao.aguardandoCorrecao);
+        const status = statusDaRedacao(redacao);
+        const pendente = status !== 'corrected';
+        const rotuloStatus = status === 'draft' ? 'Em produção' : 'Aguardando correção';
         const cor = total >= 900 ? '#34c759' : (total >= 700 ? '#ff9500' : '#ff3b30');
         const tema = escaparRevisaoHtml(redacao.theme || 'Redação sem tema');
         const data = dataISOParaLocal(redacao.date);
         const anexo = anexoSeguro(redacao.attachment);
-        return `<article class="agenda-card result-card" style="--urgency-color:${pendente ? 'var(--accent-color)' : cor};"><div class="result-card-header"><div class="result-card-title"><h3>${tema}</h3><p>${data ? data.toLocaleDateString('pt-BR') : 'Sem data'}</p></div><div class="result-score${pendente ? ' pending' : ''}">${pendente ? 'Aguardando correção' : total}</div></div>${pendente ? '<p class="result-pending-note">Quando receber as notas, edite este registro para completar C1 a C5.</p>' : `<div class="result-card-metrics five">${competencias.map(competencia => `<div><small>${competencia.sigla}</small><strong>${Number(redacao[competencia.chave]) || 0}</strong></div>`).join('')}</div>`}<div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${tema}_redacao">↗ Ver arquivo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarRedacao(${redacao.id})" aria-label="Editar ${tema}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('redacao', ${redacao.id}, 'Apagar redação?', 'O registro será eliminado.')" aria-label="Apagar ${tema}" title="Apagar">×</button></div></div></article>`;
+        const contexto = [redacao.tempoMin ? `${redacao.tempoMin} min` : '', redacao.evaluator ? `Correção: ${redacao.evaluator}` : ''].filter(Boolean).join(' • ');
+        const devolutiva = [redacao.strengths ? `Manter: ${redacao.strengths}` : '', redacao.nextFocus ? `Próximo foco: ${redacao.nextFocus}` : ''].filter(Boolean);
+        return `<article class="agenda-card result-card" style="--urgency-color:${pendente ? 'var(--accent-color)' : cor};"><div class="result-card-header"><div class="result-card-title"><span class="result-format-chip">${status === 'draft' ? 'Rascunho' : status === 'awaiting' ? 'Na fila de correção' : 'Corrigida'}</span><h3>${tema}</h3><p>${data ? data.toLocaleDateString('pt-BR') : 'Sem data'}${contexto ? ` • ${escaparRevisaoHtml(contexto)}` : ''}</p></div><div class="result-score${pendente ? ' pending' : ''}">${pendente ? rotuloStatus : total}</div></div>${pendente ? `<p class="result-pending-note">${status === 'draft' ? 'Continue a produção quando quiser; o registro já está salvo.' : 'Quando receber as notas, edite para preencher C1 a C5 e a devolutiva.'}</p>` : `<div class="result-card-metrics five">${competencias.map(competencia => `<div><small>${competencia.sigla}</small><strong>${Number(redacao[competencia.chave]) || 0}</strong></div>`).join('')}</div>`}${devolutiva.length ? `<div class="result-action-note"><span>✦</span><p>${devolutiva.map(texto => escaparRevisaoHtml(texto)).join(' · ')}</p></div>` : ''}<div class="result-card-actions">${anexo ? `<a class="attachment-link" href="${anexo}" download="${tema}_redacao">↗ Ver arquivo</a>` : '<span></span>'}<div><button type="button" class="workspace-icon-button" onclick="editarRedacao(${redacao.id})" aria-label="Editar ${tema}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('redacao', ${redacao.id}, 'Apagar redação?', 'O registro será eliminado.')" aria-label="Apagar ${tema}" title="Apagar">×</button></div></div></article>`;
     }).join('');
 }
 

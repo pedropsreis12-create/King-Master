@@ -53,6 +53,9 @@
         ordered.forEach((block, index) => {
             const same = String(block.subjectId) === String(runSubject);
             if (index && (!same || runLength >= 2)) { cursor += settings.pauseMinutes; runLength = 0; }
+            if (block.fixedStart && /^\d{2}:\d{2}$/.test(String(block.start || ''))) {
+                cursor = Math.max(cursor, toMinutes(block.start));
+            }
             block.start = toClock(cursor);
             block.order = index;
             block.duration = Math.min(240, Math.max(5, Number(block.duration) || settings.blockMinutes));

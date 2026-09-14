@@ -68,6 +68,33 @@ test('completed timers require a useful study record and can feed specialist wor
   assert.match(html, /Salvar registro/);
   assert.match(script, /function prepararRegistroSessao/);
   assert.match(script, /function criarRevisaoAutomaticaRegistro/);
+  assert.match(html, /id="pendingSessionCard"[^>]+hidden/);
+  assert.match(html, /onclick="descartarRegistroSessao\(\)"/);
+  assert.match(script, /resolvedStudySessionIds/);
+  assert.match(script, /sourceSessionId/);
+  assert.doesNotMatch(script, /setTimeout\([^\n]*abrirRegistroSessaoPendente/);
+});
+
+test('simulation and essay records capture a useful post-practice diagnosis', () => {
+  for (const id of ['simFormat', 'simBrancos', 'simPreparation', 'simMainError', 'simWeakTopics', 'simNextStep', 'simCreateReview']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  for (const id of ['redTempo', 'redScoresSection', 'redEvaluator', 'redStrengths', 'redNextFocus']) {
+    assert.match(html, new RegExp(`id="${id}"`));
+  }
+  for (const status of ['draft', 'awaiting', 'corrected']) assert.match(html, new RegExp(`name="redStatus" value="${status}"`));
+  assert.match(script, /function atualizarResumoSimulado/);
+  assert.match(script, /erros: total - acertos - brancos/);
+  assert.match(script, /function atualizarEstadoRedacao/);
+  assert.match(script, /status !== 'corrected'/);
+});
+
+test('profile keeps an independent persistent banner', () => {
+  assert.match(html, /id="profileBannerImage"/);
+  assert.match(html, /id="profileBannerInput"/);
+  assert.match(script, /profileBanner: ''/);
+  assert.match(script, /function alterarBannerPerfil/);
+  assert.match(script, /appData\.profileBanner = canvas\.toDataURL/);
 });
 
 test('topic organizer searches existing content and supports one-tap study logging', () => {

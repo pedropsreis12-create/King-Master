@@ -54,6 +54,16 @@ test('horários incluem pausa após uma sequência e a cópia limpa o progresso'
     assert.equal(Object.keys(copied.dailyClosures).length, 0);
 });
 
+test('um horário escolhido manualmente permanece fixo sem quebrar a sequência', () => {
+    const blocks = [
+        { id: 1, subjectId: 1, day: 2, order: 0, duration: 40 },
+        { id: 2, subjectId: 2, day: 2, order: 1, duration: 50, start: '17:30', fixedStart: true },
+        { id: 3, subjectId: 2, day: 2, order: 2, duration: 25 }
+    ];
+    Core.arrangeTimes(blocks, { ...settings, startTime: '14:00', pauseMinutes: 10 }, 2);
+    assert.deepEqual(blocks.map(block => block.start), ['14:00', '17:30', '18:20']);
+});
+
 test('interface liga cronograma, configuração, arrastar e integração ao registro existente', () => {
     const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const ui = fs.readFileSync(new URL('../schedule.js', import.meta.url), 'utf8');
@@ -61,6 +71,8 @@ test('interface liga cronograma, configuração, arrastar e integração ao regi
     assert.match(html, /data-section="cronograma"/);
     assert.match(html, /id="scheduleSettingsModal"/);
     assert.match(html, /id="scheduleDayCloseModal"/);
+    assert.match(html, /id="scheduleDayStrip"/);
+    assert.match(html, /id="scheduleTimeline"/);
     assert.match(ui, /ondragstart="KingSchedule\.dragStart/);
     assert.match(ui, /abrirRegistroSessaoPendente\(\)/);
     assert.match(app, /KingSchedule\?\.completeFromSession/);

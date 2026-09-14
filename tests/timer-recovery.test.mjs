@@ -100,6 +100,16 @@ test('ending a session protects the draft until the required study summary is sa
     h.run('restoreTimerSession(); encerrarSessaoDashboard()');
     assert.equal(h.ctx.appData.historyItems.length, 1);
 });
+test('a resolved session id cannot be registered or reminded twice', () => {
+    const h = setup();
+    h.ctx.appData.pendingStudySession = { id: 'session-once', seconds: 90, subjectId: '', createdAt: Date.now() };
+    h.run(`registrarSessao(90, { pendingSession: { id: 'session-once', seconds: 90 }, assunto: 'Funções', comentario: 'Exercícios resolvidos', atividade: 'estudo' })`);
+    assert.equal(h.ctx.appData.historyItems.length, 1);
+    assert.deepEqual(plain(h.ctx.appData.resolvedStudySessionIds), ['session-once']);
+    h.run(`registrarSessao(90, { pendingSession: { id: 'session-once', seconds: 90 }, assunto: 'Funções', comentario: 'Exercícios resolvidos', atividade: 'estudo' })`);
+    assert.equal(h.ctx.appData.historyItems.length, 1);
+    assert.equal(h.ctx.appData.pendingStudySession, null);
+});
 test('explicit timer reset remains reset after recovery', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(3500); h.run('tickTimer(); executarResetTimer(); restoreTimerSession()');
     assert.equal(h.run('currentSeconds'), 0);

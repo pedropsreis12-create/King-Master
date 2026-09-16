@@ -180,6 +180,34 @@
         }).join('');
     }
 
+    function renderWeekMatrix() {
+        const container = byId('scheduleWeekMatrix');
+        if (!container) return;
+        const blocks = week(false)?.blocks || [];
+        if (!appData.cycleItems.length) {
+            container.innerHTML = '<div class="schedule-matrix-empty"><span>＋</span><strong>O quadro nasce das suas matérias</strong><p>Cadastre uma matéria para começar, sem conteúdo pronto ou grade imposta.</p><button type="button" class="cycle-btn primary" onclick="showSection(\'planejamento\');abrirModalCiclo()">Adicionar matéria</button></div>';
+            return;
+        }
+        if (!blocks.length) {
+            container.innerHTML = '<div class="schedule-matrix-empty"><span>▤</span><strong>Construa sua própria grade</strong><p>Adicione blocos manualmente ou use a organização automática com a carga que você definiu.</p><div><button type="button" class="cycle-btn primary" onclick="KingSchedule.openBlock()">Criar primeiro bloco</button><button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()">Configurar carga</button></div></div>';
+            return;
+        }
+        const horarios = [...new Set(blocks.map(block => block.start).filter(Boolean))].sort((a, b) => Core.toMinutes(a) - Core.toMinutes(b));
+        const cabecalho = `<div class="schedule-matrix-corner"><span>HORÁRIO</span></div>${DAYS.map(day => `<button type="button" class="schedule-matrix-day ${selectedDay === day ? 'active' : ''}" onclick="KingSchedule.selectDay(${day})"><strong>${DAY_SHORT[day]}</strong><small>${dayDate(visibleWeek, day).getDate()}</small></button>`).join('')}`;
+        const linhas = horarios.map(horario => {
+            const rotuloFim = blocks.filter(block => block.start === horario).reduce((maior, block) => Math.max(maior, Core.toMinutes(block.start) + Number(block.duration || 0)), 0);
+            const fim = rotuloFim ? `${String(Math.floor(rotuloFim / 60)).padStart(2, '0')}:${String(rotuloFim % 60).padStart(2, '0')}` : '';
+            const celulas = DAYS.map(day => {
+                const block = blocks.find(item => Number(item.day) === day && item.start === horario);
+                if (!block) return `<button type="button" class="schedule-matrix-cell empty" onclick="KingSchedule.openBlock(null,${day})" aria-label="Adicionar bloco em ${DAY_NAMES[day]}"><span>＋</span></button>`;
+                const mat = subject(block.subjectId), kind = KINDS[block.kind] || KINDS.teoria, state = STATUS[block.status] || STATUS.pending;
+                return `<button type="button" class="schedule-matrix-cell status-${block.status}" style="--block-color:${safeColor(mat?.color)}" onclick="KingSchedule.openBlock('${safeId(block.id)}')"><span class="schedule-matrix-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><span><strong>${escape(mat?.subject || 'Matéria removida')}</strong><small>${escape(block.topic || kind.label)}</small></span><i title="${escape(state.label)}">${state.icon}</i></button>`;
+            }).join('');
+            return `<div class="schedule-matrix-time"><strong>${escape(horario)}</strong><small>${escape(fim)}</small></div>${celulas}`;
+        }).join('');
+        container.innerHTML = `<div class="schedule-matrix-grid">${cabecalho}${linhas}</div>`;
+    }
+
     function blockHtml(block) {
         const mat = subject(block.subjectId), color = safeColor(mat?.color), kind = KINDS[block.kind] || KINDS.teoria, state = STATUS[block.status] || STATUS.pending;
         const end = Core.addMinutes(block.start, block.duration), id = safeId(block.id);
@@ -270,7 +298,7 @@
         if (!byId('scheduleTimeline')) return;
         byId('scheduleWeekRange').textContent = formatRange(visibleWeek);
         byId('scheduleWeekEyebrow').textContent = visibleWeek === currentWeekKey() ? 'SEMANA ATUAL' : visibleWeek < currentWeekKey() ? 'SEMANA ANTERIOR' : 'PRÓXIMA SEMANA';
-        renderSummary(); renderNext(); renderBalance(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderNotice(); renderReplanButton(); performanceSuggestion();
+        renderSummary(); renderNext(); renderBalance(); renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderNotice(); renderReplanButton(); performanceSuggestion();
     }
 
     function organizeCurrentWeek() {
@@ -295,7 +323,7 @@
     }
     function changeWeek(direction) { visibleWeek = Core.addDays(visibleWeek, Number(direction) * 7); selectedDay = settings().studyDays[0] || 1; render(); }
     function goCurrentWeek() { visibleWeek = currentWeekKey(); selectedDay = Math.min(6, Math.max(1, new Date().getDay() || 1)); render(); }
-    function selectDay(day) { selectedDay = DAYS.includes(Number(day)) ? Number(day) : 1; renderDayStrip(); renderTimeline(); renderDayPanel(); }
+    function selectDay(day) { selectedDay = DAYS.includes(Number(day)) ? Number(day) : 1; renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); }
     function copyToNextWeek() {
         const source = week(false);
         if (!source?.blocks?.length) return toast('Monte esta semana antes de copiá-la.', true);

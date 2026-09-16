@@ -13,11 +13,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260914-subject-editor-v1">
+    <link rel="stylesheet" href="style.css?v=20260916-session-safe-v1">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
-    <link rel="stylesheet" href="usability.css?v=20260911-adaptive-study-1">
-    <link rel="stylesheet" href="schedule.css?v=20260914-schedule-v3">
+    <link rel="stylesheet" href="usability.css?v=20260916-session-safe-v1">
+    <link rel="stylesheet" href="schedule.css?v=20260916-session-safe-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -313,7 +313,7 @@
                     <p id="timerSaveStatus" class="timer-save-status" role="status">● Salvamento automático do cronômetro</p>
                     <div class="pending-session-card" id="pendingSessionCard" hidden>
                         <span aria-hidden="true">↗</span>
-                        <div><strong>Existe uma sessão sem resumo</strong><small>Ela fica guardada, mas não abrirá sozinha.</small></div>
+                        <div><strong>Existe uma sessão protegida</strong><small>O tempo fica guardado até você registrar ou confirmar a exclusão.</small></div>
                         <button type="button" onclick="abrirRegistroSessaoPendente()">Registrar</button>
                         <button type="button" class="pending-session-dismiss" onclick="descartarRegistroSessao()" aria-label="Descartar sessão pendente">×</button>
                     </div>
@@ -392,6 +392,11 @@
 
             <div class="schedule-notice" id="scheduleNotice" hidden role="status"></div>
             <div class="schedule-suggestion widget" id="scheduleSuggestion" hidden></div>
+
+            <section class="schedule-week-board widget" aria-labelledby="scheduleWeekBoardTitle">
+                <header class="schedule-week-board-heading"><div><span class="workspace-kicker">PLANO SEMANAL</span><h2 id="scheduleWeekBoardTitle">Sua semana em uma visão</h2><p>Os blocos abaixo usam somente as matérias que você cadastrou.</p></div><button type="button" class="cycle-btn" onclick="KingSchedule.openBlock()">＋ Novo bloco</button></header>
+                <div class="schedule-matrix-scroll"><div class="schedule-week-matrix" id="scheduleWeekMatrix"></div></div>
+            </section>
 
             <div class="schedule-day-strip widget" id="scheduleDayStrip" role="tablist" aria-label="Dias da semana"></div>
             <div class="schedule-focus-layout">
@@ -1025,7 +1030,7 @@
                     <fieldset class="error-form-step">
                         <legend><b>1</b><span><strong>Onde aconteceu?</strong><small>Localize o padrão sem burocracia.</small></span></legend>
                         <div class="form-grid two">
-                            <div class="cycle-form-group"><label class="cycle-label" for="errorSubjectInput">Matéria</label><input class="cycle-input" id="errorSubjectInput" list="errorSubjectOptions" maxlength="50" placeholder="Ex.: Matemática" autocomplete="off" required><datalist id="errorSubjectOptions"></datalist></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorSubjectInput">Matéria</label><select class="cycle-input" id="errorSubjectInput" required><option value="">Selecione uma matéria cadastrada</option></select></div>
                             <div class="cycle-form-group"><label class="cycle-label" for="errorTopicInput">Assunto</label><input class="cycle-input" id="errorTopicInput" maxlength="80" placeholder="Ex.: Função do 2º grau" autocomplete="off" required></div>
                         </div>
                         <div class="form-grid two">
@@ -1044,14 +1049,20 @@
                         <div class="error-image-preview" id="errorImagePreview"></div>
                         <p class="error-image-status" id="errorImageStatus" role="status"></p>
                         <div class="form-grid two">
-                            <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta</label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
-                            <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta</label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme." required></textarea></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta <span>(opcional)</span></label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta <span>(opcional)</span></label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme."></textarea></div>
                         </div>
                     </fieldset>
                     <fieldset class="error-form-step">
                         <legend><b>3</b><span><strong>Como evitar a repetição?</strong><small>Transforme o erro em uma ação concreta.</small></span></legend>
-                        <div class="cycle-form-group"><label class="cycle-label" for="errorCauseInput">Por que eu errei?</label><textarea class="cycle-input" id="errorCauseInput" rows="2" maxlength="500" placeholder="Ex.: confundi grandezas diretamente e inversamente proporcionais." required></textarea></div>
                         <div class="cycle-form-group"><label class="cycle-label" for="errorRuleInput">Regra anti-erro</label><input class="cycle-input" id="errorRuleInput" maxlength="240" placeholder="Ex.: antes da conta, verificar o que aumenta e o que diminui." required></div>
+                        <div class="error-image-attach" id="errorRuleImageDropzone" ondragover="prepararDropImagensCadernoErro(event)" ondragleave="encerrarDropImagensCadernoErro(event)" ondrop="receberDropImagensCadernoErro(event, 'rule')">
+                            <input type="file" id="errorRuleImageInput" accept="image/png,image/jpeg,image/webp" multiple hidden onchange="selecionarImagensCadernoErro(event, 'rule')">
+                            <label for="errorRuleImageInput" class="error-image-picker"><span aria-hidden="true">▧</span><strong>Anexar imagens da regra anti-erro</strong><small>Fórmula, mapa mental, resolução ou lembrete visual • até 4 imagens</small></label>
+                            <span class="error-image-counter" id="errorRuleImageCounter">0/4</span>
+                        </div>
+                        <div class="error-image-preview" id="errorRuleImagePreview"></div>
+                        <p class="error-image-status" id="errorRuleImageStatus" role="status"></p>
                     </fieldset>
                     <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('errorNotebookModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar no caderno</button></div>
                 </form>
@@ -1070,8 +1081,8 @@
                 <button type="button" class="cycle-btn primary error-reveal-button" id="errorRevealButton" onclick="revelarCorrecaoCadernoErro()">Revelar correção</button>
                 <section class="error-review-answer" id="errorReviewAnswer" hidden aria-live="polite">
                     <div><small>RESPOSTA CORRETA</small><p id="errorReviewCorrect"></p></div>
-                    <div><small>CAUSA DIAGNOSTICADA</small><p id="errorReviewCause"></p></div>
-                    <blockquote><small>REGRA ANTI-ERRO</small><strong id="errorReviewRule"></strong></blockquote>
+                    <div><small>PADRÃO DO ERRO</small><p id="errorReviewCause"></p></div>
+                    <blockquote><small>REGRA ANTI-ERRO</small><strong id="errorReviewRule"></strong><div class="error-review-images" id="errorReviewRuleImages" hidden></div></blockquote>
                     <div class="error-review-rating">
                         <p>Como foi lembrar sem olhar?</p>
                         <div><button type="button" class="error-rating again" onclick="avaliarRevisaoCadernoErro('again')"><span>×</span><strong>Errei de novo</strong><small>volta amanhã</small></button><button type="button" class="error-rating almost" onclick="avaliarRevisaoCadernoErro('almost')"><span>~</span><strong>Quase consegui</strong><small>reforço em breve</small></button><button type="button" class="error-rating remembered" onclick="avaliarRevisaoCadernoErro('remembered')"><span>✓</span><strong>Lembrei sozinho</strong><small>avança um nível</small></button></div>
@@ -1108,7 +1119,8 @@
                 <div class="cycle-modal-title">Tags de Revisão</div>
                 <form class="revision-tag-create" onsubmit="salvarTagRevisao(event)">
                     <input type="text" class="cycle-input" id="novaTagRevisao" placeholder="Ex.: Fórmulas, Difícil, Prioridade" maxlength="28" required autocomplete="off">
-                    <button type="submit" class="cycle-btn primary">Criar</button>
+                    <button type="button" class="cycle-btn" id="cancelarEdicaoTagRevisao" onclick="cancelarEdicaoTagRevisao()" hidden>Cancelar</button>
+                    <button type="submit" class="cycle-btn primary" id="salvarTagRevisaoButton">Criar</button>
                 </form>
                 <p class="revision-tag-help">As tags criadas ficam disponíveis em todas as revisões.</p>
                 <div class="revision-tag-manager" id="revisaoTagsLista"></div>
@@ -1140,7 +1152,7 @@
                         <div class="cycle-form-group"><label class="cycle-label" for="sessionSubject">Matéria</label><select class="cycle-input" id="sessionSubject" onchange="atualizarTopicosRegistroSessao()" required></select></div>
                         <div class="cycle-form-group"><label class="cycle-label" for="sessionTopic">Tópico ou assunto estudado</label><input class="cycle-input" id="sessionTopic" list="sessionTopicOptions" placeholder="Pesquise ou escreva um tópico" autocomplete="off" required><datalist id="sessionTopicOptions"></datalist></div>
                     </div>
-                    <div class="cycle-form-group"><label class="cycle-label" for="sessionNotes">Resumo da sessão</label><textarea class="cycle-input" id="sessionNotes" rows="3" maxlength="700" placeholder="O que você aprendeu, praticou ou ainda precisa reforçar?" required></textarea></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="sessionNotes">Resumo da sessão <span class="schedule-optional">opcional</span></label><textarea class="cycle-input" id="sessionNotes" rows="3" maxlength="700" placeholder="O que você aprendeu, praticou ou ainda precisa reforçar?"></textarea></div>
                     <fieldset class="session-kind-fieldset"><legend>O que foi feito?</legend><div class="session-kind-options"><label><input type="radio" name="sessionKind" value="estudo" checked onchange="atualizarTipoRegistroSessao()"><span><b>▦</b><strong>Estudo</strong><small>Teoria ou exercícios</small></span></label><label><input type="radio" name="sessionKind" value="simulado" onchange="atualizarTipoRegistroSessao()"><span><b>◎</b><strong>Simulado</strong><small>Questões e resultado</small></span></label><label><input type="radio" name="sessionKind" value="redacao" onchange="atualizarTipoRegistroSessao()"><span><b>✎</b><strong>Redação</strong><small>Tema e competências</small></span></label></div></fieldset>
                     <section class="session-kind-details" id="sessionSimuladoFields" hidden>
                         <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTitle">Nome do simulado</label><input class="cycle-input" id="sessionSimTitle" maxlength="80" placeholder="Ex.: ENEM 2024 — Natureza"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimArea">Área</label><select class="cycle-input" id="sessionSimArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div></div>
@@ -1228,13 +1240,13 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260907-save-2"></script>
     <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260914-subject-editor-v1"></script>
-    <script src="schedule.js?v=20260914-schedule-v3"></script>
+    <script src="script.js?v=20260916-session-safe-v1"></script>
+    <script src="schedule.js?v=20260916-session-safe-v1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>
-    <script src="productivity.js?v=20260911-adaptive-study-1"></script>
+    <script src="productivity.js?v=20260916-session-safe-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260914-auth-fix-1"></script>
+    <script type="module" src="cloud-sync.js?v=20260916-session-safe-v1"></script>
 </body>
 </html>

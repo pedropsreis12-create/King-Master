@@ -1,6 +1,10 @@
 /* Contraste confortável sem substituir a cor de destaque escolhida no perfil. */
-:root { --text-muted: #555d6a; }
-html[data-theme="dark"] { --text-muted: #b2bac7; }
+:root { --text-muted: #46505f; }
+html[data-theme="dark"] { --text-muted: #c2c9d3; }
+input::placeholder,textarea::placeholder { color: color-mix(in srgb,var(--text-muted) 88%,transparent); opacity: 1; }
+:is(.workspace-kicker,.error-notebook-kicker,.revision-tags-label-row button,.revision-tag-chip,.custom-option.selected,.nav-xp-top strong,.schedule-settings-section-title > span) { color: var(--accent-ink); }
+:is(.cycle-btn.primary,.mode-btn.active,.btn-play,.onboarding-mark) { color: var(--accent-on-solid); }
+.cycle-label,.field-help,.modal-message,.schedule-modal-intro,.session-detail-help { opacity: 1; }
 .timer-save-status { margin: 14px 0 0; text-align: center; color: var(--text-muted); font-size: .65rem; line-height: 1.5; }
 .timer-save-status[data-state="error"] { color: #d34533; font-weight: 700; }
 .nav-reveal { display: none; }

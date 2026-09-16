@@ -647,6 +647,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             ownerUid: currentUser.uid,
             errorId: String(image.errorId || '').slice(0, 40),
             name: String(image.name || 'Imagem da questão').slice(0, 100),
+            context: image.context === 'rule' ? 'rule' : 'question',
             contentType: String(image.type || 'image/webp').slice(0, 30),
             width: Math.max(1, Math.min(2400, Number(image.width) || 1)),
             height: Math.max(1, Math.min(2400, Number(image.height) || 1)),
@@ -654,7 +655,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             updatedAt: firestoreSdk.serverTimestamp()
         };
         await firestoreSdk.setDoc(errorImageDocument(image.id), metadata);
-        return { id: String(image.id), name: metadata.name, type: metadata.contentType, width: metadata.width, height: metadata.height };
+        return { id: String(image.id), name: metadata.name, context: metadata.context, type: metadata.contentType, width: metadata.width, height: metadata.height };
     }
 
     async function getErrorImage(imageId) {
@@ -662,7 +663,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         if (!snapshot.exists()) throw new Error('Imagem não encontrada na nuvem.');
         const data = snapshot.data();
         if (!/^data:image\/(png|jpeg|webp);base64,/i.test(data?.dataUrl || '')) throw new Error('A imagem salva está inválida.');
-        return { id: String(imageId), name: data.name || 'Imagem da questão', type: data.contentType || 'image/webp', width: data.width || 1, height: data.height || 1, dataUrl: data.dataUrl };
+        return { id: String(imageId), name: data.name || 'Imagem da questão', context: data.context === 'rule' ? 'rule' : 'question', type: data.contentType || 'image/webp', width: data.width || 1, height: data.height || 1, dataUrl: data.dataUrl };
     }
 
     async function deleteErrorImage(imageId) {

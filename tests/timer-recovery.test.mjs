@@ -84,11 +84,12 @@ test('rest timer is restored with its preset and never awards study time', () =>
     assert.equal(h.run('currentSeconds'), 597);
     assert.equal(h.run('isRunning'), false);
 });
-test('ending a session protects the draft until the required study summary is saved', () => {
+test('ending a session protects the draft until the useful study record is saved', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(6500); h.run('encerrarSessaoDashboard()');
     let saved = JSON.parse(h.storage.get('qg_pedro_data'));
     assert.equal(saved.historyItems.length, 0);
     assert.equal(saved.pendingStudySession.seconds, 6);
+    assert.equal(saved.pendingStudySessions.length, 1);
     assert.equal(saved.timerState.seconds, 6);
     assert.equal(saved.totalStudySeconds, 106);
     h.run('registrarSessao(6)');
@@ -99,6 +100,14 @@ test('ending a session protects the draft until the required study summary is sa
     assert.equal(saved.timerState.seconds, 0);
     h.run('restoreTimerSession(); encerrarSessaoDashboard()');
     assert.equal(h.ctx.appData.historyItems.length, 1);
+});
+test('starting another timer never erases a deferred protected session', () => {
+    const h = setup(); h.run('toggleTimer()'); h.advance(6500); h.run('encerrarSessaoDashboard(); adiarRegistroSessao()');
+    h.run('toggleTimer()'); h.advance(2100); h.run('toggleTimer()');
+    const saved = JSON.parse(h.storage.get('qg_pedro_data'));
+    assert.equal(saved.pendingStudySessions.length, 1);
+    assert.equal(saved.pendingStudySessions[0].seconds, 6);
+    assert.equal(saved.timerState.seconds, 2);
 });
 test('a resolved session id cannot be registered or reminded twice', () => {
     const h = setup();

@@ -58,10 +58,11 @@ test('motion quality can be automatic, full, reduced or disabled', () => {
   assert.doesNotMatch(html, /Backup de Segurança/);
 });
 
-test('completed timers require a useful study record and can feed specialist workspaces', () => {
+test('completed timers require a topic, keep notes optional and can feed specialist workspaces', () => {
   assert.match(html, /id="sessionCompleteForm"/);
   assert.match(html, /id="sessionTopic"[^>]+required/);
-  assert.match(html, /id="sessionNotes"[^>]+required/);
+  assert.match(html, /id="sessionNotes"/);
+  assert.doesNotMatch(html, /id="sessionNotes"[^>]+required/);
   assert.match(html, /name="sessionKind" value="simulado"/);
   assert.match(html, /name="sessionKind" value="redacao"/);
   assert.match(html, /id="sessionAutoReview" checked/);
@@ -70,9 +71,18 @@ test('completed timers require a useful study record and can feed specialist wor
   assert.match(script, /function criarRevisaoAutomaticaRegistro/);
   assert.match(html, /id="pendingSessionCard"[^>]+hidden/);
   assert.match(html, /onclick="descartarRegistroSessao\(\)"/);
+  assert.match(script, /abrirModalDeletar\('pendingSession'/);
+  assert.match(script, /pendingStudySessions/);
   assert.match(script, /resolvedStudySessionIds/);
   assert.match(script, /sourceSessionId/);
   assert.doesNotMatch(script, /setTimeout\([^\n]*abrirRegistroSessaoPendente/);
+});
+
+test('timer goal keeps counting and uses a system notification when available', () => {
+  assert.match(script, /O cronômetro continua contando até você encerrar/);
+  assert.match(script, /function notificarMetaTimer/);
+  assert.match(script, /TimestampTrigger/);
+  assert.doesNotMatch(script, /setTimeout\(\(\) => \{ stopAlarm\(\); prepararRegistroSessao\(currentSeconds, 'meta'\); \}, 1600\)/);
 });
 
 test('simulation and essay records capture a useful post-practice diagnosis', () => {

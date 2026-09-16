@@ -73,6 +73,9 @@ test('interface liga cronograma, configuração, arrastar e integração ao regi
     assert.match(html, /id="scheduleDayCloseModal"/);
     assert.match(html, /id="scheduleDayStrip"/);
     assert.match(html, /id="scheduleTimeline"/);
+    assert.match(html, /id="scheduleWeekMatrix"/);
+    assert.match(ui, /function renderWeekMatrix/);
+    assert.match(html, /Os blocos abaixo usam somente as matérias que você cadastrou/);
     assert.match(ui, /ondragstart="KingSchedule\.dragStart/);
     assert.match(ui, /abrirRegistroSessaoPendente\(\)/);
     assert.match(app, /KingSchedule\?\.completeFromSession/);

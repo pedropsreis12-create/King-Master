@@ -14,8 +14,11 @@ test('error notebook is a first-class saved section with a guided entry form', (
     assert.match(html, /showSection\('caderno-erros'\)/);
     assert.match(html, /id="caderno-erros"/);
     assert.match(html, /id="errorNotebookForm"/);
-    assert.match(html, /id="errorCauseInput"/);
+    assert.doesNotMatch(html, /id="errorCauseInput"/);
     assert.match(html, /id="errorRuleInput"/);
+    assert.match(html, /id="errorRuleImageInput"/);
+    assert.match(html, /Minha resposta <span>\(opcional\)<\/span>/);
+    assert.match(html, /Resposta correta <span>\(opcional\)<\/span>/);
     assert.match(script, /cadernoErrosItems:\s*\[\]/);
     assert.match(script, /saveAppData\(\);\s*\n\s*renderizarCadernoErros\(\)/);
 });
@@ -46,7 +49,7 @@ test('question images support file selection, paste and drag without bloating th
     assert.match(html, /onpaste="colarImagensCadernoErro\(event\)"/);
     assert.match(html, /ondrop="receberDropImagensCadernoErro\(event\)"/);
     assert.match(html, /id="errorReviewImages"/);
-    assert.match(script, /cadernoErroImagensRascunho\.length/);
+    assert.match(script, /filter\(imagem => imagem\.context === contexto\)/);
     assert.match(script, /canvas\.toDataURL\('image\/webp'/);
   assert.match(script, /dados\.imagens\s*=\s*imagensSalvas/);
     assert.doesNotMatch(script, /dados\.imagens\s*=\s*cadernoErroImagensRascunho/);

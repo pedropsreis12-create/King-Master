@@ -40,6 +40,7 @@ const defaultAppData = {
     aiSettings: { retentionDays: 7 },
     aiConversation: [],
     pendingStudySession: null,
+    pendingStudySessions: [],
     resolvedStudySessionIds: [],
     reminder: { enabled: false, time: '19:00', lastShown: '' },
     lastModifiedAt: 0
@@ -110,10 +111,12 @@ appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
 appData.aiSettings.retentionDays = [1, 7, 30].includes(Number(appData.aiSettings.retentionDays)) ? Number(appData.aiSettings.retentionDays) : 7;
 if (!Array.isArray(appData.aiConversation)) appData.aiConversation = [];
 if (!appData.pendingStudySession || typeof appData.pendingStudySession !== 'object') appData.pendingStudySession = null;
+if (!Array.isArray(appData.pendingStudySessions)) appData.pendingStudySessions = [];
 if (!Array.isArray(appData.resolvedStudySessionIds)) appData.resolvedStudySessionIds = [];
 appData.resolvedStudySessionIds = appData.resolvedStudySessionIds.map(String).filter(Boolean).slice(-40);
-if (appData.pendingStudySession) {
-    const pendente = appData.pendingStudySession;
+const sessoesPendentesMigradas = [...appData.pendingStudySessions, ...(appData.pendingStudySession ? [appData.pendingStudySession] : [])];
+appData.pendingStudySessions = sessoesPendentesMigradas.filter((pendente, indice, lista) => {
+    if (!pendente || Number(pendente.seconds) < 5) return false;
     const materiaPendente = appData.cycleItems.find(item => String(item.id) === String(pendente.subjectId));
     const duplicadaPorId = pendente.id && (appData.resolvedStudySessionIds.includes(String(pendente.id))
         || appData.historyItems.some(item => String(item.sourceSessionId || '') === String(pendente.id)));
@@ -124,8 +127,11 @@ if (appData.pendingStudySession) {
         const mesmaMateria = String(item.materia || '').trim().toLocaleLowerCase('pt-BR') === String(materiaPendente?.subject || 'Estudo Livre').trim().toLocaleLowerCase('pt-BR');
         return mesmaDuracao && mesmaMateria && idHistorico >= criadaEm && idHistorico - criadaEm < 6 * 60 * 60 * 1000;
     });
-    if (duplicadaPorId || duplicadaLegada) appData.pendingStudySession = null;
-}
+    const id = String(pendente.id || `legado-${pendente.createdAt || indice}`);
+    const repetidaNaFila = lista.findIndex(item => String(item?.id || '') === id) !== indice;
+    return !duplicadaPorId && !duplicadaLegada && !repetidaNaFila;
+}).map(pendente => ({ ...pendente, id: String(pendente.id || `sessao-legada-${pendente.createdAt || Date.now()}`) }));
+appData.pendingStudySession = appData.pendingStudySessions[0] || null;
 if (!appData.reminder || typeof appData.reminder !== 'object') appData.reminder = { ...defaultAppData.reminder };
 appData.reminder = { ...defaultAppData.reminder, ...appData.reminder };
 if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
@@ -133,12 +139,10 @@ if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0
 if(appData.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
 document.documentElement.setAttribute('data-visual', appData.visualMode === 'classic' ? 'classic' : 'futuristic');
 document.documentElement.setAttribute('data-rank-mode', appData.rankVisualMode);
-if(appData.themeColor) { 
-    document.documentElement.style.setProperty('--accent-color', appData.themeColor); 
-    document.documentElement.style.setProperty('--accent-rgb', appData.themeColorRgb); 
-}
+aplicarCorDoSistema(appData.themeColor || '#007aff');
 
 function saveAppData() { 
+    sincronizarFilaSessoesPendentes();
     if (timerPersistenceReady) appData.timerState = captureTimerState();
     const previousRevision = appData.lastModifiedAt;
     appData.lastModifiedAt = Date.now();
@@ -414,18 +418,31 @@ function syncSettingsUI() {
     if (seletor) seletor.value = appData.themeColor || '#007aff';
 }
 
+function aplicarCorDoSistema(hex) {
+    const limpa = String(hex || '#007aff').replace('#', '').padEnd(6, '0').slice(0, 6);
+    const componentes = [0, 2, 4].map(indice => Number.parseInt(limpa.slice(indice, indice + 2), 16));
+    if (componentes.some(Number.isNaN)) return aplicarCorDoSistema('#007aff');
+    const [r, g, b] = componentes;
+    const misturar = (cor, destino, peso) => Math.round(cor * (1 - peso) + destino * peso);
+    const paraHex = valores => `#${valores.map(valor => Math.max(0, Math.min(255, valor)).toString(16).padStart(2, '0')).join('')}`;
+    const luminancia = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    const raiz = document.documentElement.style;
+    raiz.setProperty('--accent-color', `#${limpa}`);
+    raiz.setProperty('--accent-rgb', `${r}, ${g}, ${b}`);
+    raiz.setProperty('--accent-ink-light', paraHex(componentes.map(cor => misturar(cor, 0, luminancia > .42 ? .48 : .2))));
+    raiz.setProperty('--accent-ink-dark', paraHex(componentes.map(cor => misturar(cor, 255, luminancia < .62 ? .38 : .12))));
+    raiz.setProperty('--accent-on-solid', luminancia > .67 ? '#10141c' : '#ffffff');
+    return `${r}, ${g}, ${b}`;
+}
+
 function previewTheme(hex) { 
-    hex = hex.replace('#', ''); 
-    const r = parseInt(hex.substring(0, 2), 16), g = parseInt(hex.substring(2, 4), 16), b = parseInt(hex.substring(4, 6), 16); 
-    document.documentElement.style.setProperty('--accent-color', '#' + hex); 
-    document.documentElement.style.setProperty('--accent-rgb', `${r}, ${g}, ${b}`); 
+    aplicarCorDoSistema(hex);
 }
 
 function setTheme(hex, rgb) { 
-    document.documentElement.style.setProperty('--accent-color', hex); 
-    document.documentElement.style.setProperty('--accent-rgb', rgb); 
+    const corRgb = aplicarCorDoSistema(hex);
     appData.themeColor = hex; 
-    appData.themeColorRgb = rgb; 
+    appData.themeColorRgb = corRgb || rgb;
     saveAppData(); 
     syncSettingsUI();
 }
@@ -543,6 +560,16 @@ function confirmarDelecao() {
         saveAppData(); renderizarRevisoes();
         showToast('🗑️ Revisão removida!');
     }
+    else if (tipo === 'revisaoTag') {
+        appData.revisaoTags = appData.revisaoTags.filter(tag => tag !== id);
+        appData.revisoesItems.forEach(revisao => revisao.tags = (revisao.tags || []).filter(tag => tag !== id));
+        saveAppData();
+        cancelarEdicaoTagRevisao();
+        renderGerenciadorTagsRevisao();
+        renderTagsRevisaoSelecionaveis(obterTagsSelecionadasFormulario().filter(tag => tag !== id));
+        renderizarRevisoes();
+        showToast('Tag excluída das revisões.');
+    }
     else if (tipo === 'cadernoErro') {
         const removido = appData.cadernoErrosItems.find(i => i.id === id);
         appData.cadernoErrosItems = appData.cadernoErrosItems.filter(i => i.id !== id);
@@ -553,6 +580,7 @@ function confirmarDelecao() {
         });
         showToast('Erro removido do caderno.');
     }
+    else if (tipo === 'pendingSession') confirmarDescarteRegistroSessao(id);
 }
 
 function showToast(msg, isError = false) {
@@ -1436,8 +1464,36 @@ function toggleBotaoStopHistorico() {
 function renderizarAvisoSessaoPendente() {
     const card = document.getElementById('pendingSessionCard');
     if (!card) return;
-    const pendente = appData.pendingStudySession;
+    const fila = sincronizarFilaSessoesPendentes();
+    const pendente = fila[0];
     card.hidden = !(pendente && Number(pendente.seconds) >= 5);
+    const titulo = card.querySelector?.('strong');
+    const detalhe = card.querySelector?.('small');
+    if (titulo && pendente) titulo.textContent = fila.length === 1 ? 'Existe uma sessão protegida' : `${fila.length} sessões protegidas`;
+    if (detalhe && pendente) detalhe.textContent = `${formatHistoryTime(pendente.seconds)} aguardando registro${fila.length > 1 ? ` · mais ${fila.length - 1} na fila` : ''}.`;
+}
+
+function sincronizarFilaSessoesPendentes() {
+    const fila = Array.isArray(appData.pendingStudySessions) ? appData.pendingStudySessions : [];
+    const vistos = new Set();
+    appData.pendingStudySessions = fila.filter(sessao => {
+        const id = String(sessao?.id || '');
+        if (!id || vistos.has(id) || Number(sessao?.seconds) < 5 || appData.resolvedStudySessionIds?.includes(id)) return false;
+        vistos.add(id);
+        return true;
+    });
+    appData.pendingStudySession = appData.pendingStudySessions[0] || null;
+    return appData.pendingStudySessions;
+}
+
+function obterSessaoPendenteAtual() {
+    return sincronizarFilaSessoesPendentes()[0] || null;
+}
+
+function removerSessaoPendente(id) {
+    const alvo = String(id || '');
+    appData.pendingStudySessions = sincronizarFilaSessoesPendentes().filter(sessao => String(sessao.id) !== alvo);
+    appData.pendingStudySession = appData.pendingStudySessions[0] || null;
 }
 
 function dataFuturaRegistro(dias = 1) {
@@ -1484,17 +1540,20 @@ function criarItemHistoricoRegistro({ segundos = 0, materia = 'Estudo Livre', as
 }
 
 function registrarSessao(segundos, detalhes = null) {
-    if(segundos < 5) return;
+    if(segundos < 5) return false;
     if (!Array.isArray(appData.resolvedStudySessionIds)) appData.resolvedStudySessionIds = [];
-    const sessaoOrigem = detalhes?.pendingSession || appData.pendingStudySession || null;
+    const sessaoOrigem = detalhes?.pendingSession || obterSessaoPendenteAtual() || null;
     const sourceSessionId = String(sessaoOrigem?.id || '');
     if (sourceSessionId && (appData.resolvedStudySessionIds.includes(sourceSessionId)
         || appData.historyItems.some(item => String(item.sourceSessionId || '') === sourceSessionId))) {
-        appData.pendingStudySession = null;
+        removerSessaoPendente(sourceSessionId);
         saveAppData();
         renderizarAvisoSessaoPendente();
-        return showToast('Essa sessão já estava registrada. O lembrete antigo foi removido.');
+        showToast('Essa sessão já estava registrada. O lembrete antigo foi removido.');
+        return true;
     }
+    const snapshot = JSON.parse(JSON.stringify(appData));
+    const currentSecondsSnapshot = currentSeconds;
     const activeSubjId = detalhes?.subjectId ?? document.getElementById('activeSubjectSelect').value;
     let nome = 'Estudo Livre', cor = '#515154', tipo = 'Livre', materia = null;
     if (activeSubjId) materia = appData.cycleItems.find(item => String(item.id) === String(activeSubjId)) || null;
@@ -1532,18 +1591,30 @@ function registrarSessao(segundos, detalhes = null) {
             nextFocus: red.nextFocus || '', attachment: '', aguardandoCorrecao: red.status !== 'corrected' });
     }
 
-    appData.pendingStudySession = null;
+    if (sourceSessionId) removerSessaoPendente(sourceSessionId);
     if (sourceSessionId) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== sourceSessionId), sourceSessionId].slice(-40);
-    if (pendenteCronograma) window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade });
-    currentSeconds = 0; // Histórico e rascunho são salvos na mesma escrita, sem duplicar na recuperação.
-    appData.activeScheduleBlock = null;
-    saveAppData(); renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico(); 
+    try {
+        if (pendenteCronograma) window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade });
+        if (sessaoOrigem?.holdsTimer && !isRunning) currentSeconds = 0;
+        if (String(appData.activeScheduleBlock?.blockId || '') === String(sessaoOrigem?.scheduleBlockId || '')) appData.activeScheduleBlock = null;
+        saveAppData();
+    } catch (error) {
+        appData = snapshot;
+        currentSeconds = currentSecondsSnapshot;
+        sincronizarFilaSessoesPendentes();
+        renderizarAvisoSessaoPendente();
+        showToast('Não foi possível concluir o registro. Sua sessão continua protegida para tentar novamente.', true);
+        console.error('Falha ao registrar sessão protegida:', error);
+        return false;
+    }
+    renderizarCiclo(); if(document.getElementById('historico').classList.contains('active')) renderizarHistorico();
     if (typeof renderizarRevisoes === 'function') renderizarRevisoes();
     if (atividade === 'simulado' && typeof renderizarSimulados === 'function') renderizarSimulados();
     if (atividade === 'redacao' && typeof renderizarRedacoes === 'function') renderizarRedacoes();
     renderizarAvisoSessaoPendente();
     showToast(detalhes?.autoReview ? '✓ Sessão salva e revisão agendada.' : '✓ Sessão salva no histórico.');
     mostrarFraseMotivacional();
+    return true;
 }
 
 function atualizarTopicosRegistroSessao() {
@@ -1580,7 +1651,7 @@ function atualizarRevisaoRegistroSessao() {
 }
 
 function abrirRegistroSessaoPendente() {
-    const pendente = appData.pendingStudySession;
+    const pendente = obterSessaoPendenteAtual();
     if (!pendente || Number(pendente.seconds) < 5) return;
     const form = document.getElementById('sessionCompleteForm');
     if (!form || typeof form.reset !== 'function') return;
@@ -1589,8 +1660,35 @@ function abrirRegistroSessaoPendente() {
     const select = document.getElementById('sessionSubject');
     select.innerHTML = '<option value="">Estudo Livre</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
     select.value = appData.cycleItems.some(item => String(item.id) === String(pendente.subjectId)) ? String(pendente.subjectId) : '';
-    document.getElementById('sessionAutoReview').checked = appData.studyLogging.autoReview !== false;
-    document.getElementById('sessionReviewDelay').value = String(appData.studyLogging.reviewDelayDays || 1);
+    const rascunho = pendente.draft || {};
+    if (rascunho.subjectId != null && [...select.options].some(option => String(option.value) === String(rascunho.subjectId))) select.value = String(rascunho.subjectId);
+    document.getElementById('sessionTopic').value = rascunho.assunto || '';
+    document.getElementById('sessionNotes').value = rascunho.comentario || '';
+    const tipo = ['estudo', 'simulado', 'redacao'].includes(rascunho.atividade) ? rascunho.atividade : 'estudo';
+    const radio = document.querySelector(`input[name="sessionKind"][value="${tipo}"]`);
+    if (radio) radio.checked = true;
+    document.getElementById('sessionAutoReview').checked = rascunho.autoReview ?? (appData.studyLogging.autoReview !== false);
+    document.getElementById('sessionReviewDelay').value = String(rascunho.reviewDelayDays || appData.studyLogging.reviewDelayDays || 1);
+    if (rascunho.study) {
+        document.getElementById('sessionStudyQuestions').value = rascunho.study.questoes || 0;
+        document.getElementById('sessionStudyHits').value = rascunho.study.acertos || 0;
+        document.getElementById('sessionStudyErrors').value = rascunho.study.erros || 0;
+    }
+    if (rascunho.simulado) {
+        document.getElementById('sessionSimTitle').value = rascunho.simulado.title || '';
+        document.getElementById('sessionSimArea').value = rascunho.simulado.area || 'Geral';
+        document.getElementById('sessionSimTotal').value = rascunho.simulado.total || 45;
+        document.getElementById('sessionSimHits').value = rascunho.simulado.acertos || 0;
+        document.getElementById('sessionSimBlanks').value = rascunho.simulado.brancos || 0;
+        document.getElementById('sessionSimMainError').value = rascunho.simulado.mainError || '';
+        document.getElementById('sessionSimNextStep').value = rascunho.simulado.nextStep || '';
+    }
+    if (rascunho.redacao) {
+        document.getElementById('sessionEssayTheme').value = rascunho.redacao.theme || '';
+        document.getElementById('sessionEssayStatus').value = rascunho.redacao.status || 'awaiting';
+        document.querySelectorAll('.session-essay-score').forEach((input, indice) => input.value = rascunho.redacao.scores?.[indice] || '');
+        document.getElementById('sessionEssayNextFocus').value = rascunho.redacao.nextFocus || '';
+    }
     atualizarTopicosRegistroSessao(); atualizarTipoRegistroSessao(); atualizarRevisaoRegistroSessao();
     document.getElementById('sessionCompleteModal').classList.add('active');
     setTimeout(() => document.getElementById('sessionTopic')?.focus(), 120);
@@ -1600,27 +1698,38 @@ function prepararRegistroSessao(segundos = currentSeconds, origem = 'manual') {
     if (Number(segundos) < 5) return false;
     clearInterval(timerInterval); isRunning = false; playPauseBtn.textContent = '▶';
     const criadaEm = Date.now();
-    appData.pendingStudySession = { id: `sessao-${criadaEm}-${Math.random().toString(36).slice(2, 8)}`, seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: criadaEm, scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false };
+    const nova = { id: `sessao-${criadaEm}-${Math.random().toString(36).slice(2, 8)}`, seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: criadaEm, scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false, holdsTimer: true };
+    appData.pendingStudySessions = [...sincronizarFilaSessoesPendentes(), nova];
+    appData.pendingStudySession = appData.pendingStudySessions[0];
     saveAppData(); updateProgress(); toggleBotaoStopHistorico(); renderizarAvisoSessaoPendente(); abrirRegistroSessaoPendente();
     return true;
 }
 
 function adiarRegistroSessao() {
+    const pendente = obterSessaoPendenteAtual();
+    if (pendente) {
+        pendente.deferredAt = Date.now();
+        pendente.draft = coletarRascunhoRegistroSessao();
+    }
     fecharModal('sessionCompleteModal');
-    if (appData.pendingStudySession) appData.pendingStudySession.deferredAt = Date.now();
     saveAppData();
     renderizarAvisoSessaoPendente();
     showToast('A sessão continua protegida e não abrirá sozinha.');
 }
 
 function descartarRegistroSessao() {
-    const pendente = appData.pendingStudySession;
+    const pendente = obterSessaoPendenteAtual();
+    if (!pendente) return;
+    const duracao = formatHistoryTime(Number(pendente.seconds) || 0);
+    abrirModalDeletar('pendingSession', pendente.id, 'Descartar esta sessão?', `O tempo de ${duracao} será removido definitivamente. Essa ação só acontece depois desta confirmação.`);
+}
+
+function confirmarDescarteRegistroSessao(id) {
+    const pendente = sincronizarFilaSessoesPendentes().find(sessao => String(sessao.id) === String(id));
+    if (!pendente) return;
     if (pendente?.id) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== String(pendente.id)), String(pendente.id)].slice(-40);
-    appData.pendingStudySession = null;
-    appData.activeScheduleBlock = null;
-    currentSeconds = 0;
-    clearInterval(timerInterval);
-    isRunning = false;
+    removerSessaoPendente(pendente.id);
+    if (String(appData.activeScheduleBlock?.blockId || '') === String(pendente.scheduleBlockId || '')) appData.activeScheduleBlock = null;
     fecharModal('sessionCompleteModal');
     saveAppData();
     updateProgress();
@@ -1629,14 +1738,42 @@ function descartarRegistroSessao() {
     showToast('Registro pendente descartado. Ele não aparecerá novamente.');
 }
 
+function coletarRascunhoRegistroSessao() {
+    const atividade = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
+    return {
+        subjectId: document.getElementById('sessionSubject')?.value || '',
+        assunto: document.getElementById('sessionTopic')?.value.trim() || '',
+        comentario: document.getElementById('sessionNotes')?.value.trim() || '',
+        atividade,
+        autoReview: document.getElementById('sessionAutoReview')?.checked !== false,
+        reviewDelayDays: Number(document.getElementById('sessionReviewDelay')?.value) || 1,
+        study: atividade === 'estudo' ? {
+            questoes: Math.max(0, Number(document.getElementById('sessionStudyQuestions')?.value) || 0),
+            acertos: Math.max(0, Number(document.getElementById('sessionStudyHits')?.value) || 0),
+            erros: Math.max(0, Number(document.getElementById('sessionStudyErrors')?.value) || 0)
+        } : null,
+        simulado: atividade === 'simulado' ? {
+            title: document.getElementById('sessionSimTitle')?.value.trim() || '', area: document.getElementById('sessionSimArea')?.value || 'Geral',
+            total: Math.max(1, Number(document.getElementById('sessionSimTotal')?.value) || 45), acertos: Math.max(0, Number(document.getElementById('sessionSimHits')?.value) || 0),
+            brancos: Math.max(0, Number(document.getElementById('sessionSimBlanks')?.value) || 0), mainError: document.getElementById('sessionSimMainError')?.value || '',
+            nextStep: document.getElementById('sessionSimNextStep')?.value.trim() || ''
+        } : null,
+        redacao: atividade === 'redacao' ? {
+            theme: document.getElementById('sessionEssayTheme')?.value.trim() || '', status: document.getElementById('sessionEssayStatus')?.value || 'awaiting',
+            scores: [...document.querySelectorAll('.session-essay-score')].map(input => Math.max(0, Math.min(200, Number(input.value) || 0))),
+            nextFocus: document.getElementById('sessionEssayNextFocus')?.value.trim() || ''
+        } : null
+    };
+}
+
 function salvarRegistroSessao(event) {
     event.preventDefault();
-    const pendente = appData.pendingStudySession;
+    const pendente = obterSessaoPendenteAtual();
     if (!pendente || Number(pendente.seconds) < 5) return fecharModal('sessionCompleteModal');
     const atividade = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
     const assunto = document.getElementById('sessionTopic').value.trim();
     const comentario = document.getElementById('sessionNotes').value.trim();
-    if (!assunto || !comentario) return showToast('Preencha o assunto e o resumo da sessão.', true);
+    if (!assunto) return showToast('Informe o tópico ou assunto estudado. O resumo é opcional.', true);
     const detalhes = { subjectId: document.getElementById('sessionSubject').value, assunto, comentario, atividade,
         autoReview: document.getElementById('sessionAutoReview').checked, reviewDelayDays: Number(document.getElementById('sessionReviewDelay').value) || 1 };
     if (atividade === 'estudo') {
@@ -1665,8 +1802,48 @@ function salvarRegistroSessao(event) {
             nextFocus: document.getElementById('sessionEssayNextFocus').value.trim() };
     }
     detalhes.pendingSession = { ...pendente };
-    appData.pendingStudySession = null;
-    fecharModal('sessionCompleteModal'); stopAlarm(); registrarSessao(Number(pendente.seconds), detalhes); updateProgress(); toggleBotaoStopHistorico(); document.title = 'King Master';
+    const salvo = registrarSessao(Number(pendente.seconds), detalhes);
+    if (!salvo) return;
+    fecharModal('sessionCompleteModal'); stopAlarm(); updateProgress(); toggleBotaoStopHistorico(); document.title = 'King Master';
+}
+
+async function prepararAvisoMetaTimer(segundosRestantes) {
+    if (!('Notification' in window) || !window.isSecureContext || Number(segundosRestantes) <= 0) return;
+    try {
+        if (Notification.permission === 'default') await Notification.requestPermission();
+        if (Notification.permission !== 'granted') return;
+        const registro = await navigator.serviceWorker?.ready;
+        if (!registro || typeof window.TimestampTrigger !== 'function') return;
+        const existentes = await registro.getNotifications({ tag: 'king-master-timer-goal' });
+        existentes.forEach(notificacao => notificacao.close());
+        await registro.showNotification('Meta de estudo atingida', {
+            body: 'O cronômetro continua contando. Volte quando quiser encerrar e registrar a sessão.',
+            icon: './assets/app-icon-192.png', badge: './assets/app-icon-192.png',
+            tag: 'king-master-timer-goal', renotify: true,
+            showTrigger: new window.TimestampTrigger(Date.now() + Number(segundosRestantes) * 1000)
+        });
+    } catch { /* O aviso normal do relógio continua sendo o fallback. */ }
+}
+
+async function cancelarAvisoMetaTimer() {
+    try {
+        const registro = await navigator.serviceWorker?.ready;
+        const existentes = await registro?.getNotifications?.({ tag: 'king-master-timer-goal' }) || [];
+        existentes.forEach(notificacao => notificacao.close());
+    } catch { /* Sem impacto no cronômetro. */ }
+}
+
+async function notificarMetaTimer() {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+        const registro = await navigator.serviceWorker?.ready;
+        if (registro) await registro.showNotification('Meta de estudo atingida', {
+            body: 'O tempo continua contando. Abra o King Master quando quiser encerrar a sessão.',
+            icon: './assets/app-icon-192.png', badge: './assets/app-icon-192.png',
+            tag: 'king-master-timer-goal', renotify: true, requireInteraction: true
+        });
+        else new Notification('Meta de estudo atingida', { body: 'O tempo continua contando no King Master.' });
+    } catch { /* O áudio e o aviso visual continuam disponíveis. */ }
 }
 
 function toggleTimer() {
@@ -1675,10 +1852,16 @@ function toggleTimer() {
         clearInterval(timerInterval); 
         playPauseBtn.textContent = '▶'; 
         isRunning = false; 
+        cancelarAvisoMetaTimer();
         saveAppData(); 
         updateProgress(); 
     } else {
-        if (appData.pendingStudySession) appData.pendingStudySession = null;
+        const sessaoQueSeguraCronometro = sincronizarFilaSessoesPendentes().find(sessao => sessao.holdsTimer);
+        if (sessaoQueSeguraCronometro) {
+            sessaoQueSeguraCronometro.holdsTimer = false;
+            currentSeconds = 0;
+            alarmTriggered = false;
+        }
         let target = getTargetSeconds();
         if (currentMode === 'descanso' && currentSeconds <= 0) currentSeconds = target;
         if (target <= 0 && currentMode === 'descanso') return showToast('⚠️ Defina um tempo maior que zero.', true);
@@ -1690,6 +1873,7 @@ function toggleTimer() {
         timerInterval = setInterval(tickTimer, 500);
         playPauseBtn.innerHTML = '&#10074;&#10074;';
         isRunning = true;
+        if (currentMode === 'estudo' && target > currentSeconds) prepararAvisoMetaTimer(target - currentSeconds);
         lastTimerCloudSave = Date.now();
         saveAppData();
         updateProgress();
@@ -1715,12 +1899,9 @@ function tickTimer() {
                     if (target > 0 && currentSeconds >= target && !alarmTriggered) { 
                         alarmTriggered = true; 
                         document.title = "⏰ META ATINGIDA! - King Master";
-                        clearInterval(timerInterval);
-                        isRunning = false;
-                        playPauseBtn.textContent = '▶';
                         triggerAlarm(); 
-                        showToast('🎯 Meta atingida! Registre o que você estudou.');
-                        setTimeout(() => { stopAlarm(); prepararRegistroSessao(currentSeconds, 'meta'); }, 1600);
+                        notificarMetaTimer();
+                        showToast('🎯 Meta atingida! O cronômetro continua contando até você encerrar.');
                     }
                 } else { 
                     currentSeconds -= deltaSecs;
@@ -1782,7 +1963,7 @@ function stopAlarm() {
 }
 
 function abrirConfirmReset() { document.getElementById('confirmResetModal').classList.add('active'); }
-function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
+function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); cancelarAvisoMetaTimer(); stopAlarm(); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
 function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) prepararRegistroSessao(currentSeconds, 'manual'); else { showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; } }
 function setDescansoTime(mins) { descansoTempoAtual = mins; document.getElementById('btn-descanso-5').classList.remove('primary'); document.getElementById('btn-descanso-10').classList.remove('primary'); document.getElementById(`btn-descanso-${mins}`).classList.add('primary'); executarResetTimer(); }
 
@@ -2751,6 +2932,7 @@ function salvarReagendamentoRevisao(e) {
 }
 
 function abrirModalTagsRevisao() {
+    cancelarEdicaoTagRevisao();
     renderGerenciadorTagsRevisao();
     document.getElementById('tagsRevisaoModal').classList.add('active');
     setTimeout(() => document.getElementById('novaTagRevisao')?.focus(), 50);
@@ -2760,8 +2942,36 @@ function renderGerenciadorTagsRevisao() {
     const lista = document.getElementById('revisaoTagsLista');
     if (!lista) return;
     lista.innerHTML = appData.revisaoTags.length
-        ? [...appData.revisaoTags].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(tag => `<span class="revision-tag-chip">${escaparRevisaoHtml(tag)}</span>`).join('')
+        ? [...appData.revisaoTags].sort((a, b) => a.localeCompare(b, 'pt-BR')).map(tag => `<span class="revision-tag-chip revision-tag-manage"><span>${escaparRevisaoHtml(tag)}</span><button type="button" onclick="editarTagRevisao('${encodeURIComponent(tag)}')" aria-label="Alterar ${escaparRevisaoHtml(tag)}">✎</button><button type="button" onclick="excluirTagRevisao('${encodeURIComponent(tag)}')" aria-label="Excluir ${escaparRevisaoHtml(tag)}">×</button></span>`).join('')
         : '<span class="revision-tag-empty">Crie sua primeira tag para reutilizá-la nas revisões.</span>';
+}
+
+let tagRevisaoEmEdicao = '';
+
+function editarTagRevisao(tagCodificada) {
+    const tag = decodeURIComponent(tagCodificada || '');
+    if (!appData.revisaoTags.includes(tag)) return;
+    tagRevisaoEmEdicao = tag;
+    document.getElementById('novaTagRevisao').value = tag;
+    document.getElementById('salvarTagRevisaoButton').textContent = 'Salvar';
+    document.getElementById('cancelarEdicaoTagRevisao').hidden = false;
+    document.getElementById('novaTagRevisao').focus();
+}
+
+function cancelarEdicaoTagRevisao() {
+    tagRevisaoEmEdicao = '';
+    const input = document.getElementById('novaTagRevisao');
+    if (input) input.value = '';
+    const botao = document.getElementById('salvarTagRevisaoButton');
+    if (botao) botao.textContent = 'Criar';
+    const cancelar = document.getElementById('cancelarEdicaoTagRevisao');
+    if (cancelar) cancelar.hidden = true;
+}
+
+function excluirTagRevisao(tagCodificada) {
+    const tag = decodeURIComponent(tagCodificada || '');
+    if (!appData.revisaoTags.includes(tag)) return;
+    abrirModalDeletar('revisaoTag', tag, 'Excluir esta tag?', `A tag “${tag}” será retirada também das revisões em que foi usada. As revisões não serão apagadas.`);
 }
 
 function salvarTagRevisao(e) {
@@ -2769,16 +2979,23 @@ function salvarTagRevisao(e) {
     const input = document.getElementById('novaTagRevisao');
     const tag = input.value.trim();
     if (!tag) return;
-    if (appData.revisaoTags.some(item => normalizarRevisaoTexto(item) === normalizarRevisaoTexto(tag))) {
+    if (appData.revisaoTags.some(item => item !== tagRevisaoEmEdicao && normalizarRevisaoTexto(item) === normalizarRevisaoTexto(tag))) {
         return showToast('Essa tag já existe.', true);
     }
     const selecionadas = obterTagsSelecionadasFormulario();
-    appData.revisaoTags.push(tag);
+    const tagAntiga = tagRevisaoEmEdicao;
+    if (tagRevisaoEmEdicao) {
+        const antiga = tagRevisaoEmEdicao;
+        appData.revisaoTags = appData.revisaoTags.map(item => item === antiga ? tag : item);
+        appData.revisoesItems.forEach(revisao => revisao.tags = (revisao.tags || []).map(item => item === antiga ? tag : item));
+    } else appData.revisaoTags.push(tag);
     saveAppData();
-    input.value = '';
+    const editada = Boolean(tagRevisaoEmEdicao);
+    cancelarEdicaoTagRevisao();
     renderGerenciadorTagsRevisao();
-    renderTagsRevisaoSelecionaveis(selecionadas);
-    showToast('Tag criada e pronta para usar.');
+    renderTagsRevisaoSelecionaveis(selecionadas.map(item => editada && item === tagAntiga ? tag : item));
+    renderizarRevisoes();
+    showToast(editada ? 'Tag alterada em todas as revisões.' : 'Tag criada e pronta para usar.');
 }
 
 function obterDesempenhoPorArea() {
@@ -2943,7 +3160,6 @@ const CADERNO_ERROS_TIPOS = {
     estrategia: { nome: 'Estratégia ou tempo', curto: 'Estratégia', icone: '⌁' }
 };
 const CADERNO_ERROS_INTERVALOS = [1, 3, 7, 14, 30];
-const CADERNO_ERROS_MATERIAS = ['Matemática', 'Português', 'Literatura', 'Redação', 'Física', 'Química', 'Biologia', 'História', 'Geografia', 'Filosofia', 'Sociologia', 'Inglês', 'Espanhol'];
 let cadernoErrosFiltros = { busca: '', materia: 'todas', tipo: 'todos', status: 'ativos' };
 let cadernoErroEmRevisaoId = null;
 let cadernoErroImagensRascunho = [];
@@ -2966,9 +3182,10 @@ function normalizarItemCadernoErro(item) {
         respostaCorreta: String(item?.respostaCorreta || '').slice(0, 900),
         causa: String(item?.causa || '').slice(0, 500),
         regra: String(item?.regra || '').slice(0, 240),
-        imagens: (Array.isArray(item?.imagens) ? item.imagens : []).filter(imagem => imagem?.id).slice(0, 4).map(imagem => ({
+        imagens: (Array.isArray(item?.imagens) ? item.imagens : []).filter(imagem => imagem?.id).slice(0, 8).map(imagem => ({
             id: String(imagem.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 90),
             name: String(imagem.name || 'Imagem da questão').slice(0, 100),
+            context: imagem.context === 'rule' ? 'rule' : 'question',
             type: ['image/png', 'image/jpeg', 'image/webp'].includes(imagem.type) ? imagem.type : 'image/webp',
             width: Math.max(1, Math.min(2400, Number(imagem.width) || 1)),
             height: Math.max(1, Math.min(2400, Number(imagem.height) || 1))
@@ -3015,8 +3232,8 @@ function formatarDataCadernoErro(valor) {
     return `Revisar em ${data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}`;
 }
 
-function definirStatusImagemCadernoErro(mensagem = '', erro = false) {
-    const status = document.getElementById('errorImageStatus');
+function definirStatusImagemCadernoErro(mensagem = '', erro = false, contexto = 'question') {
+    const status = document.getElementById(contexto === 'rule' ? 'errorRuleImageStatus' : 'errorImageStatus');
     if (!status) return;
     status.textContent = mensagem;
     status.classList.toggle('error', erro);
@@ -3036,7 +3253,7 @@ function carregarArquivoImagem(file) {
     });
 }
 
-async function otimizarImagemCadernoErro(file) {
+async function otimizarImagemCadernoErro(file, contexto = 'question') {
     if (!file?.type?.startsWith('image/')) throw new Error('Selecione apenas imagens.');
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) throw new Error('Use imagens PNG, JPG ou WebP.');
     if (file.size > 12 * 1024 * 1024) throw new Error('Cada imagem pode ter no máximo 12 MB antes da otimização.');
@@ -3046,16 +3263,16 @@ async function otimizarImagemCadernoErro(file) {
     let largura = Math.max(1, Math.round(imagem.naturalWidth * escala));
     let altura = Math.max(1, Math.round(imagem.naturalHeight * escala));
     const canvas = document.createElement('canvas');
-    const contexto = canvas.getContext('2d', { alpha: false });
-    if (!contexto) throw new Error('Seu navegador não conseguiu preparar a imagem.');
+    const contextoCanvas = canvas.getContext('2d', { alpha: false });
+    if (!contextoCanvas) throw new Error('Seu navegador não conseguiu preparar a imagem.');
     let qualidade = .88;
     let dataUrl = '';
     for (let tentativa = 0; tentativa < 8; tentativa += 1) {
         canvas.width = largura;
         canvas.height = altura;
-        contexto.fillStyle = '#ffffff';
-        contexto.fillRect(0, 0, largura, altura);
-        contexto.drawImage(imagem, 0, 0, largura, altura);
+        contextoCanvas.fillStyle = '#ffffff';
+        contextoCanvas.fillRect(0, 0, largura, altura);
+        contextoCanvas.drawImage(imagem, 0, 0, largura, altura);
         dataUrl = canvas.toDataURL('image/webp', qualidade);
         if (dataUrl.length <= 680000) break;
         largura = Math.max(480, Math.round(largura * .82));
@@ -3063,27 +3280,28 @@ async function otimizarImagemCadernoErro(file) {
         qualidade = Math.max(.58, qualidade - .06);
     }
     if (!dataUrl || dataUrl.length > 680000) throw new Error('A imagem ficou grande demais. Recorte-a e tente novamente.');
-    return { id: identificadorImagemCadernoErro(), name: file.name || 'Imagem da questão', type: 'image/webp', width: largura, height: altura, dataUrl, nova: true };
+    return { id: identificadorImagemCadernoErro(), name: file.name || (contexto === 'rule' ? 'Imagem da regra anti-erro' : 'Imagem da questão'), context: contexto === 'rule' ? 'rule' : 'question', type: 'image/webp', width: largura, height: altura, dataUrl, nova: true };
 }
 
-async function processarImagensCadernoErro(files) {
+async function processarImagensCadernoErro(files, contexto = 'question') {
+    contexto = contexto === 'rule' ? 'rule' : 'question';
     const imagens = [...(files || [])].filter(file => file?.type?.startsWith('image/'));
-    if (!imagens.length) return definirStatusImagemCadernoErro('Nenhuma imagem compatível foi encontrada.', true);
-    const vagas = 4 - cadernoErroImagensRascunho.length;
-    if (vagas <= 0) return definirStatusImagemCadernoErro('Você já anexou o limite de 4 imagens.', true);
-    definirStatusImagemCadernoErro('Otimizando as imagens para a nuvem…');
+    if (!imagens.length) return definirStatusImagemCadernoErro('Nenhuma imagem compatível foi encontrada.', true, contexto);
+    const vagas = 4 - cadernoErroImagensRascunho.filter(imagem => imagem.context === contexto).length;
+    if (vagas <= 0) return definirStatusImagemCadernoErro('Você já anexou o limite de 4 imagens nesta parte.', true, contexto);
+    definirStatusImagemCadernoErro('Otimizando as imagens para a nuvem…', false, contexto);
     try {
-        for (const file of imagens.slice(0, vagas)) cadernoErroImagensRascunho.push(await otimizarImagemCadernoErro(file));
+        for (const file of imagens.slice(0, vagas)) cadernoErroImagensRascunho.push(await otimizarImagemCadernoErro(file, contexto));
         renderizarPreviaImagensCadernoErro();
-        definirStatusImagemCadernoErro(`${Math.min(imagens.length, vagas)} ${Math.min(imagens.length, vagas) === 1 ? 'imagem pronta' : 'imagens prontas'} para salvar.`);
+        definirStatusImagemCadernoErro(`${Math.min(imagens.length, vagas)} ${Math.min(imagens.length, vagas) === 1 ? 'imagem pronta' : 'imagens prontas'} para salvar.`, false, contexto);
         if (imagens.length > vagas) showToast(`O limite é de 4 imagens por registro. ${imagens.length - vagas} não ${imagens.length - vagas === 1 ? 'foi adicionada' : 'foram adicionadas'}.`, true);
     } catch (error) {
-        definirStatusImagemCadernoErro(error.message || 'Não foi possível preparar a imagem.', true);
+        definirStatusImagemCadernoErro(error.message || 'Não foi possível preparar a imagem.', true, contexto);
     }
 }
 
-function selecionarImagensCadernoErro(event) {
-    processarImagensCadernoErro(event.target.files);
+function selecionarImagensCadernoErro(event, contexto = 'question') {
+    processarImagensCadernoErro(event.target.files, contexto);
     event.target.value = '';
 }
 
@@ -3103,16 +3321,17 @@ function encerrarDropImagensCadernoErro(event) {
     if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('dragging');
 }
 
-function receberDropImagensCadernoErro(event) {
+function receberDropImagensCadernoErro(event, contexto = 'question') {
     event.preventDefault();
     event.currentTarget.classList.remove('dragging');
-    processarImagensCadernoErro(event.dataTransfer?.files);
+    processarImagensCadernoErro(event.dataTransfer?.files, contexto);
 }
 
 function removerImagemCadernoErro(indice) {
+    const contexto = cadernoErroImagensRascunho[Number(indice)]?.context || 'question';
     cadernoErroImagensRascunho.splice(Number(indice), 1);
     renderizarPreviaImagensCadernoErro();
-    definirStatusImagemCadernoErro('Imagem retirada. A alteração será confirmada ao salvar.');
+    definirStatusImagemCadernoErro('Imagem retirada. A alteração será confirmada ao salvar.', false, contexto);
 }
 
 function criarBotaoImagemCadernoErro(imagem, indice = null, removivel = false) {
@@ -3151,12 +3370,15 @@ function criarBotaoImagemCadernoErro(imagem, indice = null, removivel = false) {
 }
 
 function renderizarPreviaImagensCadernoErro() {
-    const container = document.getElementById('errorImagePreview');
-    const contador = document.getElementById('errorImageCounter');
-    if (contador) contador.textContent = `${cadernoErroImagensRascunho.length}/4`;
-    if (!container) return;
-    container.replaceChildren(...cadernoErroImagensRascunho.map((imagem, indice) => criarBotaoImagemCadernoErro(imagem, indice, true)));
-    carregarImagensCadernoErro(container);
+    ['question', 'rule'].forEach(contexto => {
+        const container = document.getElementById(contexto === 'rule' ? 'errorRuleImagePreview' : 'errorImagePreview');
+        const contador = document.getElementById(contexto === 'rule' ? 'errorRuleImageCounter' : 'errorImageCounter');
+        const imagens = cadernoErroImagensRascunho.map((imagem, indice) => ({ imagem, indice })).filter(item => item.imagem.context === contexto);
+        if (contador) contador.textContent = `${imagens.length}/4`;
+        if (!container) return;
+        container.replaceChildren(...imagens.map(item => criarBotaoImagemCadernoErro(item.imagem, item.indice, true)));
+        carregarImagensCadernoErro(container);
+    });
 }
 
 async function obterImagemCadernoErro(imageId) {
@@ -3218,11 +3440,12 @@ function abrirModalCadernoErro(id = null) {
     cadernoErroImagensRascunho = (item?.imagens || []).map(imagem => ({ ...imagem, nova: false }));
     cadernoErroImagensOriginais = (item?.imagens || []).map(imagem => imagem.id);
     definirStatusImagemCadernoErro('');
+    definirStatusImagemCadernoErro('', false, 'rule');
     renderizarPreviaImagensCadernoErro();
     document.getElementById('errorNotebookEditId').value = item?.id || '';
     document.getElementById('errorNotebookModalTitle').textContent = item ? 'Editar registro' : 'Registrar um erro';
-    const materias = [...new Set([...CADERNO_ERROS_MATERIAS, ...appData.cycleItems.map(materia => materia.subject), ...obterItensCadernoErros().map(registro => registro.materia)].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
-    document.getElementById('errorSubjectOptions').innerHTML = materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}"></option>`).join('');
+    const materias = [...new Set([...appData.cycleItems.map(materia => materia.subject), ...(item?.materia ? [item.materia] : [])].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+    document.getElementById('errorSubjectInput').innerHTML = '<option value="">Selecione uma matéria cadastrada</option>' + materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}">${escaparRevisaoHtml(materia)}</option>`).join('');
     if (item) {
         document.getElementById('errorSubjectInput').value = item.materia;
         document.getElementById('errorTopicInput').value = item.assunto;
@@ -3231,7 +3454,6 @@ function abrirModalCadernoErro(id = null) {
         document.getElementById('errorQuestionInput').value = item.questao;
         document.getElementById('errorAttemptInput').value = item.minhaResposta;
         document.getElementById('errorCorrectInput').value = item.respostaCorreta;
-        document.getElementById('errorCauseInput').value = item.causa;
         document.getElementById('errorRuleInput').value = item.regra;
     }
     document.getElementById('errorNotebookModal').classList.add('active');
@@ -3251,17 +3473,16 @@ async function salvarCadernoErro(event) {
         questao: document.getElementById('errorQuestionInput').value.trim(),
         minhaResposta: document.getElementById('errorAttemptInput').value.trim(),
         respostaCorreta: document.getElementById('errorCorrectInput').value.trim(),
-        causa: document.getElementById('errorCauseInput').value.trim(),
         regra: document.getElementById('errorRuleInput').value.trim(),
         atualizadoEm: Date.now()
     };
-    if (!dados.materia || !dados.assunto || !dados.questao || !dados.respostaCorreta || !dados.causa || !dados.regra) return;
+    if (!dados.materia || !dados.assunto || !dados.questao || !dados.regra) return showToast('Preencha matéria, assunto, questão e regra anti-erro.', true);
     if (submit) { submit.disabled = true; submit.textContent = cadernoErroImagensRascunho.some(imagem => imagem.nova) ? 'Enviando imagens…' : 'Salvando…'; }
     try {
         const imagensSalvas = [];
         for (const imagem of cadernoErroImagensRascunho) {
             if (!imagem.nova) {
-                imagensSalvas.push({ id: imagem.id, name: imagem.name, type: imagem.type, width: imagem.width, height: imagem.height });
+                imagensSalvas.push({ id: imagem.id, name: imagem.name, context: imagem.context || 'question', type: imagem.type, width: imagem.width, height: imagem.height });
                 continue;
             }
             if (!window.kingCloud?.saveErrorImage) throw new Error('A nuvem de imagens ainda não está disponível. Aguarde um instante e tente novamente.');
@@ -3339,7 +3560,7 @@ function renderizarCadernoErros() {
     const hoje = dataLocalISO();
     const busca = normalizarRevisaoTexto(cadernoErrosFiltros.busca);
     const filtrados = itens.filter(item => {
-        const correspondeBusca = !busca || normalizarRevisaoTexto([item.materia, item.assunto, item.questao, item.causa, item.regra, item.origem].join(' ')).includes(busca);
+        const correspondeBusca = !busca || normalizarRevisaoTexto([item.materia, item.assunto, item.questao, item.regra, item.origem].join(' ')).includes(busca);
         const correspondeMateria = cadernoErrosFiltros.materia === 'todas' || item.materia === cadernoErrosFiltros.materia;
         const correspondeTipo = cadernoErrosFiltros.tipo === 'todos' || item.tipo === cadernoErrosFiltros.tipo;
         const correspondeStatus = cadernoErrosFiltros.status === 'todos'
@@ -3370,13 +3591,14 @@ function renderizarCadernoErros() {
         const origem = item.origem ? `<span class="error-card-source">${escaparRevisaoHtml(item.origem)}</span>` : '';
         const dataClasse = dominado ? 'mastered' : (devido ? 'due' : 'scheduled');
         const dataTexto = dominado ? 'Dominado' : formatarDataCadernoErro(item.proximaRevisao);
-        const imagens = htmlMiniaturasCadernoErro(item.imagens, 'card');
+        const imagensQuestao = htmlMiniaturasCadernoErro(item.imagens.filter(imagem => imagem.context !== 'rule'), 'card');
+        const imagensRegra = htmlMiniaturasCadernoErro(item.imagens.filter(imagem => imagem.context === 'rule'), 'card rule');
         return `<article class="error-card ${dominado ? 'mastered' : ''}">
             <div class="error-card-rail"><span>${tipo.icone}</span></div>
             <div class="error-card-body">
                 <div class="error-card-top"><div><span class="error-card-subject">${escaparRevisaoHtml(item.materia)}</span><i>•</i><span>${escaparRevisaoHtml(item.assunto)}</span></div><span class="error-card-date ${dataClasse}">${dataTexto}</span></div>
-                <h3>${escaparRevisaoHtml(item.questao)}</h3>${imagens}
-                <div class="error-card-diagnosis"><span><small>CAUSA</small>${escaparRevisaoHtml(item.causa)}</span><span><small>REGRA ANTI-ERRO</small>${escaparRevisaoHtml(item.regra)}</span></div>
+                <h3>${escaparRevisaoHtml(item.questao)}</h3>${imagensQuestao}
+                <div class="error-card-diagnosis"><span><small>PADRÃO DO ERRO</small>${escaparRevisaoHtml(tipo.nome)}</span><span><small>REGRA ANTI-ERRO</small>${escaparRevisaoHtml(item.regra)}${imagensRegra}</span></div>
                 <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
             </div>
         </article>`;
@@ -3411,14 +3633,22 @@ function iniciarRevisaoCadernoErros(id = null) {
     document.getElementById('errorReviewTopic').textContent = item.assunto;
     document.getElementById('errorReviewQuestion').textContent = item.questao;
     const imagensRevisao = document.getElementById('errorReviewImages');
-    imagensRevisao.innerHTML = htmlMiniaturasCadernoErro(item.imagens, 'review');
-    imagensRevisao.hidden = !item.imagens.length;
+    const imagensQuestao = item.imagens.filter(imagem => imagem.context !== 'rule');
+    imagensRevisao.innerHTML = htmlMiniaturasCadernoErro(imagensQuestao, 'review');
+    imagensRevisao.hidden = !imagensQuestao.length;
     carregarImagensCadernoErro(imagensRevisao);
     const tentativa = document.querySelector('#errorReviewPreviousAttempt p');
     tentativa.textContent = item.minhaResposta || 'Você não registrou uma resposta anterior.';
-    document.getElementById('errorReviewCorrect').textContent = item.respostaCorreta;
-    document.getElementById('errorReviewCause').textContent = `${tipo.nome}: ${item.causa}`;
+    document.getElementById('errorReviewCorrect').textContent = item.respostaCorreta || 'Nenhuma resposta correta foi registrada.';
+    document.getElementById('errorReviewCause').textContent = tipo.nome;
     document.getElementById('errorReviewRule').textContent = item.regra;
+    const imagensRegra = document.getElementById('errorReviewRuleImages');
+    if (imagensRegra) {
+        const regra = item.imagens.filter(imagem => imagem.context === 'rule');
+        imagensRegra.innerHTML = htmlMiniaturasCadernoErro(regra, 'review rule');
+        imagensRegra.hidden = !regra.length;
+        carregarImagensCadernoErro(imagensRegra);
+    }
     document.getElementById('errorRecallInput').value = '';
     document.getElementById('errorReviewAnswer').hidden = true;
     document.getElementById('errorRevealButton').hidden = false;

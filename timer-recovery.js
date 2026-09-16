@@ -20,7 +20,7 @@
             || !checkpoint.weeklyChart.every(finite)) return data;
         return { ...data, totalStudySeconds: checkpoint.totalStudySeconds,
             weeklyChart: [...checkpoint.weeklyChart], lastWeekStart: checkpoint.lastWeekStart,
-            timerState: { ...checkpoint.state, running: false } };
+            timerState: { ...checkpoint.state } };
     }
     function nextLevel(xp, start, end, maximum) {
         const needed = Math.max(0, end - start);

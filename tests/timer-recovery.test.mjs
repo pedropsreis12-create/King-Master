@@ -39,7 +39,7 @@ test('crash checkpoint restores clock and earned totals atomically without offli
     h.advance(86400000);
     const recovered = h.lib.recover(base, checkpoint);
     assert.equal(recovered.timerState.seconds, 7);
-    assert.equal(recovered.timerState.running, false);
+    assert.equal(recovered.timerState.running, true);
     assert.equal(recovered.totalStudySeconds, 107);
     assert.equal(recovered.weeklyChart[0], 107);
     assert.equal(h.lib.recover(recovered, checkpoint).totalStudySeconds, 107);
@@ -52,12 +52,20 @@ test('pause and resume count elapsed time once, ignoring paused time', () => {
     assert.equal(h.run('currentSeconds'), 5);
     assert.equal(h.ctx.appData.totalStudySeconds, 105);
 });
-test('closing flushes the last whole seconds and pauses; repeated pagehide does not add time', () => {
+test('study timer keeps counting after the configured goal is reached', () => {
+    const h = setup(); h.get('inputMinutes').value = '0'; h.get('inputSeconds').value = '2';
+    h.run('toggleTimer()'); h.advance(3500); h.run('tickTimer()');
+    assert.equal(h.run('currentSeconds'), 3);
+    assert.equal(h.run('isRunning'), true);
+    assert.equal(h.run('alarmTriggered'), true);
+});
+test('closing flushes the last whole seconds and preserves the running timer', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(8200); h.events.pagehide();
-    assert.equal(h.run('isRunning'), false);
+    assert.equal(h.run('isRunning'), true);
     assert.equal(JSON.parse(h.storage.get('qg_pedro_data')).timerState.seconds, 8);
-    h.advance(10000); h.events.pagehide();
-    assert.equal(h.ctx.appData.totalStudySeconds, 108);
+    h.advance(10000); h.run('restoreTimerSession()');
+    assert.equal(h.ctx.appData.totalStudySeconds, 118);
+    assert.equal(h.run('currentSeconds'), 18);
 });
 test('cloud import disables close saving so remote data cannot be overwritten', () => {
     const h = setup(); h.run('toggleTimer()'); h.run('timerPersistenceReady = false');
@@ -82,7 +90,7 @@ test('rest timer is restored with its preset and never awards study time', () =>
     h.run('restoreTimerSession()');
     assert.equal(h.run('currentMode'), 'descanso');
     assert.equal(h.run('currentSeconds'), 597);
-    assert.equal(h.run('isRunning'), false);
+    assert.equal(h.run('isRunning'), true);
 });
 test('ending a session protects the draft until the useful study record is saved', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(6500); h.run('encerrarSessaoDashboard()');

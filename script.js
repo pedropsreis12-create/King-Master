@@ -1395,6 +1395,7 @@ const sincronizarTempo = () => { if (!isRunning) updateProgress(); if (timerPers
 
 function captureTimerState() {
     return { mode: currentMode, seconds: currentSeconds, running: isRunning,
+        lastTickAt: isRunning ? lastTickTime : 0, goalNotified: alarmTriggered,
         restMinutes: descansoTempoAtual, subjectId: document.getElementById('activeSubjectSelect').value,
         target: ['inputHours', 'inputMinutes', 'inputSeconds'].map(id => Math.max(0, Number(document.getElementById(id).value) || 0)) };
 }
@@ -1412,6 +1413,7 @@ function persistTimerCheckpoint() {
 
 function restoreTimerSession() {
     const saved = appData.timerState;
+    let retomado = false;
     if (window.KingTimerRecovery.validState(saved)) {
         currentMode = saved.mode;
         currentSeconds = Math.floor(saved.seconds);
@@ -1429,13 +1431,37 @@ function restoreTimerSession() {
         document.getElementById('descansoPresetGroup').style.display = currentMode === 'estudo' ? 'none' : 'flex';
         document.getElementById('labelConfig').textContent = currentMode === 'estudo' ? 'Tocar alarme após' : 'Tempo de Descanso';
         [5, 10].forEach(value => document.getElementById(`btn-descanso-${value}`).classList.toggle('primary', value === descansoTempoAtual));
-        if (currentSeconds > 0) showToast('⏱ Sessão recuperada e pausada. Aperte ▶ para continuar.');
+        alarmTriggered = Boolean(saved.goalNotified);
+        if (saved.running && Number(saved.lastTickAt) > 0) {
+            const agora = Date.now();
+            const desde = Math.min(agora, Number(saved.lastTickAt));
+            const segundosAusente = Math.max(0, Math.floor((agora - desde) / 1000));
+            if (currentMode === 'estudo' && segundosAusente) {
+                currentSeconds += segundosAusente;
+                window.KingTimerRecovery.creditStudy(appData, desde, desde + segundosAusente * 1000);
+            } else if (currentMode === 'descanso' && segundosAusente) currentSeconds = Math.max(0, currentSeconds - segundosAusente);
+            lastTickTime = agora;
+            isRunning = currentMode === 'estudo' || currentSeconds > 0;
+            retomado = isRunning;
+            if (retomado) {
+                timerInterval = setInterval(tickTimer, 500);
+                playPauseBtn.innerHTML = '&#10074;&#10074;';
+                const target = getTargetSeconds();
+                if (currentMode === 'estudo' && target > 0 && currentSeconds >= target && !alarmTriggered) {
+                    alarmTriggered = true;
+                    triggerAlarm();
+                    notificarMetaTimer();
+                }
+                showToast('⏱ Cronômetro retomado com o tempo passado fora do app.');
+            }
+        } else if (currentSeconds > 0) showToast('⏱ Sessão recuperada e pausada. Aperte ▶ para continuar.');
     }
-    isRunning = false;
+    if (!retomado) isRunning = false;
     timerPersistenceReady = true;
     updateProgress();
     toggleBotaoStopHistorico();
-    persistTimerCheckpoint();
+    if (retomado) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
+    else persistTimerCheckpoint();
     renderizarAvisoSessaoPendente();
 }
 
@@ -1927,16 +1953,21 @@ function tickTimer() {
             }
 }
 
-// pagehide também cobre navegação e o cache de voltar/avançar, sem impedir o fechamento.
+// O relógio permanece rodando ao sair. Na volta, a diferença de horário é creditada uma única vez.
 window.addEventListener('pagehide', () => {
     if (!timerPersistenceReady) return;
     tickTimer();
     clearInterval(timerInterval);
-    isRunning = false;
-    playPauseBtn.textContent = '▶';
     updateProgress();
     toggleBotaoStopHistorico();
     try { saveAppData(); } catch { persistTimerCheckpoint(); }
+});
+window.addEventListener('pageshow', () => {
+    if (!timerPersistenceReady || !isRunning) return;
+    tickTimer();
+    clearInterval(timerInterval);
+    timerInterval = setInterval(tickTimer, 500);
+    playPauseBtn.innerHTML = '&#10074;&#10074;';
 });
 document.addEventListener('visibilitychange', () => {
     if (!timerPersistenceReady) return;

@@ -218,7 +218,12 @@ h1 { margin-bottom: 35px; font-size: 2.5rem; font-weight: 800; letter-spacing: -
 .timer-hero-dashboard > * { position: relative; z-index: 1; }
 .timer-hero-dashboard .mode-selector { min-width: 340px; margin-bottom: 14px; }
 .timer-hero-dashboard .mode-btn { flex: 1; padding: 10px 20px; }
-.stop-alarm-btn { position: absolute; top: 20px; right: 20px; background: #ff3b30; color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: bold; cursor: pointer; animation: pulseGlow 1.5s infinite; z-index: 20; display: none; box-shadow: 0 0 20px rgba(255, 59, 48, 0.4);}
+.timer-goal-actions { position: absolute; top: 18px; right: 18px; z-index: 20; display: none; width: min(330px, calc(100% - 36px)); padding: 10px; grid-template-columns: 1fr 1fr; gap: 8px; border: 1px solid rgba(255,149,0,.38); border-radius: 15px; background: color-mix(in srgb, var(--card-bg) 94%, #ff9500 6%); box-shadow: 0 12px 34px rgba(0,0,0,.16); }
+.timer-goal-actions.active { display: grid; }
+.timer-goal-actions > span { grid-column: 1 / -1; color: var(--text-main); font-size: .68rem; font-weight: 800; text-align: center; }
+.timer-goal-actions button { min-height: 38px; padding: 8px 10px; border-radius: 10px; font-size: .66rem; font-weight: 850; cursor: pointer; }
+.stop-alarm-btn { position: static; display: block; border: 1px solid var(--border-color); background: var(--hover-bg); color: var(--text-main); box-shadow: none; }
+.finish-goal-btn { border: 0; background: linear-gradient(135deg,#ff3b30,#c02b22); color: #fff; box-shadow: 0 6px 16px rgba(255,59,48,.25); }
 .mode-selector { display: flex; gap: 5px; margin-bottom: 30px; background: var(--card-bg); padding: 8px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: 0 4px 15px rgba(0,0,0,0.02);}
 .mode-btn { border: none; padding: 10px 24px; border-radius: 14px; cursor: pointer; font-weight: 700; background: transparent; color: var(--text-muted); transition: all 0.3s ease; font-size: 0.85rem;}
 .mode-btn.active { background: var(--accent-color); color: var(--accent-on-solid); box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3); }
@@ -1065,6 +1070,9 @@ html[data-rank-mode="aura"] .rank-frame-tag { box-shadow: 0 0 22px color-mix(in 
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.4s ease; }
 .modal-overlay.active { display: flex; opacity: 1; }
+/* Confirmações destrutivas devem ficar acima do formulário que as abriu. */
+#deleteConfirmModal { z-index: 1800; background: rgba(0,0,0,.58); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+body:has(#deleteConfirmModal.active) .modal-overlay.active:not(#deleteConfirmModal) { pointer-events: none; }
 .modal-box { background: var(--card-bg); backdrop-filter: blur(25px); border: 1px solid var(--border-color); padding: 40px; border-radius: 32px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); width: 420px; max-width: 90%; max-height: 92vh; overflow-y: auto; position: relative; transform: translateY(30px) scale(0.95); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 .modal-overlay.active .modal-box { transform: translateY(0) scale(1); }
 .modal-wide { width: 660px; }

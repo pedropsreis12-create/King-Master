@@ -2,10 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, script, usability] = await Promise.all([
+const [html, script, usability, style] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../script.js', import.meta.url), 'utf8'),
-  readFile(new URL('../usability.css', import.meta.url), 'utf8')
+  readFile(new URL('../usability.css', import.meta.url), 'utf8'),
+  readFile(new URL('../style.css', import.meta.url), 'utf8')
 ]);
 
 test('primary navigation is grouped by study intent and identifies the current destination', () => {
@@ -32,4 +33,11 @@ test('only actionable due counts become navigation badges', () => {
   assert.match(html, /id="navErrorBadge" hidden/);
   assert.match(script, /function atualizarIndicadoresNavegacao\(\)/);
   assert.match(script, /badge\.hidden = total < 1/);
+});
+
+test('discard confirmation stays above the session form that opened it', () => {
+  assert.match(style, /\.modal-overlay \{[^}]+z-index:\s*1000/);
+  assert.match(usability, /\.session-complete-overlay \{ z-index:\s*1500/);
+  assert.match(style, /#deleteConfirmModal \{ z-index:\s*1800/);
+  assert.match(style, /body:has\(#deleteConfirmModal\.active\)[^{]+\{[^}]*pointer-events:\s*none/);
 });

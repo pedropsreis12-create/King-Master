@@ -98,7 +98,9 @@ test('ending a session protects the draft until the useful study record is saved
     assert.equal(saved.historyItems.length, 0);
     assert.equal(saved.pendingStudySession.seconds, 6);
     assert.equal(saved.pendingStudySessions.length, 1);
-    assert.equal(saved.timerState.seconds, 6);
+    assert.equal(saved.timerState.seconds, 0);
+    assert.equal(saved.timerState.running, false);
+    assert.equal(h.run('currentSeconds'), 0);
     assert.equal(saved.totalStudySeconds, 106);
     h.run('registrarSessao(6)');
     saved = JSON.parse(h.storage.get('qg_pedro_data'));
@@ -108,6 +110,28 @@ test('ending a session protects the draft until the useful study record is saved
     assert.equal(saved.timerState.seconds, 0);
     h.run('restoreTimerSession(); encerrarSessaoDashboard()');
     assert.equal(h.ctx.appData.historyItems.length, 1);
+});
+test('ending after the goal freezes the timer and prioritizes the session just finished', () => {
+    const h = setup();
+    h.ctx.appData.pendingStudySessions = [{ id: 'older-session', seconds: 30, subjectId: '', createdAt: Date.now() - 10000 }];
+    h.get('inputMinutes').value = '0'; h.get('inputSeconds').value = '2';
+    h.run('toggleTimer()'); h.advance(6500); h.run('encerrarSessaoDashboard()');
+    const saved = JSON.parse(h.storage.get('qg_pedro_data'));
+    assert.equal(saved.timerState.running, false);
+    assert.equal(saved.timerState.seconds, 0);
+    assert.equal(saved.pendingStudySessions.length, 2);
+    assert.equal(saved.pendingStudySessions[0].seconds, 6);
+    assert.equal(saved.pendingStudySessions[1].id, 'older-session');
+});
+test('discarding a protected session from the previous version clears its frozen timer', () => {
+    const h = setup();
+    h.ctx.appData.resolvedStudySessionIds = [];
+    h.ctx.appData.pendingStudySessions = [{ id: 'legacy-session', seconds: 1431, subjectId: '', createdAt: Date.now(), holdsTimer: true }];
+    h.run('currentSeconds = 1431; isRunning = false; confirmarDescarteRegistroSessao("legacy-session")');
+    const saved = JSON.parse(h.storage.get('qg_pedro_data'));
+    assert.equal(saved.pendingStudySessions.length, 0);
+    assert.equal(saved.timerState.seconds, 0);
+    assert.equal(h.run('currentSeconds'), 0);
 });
 test('starting another timer never erases a deferred protected session', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(6500); h.run('encerrarSessaoDashboard(); adiarRegistroSessao()');

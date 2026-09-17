@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260916-session-safe-v1">
+    <link rel="stylesheet" href="style.css?v=20260917-timer-layer-v2">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260916-session-safe-v1">
@@ -281,7 +281,11 @@
                             <div class="timer-display-large" id="timeDisplay">00:00:00</div>
                         </div>
                     </div>
-                    <button id="stopAlarmBtn" onclick="stopAlarm()" class="stop-alarm-btn">⏰ PARAR ALARME</button>
+                    <div id="timerGoalActions" class="timer-goal-actions" aria-live="polite">
+                        <span>Meta atingida — o tempo continua contando.</span>
+                        <button id="stopAlarmBtn" type="button" onclick="stopAlarm()" class="stop-alarm-btn">Silenciar e continuar</button>
+                        <button type="button" onclick="encerrarSessaoDashboard()" class="finish-goal-btn">Encerrar e registrar</button>
+                    </div>
                     <div class="config-area">
                         <div class="subject-selector-area" id="subjectSelectorArea">
                             <label class="config-label">A Estudar Agora:</label>
@@ -1240,7 +1244,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260916-session-safe-v1"></script>
+    <script src="script.js?v=20260917-timer-end-v1"></script>
     <script src="schedule.js?v=20260916-session-safe-v1"></script>
     <script src="study-insights.js?v=20260906-worlds-2"></script>
     <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>

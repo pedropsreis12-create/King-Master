@@ -1387,7 +1387,7 @@ let timerInterval, isRunning = false, currentMode = 'estudo', currentSeconds = 0
 let lastTickTime = 0;
 let alarmTriggered = false;
 let lastTimerCloudSave = 0;
-const alarmAudio = document.getElementById('alarmAudio'), stopAlarmBtn = document.getElementById('stopAlarmBtn'), timeDisplay = document.getElementById('timeDisplay'), playPauseBtn = document.getElementById('playPauseBtn'), progressRing = document.getElementById('progressRing'), circ = 2 * Math.PI * 135;
+const alarmAudio = document.getElementById('alarmAudio'), stopAlarmBtn = document.getElementById('stopAlarmBtn'), timerGoalActions = document.getElementById('timerGoalActions'), timeDisplay = document.getElementById('timeDisplay'), playPauseBtn = document.getElementById('playPauseBtn'), progressRing = document.getElementById('progressRing'), circ = 2 * Math.PI * 135;
 if(progressRing) progressRing.style.strokeDasharray = circ;
 
 const getTargetSeconds = () => currentMode === 'descanso' ? descansoTempoAtual * 60 : ((parseInt(document.getElementById('inputHours').value) || 0) * 3600) + ((parseInt(document.getElementById('inputMinutes').value) || 0) * 60) + (parseInt(document.getElementById('inputSeconds').value) || 0);
@@ -1722,12 +1722,29 @@ function abrirRegistroSessaoPendente() {
 
 function prepararRegistroSessao(segundos = currentSeconds, origem = 'manual') {
     if (Number(segundos) < 5) return false;
-    clearInterval(timerInterval); isRunning = false; playPauseBtn.textContent = '▶';
+    const segundosProtegidos = Math.floor(Number(segundos));
+    clearInterval(timerInterval);
+    isRunning = false;
+    cancelarAvisoMetaTimer();
+    stopAlarm();
+    playPauseBtn.textContent = '▶';
     const criadaEm = Date.now();
-    const nova = { id: `sessao-${criadaEm}-${Math.random().toString(36).slice(2, 8)}`, seconds: Math.floor(segundos), subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: criadaEm, scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false, holdsTimer: true };
-    appData.pendingStudySessions = [...sincronizarFilaSessoesPendentes(), nova];
-    appData.pendingStudySession = appData.pendingStudySessions[0];
-    saveAppData(); updateProgress(); toggleBotaoStopHistorico(); renderizarAvisoSessaoPendente(); abrirRegistroSessaoPendente();
+    const nova = { id: `sessao-${criadaEm}-${Math.random().toString(36).slice(2, 8)}`, seconds: segundosProtegidos, subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt: criadaEm, scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '', scheduleCreditNeeded: false, holdsTimer: false };
+    // A sessão recém-encerrada sempre abre primeiro. As anteriores continuam protegidas na fila.
+    appData.pendingStudySessions = [nova, ...sincronizarFilaSessoesPendentes()];
+    appData.pendingStudySession = nova;
+    currentSeconds = 0;
+    alarmTriggered = false;
+    lastTickTime = 0;
+    document.title = 'King Master';
+    try { saveAppData(); } catch (error) {
+        console.error('Falha ao salvar sessão encerrada:', error);
+        showToast('A sessão está protegida nesta tela, mas houve uma falha ao salvar no dispositivo.', true);
+    }
+    updateProgress();
+    toggleBotaoStopHistorico();
+    renderizarAvisoSessaoPendente();
+    abrirRegistroSessaoPendente();
     return true;
 }
 
@@ -1755,6 +1772,17 @@ function confirmarDescarteRegistroSessao(id) {
     if (!pendente) return;
     if (pendente?.id) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== String(pendente.id)), String(pendente.id)].slice(-40);
     removerSessaoPendente(pendente.id);
+    // Compatibilidade com sessões criadas antes da separação entre o relógio e a fila protegida.
+    // Nessas sessões, descartar removia a fila, mas deixava o mesmo tempo preso na tela.
+    if (pendente.holdsTimer && !isRunning) {
+        currentSeconds = 0;
+        alarmTriggered = false;
+        lastTickTime = 0;
+        playPauseBtn.textContent = '▶';
+        cancelarAvisoMetaTimer();
+        stopAlarm();
+        document.title = 'King Master';
+    }
     if (String(appData.activeScheduleBlock?.blockId || '') === String(pendente.scheduleBlockId || '')) appData.activeScheduleBlock = null;
     fecharModal('sessionCompleteModal');
     saveAppData();
@@ -1977,25 +2005,49 @@ document.addEventListener('visibilitychange', () => {
 
 function triggerAlarm() { 
     saveAppData(); 
-    if(!alarmAudio) return;
-    alarmAudio.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3"; 
-    alarmAudio.loop = true; 
-    alarmAudio.currentTime = 0; 
-    alarmAudio.play().catch(e => console.log("Áudio bloqueado pelo navegador. Interação manual necessária.")); 
-    stopAlarmBtn.style.display = 'block'; 
+    timerGoalActions?.classList.add('active');
+    if(alarmAudio) {
+        alarmAudio.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
+        alarmAudio.loop = true;
+        alarmAudio.currentTime = 0;
+        alarmAudio.play().catch(e => console.log("Áudio bloqueado pelo navegador. Interação manual necessária."));
+    }
 }
 
 function stopAlarm() { 
-    if(!alarmAudio) return;
-    alarmAudio.pause(); 
-    alarmAudio.currentTime = 0; 
-    alarmAudio.loop = false; 
-    stopAlarmBtn.style.display = 'none'; 
+    if(alarmAudio) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+        alarmAudio.loop = false;
+    }
+    timerGoalActions?.classList.remove('active');
 }
 
 function abrirConfirmReset() { document.getElementById('confirmResetModal').classList.add('active'); }
 function executarResetTimer() { fecharModal('confirmResetModal'); clearInterval(timerInterval); cancelarAvisoMetaTimer(); stopAlarm(); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = currentMode === 'estudo' ? 0 : getTargetSeconds(); saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; }
-function encerrarSessaoDashboard() { tickTimer(); if (currentSeconds >= 5) prepararRegistroSessao(currentSeconds, 'manual'); else { showToast('⚠️ Sessão muito curta (mínimo 5s).', true); clearInterval(timerInterval); isRunning = false; alarmTriggered = false; playPauseBtn.textContent = '▶'; currentSeconds = 0; saveAppData(); updateProgress(); toggleBotaoStopHistorico(); document.title = "King Master"; } }
+function encerrarSessaoDashboard() {
+    // Congela o relógio antes de abrir o registro. Assim nenhum novo segundo, alarme
+    // ou clique duplo consegue manter a sessão aparentemente ativa.
+    tickTimer();
+    const segundosFinais = Math.floor(currentSeconds);
+    clearInterval(timerInterval);
+    isRunning = false;
+    cancelarAvisoMetaTimer();
+    stopAlarm();
+    playPauseBtn.textContent = '▶';
+    if (segundosFinais >= 5) {
+        prepararRegistroSessao(segundosFinais, 'manual');
+        return;
+    }
+    showToast('⚠️ Sessão muito curta (mínimo 5s).', true);
+    alarmTriggered = false;
+    currentSeconds = 0;
+    lastTickTime = 0;
+    saveAppData();
+    updateProgress();
+    toggleBotaoStopHistorico();
+    document.title = "King Master";
+}
 function setDescansoTime(mins) { descansoTempoAtual = mins; document.getElementById('btn-descanso-5').classList.remove('primary'); document.getElementById('btn-descanso-10').classList.remove('primary'); document.getElementById(`btn-descanso-${mins}`).classList.add('primary'); executarResetTimer(); }
 
 function setMode(mode) {

@@ -107,12 +107,21 @@ test('profile keeps an independent persistent banner', () => {
   assert.match(script, /appData\.profileBanner = canvas\.toDataURL/);
 });
 
-test('topic organizer searches existing content and supports one-tap study logging', () => {
+test('topic organizer prioritizes next actions, mastery and spaced review controls', () => {
   assert.match(html, /id="assuntosBuscaInput"/);
-  assert.match(html, /Estudei hoje/);
+  assert.match(html, /data-topic-filter="acao"/);
+  assert.match(html, /data-topic-filter="revisar"/);
+  assert.match(html, /id="assuntosOrdenacao"/);
+  assert.match(html, /id="topicControlPanel"/);
+  assert.match(html, /id="assuntosDominadosValue"/);
   assert.match(script, /function filtrarAssuntos/);
   assert.match(script, /function registrarTopicoEstudado/);
+  assert.match(script, /function registrarDesempenhoTopico/);
+  assert.match(script, /function definirNivelDominioTopico/);
+  assert.match(script, /function agendarRevisaoTopico/);
+  assert.match(script, /Recuperação ativa/);
   assert.match(script, /registroRapido: true/);
+  assert.match(usability, /\.topics-control-workspace/);
 });
 
 test('subject creation starts simple and progressively reveals planning tools', () => {

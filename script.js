@@ -570,6 +570,10 @@ function confirmarDelecao() {
         renderizarRevisoes();
         showToast('Tag excluída das revisões.');
     }
+    else if (tipo === 'topico') {
+        const [materiaId, topicoIndice] = String(id).split(':').map(Number);
+        deletarTopico(materiaId, topicoIndice);
+    }
     else if (tipo === 'cadernoErro') {
         const removido = appData.cadernoErrosItems.find(i => i.id === id);
         appData.cadernoErrosItems = appData.cadernoErrosItems.filter(i => i.id !== id);
@@ -1549,10 +1553,12 @@ function atualizarTopicoAposEstudo(materia, assunto) {
     if (!Array.isArray(materia.topicos)) materia.topicos = [];
     let topico = materia.topicos.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(assunto));
     if (!topico) {
-        topico = { nome: String(assunto).trim().slice(0, 100), concluido: true };
+        topico = { nome: String(assunto).trim().slice(0, 100), concluido: false, prioridade: 'media', dominio: { teoria: true, pratica: false, dominio: false }, notas: '' };
         materia.topicos.push(topico);
     }
-    topico.concluido = true;
+    if (!topico.dominio) topico.dominio = { teoria: true, pratica: false, dominio: Boolean(topico.concluido) };
+    else topico.dominio.teoria = true;
+    topico.concluido = Boolean(topico.dominio.dominio);
     topico.ultimoEstudoEm = Date.now();
     topico.vezesEstudado = (Number(topico.vezesEstudado) || 0) + 1;
     return topico;
@@ -2264,6 +2270,9 @@ function salvarMateriaCiclo(e) {
 
 let buscaMateriasAtual = '';
 let buscaAssuntosAtual = '';
+let filtroAssuntosAtual = 'acao';
+let ordenacaoAssuntosAtual = 'acao';
+let assuntoSelecionadoIndice = null;
 let filtroAgendamentoAtual = 'todos';
 let filtroRevisoesAtual = 'ativas';
 let filtroSimuladosAtual = 'todas';
@@ -2327,7 +2336,14 @@ function abrirModalAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id); if (!mat) return;
     document.getElementById('assuntosMateriaId').value = id; document.getElementById('assuntosModalTitle').textContent = mat.subject;
     buscaAssuntosAtual = '';
+    assuntoSelecionadoIndice = null;
     document.getElementById('assuntosBuscaInput').value = '';
+    document.getElementById('assuntosOrdenacao').value = ordenacaoAssuntosAtual;
+    document.querySelectorAll('[data-topic-filter]').forEach(botao => {
+        const ativo = botao.dataset.topicFilter === filtroAssuntosAtual;
+        botao.classList.toggle('active', ativo);
+        botao.setAttribute('aria-pressed', String(ativo));
+    });
     let segs = 0; appData.historyItems.forEach(h => { if(h.materia.trim().toLowerCase() === mat.subject.trim().toLowerCase()) segs += h.tempoSegundos; });
     document.getElementById('assuntosModalTimeValue').textContent = `${Math.floor(segs/3600)}h ${Math.floor((segs%3600)/60).toString().padStart(2,'0')}m`;
     renderizarListaAssuntos(id); document.getElementById('assuntosModal').classList.add('active');
@@ -2339,51 +2355,267 @@ function filtrarAssuntos(valor = '') {
     renderizarListaAssuntos(id);
 }
 
+function definirFiltroAssuntos(filtro = 'acao') {
+    filtroAssuntosAtual = filtro;
+    document.querySelectorAll('[data-topic-filter]').forEach(botao => {
+        const ativo = botao.dataset.topicFilter === filtro;
+        botao.classList.toggle('active', ativo);
+        botao.setAttribute('aria-pressed', String(ativo));
+    });
+    renderizarListaAssuntos(Number(document.getElementById('assuntosMateriaId').value));
+}
+
+function ordenarAssuntos(ordenacao = 'acao') {
+    ordenacaoAssuntosAtual = ordenacao;
+    renderizarListaAssuntos(Number(document.getElementById('assuntosMateriaId').value));
+}
+
+function obterRevisaoAtivaTopico(materia, topico) {
+    return appData.revisoesItems
+        .filter(item => item.status !== 'revisado'
+            && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject)
+            && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome))
+        .sort((a, b) => (a.dataAlvo || '9999-12-31').localeCompare(b.dataAlvo || '9999-12-31'))[0] || null;
+}
+
+function obterNivelDominioTopico(topico) {
+    if (topico?.dominio) {
+        if (topico.dominio.dominio) return 3;
+        if (topico.dominio.pratica) return 2;
+        if (topico.dominio.teoria) return 1;
+        return 0;
+    }
+    if (topico?.concluido) return 3;
+    if (Number(topico?.vezesEstudado) > 0) return 1;
+    return 0;
+}
+
+function obterEstadoTopicoControle(materia, topico) {
+    const revisao = obterRevisaoAtivaTopico(materia, topico);
+    const hoje = dataLocalISO(new Date());
+    if (revisao?.status === 'fraco' || (revisao?.dataAlvo && revisao.dataAlvo <= hoje)) return 'revisar';
+    return ['novo', 'aprendendo', 'praticando', 'dominado'][obterNivelDominioTopico(topico)];
+}
+
+function pontuacaoAcaoTopico(materia, topico) {
+    const estado = obterEstadoTopicoControle(materia, topico);
+    const prioridade = { alta: 0, media: 1, baixa: 2 }[topico.prioridade || 'media'];
+    const base = { revisar: 0, novo: 2, aprendendo: 3, praticando: 4, dominado: 8 }[estado] ?? 6;
+    return base * 10 + prioridade;
+}
+
+function rotuloDataRevisao(dataAlvo) {
+    if (!dataAlvo) return '';
+    const hoje = dataLocalISO(new Date());
+    if (dataAlvo < hoje) return 'Revisão atrasada';
+    if (dataAlvo === hoje) return 'Revisar hoje';
+    const data = dataISOParaLocal(dataAlvo);
+    return data ? `Revisar ${data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}` : '';
+}
+
 function renderizarListaAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id), lista = document.getElementById('listaAssuntos');
     if (!mat || !lista) return;
     const topicos = Array.isArray(mat.topicos) ? mat.topicos : [];
-    const estudados = topicos.filter(item => item.concluido || Number(item.vezesEstudado) > 0).length;
-    const revisoes = appData.revisoesItems.filter(item => item.status !== 'revisado' && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(mat.subject)).length;
+    const estudados = topicos.filter(item => [1, 2].includes(obterNivelDominioTopico(item))).length;
+    const dominados = topicos.filter(item => obterNivelDominioTopico(item) === 3).length;
+    const revisoes = topicos.filter(item => obterEstadoTopicoControle(mat, item) === 'revisar').length;
     document.getElementById('assuntosTotalValue').textContent = topicos.length;
     document.getElementById('assuntosEstudadosValue').textContent = estudados;
     document.getElementById('assuntosRevisoesValue').textContent = revisoes;
-    const visiveis = topicos.map((topico, index) => ({ topico, index })).filter(({ topico }) => !buscaAssuntosAtual || normalizarRevisaoTexto(topico.nome).includes(normalizarRevisaoTexto(buscaAssuntosAtual)));
-    document.getElementById('assuntosBuscaResultado').textContent = buscaAssuntosAtual ? `${visiveis.length} encontrado${visiveis.length === 1 ? '' : 's'}` : 'Todos';
-    if (!topicos.length) { lista.innerHTML = '<li class="topics-empty"><strong>Nenhum conteúdo cadastrado</strong><small>Adicione o primeiro tópico acima para começar seu mapa de estudos.</small></li>'; return; }
-    if (!visiveis.length) { lista.innerHTML = '<li class="topics-empty"><strong>Nenhum tópico encontrado</strong><small>Tente outro termo ou adicione este conteúdo à matéria.</small></li>'; return; }
+    document.getElementById('assuntosDominadosValue').textContent = dominados;
+    const correspondeFiltro = (topico) => {
+        const estado = obterEstadoTopicoControle(mat, topico);
+        const nivel = obterNivelDominioTopico(topico);
+        if (filtroAssuntosAtual === 'todos') return true;
+        if (filtroAssuntosAtual === 'novos') return nivel === 0;
+        if (filtroAssuntosAtual === 'estudo') return [1, 2].includes(nivel) && estado !== 'revisar';
+        if (filtroAssuntosAtual === 'revisar') return estado === 'revisar';
+        if (filtroAssuntosAtual === 'dominados') return nivel === 3;
+        return nivel < 3 || estado === 'revisar';
+    };
+    const prioridadeValor = topico => ({ alta: 0, media: 1, baixa: 2 }[topico.prioridade || 'media']);
+    const comparar = (a, b) => {
+        if (ordenacaoAssuntosAtual === 'nome') return String(a.topico.nome || '').localeCompare(String(b.topico.nome || ''), 'pt-BR');
+        if (ordenacaoAssuntosAtual === 'prioridade') return prioridadeValor(a.topico) - prioridadeValor(b.topico) || pontuacaoAcaoTopico(mat, a.topico) - pontuacaoAcaoTopico(mat, b.topico);
+        if (ordenacaoAssuntosAtual === 'revisao') return (obterRevisaoAtivaTopico(mat, a.topico)?.dataAlvo || '9999-12-31').localeCompare(obterRevisaoAtivaTopico(mat, b.topico)?.dataAlvo || '9999-12-31');
+        return pontuacaoAcaoTopico(mat, a.topico) - pontuacaoAcaoTopico(mat, b.topico) || prioridadeValor(a.topico) - prioridadeValor(b.topico);
+    };
+    const visiveis = topicos.map((topico, index) => ({ topico, index }))
+        .filter(({ topico }) => {
+            const termo = normalizarRevisaoTexto(`${topico.nome || ''} ${topico.notas || ''}`);
+            return correspondeFiltro(topico) && (!buscaAssuntosAtual || termo.includes(normalizarRevisaoTexto(buscaAssuntosAtual)));
+        }).sort(comparar);
+    document.getElementById('assuntosBuscaResultado').textContent = `${visiveis.length} de ${topicos.length}`;
+    if (!topicos.length) {
+        assuntoSelecionadoIndice = null;
+        lista.innerHTML = '<li class="topics-empty"><strong>Nenhum conteúdo cadastrado</strong><small>Adicione o primeiro tópico acima para começar seu mapa de estudos.</small></li>';
+        renderizarPainelControleTopico(id, null);
+        return;
+    }
+    if (!visiveis.length) {
+        assuntoSelecionadoIndice = null;
+        lista.innerHTML = '<li class="topics-empty"><strong>Nenhum tópico neste filtro</strong><small>Troque o filtro, limpe a busca ou adicione um novo conteúdo.</small></li>';
+        renderizarPainelControleTopico(id, null);
+        return;
+    }
+    if (!visiveis.some(item => item.index === assuntoSelecionadoIndice)) assuntoSelecionadoIndice = visiveis[0].index;
     lista.innerHTML = visiveis.map(({ topico: t, index: i }) => {
         const nome = escaparRevisaoHtml(t.nome || 'Tópico');
         const vezes = Number(t.vezesEstudado) || 0;
+        const nivel = obterNivelDominioTopico(t);
+        const estado = obterEstadoTopicoControle(mat, t);
+        const revisao = obterRevisaoAtivaTopico(mat, t);
         const ultimaData = t.ultimoEstudoEm ? new Date(t.ultimoEstudoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : '';
-        const meta = vezes ? `${vezes} ${vezes === 1 ? 'registro' : 'registros'}${ultimaData ? ` • último em ${ultimaData}` : ''}` : 'Ainda não registrado como estudado';
-        return `<li class="topic-organizer-item ${t.concluido ? 'completed' : ''}"><button type="button" class="topic-check-button" onclick="toggleTopico(${id},${i})" aria-pressed="${Boolean(t.concluido)}" aria-label="${t.concluido ? 'Reabrir' : 'Marcar como concluído'} ${nome}">${t.concluido ? '✓' : '○'}</button><div class="topic-organizer-copy"><strong>${nome}</strong><small>${meta}</small></div><button type="button" class="topic-studied-button" onclick="registrarTopicoEstudado(${id},${i})">Estudei hoje</button><button type="button" class="workspace-icon-button danger" onclick="deletarTopico(${id},${i})" aria-label="Excluir ${nome}" title="Excluir">×</button></li>`;
+        const meta = rotuloDataRevisao(revisao?.dataAlvo) || (vezes ? `${vezes} ${vezes === 1 ? 'estudo' : 'estudos'}${ultimaData ? ` • último ${ultimaData}` : ''}` : 'Ainda não iniciado');
+        const prioridade = t.prioridade || 'media';
+        const icone = estado === 'revisar' ? '↻' : (nivel === 3 ? '✓' : ['0', 'T', 'P'][nivel]);
+        return `<li class="topic-organizer-item state-${estado} ${i === assuntoSelecionadoIndice ? 'selected' : ''}"><button type="button" class="topic-select-button" onclick="selecionarTopicoControle(${id},${i})" aria-pressed="${i === assuntoSelecionadoIndice}"><span class="topic-state-mark">${icone}</span><span class="topic-organizer-copy"><span class="topic-organizer-title"><strong>${nome}</strong>${prioridade !== 'media' ? `<em class="topic-priority-badge ${prioridade}">${prioridade}</em>` : ''}</span><small>${meta}</small><span class="topic-mini-progress" aria-label="${nivel} de 3 etapas concluídas"><i class="${nivel >= 1 ? 'done' : ''}"></i><i class="${nivel >= 2 ? 'done' : ''}"></i><i class="${nivel >= 3 ? 'done' : ''}"></i></span></span></button><button type="button" class="topic-quick-study" onclick="registrarTopicoEstudado(${id},${i})" aria-label="Registrar estudo rápido em ${nome}" title="Estudei hoje">+</button></li>`;
     }).join('');
+    renderizarPainelControleTopico(id, assuntoSelecionadoIndice);
 }
 
-function adicionarTopico(e) { e.preventDefault(); const id = parseInt(document.getElementById('assuntosMateriaId').value), nm = document.getElementById('novoTopicoInput').value, idx = appData.cycleItems.findIndex(m => m.id === id); if (idx > -1 && nm.trim()) { if (!appData.cycleItems[idx].topicos) appData.cycleItems[idx].topicos = []; appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false }); saveAppData(); document.getElementById('novoTopicoInput').value = ''; renderizarListaAssuntos(id); renderizarCiclo(); } }
+function selecionarTopicoControle(id, indice) {
+    assuntoSelecionadoIndice = indice;
+    renderizarListaAssuntos(id);
+}
+
+function renderizarPainelControleTopico(id, indice) {
+    const painel = document.getElementById('topicControlPanel');
+    const materia = appData.cycleItems.find(item => item.id === id);
+    const topico = Number.isInteger(indice) ? materia?.topicos?.[indice] : null;
+    if (!painel) return;
+    if (!materia || !topico) {
+        painel.innerHTML = '<div class="topics-empty"><strong>Escolha um tópico</strong><small>Os controles de domínio e revisão aparecerão aqui.</small></div>';
+        return;
+    }
+    const nivel = obterNivelDominioTopico(topico);
+    const estado = obterEstadoTopicoControle(materia, topico);
+    const revisao = obterRevisaoAtivaTopico(materia, topico);
+    const rotulosEstado = { novo: 'Não iniciado', aprendendo: 'Teoria', praticando: 'Prática', revisar: 'Revisar agora', dominado: 'Dominado' };
+    const ultimaData = topico.ultimoEstudoEm ? new Date(topico.ultimoEstudoEm).toLocaleDateString('pt-BR') : 'nenhum registro ainda';
+    const hoje = dataLocalISO(new Date());
+    painel.innerHTML = `<div class="topic-control-header"><div><span class="workspace-kicker">CONTROLE DO ASSUNTO</span><h4>${escaparRevisaoHtml(topico.nome || 'Tópico')}</h4><p>${Number(topico.vezesEstudado) || 0} estudos • último: ${ultimaData}</p></div><span class="topic-state-pill">${rotulosEstado[estado]}</span></div>
+        <section class="topic-control-section"><span class="topic-control-label">Nível de domínio</span><div class="topic-mastery-control" role="group" aria-label="Nível de domínio"><button type="button" class="${nivel === 0 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},0)"><b>0</b><span>Começar</span></button><button type="button" class="${nivel === 1 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},1)"><b>T</b><span>Teoria</span></button><button type="button" class="${nivel === 2 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},2)"><b>P</b><span>Prática</span></button><button type="button" class="${nivel === 3 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},3)"><b>✓</b><span>Domínio</span></button></div></section>
+        <form class="topic-control-section" onsubmit="salvarDetalhesTopico(event,${id},${indice})"><div class="topic-control-form-grid"><label><span class="topic-control-label">Nome do tópico</span><input class="cycle-input" id="topicControlName" maxlength="100" required value="${escaparRevisaoHtml(topico.nome || '')}"></label><label><span class="topic-control-label">Prioridade</span><select class="cycle-input" id="topicControlPriority"><option value="alta" ${topico.prioridade === 'alta' ? 'selected' : ''}>Alta</option><option value="media" ${!topico.prioridade || topico.prioridade === 'media' ? 'selected' : ''}>Média</option><option value="baixa" ${topico.prioridade === 'baixa' ? 'selected' : ''}>Baixa</option></select></label></div><label><span class="topic-control-label">Anotação de controle</span><textarea class="cycle-input" id="topicControlNotes" maxlength="500" placeholder="Ex.: erro comum, fórmula que falta fixar ou próximo exercício">${escaparRevisaoHtml(topico.notas || '')}</textarea></label><button type="submit" class="cycle-btn">Salvar ajustes</button></form>
+        <section class="topic-control-section"><span class="topic-control-label">Próxima revisão</span><div class="topic-review-row"><input type="date" class="cycle-input" id="topicControlReviewDate" min="${hoje}" value="${escaparRevisaoHtml(revisao?.dataAlvo || '')}" onchange="agendarRevisaoTopico(${id},${indice},this.value)"><div class="topic-review-presets"><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},1)">+1 dia</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},3)">+3</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},7)">+7</button></div></div></section>
+        <section class="topic-recall-box"><header><b>↻</b><span><strong>Depois de tentar lembrar sem olhar</strong><small>Registre o resultado e a próxima revisão será ajustada.</small></span></header><div class="topic-recall-actions"><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'dificil')">Difícil<small>revisar amanhã</small></button><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'parcial')">Parcial<small>revisar em 3 dias</small></button><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'seguro')">Seguro<small>revisar em 7 dias</small></button></div></section>
+        <footer class="topic-control-footer"><button type="button" class="cycle-btn topic-delete-button" onclick="solicitarExclusaoTopico(${id},${indice})">Excluir tópico</button><button type="button" class="cycle-btn primary" onclick="registrarTopicoEstudado(${id},${indice})">Estudei hoje</button></footer>`;
+}
+
+function adicionarTopico(e) {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('assuntosMateriaId').value), nm = document.getElementById('novoTopicoInput').value.trim().slice(0, 100), idx = appData.cycleItems.findIndex(m => m.id === id);
+    if (idx < 0 || !nm) return;
+    if (!appData.cycleItems[idx].topicos) appData.cycleItems[idx].topicos = [];
+    if (appData.cycleItems[idx].topicos.some(topico => normalizarRevisaoTexto(topico.nome) === normalizarRevisaoTexto(nm))) {
+        showToast('Este tópico já está cadastrado.', true); return;
+    }
+    appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false, prioridade: 'media', dominio: { teoria: false, pratica: false, dominio: false }, notas: '' });
+    assuntoSelecionadoIndice = appData.cycleItems[idx].topicos.length - 1;
+    saveAppData(); document.getElementById('novoTopicoInput').value = ''; renderizarListaAssuntos(id); renderizarCiclo();
+    showToast('Tópico adicionado à sua rota.');
+}
 
 function toggleTopico(id, tIdx) { 
-    const idx = appData.cycleItems.findIndex(m => m.id === id); 
-    if (idx > -1) { 
-        appData.cycleItems[idx].topicos[tIdx].concluido = !appData.cycleItems[idx].topicos[tIdx].concluido;
-        saveAppData(); renderizarListaAssuntos(id); renderizarCiclo();
-    } 
+    const materia = appData.cycleItems.find(m => m.id === id), topico = materia?.topicos?.[tIdx];
+    if (!topico) return;
+    definirNivelDominioTopico(id, tIdx, obterNivelDominioTopico(topico) === 3 ? 0 : 3);
 }
 
-function deletarTopico(id, tIdx) { const idx = appData.cycleItems.findIndex(m => m.id === id); if (idx > -1) { appData.cycleItems[idx].topicos.splice(tIdx, 1); saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); showToast('🗑️ Assunto removido!'); } }
+function definirNivelDominioTopico(id, tIdx, nivel) {
+    const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
+    if (!topico) return;
+    const valor = Math.max(0, Math.min(3, Number(nivel) || 0));
+    topico.dominio = { teoria: valor >= 1, pratica: valor >= 2, dominio: valor >= 3 };
+    topico.concluido = valor >= 3;
+    saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarMapaDominio();
+}
 
-function registrarTopicoEstudado(id, tIdx) {
+function salvarDetalhesTopico(event, id, tIdx) {
+    event.preventDefault();
+    const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
+    if (!topico) return;
+    const nomeAnterior = topico.nome;
+    const novoNome = document.getElementById('topicControlName').value.trim().slice(0, 100);
+    const duplicado = materia.topicos.some((item, indice) => indice !== tIdx && normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(novoNome));
+    if (!novoNome || duplicado) { showToast(duplicado ? 'Já existe outro tópico com esse nome.' : 'Informe o nome do tópico.', true); return; }
+    topico.nome = novoNome;
+    topico.prioridade = document.getElementById('topicControlPriority').value;
+    topico.notas = document.getElementById('topicControlNotes').value.trim().slice(0, 500);
+    appData.revisoesItems.forEach(item => {
+        if (item.status !== 'revisado' && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(nomeAnterior)) item.assunto = novoNome;
+    });
+    saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarRevisoes(); showToast('Controle do tópico atualizado.');
+}
+
+function agendarRevisaoTopico(id, tIdx, dataAlvo) {
+    const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
+    if (!materia || !topico) return;
+    let revisao = obterRevisaoAtivaTopico(materia, topico);
+    if (!revisao) {
+        revisao = { id: Date.now() + Math.floor(Math.random() * 1000), materia: materia.subject, assunto: topico.nome, dataEstudo: dataLocalISO(new Date()), dataAlvo: dataAlvo || '', origem: 'controle-topico', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() };
+        appData.revisoesItems.push(revisao);
+    } else {
+        revisao.dataAlvo = dataAlvo || '';
+        revisao.status = 'pendente';
+        revisao.atualizadoEm = Date.now();
+    }
+    topico.proximaRevisaoEm = dataAlvo || '';
+    saveAppData(); renderizarListaAssuntos(id); renderizarRevisoes();
+}
+
+function definirRevisaoTopicoDias(id, tIdx, dias) {
+    const data = new Date(); data.setHours(12, 0, 0, 0); data.setDate(data.getDate() + Math.max(1, Number(dias) || 1));
+    agendarRevisaoTopico(id, tIdx, dataLocalISO(data));
+    showToast(`Revisão agendada para ${data.toLocaleDateString('pt-BR')}.`);
+}
+
+function solicitarExclusaoTopico(id, tIdx) {
+    const topico = appData.cycleItems.find(item => item.id === id)?.topicos?.[tIdx];
+    if (!topico) return;
+    abrirModalDeletar('topico', `${id}:${tIdx}`, 'Excluir este tópico?', `“${topico.nome}” sairá da matéria. Seu histórico de estudos será preservado.`);
+}
+
+function deletarTopico(id, tIdx) {
+    const idx = appData.cycleItems.findIndex(m => m.id === id);
+    if (idx < 0 || !appData.cycleItems[idx].topicos?.[tIdx]) return;
+    appData.cycleItems[idx].topicos.splice(tIdx, 1);
+    assuntoSelecionadoIndice = null;
+    saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarMapaDominio(); showToast('Tópico removido.');
+}
+
+function concluirRevisaoAtivaTopico(materia, topico) {
+    const revisao = obterRevisaoAtivaTopico(materia, topico);
+    if (!revisao) return;
+    revisao.status = 'revisado';
+    revisao.revisadoEm = Date.now();
+    revisao.atualizadoEm = Date.now();
+}
+
+function registrarTopicoEstudado(id, tIdx, diasRevisao = null, desempenho = '') {
     const materia = appData.cycleItems.find(item => item.id === id);
     const topico = materia?.topicos?.[tIdx];
     if (!materia || !topico) return;
+    concluirRevisaoAtivaTopico(materia, topico);
     atualizarTopicoAposEstudo(materia, topico.nome);
     appData.historyItems.push(criarItemHistoricoRegistro({ materia: materia.subject, assunto: topico.nome, cor: materia.color, tipo: materia.type || 'Teórica',
-        comentario: 'Registro rápido pelo organizador de tópicos.', atividade: 'estudo', registroRapido: true }));
-    const revisaoCriada = appData.studyLogging.autoReview !== false
-        ? criarRevisaoAutomaticaRegistro(materia.subject, topico.nome, appData.studyLogging.reviewDelayDays, 'topico-rapido') : false;
+        comentario: desempenho ? `Recuperação ativa: ${desempenho}.` : 'Registro rápido pelo organizador de tópicos.', atividade: 'estudo', registroRapido: true }));
+    const intervalo = diasRevisao || appData.studyLogging.reviewDelayDays;
+    const revisaoCriada = (diasRevisao !== null || appData.studyLogging.autoReview !== false)
+        ? criarRevisaoAutomaticaRegistro(materia.subject, topico.nome, intervalo, desempenho ? 'recuperacao-ativa' : 'topico-rapido') : false;
+    const revisao = obterRevisaoAtivaTopico(materia, topico);
+    topico.proximaRevisaoEm = revisao?.dataAlvo || '';
     saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarRevisoes();
     showToast(revisaoCriada ? '✓ Estudo registrado e revisão agendada.' : '✓ Estudo registrado para hoje.');
+}
+
+function registrarDesempenhoTopico(id, tIdx, desempenho) {
+    const configuracao = { dificil: { dias: 1, prioridade: 'alta' }, parcial: { dias: 3, prioridade: 'media' }, seguro: { dias: 7, prioridade: 'baixa' } }[desempenho];
+    const topico = appData.cycleItems.find(item => item.id === id)?.topicos?.[tIdx];
+    if (!configuracao || !topico) return;
+    topico.prioridade = configuracao.prioridade;
+    registrarTopicoEstudado(id, tIdx, configuracao.dias, desempenho);
 }
 
 function abrirModalEditarHistorico(id) { const h = appData.historyItems.find(i => i.id === id); if(h) { document.getElementById('histEditId').value = h.id; document.getElementById('histSubject').value = h.materia; document.getElementById('histComment').value = h.comentario || ''; document.getElementById('editHistoryModal').classList.add('active'); } }

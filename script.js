@@ -124,7 +124,7 @@ appData.pendingStudySessions = sessoesPendentesMigradas.filter((pendente, indice
     const duplicadaLegada = !pendente.id && criadaEm > 0 && appData.historyItems.some(item => {
         const idHistorico = Number(item.id || 0);
         const mesmaDuracao = Math.abs(Number(item.tempoSegundos || 0) - Number(pendente.seconds || 0)) < 1;
-        const mesmaMateria = String(item.materia || '').trim().toLocaleLowerCase('pt-BR') === String(materiaPendente?.subject || 'Estudo Livre').trim().toLocaleLowerCase('pt-BR');
+        const mesmaMateria = String(item.materia || '').trim().toLocaleLowerCase('pt-BR') === String(materiaPendente?.subject || 'Sem matéria').trim().toLocaleLowerCase('pt-BR');
         return mesmaDuracao && mesmaMateria && idHistorico >= criadaEm && idHistorico - criadaEm < 6 * 60 * 60 * 1000;
     });
     const id = String(pendente.id || `legado-${pendente.createdAt || indice}`);
@@ -484,18 +484,62 @@ let itemToDelete = null, deleteType = '';
 
 function fecharModal(id) { document.getElementById(id)?.classList.remove('active'); }
 
-function abrirModalDeletar(tipo, id, titulo, msg) { 
+function abrirModalDeletar(tipo, id, titulo, msg, rotuloAcao = 'Apagar', perigoso = true) {
     itemToDelete = id; 
     deleteType = tipo; 
     document.getElementById('deleteConfirmTitle').textContent = titulo; 
     document.getElementById('deleteConfirmMessage').textContent = msg; 
+    const botao = document.getElementById('deleteConfirmAction');
+    if (botao) {
+        botao.textContent = rotuloAcao;
+        botao.classList.toggle('btn-danger', perigoso);
+        botao.classList.toggle('primary', !perigoso);
+    }
     document.getElementById('deleteConfirmModal').classList.add('active'); 
 }
 
 function fecharModalDeletar() { 
     fecharModal('deleteConfirmModal'); 
+    const botao = document.getElementById('deleteConfirmAction');
+    if (botao) { botao.textContent = 'Apagar'; botao.classList.add('btn-danger'); botao.classList.remove('primary'); }
     itemToDelete = null; 
     deleteType = ''; 
+}
+
+function descontarSessoesDosTotais(sessoes = []) {
+    const removido = sessoes.reduce((total, item) => total + Math.max(0, Number(item?.tempoSegundos) || 0), 0);
+    appData.totalStudySeconds = Math.max(0, Number(appData.totalStudySeconds || 0) - removido);
+    sessoes.forEach(item => {
+        const dataISO = dataHistoricoISO(item);
+        const data = dataISOParaLocal(dataISO);
+        if (!data || getMonday(data) !== appData.lastWeekStart) return;
+        const indice = data.getDay() === 0 ? 6 : data.getDay() - 1;
+        appData.weeklyChart[indice] = Math.max(0, Number(appData.weeklyChart[indice] || 0) - Math.max(0, Number(item.tempoSegundos) || 0));
+    });
+    return removido;
+}
+
+function renomearMateriaNosRegistros(nomeAnterior, nomeNovo) {
+    const antiga = normalizarRevisaoTexto(nomeAnterior);
+    if (!antiga || antiga === normalizarRevisaoTexto(nomeNovo)) return;
+    appData.historyItems.forEach(item => { if (normalizarRevisaoTexto(item.materia) === antiga) item.materia = nomeNovo; });
+    appData.revisoesItems.forEach(item => { if (normalizarRevisaoTexto(item.materia) === antiga) item.materia = nomeNovo; });
+    appData.cadernoErrosItems.forEach(item => { if (normalizarRevisaoTexto(item.materia) === antiga) item.materia = nomeNovo; });
+}
+
+function removerMateriaComRegistros(id) {
+    const materia = appData.cycleItems.find(item => item.id === id);
+    if (!materia) return false;
+    const chave = normalizarRevisaoTexto(materia.subject);
+    const sessoesRemovidas = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) === chave);
+    appData.historyItems = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) !== chave);
+    descontarSessoesDosTotais(sessoesRemovidas);
+    appData.revisoesItems = appData.revisoesItems.filter(item => normalizarRevisaoTexto(item.materia) !== chave);
+    appData.pendingStudySessions = (appData.pendingStudySessions || []).map(sessao => String(sessao.subjectId) === String(id) ? { ...sessao, subjectId: '' } : sessao);
+    if (String(appData.pendingStudySession?.subjectId || '') === String(id)) appData.pendingStudySession = { ...appData.pendingStudySession, subjectId: '' };
+    if (String(document.getElementById('activeSubjectSelect')?.value || '') === String(id)) document.getElementById('activeSubjectSelect').value = '';
+    appData.cycleItems = appData.cycleItems.filter(item => item.id !== id);
+    return true;
 }
 
 function confirmarDelecao() {
@@ -505,9 +549,9 @@ function confirmarDelecao() {
     
     if (tipo === 'cycle') { 
         window.KingSchedule?.removeSubject(id);
-        appData.cycleItems = appData.cycleItems.filter(i => i.id !== id); 
-        saveAppData(); renderizarCiclo(); 
-        showToast('🗑️ Matéria removida!'); 
+        if (!removerMateriaComRegistros(id)) return;
+        saveAppData(); renderizarCiclo(); renderizarHistorico(); renderizarRevisoes(); atualizarSeletorDeMaterias();
+        showToast('Matéria e registros relacionados foram removidos.');
     }
     else if (tipo === 'history') { 
         const sessaoApagada = appData.historyItems.find(i => i.id === id);
@@ -531,9 +575,9 @@ function confirmarDelecao() {
     }
     else if (tipo === 'clearCycle') { 
         window.KingSchedule?.clearSubjects();
-        appData.cycleItems = []; 
-        saveAppData(); renderizarCiclo(); 
-        showToast('🧹 Tudo apagado!'); 
+        appData.cycleItems.map(item => item.id).forEach(removerMateriaComRegistros);
+        saveAppData(); renderizarCiclo(); renderizarHistorico(); renderizarRevisoes(); atualizarSeletorDeMaterias();
+        showToast('Matérias e registros relacionados foram removidos.');
     }
     else if (tipo === 'agenda') { 
         appData.agendaItems = appData.agendaItems.filter(i => i.id !== id); 
@@ -573,6 +617,14 @@ function confirmarDelecao() {
     else if (tipo === 'topico') {
         const [materiaId, topicoIndice] = String(id).split(':').map(Number);
         deletarTopico(materiaId, topicoIndice);
+    }
+    else if (tipo === 'repeatTopicStudy') {
+        const [materiaId, topicoIndice] = String(id).split(':').map(Number);
+        registrarTopicoEstudado(materiaId, topicoIndice);
+    }
+    else if (tipo === 'topicReview') {
+        const [materiaId, topicoIndice] = String(id).split(':').map(Number);
+        removerRevisaoTopico(materiaId, topicoIndice);
     }
     else if (tipo === 'cadernoErro') {
         const removido = appData.cadernoErrosItems.find(i => i.id === id);
@@ -620,6 +672,51 @@ function dataHistoricoISO(item) {
     const dataId = new Date(Number(item.id));
     return Number.isNaN(dataId.getTime()) ? '' : dataLocalISO(dataId);
 }
+
+function reconciliarHistoricoComMateriasAtuais() {
+    let tiposAntigosRemovidos = 0;
+    appData.cycleItems = appData.cycleItems.map(item => {
+        if (!item) return item;
+        const materia = { ...item };
+        if (Object.prototype.hasOwnProperty.call(materia, 'type')) { delete materia.type; tiposAntigosRemovidos++; }
+        if (Array.isArray(materia.topicos)) materia.topicos = materia.topicos.map(topico => {
+            if (!topico || typeof topico !== 'object') return topico;
+            const atualizado = { ...topico };
+            if (!Number.isInteger(Number(atualizado.nivelDominio))) {
+                atualizado.nivelDominio = atualizado.dominio?.dominio ? 3 : (atualizado.dominio?.pratica ? 2 : (atualizado.dominio?.teoria || atualizado.vezesEstudado ? 1 : 0));
+                tiposAntigosRemovidos++;
+            }
+            if (Object.prototype.hasOwnProperty.call(atualizado, 'dominio')) { delete atualizado.dominio; tiposAntigosRemovidos++; }
+            atualizado.nivelDominio = Math.max(0, Math.min(3, Number(atualizado.nivelDominio) || 0));
+            atualizado.concluido = atualizado.nivelDominio === 3;
+            return atualizado;
+        });
+        return materia;
+    });
+    const materiasAtuais = new Set(appData.cycleItems.map(item => normalizarRevisaoTexto(item.subject)).filter(Boolean));
+    const semMateria = new Set(['estudo livre', 'livre', 'sem materia', 'sem matéria']);
+    const removidas = [];
+    let normalizadas = 0;
+    appData.historyItems = appData.historyItems.filter(item => {
+        const chave = normalizarRevisaoTexto(item?.materia);
+        if (semMateria.has(chave) || !chave) {
+            if (item.materia !== 'Sem matéria' || item.tipo === 'Livre') normalizadas++;
+            item.materia = 'Sem matéria';
+            if (!item.tipo || item.tipo === 'Livre') item.tipo = 'Estudo';
+            return true;
+        }
+        if (materiasAtuais.has(chave)) return true;
+        removidas.push(item);
+        return false;
+    });
+    if (removidas.length) descontarSessoesDosTotais(removidas);
+    if (!removidas.length && !normalizadas && !tiposAntigosRemovidos) return false;
+    appData.lastModifiedAt = Date.now();
+    try { localStorage.setItem('qg_pedro_data', JSON.stringify(appData)); } catch { /* A interface ainda ignora os órfãos nesta execução. */ }
+    return true;
+}
+
+reconciliarHistoricoComMateriasAtuais();
 
 function obterDiasDeEstudo() {
     return new Set(appData.historyItems.filter(item => (item.tempoSegundos || 0) > 0).map(dataHistoricoISO).filter(Boolean));
@@ -1534,7 +1631,7 @@ function dataFuturaRegistro(dias = 1) {
 }
 
 function criarRevisaoAutomaticaRegistro(materia, assunto, dias = 1, origem = 'sessao-automatica') {
-    const materiaSegura = String(materia || 'Estudo Livre').trim();
+    const materiaSegura = String(materia || 'Sem matéria').trim();
     const assuntoSeguro = String(assunto || '').trim();
     if (!assuntoSeguro) return false;
     const dataAlvo = dataFuturaRegistro(dias);
@@ -1553,18 +1650,18 @@ function atualizarTopicoAposEstudo(materia, assunto) {
     if (!Array.isArray(materia.topicos)) materia.topicos = [];
     let topico = materia.topicos.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(assunto));
     if (!topico) {
-        topico = { nome: String(assunto).trim().slice(0, 100), concluido: false, prioridade: 'media', dominio: { teoria: true, pratica: false, dominio: false }, notas: '' };
+        topico = { nome: String(assunto).trim().slice(0, 100), concluido: false, prioridade: 'media', nivelDominio: 1, notas: '' };
         materia.topicos.push(topico);
     }
-    if (!topico.dominio) topico.dominio = { teoria: true, pratica: false, dominio: Boolean(topico.concluido) };
-    else topico.dominio.teoria = true;
-    topico.concluido = Boolean(topico.dominio.dominio);
+    topico.nivelDominio = Math.max(1, obterNivelDominioTopico(topico));
+    delete topico.dominio;
+    topico.concluido = topico.nivelDominio === 3;
     topico.ultimoEstudoEm = Date.now();
     topico.vezesEstudado = (Number(topico.vezesEstudado) || 0) + 1;
     return topico;
 }
 
-function criarItemHistoricoRegistro({ segundos = 0, materia = 'Estudo Livre', assunto = '', cor = '#515154', tipo = 'Livre', comentario = '', atividade = 'estudo', registroRapido = false }) {
+function criarItemHistoricoRegistro({ segundos = 0, materia = 'Sem matéria', assunto = '', cor = '#515154', tipo = 'Estudo', comentario = '', atividade = 'estudo', registroRapido = false }) {
     const d = new Date();
     return { id: Date.now() + Math.floor(Math.random() * 1000), dataISO: dataLocalISO(d), dataChave: `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`,
         diaNum: d.getDate().toString().padStart(2, '0'), mesAno: `${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}/${d.getFullYear().toString().slice(-2)}`,
@@ -1587,16 +1684,17 @@ function registrarSessao(segundos, detalhes = null) {
     const snapshot = JSON.parse(JSON.stringify(appData));
     const currentSecondsSnapshot = currentSeconds;
     const activeSubjId = detalhes?.subjectId ?? document.getElementById('activeSubjectSelect').value;
-    let nome = 'Estudo Livre', cor = '#515154', tipo = 'Livre', materia = null;
+    let nome = 'Sem matéria', cor = '#515154', tipo = 'Estudo', materia = null;
     if (activeSubjId) materia = appData.cycleItems.find(item => String(item.id) === String(activeSubjId)) || null;
     if (materia) {
-        nome = materia.subject; cor = materia.color; tipo = materia.type || 'Teórica';
+        nome = materia.subject; cor = materia.color;
         materia.executedMin = (materia.executedMin || 0) + (segundos / 60);
     } else cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)];
 
     const assunto = String(detalhes?.assunto || '').trim();
     const comentario = String(detalhes?.comentario || '').trim();
     const atividade = ['estudo', 'simulado', 'redacao'].includes(detalhes?.atividade) ? detalhes.atividade : 'estudo';
+    tipo = { estudo: 'Estudo', simulado: 'Simulado', redacao: 'Redação' }[atividade];
     const pendenteCronograma = sessaoOrigem?.scheduleBlockId ? { ...sessaoOrigem } : null;
     const metricas = atividade === 'estudo' ? detalhes?.study : atividade === 'simulado' ? detalhes?.simulado : null;
     const questoes = Math.max(0, Number(metricas?.questoes ?? metricas?.total) || 0);
@@ -1690,7 +1788,7 @@ function abrirRegistroSessaoPendente() {
     form.reset();
     document.getElementById('sessionCompleteTime').textContent = formatHistoryTime(pendente.seconds);
     const select = document.getElementById('sessionSubject');
-    select.innerHTML = '<option value="">Estudo Livre</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
+    select.innerHTML = '<option value="">Sem matéria</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
     select.value = appData.cycleItems.some(item => String(item.id) === String(pendente.subjectId)) ? String(pendente.subjectId) : '';
     const rascunho = pendente.draft || {};
     if (rascunho.subjectId != null && [...select.options].some(option => String(option.value) === String(rascunho.subjectId))) select.value = String(rascunho.subjectId);
@@ -2076,7 +2174,7 @@ function atualizarSeletorDeMaterias() {
     if(!opts || !trig || !hid) return;
     
     let htmlOpts = `<div class="custom-option ${hid.value === '' ? 'selected' : ''}" data-value="">
-                        <span class="color-dot" style="background:#515154;"></span>Estudo Livre
+                        <span class="color-dot" style="background:#515154;"></span>Sem matéria
                     </div>`;
     
     if(appData.cycleItems.length > 0) { 
@@ -2098,7 +2196,7 @@ function atualizarSeletorDeMaterias() {
         const sel = appData.cycleItems.find(i => i.id == hid.value); 
         if(sel) trig.innerHTML = `<span class="color-dot" style="background:${sel.color};"></span>${sel.subject}`; 
     } else {
-        trig.innerHTML = `<span class="color-dot" style="background:#515154;"></span>Estudo Livre`;
+        trig.innerHTML = `<span class="color-dot" style="background:#515154;"></span>Sem matéria`;
     }
 }
 
@@ -2159,7 +2257,6 @@ function ajustarCargaMateria(delta) {
 
 function atualizarPreviewMateria() {
     const nome = document.getElementById('cycleSubject')?.value.trim() || 'Nova matéria';
-    const tipo = document.getElementById('cycleType')?.value || 'Teórica';
     const icone = document.getElementById('cycleIcon')?.value || '●';
     const cor = document.getElementById('cycleColor')?.value || '#007aff';
     const prioridade = Number(document.getElementById('cyclePriority')?.value) || 2;
@@ -2170,7 +2267,7 @@ function atualizarPreviewMateria() {
     if (preview) preview.style.setProperty('--subject-preview', cor);
     const mark = document.getElementById('cyclePreviewMark');
     if (mark) { mark.textContent = icone; mark.style.color = cor; mark.style.borderColor = `${cor}55`; mark.style.background = `${cor}18`; }
-    const valores = { cyclePreviewIcon: icone, cyclePreviewName: nome, cyclePreviewType: tipo, cyclePreviewPriority: `Prioridade ${nomesPrioridade[prioridade]}`, cyclePreviewLoad: carga.detalhe, cyclePlanSummary: carga.resumo };
+    const valores = { cyclePreviewIcon: icone, cyclePreviewName: nome, cyclePreviewStatus: blocos ? 'No cronograma semanal' : 'Organização manual', cyclePreviewPriority: `Prioridade ${nomesPrioridade[prioridade]}`, cyclePreviewLoad: carga.detalhe, cyclePlanSummary: carga.resumo };
     Object.entries(valores).forEach(([id, valor]) => { const el = document.getElementById(id); if (el) el.textContent = valor; });
 }
 
@@ -2221,7 +2318,6 @@ function editarMateriaCiclo(id) {
     document.getElementById('cycleSaveHint').textContent = 'Seu histórico e seus tópicos atuais serão preservados.';
     document.getElementById('cycleEditId').value = mat.id;
     document.getElementById('cycleSubject').value = mat.subject;
-    document.getElementById('cycleType').value = mat.type || 'Teórica';
     document.getElementById('cycleColor').value = mat.color || '#007aff';
     document.getElementById('cycleIcon').value = mat.schedule?.icon || '●';
     document.getElementById('cyclePriority').value = String(mat.schedule?.priority || 2);
@@ -2244,7 +2340,6 @@ function salvarMateriaCiclo(e) {
     const idEdit = document.getElementById('cycleEditId').value;
     const color = document.getElementById('cycleColor').value || '#007aff';
     const subject = document.getElementById('cycleSubject').value.trim();
-    const type = document.getElementById('cycleType').value;
     const schedule = { icon: document.getElementById('cycleIcon').value || '●', priority: Math.min(3, Math.max(1, Number(document.getElementById('cyclePriority').value) || 2)), weeklyBlocks: Math.min(30, Math.max(0, Number(document.getElementById('cycleWeeklyBlocks').value) || 0)), consecutive: document.getElementById('cycleConsecutive').checked };
     const novosTopicos = normalizarListaTopicosMateria(document.getElementById('cycleInitialTopics').value);
     let quantidadeTopicosAdicionados = novosTopicos.length;
@@ -2259,10 +2354,12 @@ function salvarMateriaCiclo(e) {
             const chavesAtuais = new Set(atuais.map(item => String(item.nome || '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ')));
             const adicionados = novosTopicos.filter(nome => !chavesAtuais.has(nome.toLocaleLowerCase('pt-BR').replace(/\s+/g, ' '))).map(nome => ({ nome, concluido: false }));
             quantidadeTopicosAdicionados = adicionados.length;
-            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, type, schedule, topicos: [...atuais, ...adicionados] };
+            const nomeAnterior = appData.cycleItems[idx].subject;
+            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, schedule, topicos: [...atuais, ...adicionados] };
+            if (normalizarRevisaoTexto(nomeAnterior) !== normalizarRevisaoTexto(subject)) renomearMateriaNosRegistros(nomeAnterior, subject);
         } 
     } else { 
-        appData.cycleItems.push({ id: Date.now(), color, subject, type, schedule, targetMin: 0, executedMin: 0, topicos: novosTopicos.map(nome => ({ nome, concluido: false })), questoes: 0, acertos: 0, erros: 0 });
+        appData.cycleItems.push({ id: Date.now(), color, subject, schedule, targetMin: 0, executedMin: 0, topicos: novosTopicos.map(nome => ({ nome, concluido: false })), questoes: 0, acertos: 0, erros: 0 });
     }
     saveAppData(); renderizarCiclo(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
     showToast(quantidadeTopicosAdicionados ? `📚 Matéria salva com ${quantidadeTopicosAdicionados} ${quantidadeTopicosAdicionados === 1 ? 'tópico' : 'tópicos'}!` : '📚 Matéria salva!');
@@ -2309,7 +2406,7 @@ function renderizarCiclo() {
     definirTexto('materiasDominados', dominados);
     definirTexto('materiasDominio', topicos.length ? `${Math.round(dominados / topicos.length * 100)}%` : '0%');
 
-    const visiveis = materias.filter(item => !buscaMateriasAtual || `${item.subject || ''} ${item.type || ''}`.toLocaleLowerCase('pt-BR').includes(buscaMateriasAtual));
+    const visiveis = materias.filter(item => !buscaMateriasAtual || String(item.subject || '').toLocaleLowerCase('pt-BR').includes(buscaMateriasAtual));
     definirTexto('materiasResultado', pluralizar(visiveis.length, 'matéria'));
 
     if(materias.length === 0) {
@@ -2327,8 +2424,8 @@ function renderizarCiclo() {
         let concluidos = i.topicos ? i.topicos.filter(t => t.concluido).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
-        const tipo = escaparRevisaoHtml(i.type || 'Teórica');
-        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><button type="button" class="disc-title-button" onclick="abrirModalAssuntos(${i.id})">${nome}</button><span class="disc-type">${tipo}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria?', 'Isto vai excluir a matéria e seus tópicos.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div><button type="button" class="disc-open-row" onclick="abrirModalAssuntos(${i.id})"><span>Ver e organizar tópicos</span><span aria-hidden="true">›</span></button></article>`;
+        const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
+        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><button type="button" class="disc-title-button" onclick="abrirModalAssuntos(${i.id})">${nome}</button><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div><button type="button" class="disc-open-row" onclick="abrirModalAssuntos(${i.id})"><span>Ver e organizar tópicos</span><span aria-hidden="true">›</span></button></article>`;
     }).join('');
 }
 
@@ -2379,6 +2476,7 @@ function obterRevisaoAtivaTopico(materia, topico) {
 }
 
 function obterNivelDominioTopico(topico) {
+    if (Number.isFinite(Number(topico?.nivelDominio))) return Math.max(0, Math.min(3, Number(topico.nivelDominio) || 0));
     if (topico?.dominio) {
         if (topico.dominio.dominio) return 3;
         if (topico.dominio.pratica) return 2;
@@ -2394,13 +2492,13 @@ function obterEstadoTopicoControle(materia, topico) {
     const revisao = obterRevisaoAtivaTopico(materia, topico);
     const hoje = dataLocalISO(new Date());
     if (revisao?.status === 'fraco' || (revisao?.dataAlvo && revisao.dataAlvo <= hoje)) return 'revisar';
-    return ['novo', 'aprendendo', 'praticando', 'dominado'][obterNivelDominioTopico(topico)];
+    return ['novo', 'aprendendo', 'consolidando', 'dominado'][obterNivelDominioTopico(topico)];
 }
 
 function pontuacaoAcaoTopico(materia, topico) {
     const estado = obterEstadoTopicoControle(materia, topico);
     const prioridade = { alta: 0, media: 1, baixa: 2 }[topico.prioridade || 'media'];
-    const base = { revisar: 0, novo: 2, aprendendo: 3, praticando: 4, dominado: 8 }[estado] ?? 6;
+    const base = { revisar: 0, novo: 2, aprendendo: 3, consolidando: 4, dominado: 8 }[estado] ?? 6;
     return base * 10 + prioridade;
 }
 
@@ -2413,6 +2511,44 @@ function rotuloDataRevisao(dataAlvo) {
     return data ? `Revisar ${data.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '')}` : '';
 }
 
+function obterAnaliseTopico(materia, topico) {
+    const materiaChave = normalizarRevisaoTexto(materia?.subject);
+    const topicoChave = normalizarRevisaoTexto(topico?.nome);
+    const sessoes = (appData.historyItems || []).filter(item => normalizarRevisaoTexto(item.materia) === materiaChave && normalizarRevisaoTexto(item.assunto) === topicoChave);
+    const errosCaderno = (appData.cadernoErrosItems || []).filter(item => normalizarRevisaoTexto(item.materia) === materiaChave && normalizarRevisaoTexto(item.assunto) === topicoChave);
+    const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
+    const dias = Array.from({ length: 7 }, (_, indice) => {
+        const data = new Date(hoje); data.setDate(hoje.getDate() - (6 - indice));
+        const iso = dataLocalISO(data);
+        return {
+            iso,
+            rotulo: data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').slice(0, 3).toUpperCase(),
+            hoje: indice === 6,
+            segundos: sessoes.filter(item => dataHistoricoISO(item) === iso).reduce((total, item) => total + Math.max(0, Number(item.tempoSegundos) || 0), 0)
+        };
+    });
+    const questoes = sessoes.reduce((total, item) => total + Math.max(0, Number(item.questoes) || 0), 0);
+    const acertos = sessoes.reduce((total, item) => total + Math.max(0, Number(item.acertos) || 0), 0);
+    const errosQuestoes = sessoes.reduce((total, item) => total + Math.max(0, Number(item.erros) || 0), 0);
+    const causas = errosCaderno.reduce((mapa, item) => { mapa[item.tipo || 'conteudo'] = (mapa[item.tipo || 'conteudo'] || 0) + 1; return mapa; }, {});
+    return {
+        sessoes: sessoes.length,
+        segundos: sessoes.reduce((total, item) => total + Math.max(0, Number(item.tempoSegundos) || 0), 0),
+        questoes, acertos, errosQuestoes, errosCaderno: errosCaderno.length, causas, dias,
+        taxaErro: acertos + errosQuestoes ? Math.round(errosQuestoes / (acertos + errosQuestoes) * 100) : null
+    };
+}
+
+function htmlAnaliseTopico(analise) {
+    const maiorDia = Math.max(60, ...analise.dias.map(dia => dia.segundos));
+    const barrasTempo = analise.dias.map(dia => `<div class="topic-time-day ${dia.hoje ? 'today' : ''}" title="${dia.rotulo}: ${formatShortTime(dia.segundos)}"><span class="topic-time-track"><i style="height:${Math.max(3, Math.round(dia.segundos / maiorDia * 100))}%"></i></span><span>${dia.rotulo}</span></div>`).join('');
+    const nomesCausa = { conteudo: 'Conteúdo', interpretacao: 'Interpretação', calculo: 'Cálculo', atencao: 'Atenção', estrategia: 'Estratégia' };
+    const maiorCausa = Math.max(1, ...Object.values(analise.causas));
+    const causas = Object.entries(analise.causas).sort((a, b) => b[1] - a[1]).map(([tipo, quantidade]) => `<div class="topic-error-cause"><span>${nomesCausa[tipo] || 'Outro padrão'}</span><b>${quantidade}</b><i style="--cause-width:${Math.round(quantidade / maiorCausa * 100)}%"></i></div>`).join('');
+    return `<section class="topic-evidence-grid" aria-label="Evidências do tópico"><div class="topic-evidence-card"><small>Tempo acumulado</small><strong>${formatShortTime(analise.segundos)}</strong></div><div class="topic-evidence-card"><small>Sessões</small><strong>${analise.sessoes}</strong></div><div class="topic-evidence-card"><small>Questões</small><strong>${analise.questoes}</strong></div><div class="topic-evidence-card error"><small>Erros no caderno</small><strong>${analise.errosCaderno}</strong></div></section>
+        <section class="topic-analytics-grid" aria-label="Gráficos do tópico"><article class="topic-chart-card"><div class="topic-chart-heading"><strong>Tempo nos últimos 7 dias</strong><small>${formatShortTime(analise.dias.reduce((total, dia) => total + dia.segundos, 0))} na semana</small></div><div class="topic-time-chart">${barrasTempo}</div></article><article class="topic-chart-card"><div class="topic-chart-heading"><strong>Erros e causas</strong><small>${analise.errosQuestoes} erros em questões</small></div>${analise.errosQuestoes + analise.acertos || analise.errosCaderno ? `<div class="topic-error-overview"><div class="topic-error-ring" style="--error-rate:${analise.taxaErro || 0}"><span>${analise.taxaErro === null ? '—' : `${analise.taxaErro}%`}</span></div><div class="topic-error-causes">${causas || '<div class="topic-chart-empty">Registre erros no caderno para descobrir padrões.</div>'}</div></div>` : '<div class="topic-chart-empty">Registre questões ou erros para formar este gráfico.</div>'}</article></section>`;
+}
+
 function renderizarListaAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id), lista = document.getElementById('listaAssuntos');
     if (!mat || !lista) return;
@@ -2420,10 +2556,12 @@ function renderizarListaAssuntos(id) {
     const estudados = topicos.filter(item => [1, 2].includes(obterNivelDominioTopico(item))).length;
     const dominados = topicos.filter(item => obterNivelDominioTopico(item) === 3).length;
     const revisoes = topicos.filter(item => obterEstadoTopicoControle(mat, item) === 'revisar').length;
+    const errosRegistrados = (appData.cadernoErrosItems || []).filter(item => normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(mat.subject)).length;
     document.getElementById('assuntosTotalValue').textContent = topicos.length;
     document.getElementById('assuntosEstudadosValue').textContent = estudados;
     document.getElementById('assuntosRevisoesValue').textContent = revisoes;
     document.getElementById('assuntosDominadosValue').textContent = dominados;
+    document.getElementById('assuntosErrosValue').textContent = errosRegistrados;
     const correspondeFiltro = (topico) => {
         const estado = obterEstadoTopicoControle(mat, topico);
         const nivel = obterNivelDominioTopico(topico);
@@ -2469,8 +2607,8 @@ function renderizarListaAssuntos(id) {
         const ultimaData = t.ultimoEstudoEm ? new Date(t.ultimoEstudoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '') : '';
         const meta = rotuloDataRevisao(revisao?.dataAlvo) || (vezes ? `${vezes} ${vezes === 1 ? 'estudo' : 'estudos'}${ultimaData ? ` • último ${ultimaData}` : ''}` : 'Ainda não iniciado');
         const prioridade = t.prioridade || 'media';
-        const icone = estado === 'revisar' ? '↻' : (nivel === 3 ? '✓' : ['0', 'T', 'P'][nivel]);
-        return `<li class="topic-organizer-item state-${estado} ${i === assuntoSelecionadoIndice ? 'selected' : ''}"><button type="button" class="topic-select-button" onclick="selecionarTopicoControle(${id},${i})" aria-pressed="${i === assuntoSelecionadoIndice}"><span class="topic-state-mark">${icone}</span><span class="topic-organizer-copy"><span class="topic-organizer-title"><strong>${nome}</strong>${prioridade !== 'media' ? `<em class="topic-priority-badge ${prioridade}">${prioridade}</em>` : ''}</span><small>${meta}</small><span class="topic-mini-progress" aria-label="${nivel} de 3 etapas concluídas"><i class="${nivel >= 1 ? 'done' : ''}"></i><i class="${nivel >= 2 ? 'done' : ''}"></i><i class="${nivel >= 3 ? 'done' : ''}"></i></span></span></button><button type="button" class="topic-quick-study" onclick="registrarTopicoEstudado(${id},${i})" aria-label="Registrar estudo rápido em ${nome}" title="Estudei hoje">+</button></li>`;
+        const icone = estado === 'revisar' ? '↻' : (nivel === 3 ? '✓' : String(nivel));
+        return `<li class="topic-organizer-item state-${estado} ${i === assuntoSelecionadoIndice ? 'selected' : ''}"><button type="button" class="topic-select-button" onclick="selecionarTopicoControle(${id},${i})" aria-pressed="${i === assuntoSelecionadoIndice}"><span class="topic-state-mark">${icone}</span><span class="topic-organizer-copy"><span class="topic-organizer-title"><strong>${nome}</strong>${prioridade !== 'media' ? `<em class="topic-priority-badge ${prioridade}">${prioridade}</em>` : ''}</span><small>${meta}</small><span class="topic-mini-progress" aria-label="Nível ${nivel} de 3"><i class="${nivel >= 1 ? 'done' : ''}"></i><i class="${nivel >= 2 ? 'done' : ''}"></i><i class="${nivel >= 3 ? 'done' : ''}"></i></span></span></button><button type="button" class="topic-quick-study" onclick="solicitarRegistroTopico(${id},${i})" aria-label="Registrar estudo rápido em ${nome}" title="Estudei hoje">+</button></li>`;
     }).join('');
     renderizarPainelControleTopico(id, assuntoSelecionadoIndice);
 }
@@ -2492,15 +2630,18 @@ function renderizarPainelControleTopico(id, indice) {
     const nivel = obterNivelDominioTopico(topico);
     const estado = obterEstadoTopicoControle(materia, topico);
     const revisao = obterRevisaoAtivaTopico(materia, topico);
-    const rotulosEstado = { novo: 'Não iniciado', aprendendo: 'Teoria', praticando: 'Prática', revisar: 'Revisar agora', dominado: 'Dominado' };
+    const rotulosEstado = { novo: 'Não iniciado', aprendendo: 'Aprendendo', consolidando: 'Consolidando', revisar: 'Revisar agora', dominado: 'Dominado' };
     const ultimaData = topico.ultimoEstudoEm ? new Date(topico.ultimoEstudoEm).toLocaleDateString('pt-BR') : 'nenhum registro ainda';
     const hoje = dataLocalISO(new Date());
+    const analise = obterAnaliseTopico(materia, topico);
+    const revisaoStatus = revisao ? `<div class="topic-review-status"><span><strong>Revisão ativa</strong><small>${rotuloDataRevisao(revisao.dataAlvo) || 'Escolha uma data'}</small></span><button type="button" class="topic-review-remove" onclick="solicitarRemocaoRevisaoTopico(${id},${indice})">Remover revisão</button></div>` : '';
     painel.innerHTML = `<div class="topic-control-header"><div><span class="workspace-kicker">CONTROLE DO ASSUNTO</span><h4>${escaparRevisaoHtml(topico.nome || 'Tópico')}</h4><p>${Number(topico.vezesEstudado) || 0} estudos • último: ${ultimaData}</p></div><span class="topic-state-pill">${rotulosEstado[estado]}</span></div>
-        <section class="topic-control-section"><span class="topic-control-label">Nível de domínio</span><div class="topic-mastery-control" role="group" aria-label="Nível de domínio"><button type="button" class="${nivel === 0 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},0)"><b>0</b><span>Começar</span></button><button type="button" class="${nivel === 1 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},1)"><b>T</b><span>Teoria</span></button><button type="button" class="${nivel === 2 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},2)"><b>P</b><span>Prática</span></button><button type="button" class="${nivel === 3 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},3)"><b>✓</b><span>Domínio</span></button></div></section>
+        ${htmlAnaliseTopico(analise)}
+        <section class="topic-control-section"><span class="topic-control-label">Nível de domínio</span><div class="topic-mastery-control" role="group" aria-label="Nível de domínio"><button type="button" class="${nivel === 0 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},0)"><b>0</b><span>Não iniciado</span></button><button type="button" class="${nivel === 1 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},1)"><b>1</b><span>Aprendendo</span></button><button type="button" class="${nivel === 2 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},2)"><b>2</b><span>Consolidando</span></button><button type="button" class="${nivel === 3 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},3)"><b>✓</b><span>Dominado</span></button></div></section>
         <form class="topic-control-section" onsubmit="salvarDetalhesTopico(event,${id},${indice})"><div class="topic-control-form-grid"><label><span class="topic-control-label">Nome do tópico</span><input class="cycle-input" id="topicControlName" maxlength="100" required value="${escaparRevisaoHtml(topico.nome || '')}"></label><label><span class="topic-control-label">Prioridade</span><select class="cycle-input" id="topicControlPriority"><option value="alta" ${topico.prioridade === 'alta' ? 'selected' : ''}>Alta</option><option value="media" ${!topico.prioridade || topico.prioridade === 'media' ? 'selected' : ''}>Média</option><option value="baixa" ${topico.prioridade === 'baixa' ? 'selected' : ''}>Baixa</option></select></label></div><label><span class="topic-control-label">Anotação de controle</span><textarea class="cycle-input" id="topicControlNotes" maxlength="500" placeholder="Ex.: erro comum, fórmula que falta fixar ou próximo exercício">${escaparRevisaoHtml(topico.notas || '')}</textarea></label><button type="submit" class="cycle-btn">Salvar ajustes</button></form>
-        <section class="topic-control-section"><span class="topic-control-label">Próxima revisão</span><div class="topic-review-row"><input type="date" class="cycle-input" id="topicControlReviewDate" min="${hoje}" value="${escaparRevisaoHtml(revisao?.dataAlvo || '')}" onchange="agendarRevisaoTopico(${id},${indice},this.value)"><div class="topic-review-presets"><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},1)">+1 dia</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},3)">+3</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},7)">+7</button></div></div></section>
+        <section class="topic-control-section"><span class="topic-control-label">Próxima revisão</span><div class="topic-review-row"><input type="date" class="cycle-input" id="topicControlReviewDate" min="${hoje}" value="${escaparRevisaoHtml(revisao?.dataAlvo || '')}" onchange="agendarRevisaoTopico(${id},${indice},this.value)"><div class="topic-review-presets"><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},1)">+1 dia</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},3)">+3</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},7)">+7</button></div></div>${revisaoStatus}</section>
         <section class="topic-recall-box"><header><b>↻</b><span><strong>Depois de tentar lembrar sem olhar</strong><small>Registre o resultado e a próxima revisão será ajustada.</small></span></header><div class="topic-recall-actions"><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'dificil')">Difícil<small>revisar amanhã</small></button><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'parcial')">Parcial<small>revisar em 3 dias</small></button><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'seguro')">Seguro<small>revisar em 7 dias</small></button></div></section>
-        <footer class="topic-control-footer"><button type="button" class="cycle-btn topic-delete-button" onclick="solicitarExclusaoTopico(${id},${indice})">Excluir tópico</button><button type="button" class="cycle-btn primary" onclick="registrarTopicoEstudado(${id},${indice})">Estudei hoje</button></footer>`;
+        <footer class="topic-control-footer"><button type="button" class="cycle-btn topic-delete-button" onclick="solicitarExclusaoTopico(${id},${indice})">Excluir tópico</button><button type="button" class="cycle-btn primary" onclick="solicitarRegistroTopico(${id},${indice})">Estudei hoje</button></footer>`;
 }
 
 function adicionarTopico(e) {
@@ -2511,7 +2652,7 @@ function adicionarTopico(e) {
     if (appData.cycleItems[idx].topicos.some(topico => normalizarRevisaoTexto(topico.nome) === normalizarRevisaoTexto(nm))) {
         showToast('Este tópico já está cadastrado.', true); return;
     }
-    appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false, prioridade: 'media', dominio: { teoria: false, pratica: false, dominio: false }, notas: '' });
+    appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false, prioridade: 'media', nivelDominio: 0, notas: '' });
     assuntoSelecionadoIndice = appData.cycleItems[idx].topicos.length - 1;
     saveAppData(); document.getElementById('novoTopicoInput').value = ''; renderizarListaAssuntos(id); renderizarCiclo();
     showToast('Tópico adicionado à sua rota.');
@@ -2527,7 +2668,8 @@ function definirNivelDominioTopico(id, tIdx, nivel) {
     const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
     if (!topico) return;
     const valor = Math.max(0, Math.min(3, Number(nivel) || 0));
-    topico.dominio = { teoria: valor >= 1, pratica: valor >= 2, dominio: valor >= 3 };
+    topico.nivelDominio = valor;
+    delete topico.dominio;
     topico.concluido = valor >= 3;
     saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarMapaDominio();
 }
@@ -2571,6 +2713,34 @@ function definirRevisaoTopicoDias(id, tIdx, dias) {
     showToast(`Revisão agendada para ${data.toLocaleDateString('pt-BR')}.`);
 }
 
+function solicitarRegistroTopico(id, tIdx) {
+    const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
+    if (!materia || !topico) return;
+    const revisao = obterRevisaoAtivaTopico(materia, topico);
+    if (!revisao) { registrarTopicoEstudado(id, tIdx); return; }
+    const data = rotuloDataRevisao(revisao.dataAlvo).toLocaleLowerCase('pt-BR') || 'já agendada';
+    abrirModalDeletar('repeatTopicStudy', `${id}:${tIdx}`, 'Registrar novamente?', `“${topico.nome}” já tem uma revisão ativa (${data}). Se continuar, o estudo será registrado outra vez e a revisão será reagendada.`, 'Registrar novamente', false);
+}
+
+function solicitarRemocaoRevisaoTopico(id, tIdx) {
+    const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
+    if (!materia || !topico || !obterRevisaoAtivaTopico(materia, topico)) return;
+    abrirModalDeletar('topicReview', `${id}:${tIdx}`, 'Remover esta revisão?', `A revisão ativa de “${topico.nome}” será retirada da agenda. O histórico de estudos continuará preservado.`, 'Remover revisão', true);
+}
+
+function removerRevisaoTopico(id, tIdx) {
+    const materia = appData.cycleItems.find(item => item.id === id), topico = materia?.topicos?.[tIdx];
+    if (!materia || !topico) return;
+    const materiaChave = normalizarRevisaoTexto(materia.subject), topicoChave = normalizarRevisaoTexto(topico.nome);
+    const quantidadeAnterior = appData.revisoesItems.length;
+    appData.revisoesItems = appData.revisoesItems.filter(item => item.status === 'revisado'
+        || normalizarRevisaoTexto(item.materia) !== materiaChave
+        || normalizarRevisaoTexto(item.assunto) !== topicoChave);
+    topico.proximaRevisaoEm = '';
+    saveAppData(); renderizarListaAssuntos(id); renderizarRevisoes();
+    showToast(quantidadeAnterior === appData.revisoesItems.length ? 'Não havia revisão ativa para remover.' : 'Revisão removida da agenda.');
+}
+
 function solicitarExclusaoTopico(id, tIdx) {
     const topico = appData.cycleItems.find(item => item.id === id)?.topicos?.[tIdx];
     if (!topico) return;
@@ -2599,7 +2769,7 @@ function registrarTopicoEstudado(id, tIdx, diasRevisao = null, desempenho = '') 
     if (!materia || !topico) return;
     concluirRevisaoAtivaTopico(materia, topico);
     atualizarTopicoAposEstudo(materia, topico.nome);
-    appData.historyItems.push(criarItemHistoricoRegistro({ materia: materia.subject, assunto: topico.nome, cor: materia.color, tipo: materia.type || 'Teórica',
+    appData.historyItems.push(criarItemHistoricoRegistro({ materia: materia.subject, assunto: topico.nome, cor: materia.color, tipo: 'Estudo',
         comentario: desempenho ? `Recuperação ativa: ${desempenho}.` : 'Registro rápido pelo organizador de tópicos.', atividade: 'estudo', registroRapido: true }));
     const intervalo = diasRevisao || appData.studyLogging.reviewDelayDays;
     const revisaoCriada = (diasRevisao !== null || appData.studyLogging.autoReview !== false)
@@ -2648,7 +2818,7 @@ function renderizarHistorico() {
 
     const totalSecs = itens.reduce((soma, item) => soma + (Number(item.tempoSegundos) || 0), 0);
     const porMateria = itens.reduce((mapa, item) => {
-        const nome = item.materia || 'Estudo livre';
+        const nome = item.materia || 'Sem matéria';
         mapa[nome] = (mapa[nome] || 0) + (Number(item.tempoSegundos) || 0);
         return mapa;
     }, {});
@@ -2684,10 +2854,9 @@ function renderizarHistorico() {
         const diaSemana = data ? data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase() : '';
         const sessoes = grupo.itens.map(sessao => {
             const corMateria = corSegura(sessao.cor);
-            const corTipo = sessao.tipo === 'Prática' ? '#ff9500' : (sessao.tipo === 'Teórica e Prática' ? '#007aff' : (sessao.tipo === 'Geral' ? '#515154' : '#8657d6'));
-            const materia = escaparRevisaoHtml(sessao.materia || 'Estudo livre');
+            const corTipo = sessao.atividade === 'simulado' ? '#ff9500' : (sessao.atividade === 'redacao' ? '#af52de' : corMateria);
+            const materia = escaparRevisaoHtml(sessao.materia || 'Sem matéria');
             const assunto = escaparRevisaoHtml(sessao.assunto || 'Sessão livre');
-            const tipo = escaparRevisaoHtml(sessao.tipo || 'Teoria');
             const comentario = escaparRevisaoHtml(sessao.comentario || '');
             const atividade = sessao.registroRapido ? 'Registro rápido' : ({ simulado: 'Simulado', redacao: 'Redação' }[sessao.atividade] || 'Estudo');
             return `<article class="h-session-card" style="border-left-color:${corMateria};"><div class="history-session-main"><div class="hs-info"><b class="hs-title" style="color:${corMateria};">${materia}</b><small>${assunto}</small></div><div class="history-session-meta"><span class="hs-time">${sessao.registroRapido ? '✓ Sem cronômetro' : `⏱ ${formatHistoryTime(Number(sessao.tempoSegundos) || 0)}`}</span><span class="hs-badge" style="background-color:${corTipo};">${atividade}</span><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="abrirModalEditarHistorico(${sessao.id})" aria-label="Editar sessão de ${materia}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('history', ${sessao.id}, 'Excluir registro?', 'A sessão será removida do histórico.')" aria-label="Excluir sessão de ${materia}" title="Excluir">×</button></div></div></div>${comentario ? `<div class="history-session-note">${comentario}</div>` : ''}</article>`;
@@ -2755,10 +2924,12 @@ function renderizarRaioX() {
         }
     });
 
-    const totalMinutosGlobais = Math.floor(appData.totalStudySeconds / 60);
-    if(totalMinutosGlobais > totalMinutosExecutados) {
-        breakdown.push({ nome: "Livre / Deletados", min: (totalMinutosGlobais - totalMinutosExecutados), cor: "#515154", corOriginal: "#515154", taxa: -1, icon: "⏱", tag: "" });
-        totalMinutosExecutados = totalMinutosGlobais;
+    const minutosSemMateria = appData.historyItems
+        .filter(item => ['sem matéria', 'sem materia', 'estudo livre'].includes(normalizarRevisaoTexto(item.materia)))
+        .reduce((total, item) => total + Math.max(0, Number(item.tempoSegundos) || 0), 0) / 60;
+    if (minutosSemMateria > 0) {
+        breakdown.push({ nome: 'Sem matéria', min: minutosSemMateria, cor: '#515154', corOriginal: '#515154', taxa: -1, icon: '⏱', tag: '' });
+        totalMinutosExecutados += minutosSemMateria;
     }
 
     breakdown.sort((a, b) => b.min - a.min);
@@ -4416,16 +4587,10 @@ function toggleMapaCard(id) {
     botao?.setAttribute('aria-expanded', String(aberto));
 }
 
-function toggleTopicoDominio(materiaId, topicoIndex, etapa) {
+function toggleTopicoDominio(materiaId, topicoIndex, nivel) {
     const materia = appData.cycleItems.find(item => item.id === materiaId);
     if (!materia?.topicos?.[topicoIndex]) return;
-    const topico = materia.topicos[topicoIndex];
-    if (!topico.dominio) topico.dominio = { teoria: false, pratica: false, dominio: false };
-    topico.dominio[etapa] = !topico.dominio[etapa];
-    if (etapa === 'dominio') topico.concluido = topico.dominio[etapa];
-    saveAppData();
-    renderizarMapaDominio();
-    renderizarCiclo();
+    definirNivelDominioTopico(materiaId, topicoIndex, nivel);
 }
 
 function renderizarMapaDominio() {
@@ -4433,21 +4598,22 @@ function renderizarMapaDominio() {
     if (!container) return;
     let total = 0, completos = 0;
     if (!appData.cycleItems.length) {
-        container.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◎</b><strong>Seu mapa ainda está vazio</strong><p>Adicione uma matéria e seus tópicos para acompanhar teoria, prática e domínio.</p><button type="button" class="cycle-btn primary" onclick="alternarAbasHub(\'ciclo\');abrirModalCiclo()">Adicionar matéria</button></div>';
+        container.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◎</b><strong>Seu mapa ainda está vazio</strong><p>Adicione uma matéria e seus tópicos para acompanhar aprendizado, consolidação e domínio.</p><button type="button" class="cycle-btn primary" onclick="alternarAbasHub(\'ciclo\');abrirModalCiclo()">Adicionar matéria</button></div>';
         document.getElementById('global-mapa-pct').textContent = '0%';
         return;
     }
     container.innerHTML = appData.cycleItems.map(materia => {
         const topicos = materia.topicos || [];
         total += topicos.length;
-        const concluidos = topicos.filter(t => t.concluido || t.dominio?.dominio).length;
+        const concluidos = topicos.filter(t => obterNivelDominioTopico(t) === 3).length;
         completos += concluidos;
         const pct = topicos.length ? Math.round(concluidos / topicos.length * 100) : 0;
         const linhas = topicos.length ? topicos.map((topico, index) => {
-            const d = topico.dominio || {};
+            const nivel = obterNivelDominioTopico(topico);
             const cor = corSegura(materia.color);
             const nome = escaparRevisaoHtml(topico.nome || 'Tópico');
-            return `<div class="mapa-topic-row"><span class="mapa-topic-name">${nome}</span><div class="mapa-tpd-group" aria-label="Progresso de ${nome}"><button type="button" class="tpd-btn ${d.teoria ? 'active' : ''}" style="${d.teoria ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'teoria')" aria-pressed="${Boolean(d.teoria)}" title="Teoria estudada">T</button><button type="button" class="tpd-btn ${d.pratica ? 'active' : ''}" style="${d.pratica ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'pratica')" aria-pressed="${Boolean(d.pratica)}" title="Prática realizada">P</button><button type="button" class="tpd-btn ${d.dominio ? 'active' : ''}" style="${d.dominio ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},'dominio')" aria-pressed="${Boolean(d.dominio)}" title="Tópico dominado">D</button></div></div>`;
+            const opcoes = [['0','Novo'],['1','Aprendendo'],['2','Consolidando'],['✓','Dominado']].map(([simbolo, rotulo], opcao) => `<button type="button" class="tpd-btn ${nivel === opcao ? 'active' : ''}" style="${nivel === opcao ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},${opcao})" aria-pressed="${nivel === opcao}" title="${rotulo}">${simbolo}</button>`).join('');
+            return `<div class="mapa-topic-row"><span class="mapa-topic-name">${nome}</span><div class="mapa-tpd-group" aria-label="Nível de domínio de ${nome}">${opcoes}</div></div>`;
         }).join('') : '<div class="workspace-empty"><strong>Nenhum tópico nesta matéria</strong><p>Abra a matéria e adicione o primeiro tópico.</p></div>';
         const cor = corSegura(materia.color);
         const nomeMateria = escaparRevisaoHtml(materia.subject || 'Matéria');

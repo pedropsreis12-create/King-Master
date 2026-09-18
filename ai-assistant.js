@@ -332,7 +332,6 @@ function contextoGeminiIa(pedido = '') {
         },
         materias: materiasDoContexto.map(item => ({
             nome: item.subject,
-            tipo: item.type,
             minutos: item.executedMin || 0,
             acertos: item.acertos || 0,
             erros: item.erros || 0,
@@ -363,8 +362,7 @@ function executarFerramentaGeminiIaImediata(nome, args = {}) {
         if (subject.length < 2) return { ok: false, message: 'O nome da matéria é inválido.' };
         const existente = encontrarMateriaIa(subject);
         if (existente && normalizarIa(existente.subject) === normalizarIa(subject)) return { ok: false, message: `A matéria ${existente.subject} já existe.` };
-        const tipo = ['Teórica', 'Prática', 'Teórica e Prática', 'Revisão', 'Livre'].includes(args.tipo) ? args.tipo : 'Teórica';
-        appData.cycleItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), color: /^#[0-9a-f]{6}$/i.test(args.cor || '') ? args.cor : '#007aff', subject, type: tipo, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 });
+        appData.cycleItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), color: /^#[0-9a-f]{6}$/i.test(args.cor || '') ? args.cor : '#007aff', subject, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 });
         renderizarCiclo(); renderizarRevisoes();
         return resultadoFerramentaIa(`Matéria ${subject} adicionada.`, { section: 'planejamento', toast: '✓ Matéria criada pelo Gemini' });
     }
@@ -486,7 +484,7 @@ function executarFerramentaGeminiIaImediata(nome, args = {}) {
         if (!materia) return { ok: false, message: 'Matéria não encontrada.' };
         if (estadoIaQg.pendente && estadoIaQg.pendente.id !== materia.id) return { ok: false, message: `Confirme ou cancele primeiro a exclusão de ${estadoIaQg.pendente.label}.` };
         estadoIaQg.pendente = { type: 'delete-subject', id: materia.id, label: materia.subject };
-        return resultadoFerramentaIa(`A exclusão de ${materia.subject} aguarda confirmação explícita do usuário.`, { requiresConfirmation: true });
+        return resultadoFerramentaIa(`A exclusão completa de ${materia.subject}, incluindo sessões e revisões ligadas a ela, aguarda sua confirmação.`, { requiresConfirmation: true });
     }
 
     return { ok: false, message: `Ferramenta desconhecida: ${nome}.` };
@@ -581,15 +579,6 @@ function corDoComandoIa(comando, fallback = '#007aff') {
     const normal = normalizarIa(comando);
     const nome = Object.keys(CORES_IA).find(cor => new RegExp(`\\b${cor}\\b`).test(normal));
     return nome ? CORES_IA[nome][0] : fallback;
-}
-
-function tipoDoComandoIa(comando) {
-    const normal = normalizarIa(comando);
-    if (normal.includes('teorica e pratica') || normal.includes('mista')) return 'Teórica e Prática';
-    if (normal.includes('pratica')) return 'Prática';
-    if (normal.includes('revisao')) return 'Revisão';
-    if (normal.includes('livre')) return 'Livre';
-    return 'Teórica';
 }
 
 function dataDoComandoIa(texto = '') {
@@ -800,7 +789,7 @@ function interpretarComandoIa(texto) {
         const materia = encontrarMateriaIa(excluirMateria[1]);
         if (!materia) return { text: `Não encontrei a matéria “${limparTextoIa(excluirMateria[1])}”.`, error: true };
         estadoIaQg.pendente = { type: 'delete-subject', id: materia.id, label: materia.subject };
-        return { text: `A matéria ${materia.subject} e seus tópicos serão excluídos. Confirme a exclusão ou cancele.` };
+        return { text: `A matéria ${materia.subject}, seus tópicos, sessões e revisões serão excluídos. Confirme a exclusão ou cancele.` };
     }
 
     if (/\b(?:adicione|crie|registre|abra).*(?:simulado)\b/.test(normal)) {
@@ -822,12 +811,12 @@ function interpretarComandoIa(texto) {
         }
         const existente = encontrarMateriaIa(nome);
         if (existente && normalizarIa(existente.subject) === normalizarIa(nome)) return { text: `A matéria ${existente.subject} já está cadastrada.`, section: 'planejamento' };
-        const materia = { id: Date.now(), color: corDoComandoIa(texto), subject: nome, type: tipoDoComandoIa(texto), targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 };
+        const materia = { id: Date.now(), color: corDoComandoIa(texto), subject: nome, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 };
         const encadeado = texto.match(/\s+e\s+(?:adicione|crie|coloque|cadastre)\s+(?:o\s+|um\s+)?(?:t[oó]pico|assunto)\s+(.+?)[.!?]*$/i);
         if (encadeado) materia.topicos.push({ nome: limparTextoIa(encadeado[1], 100), concluido: false });
         appData.cycleItems.push(materia);
         renderizarCiclo(); renderizarRevisoes();
-        return { text: `Matéria ${nome} adicionada como ${materia.type}${encadeado ? `, com o tópico “${materia.topicos[0].nome}”` : ''}.`, changed: true, section: 'planejamento', toast: '✓ Matéria criada pela IA' };
+        return { text: `Matéria ${nome} adicionada${encadeado ? ` com o tópico “${materia.topicos[0].nome}”` : ''}.`, changed: true, section: 'planejamento', toast: '✓ Matéria criada pela IA' };
     }
 
     return { text: 'Ainda não reconheci esse pedido com segurança. Tente ser mais direto, por exemplo: “Adicione a matéria Química”, “Agende Química amanhã às 14:00” ou “Ajuda” para ver tudo que consigo executar.', error: true };
@@ -861,7 +850,8 @@ function executarAcaoPendenteIa(confirmado) {
         const anterior = JSON.parse(JSON.stringify(appData));
         const materia = appData.cycleItems.find(item => item.id === acao.id);
         if (!materia) return { text: 'Essa matéria já não existe.' };
-        appData.cycleItems = appData.cycleItems.filter(item => item.id !== acao.id);
+        if (typeof removerMateriaComRegistros === 'function') removerMateriaComRegistros(acao.id);
+        else appData.cycleItems = appData.cycleItems.filter(item => item.id !== acao.id);
         renderizarCiclo(); renderizarRevisoes();
         estadoIaQg.desfazer = { data: anterior, label: `exclusão de ${acao.label}` };
         return { text: `Matéria ${acao.label} excluída com confirmação.`, changed: true, section: 'planejamento', toast: '✓ Matéria excluída pela IA' };

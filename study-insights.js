@@ -41,8 +41,9 @@
         monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7);
         const firstDay = dateKey(monday);
         const lastDay = dateKey(today);
+        const hasSubjectRegistry = Array.isArray(data?.cycleItems);
         const subjects = new Map();
-        for (const item of Array.isArray(data?.cycleItems) ? data.cycleItems : []) {
+        for (const item of hasSubjectRegistry ? data.cycleItems : []) {
             if (typeof item?.subject === 'string') subjects.set(item.subject.trim().toLocaleLowerCase('pt-BR'), item);
         }
         const totals = new Map();
@@ -55,8 +56,12 @@
             if (!Number.isFinite(seconds) || seconds <= 0 || seconds > Number.MAX_SAFE_INTEGER) continue;
             const date = sessionDate(item);
             if (selectedPeriod === WEEK && (!date || date < firstDay || date > lastDay)) continue;
-            const name = typeof item.materia === 'string' && item.materia.trim() ? item.materia.trim() : 'Estudo livre';
+            const rawName = typeof item.materia === 'string' && item.materia.trim() ? item.materia.trim() : 'Sem matéria';
+            const rawKey = rawName.toLocaleLowerCase('pt-BR');
+            const subjectless = ['estudo livre', 'livre', 'sem materia', 'sem matéria'].includes(rawKey);
+            const name = subjectless ? 'Sem matéria' : rawName;
             const key = name.toLocaleLowerCase('pt-BR');
+            if (hasSubjectRegistry && !subjectless && !subjects.has(key)) continue;
             const subject = subjects.get(key);
             const group = totals.get(key) || { name: subject?.subject?.trim() || name, seconds: 0, color: subject?.color || item.cor || '', sessions: 0 };
             group.seconds += seconds;

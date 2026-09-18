@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="style.css?v=20260917-timer-layer-v2">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
-    <link rel="stylesheet" href="usability.css?v=20260917-topics-control-v1">
+    <link rel="stylesheet" href="usability.css?v=20260918-content-intelligence-v1">
     <link rel="stylesheet" href="schedule.css?v=20260916-session-safe-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
@@ -108,7 +108,14 @@
 
     <button id="navReveal" class="nav-reveal" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menu lateral"><span aria-hidden="true">›</span><small>MENU</small></button>
     <nav id="mainNavigation" aria-label="Navegação principal">
-        <h2>King Master</h2>
+        <button type="button" class="site-brand" onclick="showSection('dashboard')" aria-label="Ir para Hoje">
+            <svg class="site-brand-mark" viewBox="0 0 48 48" role="img" aria-label="Marca do King Master">
+                <rect x="4" y="4" width="40" height="40" rx="14"></rect>
+                <path d="M12 17l6 4 6-9 6 9 6-4-2 9H14z"></path>
+                <path d="M14 29v5l10 4 10-4v-5l-10 4z"></path>
+            </svg>
+            <span><strong>KM</strong><small>ESTUDOS</small></span>
+        </button>
         <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-expanded="false" aria-label="Abrir menu de navegação" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><strong>Menu</strong></button>
         <div class="nav-tabs" aria-label="Áreas do King Master">
             <div class="nav-cluster">
@@ -451,9 +458,9 @@
             </div>
             <div id="aba-dominio-content" class="workspace-tab-panel" role="tabpanel" aria-labelledby="tab-dominio" tabindex="0" hidden>
                 <div class="domain-overview widget">
-                    <div><span class="workspace-kicker">VISÃO DO CONTEÚDO</span><h2>Seu mapa de domínio</h2><p>Marque teoria, prática e domínio conforme você evolui em cada tópico.</p></div>
+                    <div><span class="workspace-kicker">VISÃO DO CONTEÚDO</span><h2>Seu mapa de domínio</h2><p>Acompanhe o que ainda é novo, o que está sendo consolidado e o que já está dominado.</p></div>
                     <strong id="global-mapa-pct">0%</strong>
-                    <div class="domain-legend" aria-label="Legenda"><span><b>T</b> Teoria</span><span><b>P</b> Prática</span><span><b>D</b> Domínio</span></div>
+                    <div class="domain-legend" aria-label="Legenda"><span><b>0</b> Novo</span><span><b>1</b> Aprendendo</span><span><b>2</b> Consolidando</span><span><b>✓</b> Dominado</span></div>
                 </div>
                 <div class="domain-map-grid" id="mapaContainer"></div>
             </div>
@@ -827,22 +834,10 @@
                                     <label class="cycle-label" for="cycleSubject">Nome da matéria</label>
                                     <input type="text" id="cycleSubject" class="cycle-input" required autocomplete="off" maxlength="50" placeholder="Ex.: a matéria que você está estudando" oninput="atualizarPreviewMateria()">
                                 </div>
-                                <div class="form-grid two subject-identity-grid">
-                                    <div class="cycle-form-group">
-                                        <label class="cycle-label" for="cycleType">Tipo de estudo</label>
-                                        <select id="cycleType" class="cycle-input" required onchange="atualizarPreviewMateria()">
-                                            <option value="Teórica">Teórica</option>
-                                            <option value="Prática">Prática</option>
-                                            <option value="Teórica e Prática">Teórica e prática</option>
-                                            <option value="Revisão">Revisão</option>
-                                            <option value="Mista">Mista</option>
-                                            <option value="Livre">Livre</option>
-                                        </select>
-                                    </div>
-                                    <div class="cycle-form-group">
-                                        <label class="cycle-label" for="cycleIcon">Símbolo</label>
-                                        <select id="cycleIcon" class="cycle-input" onchange="atualizarPreviewMateria()"><option value="●">● Essencial</option><option value="∑">∑ Exatas</option><option value="✦">✦ Destaque</option><option value="⌘">⌘ Tecnologia</option><option value="◈">◈ Ciências</option><option value="✎">✎ Linguagens</option><option value="◎">◎ Humanas</option><option value="⚗">⚗ Laboratório</option></select>
-                                    </div>
+                                <div class="cycle-form-group subject-icon-field">
+                                    <label class="cycle-label" for="cycleIcon">Símbolo da matéria</label>
+                                    <select id="cycleIcon" class="cycle-input" onchange="atualizarPreviewMateria()"><option value="●">● Essencial</option><option value="∑">∑ Exatas</option><option value="✦">✦ Destaque</option><option value="⌘">⌘ Tecnologia</option><option value="◈">◈ Ciências</option><option value="✎">✎ Linguagens</option><option value="◎">◎ Humanas</option><option value="⚗">⚗ Laboratório</option></select>
+                                    <small class="field-help">O método usado será registrado em cada sessão, não na matéria.</small>
                                 </div>
                                 <fieldset class="subject-color-fieldset">
                                     <legend class="cycle-label">Cor de identificação</legend>
@@ -899,7 +894,7 @@
                             <div class="subject-preview-card">
                                 <span class="subject-preview-glow" aria-hidden="true"></span>
                                 <div class="subject-preview-icon" id="cyclePreviewIcon" aria-hidden="true">●</div>
-                                <div class="subject-preview-copy"><strong id="cyclePreviewName">Nova matéria</strong><span id="cyclePreviewType">Teórica</span></div>
+                                <div class="subject-preview-copy"><strong id="cyclePreviewName">Nova matéria</strong><span id="cyclePreviewStatus">Organização manual</span></div>
                                 <span class="subject-preview-priority" id="cyclePreviewPriority">Prioridade normal</span>
                                 <div class="subject-preview-track"><span></span></div>
                                 <p id="cyclePreviewLoad">Defina uma carga se quiser usar o cronograma.</p>
@@ -919,7 +914,7 @@
                     <div>
                         <span class="workspace-kicker">CENTRAL DE DOMÍNIO</span>
                         <h3 id="assuntosModalTitle">Assuntos</h3>
-                        <p>Saiba o que começar, praticar e revisar — sem perder nenhum tópico de vista.</p>
+                        <p>Use tempo, questões, erros e revisões para decidir o próximo passo em cada conteúdo.</p>
                     </div>
                     <div class="topics-time-pill">
                             <span>Tempo estudado</span>
@@ -931,6 +926,7 @@
                     <span><strong id="assuntosEstudadosValue">0</strong><small>em progresso</small></span>
                     <span class="attention"><strong id="assuntosRevisoesValue">0</strong><small>para revisar</small></span>
                     <span class="success"><strong id="assuntosDominadosValue">0</strong><small>dominados</small></span>
+                    <span class="danger"><strong id="assuntosErrosValue">0</strong><small>erros registrados</small></span>
                 </div>
                 <div class="topics-organizer-toolbar">
                     <label class="topics-search" for="assuntosBuscaInput"><span aria-hidden="true">⌕</span><input type="search" id="assuntosBuscaInput" placeholder="Pesquisar tópico ou anotação" autocomplete="off" oninput="filtrarAssuntos(this.value)"><kbd id="assuntosBuscaResultado">Todos</kbd></label>
@@ -1181,7 +1177,7 @@
                         <div class="cycle-form-group"><label class="cycle-label" for="sessionTopic">Tópico ou assunto estudado</label><input class="cycle-input" id="sessionTopic" list="sessionTopicOptions" placeholder="Pesquise ou escreva um tópico" autocomplete="off" required><datalist id="sessionTopicOptions"></datalist></div>
                     </div>
                     <div class="cycle-form-group"><label class="cycle-label" for="sessionNotes">Resumo da sessão <span class="schedule-optional">opcional</span></label><textarea class="cycle-input" id="sessionNotes" rows="3" maxlength="700" placeholder="O que você aprendeu, praticou ou ainda precisa reforçar?"></textarea></div>
-                    <fieldset class="session-kind-fieldset"><legend>O que foi feito?</legend><div class="session-kind-options"><label><input type="radio" name="sessionKind" value="estudo" checked onchange="atualizarTipoRegistroSessao()"><span><b>▦</b><strong>Estudo</strong><small>Teoria ou exercícios</small></span></label><label><input type="radio" name="sessionKind" value="simulado" onchange="atualizarTipoRegistroSessao()"><span><b>◎</b><strong>Simulado</strong><small>Questões e resultado</small></span></label><label><input type="radio" name="sessionKind" value="redacao" onchange="atualizarTipoRegistroSessao()"><span><b>✎</b><strong>Redação</strong><small>Tema e competências</small></span></label></div></fieldset>
+                    <fieldset class="session-kind-fieldset"><legend>O que foi feito?</legend><div class="session-kind-options"><label><input type="radio" name="sessionKind" value="estudo" checked onchange="atualizarTipoRegistroSessao()"><span><b>▦</b><strong>Estudo</strong><small>Conteúdo ou exercícios</small></span></label><label><input type="radio" name="sessionKind" value="simulado" onchange="atualizarTipoRegistroSessao()"><span><b>◎</b><strong>Simulado</strong><small>Questões e resultado</small></span></label><label><input type="radio" name="sessionKind" value="redacao" onchange="atualizarTipoRegistroSessao()"><span><b>✎</b><strong>Redação</strong><small>Tema e competências</small></span></label></div></fieldset>
                     <section class="session-kind-details" id="sessionSimuladoFields" hidden>
                         <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTitle">Nome do simulado</label><input class="cycle-input" id="sessionSimTitle" maxlength="80" placeholder="Ex.: ENEM 2024 — Natureza"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimArea">Área</label><select class="cycle-input" id="sessionSimArea"><option>Linguagens, Códigos e suas Tecnologias</option><option>Ciências Humanas e suas Tecnologias</option><option>Ciências da Natureza e suas Tecnologias</option><option>Matemática e suas Tecnologias</option><option>Geral</option></select></div></div>
                         <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="sessionSimTotal">Questões</label><input type="number" class="cycle-input" id="sessionSimTotal" min="1" value="45"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimHits">Acertos</label><input type="number" class="cycle-input" id="sessionSimHits" min="0" value="0"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionSimBlanks">Em branco</label><input type="number" class="cycle-input" id="sessionSimBlanks" min="0" value="0"></div></div>
@@ -1226,7 +1222,7 @@
 
         <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronómetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
 
-        <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registo?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
+        <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registro?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="fecharModalDeletar()">Cancelar</button><button class="cycle-btn btn-danger" id="deleteConfirmAction" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
         <div class="modal-overlay onboarding-modal" id="onboardingModal"><div class="modal-box onboarding-box"><div class="onboarding-mark">KM</div><div class="cycle-modal-title">Seu QG está pronto</div><p class="modal-message">Três passos para começar sem se perder entre as ferramentas.</p><div class="onboarding-steps"><span><b>1</b><strong>Adicione suas matérias</strong><small>Monte o conteúdo que realmente estuda.</small></span><span><b>2</b><strong>Inicie um bloco</strong><small>O cronômetro salva o tempo e o XP.</small></span><span><b>3</b><strong>Revise seu avanço</strong><small>Use gráficos, missões e revisões.</small></span></div><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="concluirOnboarding(false)">Explorar primeiro</button><button class="cycle-btn primary" type="button" onclick="concluirOnboarding(true)">Adicionar primeira matéria</button></div></div></div>
 
     </main>
@@ -1268,10 +1264,10 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260917-topics-control-v1"></script>
+    <script src="script.js?v=20260918-content-intelligence-v1"></script>
     <script src="schedule.js?v=20260916-session-safe-v1"></script>
-    <script src="study-insights.js?v=20260906-worlds-2"></script>
-    <script src="ai-assistant.js?v=20260911-adaptive-study-1"></script>
+    <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
+    <script src="ai-assistant.js?v=20260918-content-intelligence-v1"></script>
     <script src="productivity.js?v=20260916-session-safe-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>

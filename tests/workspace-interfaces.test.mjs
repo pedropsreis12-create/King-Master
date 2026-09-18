@@ -122,6 +122,14 @@ test('topic organizer prioritizes next actions, mastery and spaced review contro
   assert.match(script, /Recuperação ativa/);
   assert.match(script, /registroRapido: true/);
   assert.match(usability, /\.topics-control-workspace/);
+  assert.match(script, /function solicitarRegistroTopico/);
+  assert.match(script, /repeatTopicStudy/);
+  assert.match(script, /function removerRevisaoTopico/);
+  assert.match(html, /id="assuntosErrosValue"/);
+  assert.match(script, /function obterAnaliseTopico/);
+  assert.match(script, /Tempo nos últimos 7 dias/);
+  assert.match(usability, /\.topic-error-ring/);
+  assert.doesNotMatch(html, /Marque teoria, prática e domínio/);
 });
 
 test('subject creation starts simple and progressively reveals planning tools', () => {
@@ -135,6 +143,8 @@ test('subject creation starts simple and progressively reveals planning tools', 
   assert.match(html, /aria-label="Adicionar um bloco"/);
   assert.match(html, /id="cycleInitialTopics"[^>]+maxlength="1600"/);
   assert.match(html, /id="cycleTopicCount"[^>]+aria-live="polite"/);
+  assert.doesNotMatch(html, /id="cycleType"/);
+  assert.match(html, /id="cyclePreviewStatus"/);
 });
 
 test('subject creation previews choices and preserves existing progress while appending unique topics', () => {
@@ -145,4 +155,19 @@ test('subject creation previews choices and preserves existing progress while ap
   assert.match(script, /topicos: \[\.\.\.atuais, \.\.\.adicionados\]/);
   assert.doesNotMatch(script, /\.\.\.appData\.cycleItems\[idx\][^\n]+targetMin: 0/);
   assert.match(script, /window\.KingSchedule\?\.render\(\)/);
+});
+
+test('deleting a subject removes its linked study records instead of creating a deleted bucket', () => {
+  assert.match(script, /function removerMateriaComRegistros\(id\)/);
+  assert.match(script, /function reconciliarHistoricoComMateriasAtuais\(\)/);
+  assert.match(script, /descontarSessoesDosTotais\(sessoesRemovidas\)/);
+  assert.match(script, /nome: 'Sem matéria'/);
+  assert.doesNotMatch(script, /Livre \/ Deletados/);
+});
+
+test('navigation uses a compact brand and hides its scrollbar without disabling scrolling', () => {
+  assert.match(html, /class="site-brand"/);
+  assert.match(html, /class="site-brand-mark"/);
+  assert.match(usability, /#mainNavigation \{ scrollbar-width: none/);
+  assert.match(usability, /#mainNavigation::-webkit-scrollbar \{ display: none/);
 });

@@ -61,7 +61,7 @@ test('the historical filter includes older and undated completed sessions while 
     assert.equal(history.sessionCount, 3);
 });
 
-test('subjects merge case-insensitively, use current registered names/colors, and retain historical colors when removed', () => {
+test('subjects merge case-insensitively and deleted subjects disappear from the distribution', () => {
     const result = aggregate({
         cycleItems: [{ subject: 'Matemática', color: '#ec4899' }, null, {}],
         historyItems: [
@@ -70,9 +70,10 @@ test('subjects merge case-insensitively, use current registered names/colors, an
             { ...session('História', 1200), cor: '#00aa88' }
         ]
     });
-    assert.equal(result.subjectCount, 2);
+    assert.equal(result.subjectCount, 1);
+    assert.equal(result.totalSeconds, 5400);
+    assert.equal(result.sessionCount, 2);
     assert.deepEqual(result.groups[0], { name: 'Matemática', seconds: 5400, color: '#ec4899', sessions: 2 });
-    assert.equal(result.groups[1].color, '#00aa88');
 });
 
 test('four subjects remain individually visible; five or more use top three plus an exact remainder', () => {
@@ -104,10 +105,10 @@ test('invalid durations and structures cannot create fabricated study time', () 
     assert.equal(aggregate({ historyItems: 'invalid' }).totalSeconds, 0);
 });
 
-test('empty data stays empty and unnamed sessions appear as Estudo livre', () => {
+test('empty data stays empty and unnamed sessions appear as Sem matéria', () => {
     assert.deepEqual(aggregate(undefined), { totalSeconds: 0, sessionCount: 0, subjectCount: 0, groups: [] });
     const result = aggregate({ historyItems: [session('', 60), session('  ', 120), session(null, 180)] });
-    assert.equal(result.groups[0].name, 'Estudo livre');
+    assert.equal(result.groups[0].name, 'Sem matéria');
     assert.equal(result.totalSeconds, 360);
     assert.equal(result.subjectCount, 1);
 });

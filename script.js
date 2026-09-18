@@ -2516,37 +2516,68 @@ function obterAnaliseTopico(materia, topico) {
     const topicoChave = normalizarRevisaoTexto(topico?.nome);
     const sessoes = (appData.historyItems || []).filter(item => normalizarRevisaoTexto(item.materia) === materiaChave && normalizarRevisaoTexto(item.assunto) === topicoChave);
     const errosCaderno = (appData.cadernoErrosItems || []).filter(item => normalizarRevisaoTexto(item.materia) === materiaChave && normalizarRevisaoTexto(item.assunto) === topicoChave);
-    const hoje = new Date(); hoje.setHours(12, 0, 0, 0);
-    const dias = Array.from({ length: 7 }, (_, indice) => {
-        const data = new Date(hoje); data.setDate(hoje.getDate() - (6 - indice));
-        const iso = dataLocalISO(data);
-        return {
-            iso,
-            rotulo: data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').slice(0, 3).toUpperCase(),
-            hoje: indice === 6,
-            segundos: sessoes.filter(item => dataHistoricoISO(item) === iso).reduce((total, item) => total + Math.max(0, Number(item.tempoSegundos) || 0), 0)
-        };
-    });
     const questoes = sessoes.reduce((total, item) => total + Math.max(0, Number(item.questoes) || 0), 0);
     const acertos = sessoes.reduce((total, item) => total + Math.max(0, Number(item.acertos) || 0), 0);
     const errosQuestoes = sessoes.reduce((total, item) => total + Math.max(0, Number(item.erros) || 0), 0);
     const causas = errosCaderno.reduce((mapa, item) => { mapa[item.tipo || 'conteudo'] = (mapa[item.tipo || 'conteudo'] || 0) + 1; return mapa; }, {});
+    const periodosMapa = new Map();
+    sessoes.forEach(item => {
+        const iso = dataHistoricoISO(item);
+        const chave = /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? iso.slice(0, 7) : 'sem-data';
+        if (!periodosMapa.has(chave)) {
+            const data = chave === 'sem-data' ? null : dataISOParaLocal(`${chave}-01`);
+            periodosMapa.set(chave, {
+                chave,
+                rotulo: data ? data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '').toUpperCase() : 'SEM DATA',
+                segundos: 0,
+                sessoes: 0,
+                questoes: 0,
+                acertos: 0,
+                erros: 0
+            });
+        }
+        const periodo = periodosMapa.get(chave);
+        periodo.segundos += Math.max(0, Number(item.tempoSegundos) || 0);
+        periodo.sessoes += 1;
+        periodo.questoes += Math.max(0, Number(item.questoes) || 0);
+        periodo.acertos += Math.max(0, Number(item.acertos) || 0);
+        periodo.erros += Math.max(0, Number(item.erros) || 0);
+    });
+    const periodos = [...periodosMapa.values()].sort((a, b) => a.chave.localeCompare(b.chave));
+    periodos.forEach(periodo => {
+        const respondidas = periodo.acertos + periodo.erros;
+        periodo.taxaAcerto = respondidas ? Math.round(periodo.acertos / respondidas * 100) : null;
+    });
+    const respondidas = acertos + errosQuestoes;
+    const segundos = sessoes.reduce((total, item) => total + Math.max(0, Number(item.tempoSegundos) || 0), 0);
     return {
         sessoes: sessoes.length,
-        segundos: sessoes.reduce((total, item) => total + Math.max(0, Number(item.tempoSegundos) || 0), 0),
-        questoes, acertos, errosQuestoes, errosCaderno: errosCaderno.length, causas, dias,
-        taxaErro: acertos + errosQuestoes ? Math.round(errosQuestoes / (acertos + errosQuestoes) * 100) : null
+        segundos,
+        questoes, acertos, errosQuestoes, errosCaderno: errosCaderno.length, causas, periodos,
+        respondidas,
+        taxaAcerto: respondidas ? Math.round(acertos / respondidas * 100) : null,
+        taxaErro: respondidas ? Math.round(errosQuestoes / respondidas * 100) : null,
+        mediaSessao: sessoes.length ? Math.round(segundos / sessoes.length) : 0
     };
 }
 
 function htmlAnaliseTopico(analise) {
-    const maiorDia = Math.max(60, ...analise.dias.map(dia => dia.segundos));
-    const barrasTempo = analise.dias.map(dia => `<div class="topic-time-day ${dia.hoje ? 'today' : ''}" title="${dia.rotulo}: ${formatShortTime(dia.segundos)}"><span class="topic-time-track"><i style="height:${Math.max(3, Math.round(dia.segundos / maiorDia * 100))}%"></i></span><span>${dia.rotulo}</span></div>`).join('');
+    const maiorPeriodo = Math.max(60, ...analise.periodos.map(periodo => periodo.segundos));
+    const barrasTempo = analise.periodos.map(periodo => `<div class="topic-time-day" title="${periodo.rotulo}: ${formatShortTime(periodo.segundos)} em ${periodo.sessoes} ${periodo.sessoes === 1 ? 'sessão' : 'sessões'}"><span class="topic-time-value">${formatShortTime(periodo.segundos)}</span><span class="topic-time-track"><i style="height:${Math.max(3, Math.round(periodo.segundos / maiorPeriodo * 100))}%"></i></span><span>${periodo.rotulo}</span></div>`).join('');
+    const barrasDesempenho = analise.periodos.map(periodo => `<div class="topic-performance-period" title="${periodo.rotulo}: ${periodo.taxaAcerto === null ? 'sem questões registradas' : `${periodo.taxaAcerto}% de acerto`}"><strong>${periodo.taxaAcerto === null ? '—' : `${periodo.taxaAcerto}%`}</strong><span class="topic-performance-track ${periodo.taxaAcerto === null ? 'empty' : ''}"><i style="height:${periodo.taxaAcerto === null ? 0 : periodo.taxaAcerto}%"></i></span><small>${periodo.rotulo}</small></div>`).join('');
     const nomesCausa = { conteudo: 'Conteúdo', interpretacao: 'Interpretação', calculo: 'Cálculo', atencao: 'Atenção', estrategia: 'Estratégia' };
     const maiorCausa = Math.max(1, ...Object.values(analise.causas));
     const causas = Object.entries(analise.causas).sort((a, b) => b[1] - a[1]).map(([tipo, quantidade]) => `<div class="topic-error-cause"><span>${nomesCausa[tipo] || 'Outro padrão'}</span><b>${quantidade}</b><i style="--cause-width:${Math.round(quantidade / maiorCausa * 100)}%"></i></div>`).join('');
-    return `<section class="topic-evidence-grid" aria-label="Evidências do tópico"><div class="topic-evidence-card"><small>Tempo acumulado</small><strong>${formatShortTime(analise.segundos)}</strong></div><div class="topic-evidence-card"><small>Sessões</small><strong>${analise.sessoes}</strong></div><div class="topic-evidence-card"><small>Questões</small><strong>${analise.questoes}</strong></div><div class="topic-evidence-card error"><small>Erros no caderno</small><strong>${analise.errosCaderno}</strong></div></section>
-        <section class="topic-analytics-grid" aria-label="Gráficos do tópico"><article class="topic-chart-card"><div class="topic-chart-heading"><strong>Tempo nos últimos 7 dias</strong><small>${formatShortTime(analise.dias.reduce((total, dia) => total + dia.segundos, 0))} na semana</small></div><div class="topic-time-chart">${barrasTempo}</div></article><article class="topic-chart-card"><div class="topic-chart-heading"><strong>Erros e causas</strong><small>${analise.errosQuestoes} erros em questões</small></div>${analise.errosQuestoes + analise.acertos || analise.errosCaderno ? `<div class="topic-error-overview"><div class="topic-error-ring" style="--error-rate:${analise.taxaErro || 0}"><span>${analise.taxaErro === null ? '—' : `${analise.taxaErro}%`}</span></div><div class="topic-error-causes">${causas || '<div class="topic-chart-empty">Registre erros no caderno para descobrir padrões.</div>'}</div></div>` : '<div class="topic-chart-empty">Registre questões ou erros para formar este gráfico.</div>'}</article></section>`;
+    const graficoTempo = barrasTempo ? `<div class="topic-chart-scroll"><div class="topic-time-chart" style="--period-count:${analise.periodos.length}">${barrasTempo}</div></div>` : '<div class="topic-chart-empty">O tempo aparecerá aqui depois da primeira sessão registrada neste assunto.</div>';
+    const graficoDesempenho = barrasDesempenho && analise.respondidas ? `<div class="topic-chart-scroll"><div class="topic-performance-chart" style="--period-count:${analise.periodos.length}">${barrasDesempenho}</div></div>` : '<div class="topic-chart-empty">Registre acertos e erros nas sessões para acompanhar sua evolução.</div>';
+    const graficoAcertos = analise.respondidas ? `<div class="topic-answer-overview"><div class="topic-answer-ring" style="--hit-rate:${analise.taxaAcerto}"><span><strong>${analise.taxaAcerto}%</strong><small>de acerto</small></span></div><div class="topic-answer-legend"><span class="hit"><i></i><b>Acertos</b><strong>${analise.acertos}</strong></span><span class="miss"><i></i><b>Erros</b><strong>${analise.errosQuestoes}</strong></span><small>${analise.respondidas} questões corrigidas</small></div></div>` : '<div class="topic-chart-empty">Ainda não há questões corrigidas neste assunto.</div>';
+    return `<section class="topic-evidence-grid" aria-label="Resumo acumulado do tópico"><div class="topic-evidence-card"><small>Tempo total</small><strong>${formatShortTime(analise.segundos)}</strong></div><div class="topic-evidence-card"><small>Sessões totais</small><strong>${analise.sessoes}</strong></div><div class="topic-evidence-card"><small>Média por sessão</small><strong>${formatShortTime(analise.mediaSessao)}</strong></div><div class="topic-evidence-card success"><small>Taxa de acerto</small><strong>${analise.taxaAcerto === null ? '—' : `${analise.taxaAcerto}%`}</strong></div><div class="topic-evidence-card error"><small>Erros no caderno</small><strong>${analise.errosCaderno}</strong></div></section>
+        <section class="topic-analytics-grid" aria-label="Gráficos acumulados do tópico">
+            <article class="topic-chart-card wide"><div class="topic-chart-heading"><div><strong>Tempo geral do tópico</strong><small>Todo o histórico, agrupado por mês</small></div><b>${formatShortTime(analise.segundos)} acumulados</b></div>${graficoTempo}</article>
+            <article class="topic-chart-card"><div class="topic-chart-heading"><div><strong>Acertos x erros</strong><small>Resultado geral das questões corrigidas</small></div></div>${graficoAcertos}</article>
+            <article class="topic-chart-card"><div class="topic-chart-heading"><div><strong>Causas dos erros</strong><small>Padrões encontrados no caderno</small></div><b>${analise.errosCaderno} registros</b></div>${causas ? `<div class="topic-error-causes">${causas}</div>` : '<div class="topic-chart-empty">Registre erros no caderno para descobrir os padrões mais frequentes.</div>'}</article>
+            <article class="topic-chart-card wide"><div class="topic-chart-heading"><div><strong>Evolução da precisão</strong><small>Percentual mensal de acertos em todo o histórico</small></div><b>${analise.questoes} questões registradas</b></div>${graficoDesempenho}</article>
+        </section>`;
 }
 
 function renderizarListaAssuntos(id) {

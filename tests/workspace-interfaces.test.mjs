@@ -127,8 +127,13 @@ test('topic organizer prioritizes next actions, mastery and spaced review contro
   assert.match(script, /function removerRevisaoTopico/);
   assert.match(html, /id="assuntosErrosValue"/);
   assert.match(script, /function obterAnaliseTopico/);
-  assert.match(script, /Tempo nos últimos 7 dias/);
-  assert.match(usability, /\.topic-error-ring/);
+  assert.match(script, /Tempo geral do tópico/);
+  assert.match(script, /Todo o histórico, agrupado por mês/);
+  assert.match(script, /Acertos x erros/);
+  assert.match(script, /Evolução da precisão/);
+  assert.doesNotMatch(script, /Tempo nos últimos 7 dias/);
+  assert.match(usability, /\.topic-answer-ring/);
+  assert.match(usability, /\.topic-performance-chart/);
   assert.doesNotMatch(html, /Marque teoria, prática e domínio/);
 });
 

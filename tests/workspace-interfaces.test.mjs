@@ -23,11 +23,11 @@ test('agenda and reviews can be reduced to the next actionable items', () => {
   for (const value of ['todos', 'hoje', 'proximos', 'concluidos']) {
     assert.match(html, new RegExp(`data-agenda-filter="${value}"`));
   }
-  for (const value of ['ativas', 'hoje', 'fracas', 'concluidas', 'todas']) {
+  for (const value of ['hoje', 'pendentes', 'proximas', 'concluidas']) {
     assert.match(html, new RegExp(`data-review-filter="${value}"`));
   }
   assert.match(script, /function filtrarAgendamento\(filtro = 'todos'\)/);
-  assert.match(script, /function filtrarRevisoes\(filtro = 'ativas'\)/);
+  assert.match(script, /function filtrarRevisoes\(filtro = 'pendentes'\)/);
   assert.match(script, /aria-pressed/);
 });
 

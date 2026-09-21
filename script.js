@@ -2,6 +2,17 @@ const XP_LAB_SESSION_KEY = 'kingMasterXpLabUnlocked';
 let XP_LAB_ATIVO = sessionStorage.getItem(XP_LAB_SESSION_KEY) === 'true';
 document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
 
+const REVISAO_MOTIVOS = {
+    'errei-questao': 'Errei questão',
+    'nao-entendi': 'Não entendi',
+    'demorei': 'Demorei demais',
+    'interpretacao': 'Problema de interpretação',
+    'esqueci-conceito': 'Esqueci conceito',
+    'esqueci-formula': 'Esqueci fórmula',
+    'erro-calculo': 'Erro de cálculo',
+    'reforcar': 'Quero reforçar'
+};
+
 const defaultAppData = {
     totalStudySeconds: 0, 
     weeklyChart: [0, 0, 0, 0, 0, 0, 0], 
@@ -72,7 +83,8 @@ if (!appData.agendaItems) appData.agendaItems = [];
 if (!appData.agendamentoItems) appData.agendamentoItems = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!appData.redacaoItems) appData.redacaoItems = [];
-if (!appData.revisoesItems) appData.revisoesItems = [];
+if (!Array.isArray(appData.revisoesItems)) appData.revisoesItems = [];
+appData.revisoesItems = appData.revisoesItems.map(normalizarItemRevisao);
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!Array.isArray(appData.cadernoErrosItems)) appData.cadernoErrosItems = [];
 if (!appData.xpLoginDates) appData.xpLoginDates = [];
@@ -534,7 +546,9 @@ function removerMateriaComRegistros(id) {
     const sessoesRemovidas = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) === chave);
     appData.historyItems = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) !== chave);
     descontarSessoesDosTotais(sessoesRemovidas);
+    const revisoesRemovidas = appData.revisoesItems.filter(item => normalizarRevisaoTexto(item.materia) === chave);
     appData.revisoesItems = appData.revisoesItems.filter(item => normalizarRevisaoTexto(item.materia) !== chave);
+    revisoesRemovidas.forEach(item => { if (item.imagem?.id) window.kingCloud?.deleteReviewImage?.(item.imagem.id).catch(() => {}); });
     appData.pendingStudySessions = (appData.pendingStudySessions || []).map(sessao => String(sessao.subjectId) === String(id) ? { ...sessao, subjectId: '' } : sessao);
     if (String(appData.pendingStudySession?.subjectId || '') === String(id)) appData.pendingStudySession = { ...appData.pendingStudySession, subjectId: '' };
     if (String(document.getElementById('activeSubjectSelect')?.value || '') === String(id)) document.getElementById('activeSubjectSelect').value = '';
@@ -600,9 +614,11 @@ function confirmarDelecao() {
         showToast('🗑️ Redação removida do histórico!'); 
     }
     else if (tipo === 'revisao') {
+        const removida = appData.revisoesItems.find(i => i.id === id);
         appData.revisoesItems = appData.revisoesItems.filter(i => i.id !== id);
+        if (removida?.imagem?.id) window.kingCloud?.deleteReviewImage?.(removida.imagem.id).catch(() => {});
         saveAppData(); renderizarRevisoes();
-        showToast('🗑️ Revisão removida!');
+        showToast('Revisão removida da caixa.');
     }
     else if (tipo === 'revisaoTag') {
         appData.revisaoTags = appData.revisaoTags.filter(tag => tag !== id);
@@ -1640,8 +1656,8 @@ function criarRevisaoAutomaticaRegistro(materia, assunto, dias = 1, origem = 'se
         && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(assuntoSeguro)
         && item.dataAlvo === dataAlvo);
     if (duplicada) return false;
-    appData.revisoesItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), materia: materiaSegura, assunto: assuntoSeguro,
-        dataEstudo: dataLocalISO(new Date()), dataAlvo, origem, tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
+    appData.revisoesItems.push(normalizarItemRevisao({ id: Date.now() + Math.floor(Math.random() * 1000), materia: materiaSegura, assunto: assuntoSeguro,
+        motivos: ['reforcar'], dataEstudo: dataLocalISO(new Date()), dataAlvo, origem, tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() }));
     return true;
 }
 
@@ -2371,7 +2387,7 @@ let filtroAssuntosAtual = 'acao';
 let ordenacaoAssuntosAtual = 'acao';
 let assuntoSelecionadoIndice = null;
 let filtroAgendamentoAtual = 'todos';
-let filtroRevisoesAtual = 'ativas';
+let filtroRevisoesAtual = 'pendentes';
 let filtroSimuladosAtual = 'todas';
 let filtroHistoricoAtual = { busca: '', periodo: 'tudo' };
 
@@ -2727,7 +2743,7 @@ function agendarRevisaoTopico(id, tIdx, dataAlvo) {
     if (!materia || !topico) return;
     let revisao = obterRevisaoAtivaTopico(materia, topico);
     if (!revisao) {
-        revisao = { id: Date.now() + Math.floor(Math.random() * 1000), materia: materia.subject, assunto: topico.nome, dataEstudo: dataLocalISO(new Date()), dataAlvo: dataAlvo || '', origem: 'controle-topico', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() };
+        revisao = normalizarItemRevisao({ id: Date.now() + Math.floor(Math.random() * 1000), materia: materia.subject, assunto: topico.nome, motivos: ['reforcar'], dataEstudo: dataLocalISO(new Date()), dataAlvo: dataAlvo || '', origem: 'controle-topico', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
         appData.revisoesItems.push(revisao);
     } else {
         revisao.dataAlvo = dataAlvo || '';
@@ -3326,6 +3342,90 @@ function escaparRevisaoHtml(valor) {
     })[caractere]);
 }
 
+function normalizarImagemRevisao(imagem) {
+    if (!imagem?.id) return null;
+    return {
+        id: String(imagem.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 90),
+        name: String(imagem.name || 'Foto da revisão').slice(0, 100),
+        type: ['image/png', 'image/jpeg', 'image/webp'].includes(imagem.type) ? imagem.type : 'image/webp',
+        width: Math.max(1, Math.min(2400, Number(imagem.width) || 1)),
+        height: Math.max(1, Math.min(2400, Number(imagem.height) || 1))
+    };
+}
+
+function normalizarItemRevisao(item = {}) {
+    const agora = Date.now();
+    const id = Number(item.id) || agora + Math.floor(Math.random() * 1000);
+    const criadoEm = Number(item.criadoEm) || (id > 1e11 ? id : agora);
+    const motivos = [...new Set((Array.isArray(item.motivos) ? item.motivos : []).filter(motivo => REVISAO_MOTIVOS[motivo]))];
+    const status = ['pendente', 'fraco', 'revisado'].includes(item.status) ? item.status : 'pendente';
+    const dataCriacao = new Date(criadoEm);
+    const materiaRecebida = String(item.materia || '').trim();
+    const materiaCadastrada = (Array.isArray(appData?.cycleItems) ? appData.cycleItems : []).find(materia =>
+        String(materia.id) === materiaRecebida || normalizarRevisaoTexto(materia.subject) === normalizarRevisaoTexto(materiaRecebida)
+    );
+    return {
+        ...item,
+        id,
+        materia: String(materiaCadastrada?.subject || materiaRecebida || 'Sem matéria').trim().slice(0, 60),
+        assunto: String(item.assunto || '').trim().slice(0, 120),
+        motivos,
+        observacao: String(item.observacao || '').trim().slice(0, 500),
+        questao: String(item.questao || '').trim().slice(0, 1000),
+        link: /^https?:\/\//i.test(String(item.link || '').trim()) ? String(item.link).trim().slice(0, 500) : '',
+        fonte: String(item.fonte || '').trim().slice(0, 120),
+        numeroQuestao: String(item.numeroQuestao || '').trim().slice(0, 30),
+        dataEstudo: /^\d{4}-\d{2}-\d{2}$/.test(item.dataEstudo || '') ? item.dataEstudo : dataLocalISO(dataCriacao),
+        horaEstudo: /^\d{2}:\d{2}$/.test(item.horaEstudo || '') ? item.horaEstudo : dataCriacao.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        dataAlvo: /^\d{4}-\d{2}-\d{2}$/.test(item.dataAlvo || '') ? item.dataAlvo : '',
+        origem: String(item.origem || 'manual').slice(0, 50),
+        scheduleBlockId: String(item.scheduleBlockId || '').slice(0, 100),
+        scheduleWeekKey: String(item.scheduleWeekKey || '').slice(0, 20),
+        blocoTitulo: String(item.blocoTitulo || '').slice(0, 140),
+        imagem: normalizarImagemRevisao(item.imagem),
+        tags: [...new Set((Array.isArray(item.tags) ? item.tags : []).map(String).filter(Boolean).slice(0, 12))],
+        status,
+        estimativaMin: Math.max(1, Math.min(60, Number(item.estimativaMin) || 5)),
+        historicoRevisoes: Array.isArray(item.historicoRevisoes) ? item.historicoRevisoes.slice(-20) : [],
+        criadoEm,
+        atualizadoEm: Number(item.atualizadoEm) || criadoEm,
+        revisadoEm: Number(item.revisadoEm) || null
+    };
+}
+
+function dataRevisaoComDias(dias = 1, base = new Date()) {
+    const data = new Date(base);
+    data.setHours(12, 0, 0, 0);
+    data.setDate(data.getDate() + Number(dias || 0));
+    return dataLocalISO(data);
+}
+
+function obterBlocoCronogramaRevisao() {
+    const ativo = appData.activeScheduleBlock;
+    if (!ativo?.weekKey || !ativo?.blockId) return null;
+    return appData.studySchedule?.weeks?.[ativo.weekKey]?.blocks?.find(bloco => String(bloco.id) === String(ativo.blockId)) || null;
+}
+
+function obterContextoRevisaoRapida() {
+    const agora = new Date();
+    const bloco = obterBlocoCronogramaRevisao();
+    const seletorSessao = document.getElementById('sessionCompleteModal')?.classList.contains('active') ? document.getElementById('sessionSubject')?.value : '';
+    const materiaId = bloco?.subjectId || seletorSessao || document.getElementById('activeSubjectSelect')?.value || document.getElementById('assuntosMateriaId')?.value || '';
+    const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId)) || null;
+    const topicoAberto = document.getElementById('assuntosModal')?.classList.contains('active') && Number.isInteger(assuntoSelecionadoIndice)
+        ? materia?.topicos?.[assuntoSelecionadoIndice]?.nome : '';
+    const assuntoSessao = document.getElementById('sessionCompleteModal')?.classList.contains('active') ? document.getElementById('sessionTopic')?.value?.trim() : '';
+    return {
+        materia,
+        assunto: assuntoSessao || bloco?.topic || topicoAberto || '',
+        dataEstudo: dataLocalISO(agora),
+        horaEstudo: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        scheduleBlockId: bloco?.id || '',
+        scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '',
+        blocoTitulo: bloco ? `${bloco.start || ''}${bloco.start ? ' · ' : ''}${bloco.topic || bloco.kind || 'Bloco de estudo'}` : ''
+    };
+}
+
 function obterTagsSelecionadasFormulario() {
     return [...document.querySelectorAll('#revisaoTagsSelecao input[type="checkbox"]:checked')].map(input => input.value);
 }
@@ -3343,74 +3443,216 @@ function renderTagsRevisaoSelecionaveis(selecionadas = []) {
     }).join('');
 }
 
+let revisaoImagemRascunho = null;
+let revisaoImagemOriginalId = '';
+const revisaoImagemCache = new Map();
+
+function definirStatusImagemRevisao(mensagem = '', erro = false) {
+    const status = document.getElementById('revisaoImagemStatus');
+    if (!status) return;
+    status.textContent = mensagem;
+    status.classList.toggle('error', erro);
+}
+
+async function obterImagemRevisao(imageId) {
+    if (revisaoImagemCache.has(imageId)) return revisaoImagemCache.get(imageId);
+    if (!window.kingCloud?.getReviewImage) throw new Error('A nuvem da foto ainda está sendo preparada.');
+    const imagem = await window.kingCloud.getReviewImage(imageId);
+    revisaoImagemCache.set(imageId, imagem);
+    return imagem;
+}
+
+function renderizarPreviaImagemRevisao() {
+    const container = document.getElementById('revisaoImagemPreview');
+    if (!container) return;
+    container.replaceChildren();
+    if (!revisaoImagemRascunho) return;
+    const figura = document.createElement('figure');
+    const img = document.createElement('img');
+    img.alt = revisaoImagemRascunho.name || 'Foto da revisão';
+    img.hidden = !revisaoImagemRascunho.dataUrl;
+    if (revisaoImagemRascunho.dataUrl) img.src = revisaoImagemRascunho.dataUrl;
+    const nome = document.createElement('span');
+    nome.textContent = revisaoImagemRascunho.name || 'Foto da revisão';
+    const remover = document.createElement('button');
+    remover.type = 'button';
+    remover.textContent = '×';
+    remover.setAttribute('aria-label', 'Remover foto da revisão');
+    remover.onclick = removerImagemRevisao;
+    figura.append(img, nome, remover);
+    container.append(figura);
+    if (!revisaoImagemRascunho.dataUrl) obterImagemRevisao(revisaoImagemRascunho.id).then(imagem => {
+        if (!revisaoImagemRascunho || revisaoImagemRascunho.id !== imagem.id) return;
+        revisaoImagemRascunho = { ...revisaoImagemRascunho, dataUrl: imagem.dataUrl };
+        img.src = imagem.dataUrl;
+        img.hidden = false;
+    }).catch(error => definirStatusImagemRevisao(error.message, true));
+}
+
+async function selecionarImagemRevisao(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    definirStatusImagemRevisao('Otimizando a foto para a nuvem…');
+    try {
+        const imagem = await otimizarImagemCadernoErro(file, 'question');
+        revisaoImagemRascunho = { ...imagem, name: file.name || 'Foto da revisão', nova: true };
+        renderizarPreviaImagemRevisao();
+        definirStatusImagemRevisao('Foto pronta para salvar.');
+    } catch (error) {
+        definirStatusImagemRevisao(error.message || 'Não foi possível preparar a foto.', true);
+    }
+}
+
+function removerImagemRevisao() {
+    revisaoImagemRascunho = null;
+    renderizarPreviaImagemRevisao();
+    definirStatusImagemRevisao('A foto será removida ao salvar.');
+}
+
+function definirPrazoRevisaoRapida(dias) {
+    const input = document.getElementById('revisaoDataAlvo');
+    if (!input) return;
+    input.value = dataRevisaoComDias(Number(dias) || 0);
+    sincronizarPrazoRevisaoRapida();
+}
+
+function sincronizarPrazoRevisaoRapida() {
+    const valor = document.getElementById('revisaoDataAlvo')?.value || '';
+    document.querySelectorAll('[data-review-days]').forEach(botao => {
+        const ativo = valor === dataRevisaoComDias(Number(botao.dataset.reviewDays) || 0);
+        botao.classList.toggle('active', ativo);
+        botao.setAttribute('aria-pressed', String(ativo));
+    });
+}
+
 function abrirModalRevisao(id = null) {
     const form = document.getElementById('formAddRevisao');
     const select = document.getElementById('revisaoMateria');
     const assunto = document.getElementById('revisaoAssunto');
-    const dataEstudo = document.getElementById('revisaoDataEstudo');
-    const dataAlvo = document.getElementById('revisaoDataAlvo');
     const aviso = document.getElementById('revisaoSemMaterias');
-    const submit = form.querySelector('button[type="submit"]');
-    const item = id ? appData.revisoesItems.find(revisao => revisao.id === id) : null;
+    const submit = document.getElementById('revisaoSalvarBotao');
+    const itemEncontrado = id ? appData.revisoesItems.find(revisao => revisao.id === Number(id)) : null;
+    const item = itemEncontrado ? normalizarItemRevisao(itemEncontrado) : null;
+    const contexto = obterContextoRevisaoRapida();
     const temMaterias = appData.cycleItems.length > 0 || Boolean(item);
     form.reset();
-    document.getElementById('revisaoModalTitle').textContent = item ? 'Editar Revisão' : 'Nova Revisão';
+    document.getElementById('revisaoModalTitle').textContent = item ? 'Abrir revisão' : 'Revisar depois';
     document.getElementById('revisaoEditId').value = item?.id || '';
-    document.getElementById('revisaoOrigem').value = item?.origem || 'manual';
+    document.getElementById('revisaoOrigem').value = item?.origem || (contexto.scheduleBlockId ? 'cronograma-rapido' : 'captura-rapida');
+    document.getElementById('revisaoDataEstudo').value = item?.dataEstudo || contexto.dataEstudo;
+    document.getElementById('revisaoHoraEstudo').value = item?.horaEstudo || contexto.horaEstudo;
+    document.getElementById('revisaoBlocoId').value = item?.scheduleBlockId || contexto.scheduleBlockId;
+    document.getElementById('revisaoSemanaChave').value = item?.scheduleWeekKey || contexto.scheduleWeekKey;
     const materias = appData.cycleItems.map(materia => materia.subject);
     if (item?.materia && !materias.includes(item.materia)) materias.unshift(item.materia);
     select.innerHTML = temMaterias
         ? materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}">${escaparRevisaoHtml(materia)}</option>`).join('')
         : '<option value="">Nenhuma matéria cadastrada</option>';
-    if (item) {
-        select.value = item.materia;
-        assunto.value = item.assunto || '';
-        dataEstudo.value = item.dataEstudo || '';
-        dataAlvo.value = item.dataAlvo || '';
-    }
+    const materiaPreferida = item?.materia || contexto.materia?.subject || materias[0] || '';
+    select.value = materiaPreferida;
+    atualizarAssuntosRevisao();
+    assunto.value = item?.assunto || contexto.assunto || '';
+    document.getElementById('revisaoDataAlvo').value = item?.dataAlvo || dataRevisaoComDias(1);
+    document.getElementById('revisaoObservacao').value = item?.observacao || '';
+    document.getElementById('revisaoQuestao').value = item?.questao || '';
+    document.getElementById('revisaoFonte').value = item?.fonte || '';
+    document.getElementById('revisaoNumeroQuestao').value = item?.numeroQuestao || '';
+    document.getElementById('revisaoLink').value = item?.link || '';
+    document.querySelectorAll('#revisaoMotivos input[type="checkbox"]').forEach(input => { input.checked = Boolean(item?.motivos?.includes(input.value)); });
+    revisaoImagemRascunho = item?.imagem ? { ...item.imagem, nova: false } : null;
+    revisaoImagemOriginalId = item?.imagem?.id || '';
+    definirStatusImagemRevisao('');
+    renderizarPreviaImagemRevisao();
+    renderTagsRevisaoSelecionaveis(item?.tags || []);
+    const possuiDetalhes = Boolean(item && (item.observacao || item.questao || item.fonte || item.numeroQuestao || item.link || item.imagem || item.tags?.length));
+    const detalhes = document.querySelector('#revisaoModal .review-optional-details');
+    if (detalhes) detalhes.open = possuiDetalhes;
     select.disabled = !temMaterias;
     assunto.disabled = !temMaterias;
-    dataEstudo.disabled = !temMaterias;
-    dataAlvo.disabled = !temMaterias;
+    document.getElementById('revisaoDataAlvo').disabled = !temMaterias;
     submit.disabled = !temMaterias;
+    submit.textContent = item ? 'Salvar alterações' : 'Adicionar revisão';
     aviso.style.display = temMaterias ? 'none' : 'block';
-    atualizarAssuntosRevisao();
-    renderTagsRevisaoSelecionaveis(item?.tags || []);
+    document.getElementById('revisaoContextoTitulo').textContent = item ? 'Registro da revisão' : (contexto.blocoTitulo || 'Captura rápida');
+    document.getElementById('revisaoContextoDetalhe').textContent = item
+        ? `${item.dataEstudo.split('-').reverse().join('/')} às ${item.horaEstudo}`
+        : `${contexto.dataEstudo.split('-').reverse().join('/')} às ${contexto.horaEstudo}${contexto.scheduleBlockId ? ' · vinculado ao bloco atual' : ''}`;
+    sincronizarPrazoRevisaoRapida();
     document.getElementById('revisaoModal').classList.add('active');
+    setTimeout(() => (assunto.value ? document.querySelector('#revisaoMotivos input') : assunto)?.focus(), 80);
 }
 
 function atualizarAssuntosRevisao() {
     const materiaNome = document.getElementById('revisaoMateria')?.value;
-    const materia = appData.cycleItems.find(item => item.subject === materiaNome);
+    const materia = appData.cycleItems.find(item => normalizarRevisaoTexto(item.subject) === normalizarRevisaoTexto(materiaNome));
     const datalist = document.getElementById('revisaoAssuntosOptions');
     if (!datalist) return;
     datalist.innerHTML = (materia?.topicos || []).map(topico => `<option value="${escaparRevisaoHtml(topico.nome)}"></option>`).join('');
 }
 
-function salvarRevisao(e) {
+async function salvarRevisao(e) {
     e.preventDefault();
     const idEdit = Number(document.getElementById('revisaoEditId').value) || null;
     if (!appData.cycleItems.length && !idEdit) return;
+    const motivos = [...document.querySelectorAll('#revisaoMotivos input[type="checkbox"]:checked')].map(input => input.value).filter(motivo => REVISAO_MOTIVOS[motivo]);
+    if (!motivos.length) return showToast('Escolha pelo menos um motivo para a revisão.', true);
+    const assunto = document.getElementById('revisaoAssunto').value.trim();
+    if (!assunto) return showToast('Informe o assunto que precisa voltar ao foco.', true);
+    const submit = document.getElementById('revisaoSalvarBotao');
+    const idRegistro = idEdit || Date.now();
+    const itemAnterior = idEdit ? appData.revisoesItems.find(item => item.id === idEdit) : null;
+    let imagemSalva = revisaoImagemRascunho ? normalizarImagemRevisao(revisaoImagemRascunho) : null;
+    submit.disabled = true;
+    submit.textContent = revisaoImagemRascunho?.nova ? 'Enviando foto…' : 'Salvando…';
+    try {
+        if (revisaoImagemRascunho?.nova) {
+            if (!window.kingCloud?.saveReviewImage) throw new Error('A nuvem da foto ainda não está disponível. Aguarde e tente novamente.');
+            imagemSalva = await window.kingCloud.saveReviewImage({ ...revisaoImagemRascunho, reviewId: idRegistro });
+            revisaoImagemCache.set(imagemSalva.id, { ...imagemSalva, dataUrl: revisaoImagemRascunho.dataUrl });
+        }
     const dados = {
         materia: document.getElementById('revisaoMateria').value,
-        assunto: document.getElementById('revisaoAssunto').value.trim(),
+        assunto,
+        motivos,
+        observacao: document.getElementById('revisaoObservacao').value.trim(),
+        questao: document.getElementById('revisaoQuestao').value.trim(),
+        fonte: document.getElementById('revisaoFonte').value.trim(),
+        numeroQuestao: document.getElementById('revisaoNumeroQuestao').value.trim(),
+        link: document.getElementById('revisaoLink').value.trim(),
         dataEstudo: document.getElementById('revisaoDataEstudo').value,
+        horaEstudo: document.getElementById('revisaoHoraEstudo').value,
         dataAlvo: document.getElementById('revisaoDataAlvo').value,
         origem: document.getElementById('revisaoOrigem').value || 'manual',
+        scheduleBlockId: document.getElementById('revisaoBlocoId').value,
+        scheduleWeekKey: document.getElementById('revisaoSemanaChave').value,
+        blocoTitulo: itemAnterior?.blocoTitulo || obterContextoRevisaoRapida().blocoTitulo,
+        imagem: imagemSalva,
         tags: obterTagsSelecionadasFormulario(),
         atualizadoEm: Date.now()
     };
     if (idEdit) {
         const indice = appData.revisoesItems.findIndex(item => item.id === idEdit);
         if (indice < 0) return;
-        appData.revisoesItems[indice] = { ...appData.revisoesItems[indice], ...dados };
+        appData.revisoesItems[indice] = normalizarItemRevisao({ ...appData.revisoesItems[indice], ...dados });
     } else {
-        appData.revisoesItems.push({ id: Date.now(), ...dados, status: 'pendente', criadoEm: Date.now() });
+        appData.revisoesItems.push(normalizarItemRevisao({ id: idRegistro, ...dados, status: 'pendente', criadoEm: Date.now() }));
     }
     saveAppData();
     renderizarRevisoes();
     fecharModal('revisaoModal');
-    showToast(idEdit ? 'Revisão atualizada.' : 'Revisão adicionada à lista.');
+        if (revisaoImagemOriginalId && revisaoImagemOriginalId !== imagemSalva?.id) {
+            revisaoImagemCache.delete(revisaoImagemOriginalId);
+            window.kingCloud?.deleteReviewImage?.(revisaoImagemOriginalId).catch(() => {});
+        }
+        showToast(idEdit ? 'Revisão atualizada.' : '✓ Revisão adicionada. Continue seu estudo.');
+    } catch (error) {
+        definirStatusImagemRevisao(error.message || 'Não foi possível salvar a revisão.', true);
+        showToast(error.message || 'Não foi possível salvar a revisão.', true);
+    } finally {
+        submit.disabled = false;
+        submit.textContent = idEdit ? 'Salvar alterações' : 'Adicionar revisão';
+    }
 }
 
 function marcarRevisao(id, novoStatus) {
@@ -3418,10 +3660,37 @@ function marcarRevisao(id, novoStatus) {
     if (!item) return;
     item.status = novoStatus;
     item.atualizadoEm = Date.now();
+    item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: novoStatus === 'revisado' ? 'concluida' : 'ainda-fraca', em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
     if (novoStatus === 'revisado') item.revisadoEm = Date.now();
     saveAppData();
     renderizarRevisoes();
-    showToast(novoStatus === 'fraco' ? 'Item voltou ao topo como ainda fraco.' : 'Revisão marcada como concluída.');
+    showToast(novoStatus === 'fraco' ? 'Revisão voltou à fila como ainda fraca.' : 'Revisão concluída e preservada no histórico.');
+}
+
+function adiarRevisao(id, dias = 1) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item) return;
+    const hoje = dataISOParaLocal(dataLocalISO());
+    const atual = dataISOParaLocal(item.dataAlvo);
+    const base = atual && atual > hoje ? atual : hoje;
+    item.dataAlvo = dataRevisaoComDias(Math.max(1, Number(dias) || 1), base);
+    item.status = 'pendente';
+    item.atualizadoEm = Date.now();
+    item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: 'adiada', dias: Number(dias) || 1, em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
+    saveAppData(); renderizarRevisoes();
+    showToast(`Revisão adiada para ${new Date(`${item.dataAlvo}T12:00:00`).toLocaleDateString('pt-BR')}.`);
+}
+
+function revisarNovamenteRevisao(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item) return;
+    item.status = 'pendente';
+    item.dataAlvo = dataRevisaoComDias(1);
+    item.ultimaRevisaoEm = dataLocalISO();
+    item.atualizadoEm = Date.now();
+    item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: 'reaberta', em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
+    saveAppData(); renderizarRevisoes();
+    showToast('Revisão reaberta para amanhã.');
 }
 
 function abrirReagendamentoRevisao(id) {
@@ -3442,6 +3711,7 @@ function salvarReagendamentoRevisao(e) {
     item.status = 'pendente';
     item.ultimaRevisaoEm = dataLocalISO();
     item.atualizadoEm = Date.now();
+    item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: 'reagendada', em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
     saveAppData();
     renderizarRevisoes();
     fecharModal('reagendarRevisaoModal');
@@ -3549,10 +3819,11 @@ function criarRevisaoDoPiorSimulado() {
         ['pendente', 'fraco'].includes(item.status) && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(piorArea)
     );
     if (jaExiste) return false;
-    appData.revisoesItems.push({
+    appData.revisoesItems.push(normalizarItemRevisao({
         id: Date.now() + 1,
         materia: piorArea,
         assunto: 'Rever a área com pior desempenho nos simulados',
+        motivos: ['reforcar'],
         dataEstudo: '',
         dataAlvo: '',
         origem: 'simulado',
@@ -3560,7 +3831,7 @@ function criarRevisaoDoPiorSimulado() {
         tags: [],
         criadoEm: Date.now(),
         atualizadoEm: Date.now()
-    });
+    }));
     return true;
 }
 
@@ -3587,8 +3858,114 @@ function renderDashboardRevisoes() {
     }).join('');
 }
 
-function filtrarRevisoes(filtro = 'ativas') {
-    filtroRevisoesAtual = ['ativas', 'hoje', 'fracas', 'concluidas', 'todas'].includes(filtro) ? filtro : 'ativas';
+function revisaoEstaAtiva(item) {
+    return item?.status !== 'revisado';
+}
+
+function revisoesParaHoje() {
+    const hoje = dataLocalISO();
+    return appData.revisoesItems.filter(item => revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo <= hoje);
+}
+
+function formatarPrazoRevisao(item) {
+    if (!item.dataAlvo) return 'Sem data definida';
+    const hoje = dataLocalISO();
+    if (item.dataAlvo < hoje) {
+        const dias = Math.max(1, Math.round((dataISOParaLocal(hoje) - dataISOParaLocal(item.dataAlvo)) / 86400000));
+        return `${dias} ${dias === 1 ? 'dia atrasada' : 'dias atrasada'}`;
+    }
+    if (item.dataAlvo === hoje) return 'Hoje';
+    if (item.dataAlvo === dataRevisaoComDias(1)) return 'Amanhã';
+    return new Date(`${item.dataAlvo}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '');
+}
+
+function atualizarResumoRevisoesCronograma() {
+    const fila = revisoesParaHoje();
+    const minutos = fila.reduce((total, item) => total + (Number(item.estimativaMin) || 5), 0);
+    const painel = document.getElementById('scheduleReviewQueue');
+    const titulo = document.getElementById('scheduleReviewQueueTitle');
+    if (!painel || !titulo) return;
+    painel.hidden = !fila.length;
+    titulo.textContent = fila.length ? `${pluralizar(fila.length, 'revisão', 'revisões')} para hoje · aproximadamente ${minutos} min` : 'Nenhuma revisão para hoje';
+}
+
+function iniciarFilaRevisoesHoje() {
+    const fila = revisoesParaHoje();
+    showSection('revisoes');
+    filtrarRevisoes(fila.length ? 'hoje' : 'pendentes');
+    if (!fila.length) showToast('Sua fila de hoje está em dia.');
+}
+
+async function abrirImagemRevisao(imageId, nome = 'Foto da revisão') {
+    try { nome = decodeURIComponent(nome); } catch (_) { /* nome já estava legível */ }
+    const modal = document.getElementById('errorImageViewerModal');
+    const conteudo = document.getElementById('errorImageViewerContent');
+    const legenda = document.getElementById('errorImageViewerCaption');
+    const carregando = document.getElementById('errorImageViewerLoading');
+    if (!modal || !conteudo || !carregando) return;
+    modal.classList.add('active');
+    conteudo.hidden = true;
+    carregando.hidden = false;
+    carregando.textContent = 'Carregando foto…';
+    legenda.textContent = nome;
+    try {
+        const imagem = await obterImagemRevisao(imageId);
+        conteudo.src = imagem.dataUrl;
+        conteudo.alt = imagem.name || nome;
+        conteudo.hidden = false;
+        carregando.hidden = true;
+        legenda.textContent = imagem.name || nome;
+    } catch (error) {
+        carregando.textContent = error.message || 'Não foi possível abrir a foto.';
+    }
+}
+
+function carregarMiniaturasRevisao() {
+    document.querySelectorAll('img[data-review-image-id]').forEach(img => {
+        const imageId = img.dataset.reviewImageId;
+        obterImagemRevisao(imageId).then(imagem => {
+            if (!img.isConnected) return;
+            img.src = imagem.dataUrl;
+            img.closest('.review-card-image')?.classList.add('loaded');
+        }).catch(() => { if (img.isConnected) img.alt = 'Foto indisponível'; });
+    });
+}
+
+function definirDataRevisaoFechamento(id, dias) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item) return;
+    item.dataAlvo = dataRevisaoComDias(Number(dias) || 0);
+    item.status = 'pendente';
+    item.atualizadoEm = Date.now();
+    saveAppData();
+    renderizarRevisoes();
+    const dataDoFechamento = document.getElementById('scheduleDayCloseReviews')?.dataset.date || dataLocalISO();
+    renderizarRevisoesFechamentoDia(dataDoFechamento);
+    showToast(`Revisão organizada para ${formatarPrazoRevisao(item).toLocaleLowerCase('pt-BR')}.`);
+}
+
+function renderizarRevisoesFechamentoDia(dataISO = dataLocalISO()) {
+    const lista = document.getElementById('scheduleDayCloseReviewsList');
+    const contador = document.getElementById('scheduleDayCloseReviewsCount');
+    const secao = document.getElementById('scheduleDayCloseReviews');
+    if (!lista || !contador || !secao) return;
+    secao.dataset.date = dataISO;
+    const itens = appData.revisoesItems.filter(item => {
+        const criadoEm = Number(item.criadoEm);
+        const dataCriacao = criadoEm > 0 ? dataLocalISO(new Date(criadoEm)) : '';
+        return item.dataEstudo === dataISO || dataCriacao === dataISO;
+    });
+    contador.textContent = pluralizar(itens.length, 'revisão registrada', 'revisões registradas');
+    secao.classList.toggle('empty', !itens.length);
+    if (!itens.length) {
+        lista.innerHTML = '<p>Nenhuma revisão foi adicionada neste dia.</p>';
+        return;
+    }
+    lista.innerHTML = itens.map(item => `<article><div><strong>${escaparRevisaoHtml(item.materia)} — ${escaparRevisaoHtml(item.assunto)}</strong><small>${formatarPrazoRevisao(item)}</small></div><span><button type="button" onclick="definirDataRevisaoFechamento(${item.id},1)">Amanhã</button><button type="button" onclick="definirDataRevisaoFechamento(${item.id},3)">+3 dias</button><button type="button" onclick="abrirReagendamentoRevisao(${item.id})">Outra data</button></span></article>`).join('');
+}
+
+function filtrarRevisoes(filtro = 'pendentes') {
+    filtroRevisoesAtual = ['hoje', 'pendentes', 'proximas', 'concluidas'].includes(filtro) ? filtro : 'pendentes';
     document.querySelectorAll('[data-review-filter]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.reviewFilter === filtroRevisoesAtual)));
     renderizarRevisoes();
 }
@@ -3596,30 +3973,34 @@ function filtrarRevisoes(filtro = 'ativas') {
 function renderizarRevisoes() {
     const lista = document.getElementById('revisoesList');
     if (!lista) return;
-    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
-    const inicioSemana = new Date(hoje);
-    const diaSemana = hoje.getDay() || 7;
-    inicioSemana.setDate(hoje.getDate() - diaSemana + 1);
-    const fimSemana = new Date(inicioSemana); fimSemana.setDate(inicioSemana.getDate() + 6); fimSemana.setHours(23, 59, 59, 999);
-    const pendente = item => ['pendente', 'fraco'].includes(item.status);
-    const dataItem = item => item.dataAlvo ? new Date(`${item.dataAlvo}T12:00:00`) : null;
-    const atrasada = item => pendente(item) && dataItem(item) && dataItem(item) < hoje;
-    const naSemana = item => pendente(item) && dataItem(item) && dataItem(item) >= inicioSemana && dataItem(item) <= fimSemana;
+    appData.revisoesItems = appData.revisoesItems.map(normalizarItemRevisao);
+    const hoje = dataLocalISO();
+    const pendentes = appData.revisoesItems.filter(revisaoEstaAtiva);
+    const hojeItens = pendentes.filter(item => item.dataAlvo && item.dataAlvo <= hoje);
+    const proximas = pendentes.filter(item => item.dataAlvo && item.dataAlvo > hoje);
+    const concluidas = appData.revisoesItems.filter(item => item.status === 'revisado');
+    const minutosHoje = hojeItens.reduce((total, item) => total + (Number(item.estimativaMin) || 5), 0);
 
-    document.getElementById('rev-pendentes').textContent = appData.revisoesItems.filter(pendente).length;
-    document.getElementById('rev-atrasadas').textContent = appData.revisoesItems.filter(atrasada).length;
-    document.getElementById('rev-semana').textContent = appData.revisoesItems.filter(naSemana).length;
+    document.getElementById('rev-hoje').textContent = hojeItens.length;
+    document.getElementById('rev-hoje-tempo').textContent = `aprox. ${minutosHoje} min`;
+    document.getElementById('rev-pendentes').textContent = pendentes.length;
+    document.getElementById('rev-proximas').textContent = proximas.length;
+    document.getElementById('rev-concluidas').textContent = concluidas.length;
+    const chamadaHoje = document.getElementById('reviewTodayCallout');
+    chamadaHoje.hidden = !hojeItens.length;
+    document.getElementById('reviewTodayCalloutTitle').textContent = hojeItens.length ? `${pluralizar(hojeItens.length, 'revisão', 'revisões')} para hoje · aproximadamente ${minutosHoje} min` : 'Nenhuma revisão para hoje';
+    atualizarResumoRevisoesCronograma();
 
     if (!appData.revisoesItems.length) {
         const resultado = document.getElementById('revisoesResultado');
         if (resultado) resultado.textContent = '0 revisões';
-        lista.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">↻</b><strong>Nenhuma revisão cadastrada</strong><p>Adicione um assunto que precisa voltar ao foco ou registre um simulado para criar revisões automaticamente.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRevisao()">Criar revisão</button></div>';
+        lista.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">↻</b><strong>Sua caixa está vazia</strong><p>Quando algo travar seu estudo, use “+ Revisar depois” e continue de onde parou.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRevisao()">+ Revisar depois</button></div>';
         renderDashboardRevisoes();
         return;
     }
 
     const ordenados = [...appData.revisoesItems].sort((a, b) => {
-        const prioridade = item => item.status === 'fraco' ? 0 : (atrasada(item) ? 1 : (item.status === 'pendente' ? 2 : 3));
+        const prioridade = item => item.status === 'fraco' ? 0 : (revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo < hoje ? 1 : (revisaoEstaAtiva(item) ? 2 : 3));
         const diferenca = prioridade(a) - prioridade(b);
         if (diferenca) return diferenca;
         if (a.status === 'fraco' && b.status === 'fraco') return (b.atualizadoEm || 0) - (a.atualizadoEm || 0);
@@ -3629,43 +4010,49 @@ function renderizarRevisoes() {
     });
 
     const visiveis = ordenados.filter(item => {
-        if (filtroRevisoesAtual === 'ativas') return pendente(item);
-        if (filtroRevisoesAtual === 'hoje') return pendente(item) && dataItem(item) && dataItem(item) <= hoje;
-        if (filtroRevisoesAtual === 'fracas') return item.status === 'fraco';
+        if (filtroRevisoesAtual === 'hoje') return revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo <= hoje;
+        if (filtroRevisoesAtual === 'pendentes') return revisaoEstaAtiva(item);
+        if (filtroRevisoesAtual === 'proximas') return revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo > hoje;
         if (filtroRevisoesAtual === 'concluidas') return item.status === 'revisado';
-        return true;
+        return revisaoEstaAtiva(item);
     });
     const resultado = document.getElementById('revisoesResultado');
     if (resultado) resultado.textContent = pluralizar(visiveis.length, 'revisão', 'revisões');
     if (!visiveis.length) {
         const mensagens = {
-            hoje: ['Nada para revisar hoje', 'Sua fila com data está em dia. As demais revisões continuam em Ativas.'],
-            fracas: ['Nenhum assunto marcado como fraco', 'Quando uma revisão ainda não estiver firme, marque uma nova data.'],
+            hoje: ['Nada para revisar hoje', 'Sua fila de hoje está em dia. As próximas revisões continuam guardadas.'],
+            proximas: ['Nenhuma revisão futura', 'As revisões com datas futuras aparecerão aqui.'],
             concluidas: ['Nenhuma revisão concluída', 'As revisões finalizadas aparecerão aqui.'],
-            ativas: ['Sua fila ativa está vazia', 'Crie uma revisão quando um conteúdo precisar voltar ao foco.']
+            pendentes: ['Sua fila ativa está vazia', 'Use “+ Revisar depois” quando um conteúdo precisar voltar ao foco.']
         };
         const mensagem = mensagens[filtroRevisoesAtual] || ['Nenhuma revisão neste filtro', 'Escolha outra visualização.'];
-        lista.innerHTML = `<div class="workspace-empty"><b aria-hidden="true">✓</b><strong>${mensagem[0]}</strong><p>${mensagem[1]}</p><button type="button" class="cycle-btn" onclick="filtrarRevisoes('todas')">Ver todas</button></div>`;
+        lista.innerHTML = `<div class="workspace-empty"><b aria-hidden="true">✓</b><strong>${mensagem[0]}</strong><p>${mensagem[1]}</p><button type="button" class="cycle-btn" onclick="filtrarRevisoes('pendentes')">Ver pendentes</button></div>`;
         renderDashboardRevisoes();
         return;
     }
 
     lista.innerHTML = visiveis.map(item => {
-        const estaAtrasada = atrasada(item);
+        const estaAtrasada = revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo < hoje;
+        const paraHoje = revisaoEstaAtiva(item) && item.dataAlvo === hoje;
         const revisado = item.status === 'revisado';
         const aindaFraco = item.status === 'fraco';
-        const statusTexto = revisado ? 'Revisado' : (aindaFraco ? 'Revisado, mas ainda fraco' : (estaAtrasada ? 'Atrasado' : 'Pendente'));
-        const statusClasse = revisado ? 'done' : (aindaFraco ? 'weak' : (estaAtrasada ? 'overdue' : ''));
-        const dataTexto = item.dataAlvo ? new Date(`${item.dataAlvo}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem data para revisar';
-        const dataEstudoTexto = item.dataEstudo ? new Date(`${item.dataEstudo}T12:00:00`).toLocaleDateString('pt-BR') : '';
-        const ultimaRevisaoTexto = item.ultimaRevisaoEm ? new Date(`${item.ultimaRevisaoEm}T12:00:00`).toLocaleDateString('pt-BR') : '';
-        const origemTexto = item.origem === 'simulado' ? 'Veio do simulado' : 'Manual';
-        const cor = revisado ? '#34c759' : (aindaFraco ? '#ff9500' : (estaAtrasada ? '#ff3b30' : 'var(--accent-color)'));
+        const statusTexto = revisado ? 'Concluída' : (aindaFraco ? 'Ainda fraca' : (estaAtrasada ? 'Atrasada' : (paraHoje ? 'Para hoje' : (item.dataAlvo ? 'Próxima' : 'Pendente'))));
+        const statusClasse = revisado ? 'done' : (aindaFraco ? 'weak' : (estaAtrasada ? 'overdue' : (paraHoje ? 'today' : '')));
+        const origemTexto = item.scheduleBlockId ? 'Bloco do cronograma' : (item.origem?.includes('simulado') ? 'Simulado' : (item.origem?.includes('sessao') ? 'Sessão de estudo' : 'Captura rápida'));
+        const materia = appData.cycleItems.find(registro => normalizarRevisaoTexto(registro.subject) === normalizarRevisaoTexto(item.materia));
+        const cor = revisado ? '#34c759' : (aindaFraco || paraHoje ? '#ff9500' : (estaAtrasada ? '#ff3b30' : corSegura(materia?.color)));
         const tagsHtml = (item.tags || []).map(tag => `<span class="revision-tag-chip small">${escaparRevisaoHtml(tag)}</span>`).join('');
-        const datasExtras = `${dataEstudoTexto ? `<span class="revision-badge">Estudou: ${dataEstudoTexto}</span>` : ''}${ultimaRevisaoTexto ? `<span class="revision-badge">Última revisão: ${ultimaRevisaoTexto}</span>` : ''}`;
-        const acoesDeFluxo = !revisado ? `<button class="cycle-btn" onclick="marcarRevisao(${item.id},'revisado')">Concluir revisão</button><button class="cycle-btn weak-action" onclick="abrirReagendamentoRevisao(${item.id})">Ainda está fraco</button>` : '';
-        return `<article class="revision-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="revision-card-main"><div class="revision-card-title">${escaparRevisaoHtml(item.materia)}</div><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div>${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge ${statusClasse}">${statusTexto}</span><span class="revision-badge">${origemTexto}</span><span class="revision-badge">Revisar: ${dataTexto}</span>${datasExtras}</div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão será removida da sua lista.')">Excluir</button></div></article>`;
+        const motivos = item.motivos.length ? item.motivos.map(motivo => `<span>${escaparRevisaoHtml(REVISAO_MOTIVOS[motivo])}</span>`).join('') : '<span>Revisão programada</span>';
+        const criado = new Date(item.criadoEm).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }).replace('.', '');
+        const detalhes = [item.fonte, item.numeroQuestao ? `Questão ${item.numeroQuestao}` : '', item.blocoTitulo].filter(Boolean).map(valor => `<span>${escaparRevisaoHtml(valor)}</span>`).join('');
+        const imagem = item.imagem ? `<button type="button" class="review-card-image" onclick="abrirImagemRevisao('${item.imagem.id}','${encodeURIComponent(item.imagem.name)}')" aria-label="Abrir foto de ${escaparRevisaoHtml(item.assunto)}"><img data-review-image-id="${item.imagem.id}" alt="${escaparRevisaoHtml(item.imagem.name)}" loading="lazy"><span aria-hidden="true">▧</span></button>` : '';
+        const link = item.link ? `<a class="review-source-link" href="${escaparRevisaoHtml(item.link)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : '';
+        const acoesDeFluxo = revisado
+            ? `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
+            : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button><button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`;
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>Adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge">${origemTexto}</span><span class="revision-badge review-due-badge">Próxima revisão: ${formatarPrazoRevisao(item)}</span></div></div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></article>`;
     }).join('');
+    carregarMiniaturasRevisao();
     renderDashboardRevisoes();
 }
 
@@ -4654,6 +5041,12 @@ function renderizarMapaDominio() {
 }
 
 document.addEventListener('keydown', event => {
+    const digitando = event.target instanceof HTMLElement && (event.target.matches('input, textarea, select') || event.target.isContentEditable);
+    if (event.altKey && event.key.toLowerCase() === 'r' && !digitando) {
+        event.preventDefault();
+        abrirModalRevisao();
+        return;
+    }
     if (event.key !== 'Escape') return;
     document.querySelectorAll('.modal-overlay.active').forEach(modal => {
         if (modal.dataset.keepOpen === 'true') adiarRegistroSessao();

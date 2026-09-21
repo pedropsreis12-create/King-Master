@@ -424,8 +424,8 @@ function executarFerramentaGeminiIaImediata(nome, args = {}) {
         const assunto = texto('assunto');
         if (!assunto || !dataValidaIa(args.data)) return { ok: false, message: 'Informe um assunto e uma data válida no formato YYYY-MM-DD.' };
         const dataAlvo = args.data;
-        if (appData.revisoesItems.some(item => item.status !== 'revisado' && String(item.materia) === String(materia.id) && item.dataAlvo === dataAlvo && normalizarIa(item.assunto) === normalizarIa(assunto))) return { ok: false, message: 'Essa revisão já está cadastrada.' };
-        appData.revisoesItems.push({ id: Date.now() + Math.floor(Math.random() * 1000), materia: String(materia.id), assunto, dataEstudo: '', dataAlvo, origem: 'gemini-qg', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
+        if (appData.revisoesItems.some(item => item.status !== 'revisado' && normalizarIa(item.materia) === normalizarIa(materia.subject) && item.dataAlvo === dataAlvo && normalizarIa(item.assunto) === normalizarIa(assunto))) return { ok: false, message: 'Essa revisão já está cadastrada.' };
+        appData.revisoesItems.push(normalizarItemRevisao({ id: Date.now() + Math.floor(Math.random() * 1000), materia: materia.subject, assunto, motivos: ['reforcar'], dataEstudo: dataLocalISO(), dataAlvo, origem: 'gemini-qg', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() }));
         renderizarRevisoes();
         return resultadoFerramentaIa(`Revisão de ${assunto} criada em ${materia.subject} para ${dataBonitaIa(dataAlvo)}.`, { section: 'revisoes', toast: '✓ Revisão criada pelo Gemini' });
     }
@@ -753,7 +753,7 @@ function interpretarComandoIa(texto) {
         const materia = encontrarMateriaIa(partes[2]);
         if (!materia) return { text: `Não encontrei a matéria “${limparTextoIa(partes[2])}”.`, error: true };
         const assunto = limparTextoIa(partes[1], 100);
-        appData.revisoesItems.push({ id: Date.now(), materia: String(materia.id), assunto, dataEstudo: '', dataAlvo, origem: 'ia-qg', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() });
+        appData.revisoesItems.push(normalizarItemRevisao({ id: Date.now(), materia: materia.subject, assunto, motivos: ['reforcar'], dataEstudo: dataLocalISO(), dataAlvo, origem: 'ia-qg', tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() }));
         renderizarRevisoes();
         return { text: `Revisão de “${assunto}” em ${materia.subject} marcada para ${dataBonitaIa(dataAlvo)}.`, changed: true, section: 'revisoes', toast: '✓ Revisão criada pela IA' };
     }

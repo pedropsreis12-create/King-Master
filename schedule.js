@@ -299,6 +299,7 @@
         byId('scheduleWeekRange').textContent = formatRange(visibleWeek);
         byId('scheduleWeekEyebrow').textContent = visibleWeek === currentWeekKey() ? 'SEMANA ATUAL' : visibleWeek < currentWeekKey() ? 'SEMANA ANTERIOR' : 'PRÓXIMA SEMANA';
         renderSummary(); renderNext(); renderBalance(); renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderNotice(); renderReplanButton(); performanceSuggestion();
+        if (typeof atualizarResumoRevisoesCronograma === 'function') atualizarResumoRevisoesCronograma();
     }
 
     function organizeCurrentWeek() {
@@ -491,6 +492,7 @@
         byId('scheduleDayCloseWeek').value = key; byId('scheduleDayCloseDay').value = day;
         byId('scheduleDayCloseNotes').value = saved?.notes || '';
         byId('scheduleDayCloseSummary').innerHTML = `<article><span>Matérias</span><strong>${escape(summary.subjects.join(', ') || 'Nenhuma concluída')}</strong></article><article><span>Blocos</span><strong>${summary.blocks}/${summary.planned}</strong></article><article><span>Tempo feito</span><strong>${minutesText(summary.minutes)}</strong></article><article><span>Questões</span><strong>${summary.questions}</strong></article><article><span>Acertos</span><strong>${summary.hits}</strong></article><article><span>Erros</span><strong>${summary.errors}</strong></article>`;
+        if (typeof renderizarRevisoesFechamentoDia === 'function') renderizarRevisoesFechamentoDia(dateForDay(key, day));
         byId('scheduleDayCloseModal').classList.add('active');
     }
     function closeDayLater() { fecharModal('scheduleDayCloseModal'); }

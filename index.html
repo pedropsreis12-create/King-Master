@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="style.css?v=20260917-timer-layer-v2">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
-    <link rel="stylesheet" href="usability.css?v=20260918-topic-analytics-v2">
+    <link rel="stylesheet" href="usability.css?v=20260921-review-inbox-v1">
     <link rel="stylesheet" href="schedule.css?v=20260916-session-safe-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
@@ -127,7 +127,7 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Aprender</span>
                 <button type="button" class="menu-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Matérias</strong><small>Conteúdo e domínio</small></span></button>
-                <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Revisões</strong><small>Voltar no tempo certo</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Caixa de Revisões</strong><small>Capture e retome depois</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
                 <button type="button" class="menu-btn" data-section="caderno-erros" aria-controls="caderno-erros" onclick="showSection('caderno-erros')"><span class="nav-item-icon" aria-hidden="true">⌁</span><span class="nav-item-label"><strong>Caderno de Erros</strong><small>Corrigir padrões</small></span><span class="nav-count urgent" id="navErrorBadge" hidden>0</span></button>
             </div>
             <div class="nav-cluster">
@@ -305,6 +305,7 @@
                             </div>
                             <input type="hidden" id="activeSubjectSelect" value="">
                         </div>
+                        <button type="button" class="quick-review-trigger" onclick="abrirModalRevisao()"><span aria-hidden="true">＋</span><span><strong>Revisar depois</strong><small>Registre sem interromper o foco</small></span><kbd>Alt R</kbd></button>
                         <label id="labelConfig" class="config-label" style="margin-top: 10px;">Tocar alarme após</label>
                         <div class="time-input-group" id="manualTimeGroup">
                             <div class="time-col"><input type="number" id="inputHours" class="config-input tiny" value="0" min="0" oninput="sincronizarTempo()"><span>h</span></div>
@@ -340,7 +341,7 @@
             <div class="widget dashboard-reviews-widget dashboard-reviews-below">
                     <div class="dashboard-reviews-heading">
                         <div>
-                            <div class="widget-title">Revisões Pendentes</div>
+                            <div class="widget-title">Caixa de Revisões</div>
                             <p>Assuntos que precisam voltar ao foco</p>
                         </div>
                         <button class="cycle-btn" onclick="showSection('revisoes')">Ver todas</button>
@@ -402,6 +403,7 @@
             </div>
 
             <div class="schedule-notice" id="scheduleNotice" hidden role="status"></div>
+            <button type="button" class="schedule-review-queue widget" id="scheduleReviewQueue" onclick="iniciarFilaRevisoesHoje()" hidden><span class="schedule-review-icon" aria-hidden="true">↻</span><span><small>CAIXA DE REVISÕES</small><strong id="scheduleReviewQueueTitle">Nenhuma revisão para hoje</strong><em>As revisões ficam separadas dos blocos normais.</em></span><b>Abrir fila <i aria-hidden="true">›</i></b></button>
             <div class="schedule-suggestion widget" id="scheduleSuggestion" hidden></div>
 
             <section class="schedule-week-board widget" aria-labelledby="scheduleWeekBoardTitle">
@@ -494,30 +496,31 @@
             <div class="agenda-list workspace-list" id="agendamentoList"></div>
         </section>
 
-        <section id="revisoes" class="content-section">
+        <section id="revisoes" class="content-section review-inbox-section">
             <div class="workspace-heading">
                 <div>
-                    <span class="workspace-kicker">RETOME NO MOMENTO CERTO</span>
-                    <h1>Revisões</h1>
-                    <p>Priorize assuntos atrasados ou ainda fracos sem perder de vista o restante.</p>
+                    <span class="workspace-kicker">CAPTURE AGORA, RETOME NO MOMENTO CERTO</span>
+                    <h1>Caixa de Revisões</h1>
+                    <p>Guarde dificuldades em poucos segundos e volte nelas sem bagunçar seu cronograma.</p>
                 </div>
                 <div class="cycle-btn-group">
                     <button class="cycle-btn" onclick="abrirModalTagsRevisao()">Gerenciar tags</button>
-                    <button class="cycle-btn primary" onclick="abrirModalRevisao()">+ Nova revisão</button>
+                    <button class="cycle-btn primary" onclick="abrirModalRevisao()">+ Revisar depois</button>
                 </div>
             </div>
             <div class="stats-grid revision-summary-grid">
-                <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value" id="rev-pendentes">0</div></div>
-                <div class="stat-card"><div class="stat-label">Atrasadas</div><div class="stat-value" id="rev-atrasadas" style="color:#ff3b30;">0</div></div>
-                <div class="stat-card"><div class="stat-label">Essa Semana</div><div class="stat-value" id="rev-semana" style="color:var(--accent-color);">0</div></div>
+                <div class="stat-card"><div class="stat-label">Hoje</div><div class="stat-value" id="rev-hoje" style="color:#ff9500;">0</div><small id="rev-hoje-tempo">aprox. 0 min</small></div>
+                <div class="stat-card"><div class="stat-label">Pendentes</div><div class="stat-value" id="rev-pendentes">0</div><small>fila ativa</small></div>
+                <div class="stat-card"><div class="stat-label">Próximas</div><div class="stat-value" id="rev-proximas" style="color:var(--accent-color);">0</div><small>datas futuras</small></div>
+                <div class="stat-card"><div class="stat-label">Concluídas</div><div class="stat-value" id="rev-concluidas" style="color:#34c759;">0</div><small>histórico preservado</small></div>
             </div>
+            <div class="review-today-callout" id="reviewTodayCallout" hidden><span aria-hidden="true">↻</span><div><strong id="reviewTodayCalloutTitle">Revisões para hoje</strong><small>Uma fila curta, separada do cronograma.</small></div><button type="button" class="cycle-btn primary" onclick="iniciarFilaRevisoesHoje()">Iniciar revisões</button></div>
             <div class="workspace-toolbar">
                 <div class="filter-chips" aria-label="Filtrar revisões">
-                    <button type="button" data-review-filter="ativas" aria-pressed="true" onclick="filtrarRevisoes('ativas')">Ativas</button>
-                    <button type="button" data-review-filter="hoje" aria-pressed="false" onclick="filtrarRevisoes('hoje')">Para hoje</button>
-                    <button type="button" data-review-filter="fracas" aria-pressed="false" onclick="filtrarRevisoes('fracas')">Ainda fracas</button>
+                    <button type="button" data-review-filter="hoje" aria-pressed="false" onclick="filtrarRevisoes('hoje')">Hoje</button>
+                    <button type="button" data-review-filter="pendentes" aria-pressed="true" onclick="filtrarRevisoes('pendentes')">Pendentes</button>
+                    <button type="button" data-review-filter="proximas" aria-pressed="false" onclick="filtrarRevisoes('proximas')">Próximas</button>
                     <button type="button" data-review-filter="concluidas" aria-pressed="false" onclick="filtrarRevisoes('concluidas')">Concluídas</button>
-                    <button type="button" data-review-filter="todas" aria-pressed="false" onclick="filtrarRevisoes('todas')">Todas</button>
                 </div>
                 <span class="workspace-result-count" id="revisoesResultado" aria-live="polite">0 revisões</span>
             </div>
@@ -1005,38 +1008,36 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="revisaoModal">
-            <div class="modal-box" style="width: 520px;">
+        <div class="modal-overlay review-quick-overlay" id="revisaoModal">
+            <div class="modal-box review-quick-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('revisaoModal')" aria-label="Fechar">×</button>
-                <div class="cycle-modal-title" id="revisaoModalTitle">Nova Revisão</div>
+                <div class="review-quick-heading"><span class="workspace-kicker">CAPTURA RÁPIDA</span><div class="cycle-modal-title" id="revisaoModalTitle">Revisar depois</div><p>Marque o ponto e continue estudando. O restante fica na caixa.</p></div>
+                <div class="review-capture-context" id="revisaoContexto"><span aria-hidden="true">◷</span><div><strong id="revisaoContextoTitulo">Agora</strong><small id="revisaoContextoDetalhe">Data e horário preenchidos automaticamente</small></div></div>
                 <form id="formAddRevisao" onsubmit="salvarRevisao(event)">
                     <input type="hidden" id="revisaoEditId">
                     <input type="hidden" id="revisaoOrigem" value="manual">
+                    <input type="hidden" id="revisaoDataEstudo">
+                    <input type="hidden" id="revisaoHoraEstudo">
+                    <input type="hidden" id="revisaoBlocoId">
+                    <input type="hidden" id="revisaoSemanaChave">
                     <p id="revisaoSemMaterias" style="display:none;color:#ff9500;background:rgba(255,149,0,.08);border:1px solid rgba(255,149,0,.25);padding:12px 14px;border-radius:12px;font-size:.82rem;font-weight:700;margin-bottom:16px;">Adicione uma matéria no Hub de Matérias antes de guardar uma revisão.</p>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Matéria</label>
-                        <select class="cycle-input" id="revisaoMateria" onchange="atualizarAssuntosRevisao()" required></select>
+                    <div class="form-grid two review-main-fields">
+                        <div class="cycle-form-group"><label class="cycle-label" for="revisaoMateria">Matéria</label><select class="cycle-input" id="revisaoMateria" onchange="atualizarAssuntosRevisao()" required></select></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="revisaoAssunto">Assunto</label><input class="cycle-input" id="revisaoAssunto" list="revisaoAssuntosOptions" autocomplete="off" maxlength="120" placeholder="Ex.: MMC" required><datalist id="revisaoAssuntosOptions"></datalist></div>
                     </div>
-                    <div class="cycle-form-group">
-                        <label class="cycle-label">Assunto</label>
-                        <input class="cycle-input" id="revisaoAssunto" list="revisaoAssuntosOptions" autocomplete="off" required>
-                        <datalist id="revisaoAssuntosOptions"></datalist>
-                    </div>
-                    <div class="form-grid two">
-                        <div class="cycle-form-group">
-                            <label class="cycle-label">Dia em que estudou <span style="font-weight:500;text-transform:none;">(opcional)</span></label>
-                            <input type="date" class="cycle-input" id="revisaoDataEstudo">
-                        </div>
-                        <div class="cycle-form-group">
-                            <label class="cycle-label">Dia para revisar <span style="font-weight:500;text-transform:none;">(opcional)</span></label>
-                            <input type="date" class="cycle-input" id="revisaoDataAlvo">
-                        </div>
-                    </div>
-                    <div class="cycle-form-group">
-                        <div class="revision-tags-label-row"><label class="cycle-label">Tags</label><button type="button" onclick="abrirModalTagsRevisao()">+ Criar tag</button></div>
-                        <div class="revision-tag-selector" id="revisaoTagsSelecao"></div>
-                    </div>
-                    <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar revisão</button></div>
+                    <fieldset class="review-reason-fieldset"><legend>Motivo da revisão <small>selecione um ou mais</small></legend><div class="review-reason-grid" id="revisaoMotivos">
+                        <label><input type="checkbox" value="errei-questao"><span>Errei questão</span></label><label><input type="checkbox" value="nao-entendi"><span>Não entendi</span></label><label><input type="checkbox" value="demorei"><span>Demorei demais</span></label><label><input type="checkbox" value="interpretacao"><span>Problema de interpretação</span></label><label><input type="checkbox" value="esqueci-conceito"><span>Esqueci conceito</span></label><label><input type="checkbox" value="esqueci-formula"><span>Esqueci fórmula</span></label><label><input type="checkbox" value="erro-calculo"><span>Erro de cálculo</span></label><label><input type="checkbox" value="reforcar"><span>Quero reforçar</span></label>
+                    </div></fieldset>
+                    <div class="cycle-form-group review-when-field"><label class="cycle-label" for="revisaoDataAlvo">Quando revisar</label><div class="review-date-presets"><button type="button" data-review-days="0" onclick="definirPrazoRevisaoRapida(0)">Hoje</button><button type="button" data-review-days="1" onclick="definirPrazoRevisaoRapida(1)">Amanhã</button><button type="button" data-review-days="3" onclick="definirPrazoRevisaoRapida(3)">Em 3 dias</button><button type="button" data-review-days="7" onclick="definirPrazoRevisaoRapida(7)">Em 7 dias</button></div><input type="date" class="cycle-input" id="revisaoDataAlvo" required onchange="sincronizarPrazoRevisaoRapida()"></div>
+                    <details class="review-optional-details"><summary><span>Adicionar detalhes opcionais</span><small>nota, questão, foto, link ou fonte</small></summary><div class="review-optional-body">
+                        <div class="cycle-form-group"><label class="cycle-label" for="revisaoObservacao">Observação rápida <span>(opcional)</span></label><textarea class="cycle-input" id="revisaoObservacao" rows="2" maxlength="500" placeholder="Ex.: Não percebi que os eventos se repetiam em ciclos."></textarea></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="revisaoQuestao">Questão relacionada <span>(opcional)</span></label><textarea class="cycle-input" id="revisaoQuestao" rows="2" maxlength="1000" placeholder="Cole o enunciado ou descreva o ponto principal."></textarea></div>
+                        <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="revisaoFonte">Fonte ou material <span>(opcional)</span></label><input class="cycle-input" id="revisaoFonte" maxlength="120" placeholder="Ex.: Apostila, ENEM 2024"></div><div class="cycle-form-group"><label class="cycle-label" for="revisaoNumeroQuestao">Número da questão <span>(opcional)</span></label><input class="cycle-input" id="revisaoNumeroQuestao" maxlength="30" placeholder="Ex.: 137"></div></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="revisaoLink">Link <span>(opcional)</span></label><input type="url" class="cycle-input" id="revisaoLink" maxlength="500" placeholder="https://..."></div>
+                        <div class="review-image-field"><input type="file" id="revisaoImagemInput" accept="image/png,image/jpeg,image/webp" hidden onchange="selecionarImagemRevisao(event)"><label for="revisaoImagemInput"><span aria-hidden="true">▧</span><strong>Anexar foto</strong><small>PNG, JPG ou WebP</small></label><div id="revisaoImagemPreview" class="review-image-preview"></div><p id="revisaoImagemStatus" role="status"></p></div>
+                        <div class="revision-tags-label-row"><label class="cycle-label">Tags <span>(opcional)</span></label><button type="button" onclick="abrirModalTagsRevisao()">+ Criar tag</button></div><div class="revision-tag-selector" id="revisaoTagsSelecao"></div>
+                    </div></details>
+                    <div class="cycle-modal-actions review-quick-actions"><button type="button" class="cycle-btn" onclick="fecharModal('revisaoModal')">Cancelar</button><button type="submit" class="cycle-btn primary" id="revisaoSalvarBotao">Adicionar revisão</button></div>
                 </form>
             </div>
         </div>
@@ -1216,7 +1217,7 @@
 
         <div class="modal-overlay" id="scheduleSettingsModal"><div class="modal-box schedule-settings-modal schedule-sheet"><button type="button" class="modal-close" onclick="fecharModal('scheduleSettingsModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ESTÚDIO DE PLANEJAMENTO</span><div class="cycle-modal-title">Desenhe uma semana possível</div><p class="schedule-modal-intro">Escolha seu ritmo e a carga de cada matéria. O organizador apenas distribui o que você decidir.</p><form id="scheduleSettingsForm" onsubmit="KingSchedule.saveSettings(event)"><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>01</span><div><strong>Ritmo base</strong><small>Os horários podem ser alterados depois em cada bloco.</small></div></div><div class="schedule-settings-grid"><div class="cycle-form-group"><label class="cycle-label" for="scheduleStartTime">Começar às</label><input type="time" class="cycle-input" id="scheduleStartTime" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockMinutes">Bloco padrão</label><select class="cycle-input" id="scheduleBlockMinutes"><option value="25">25 min</option><option value="40">40 min</option><option value="50">50 min</option><option value="60">1 hora</option><option value="90">1h30</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa</label><select class="cycle-input" id="schedulePauseMinutes"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleClosingMinutes">Fechamento</label><select class="cycle-input" id="scheduleClosingMinutes"><option value="0">Sem fechamento</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleMaxSubjects">Matérias por dia</label><select class="cycle-input" id="scheduleMaxSubjects"><option value="1">Até 1</option><option value="2">Até 2</option><option value="3">Até 3</option><option value="4">Até 4</option></select></div></div><fieldset class="schedule-day-options"><legend>Dias disponíveis</legend><label><input type="checkbox" value="1"><span><b>SEG</b><small>Segunda</small></span></label><label><input type="checkbox" value="2"><span><b>TER</b><small>Terça</small></span></label><label><input type="checkbox" value="3"><span><b>QUA</b><small>Quarta</small></span></label><label><input type="checkbox" value="4"><span><b>QUI</b><small>Quinta</small></span></label><label><input type="checkbox" value="5"><span><b>SEX</b><small>Sexta</small></span></label><label><input type="checkbox" value="6"><span><b>SÁB</b><small>Sábado</small></span></label></fieldset></section><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>02</span><div><strong>Carga por matéria</strong><small>Zero blocos mantém a matéria fora da organização automática.</small></div><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal');showSection('planejamento');abrirModalCiclo()">＋ Nova matéria</button></div><div class="schedule-subject-plans" id="scheduleSubjectPlans"></div></section><div class="schedule-settings-footer"><p><b>Sem surpresas:</b> a organização é previsível e nunca altera uma semana sem você pedir.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar e organizar</button></div></div></form></div></div>
 
-        <div class="modal-overlay" id="scheduleDayCloseModal"><div class="modal-box schedule-day-close-modal"><button type="button" class="modal-close" onclick="KingSchedule.closeDayLater()" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO FINAL</span><div class="cycle-modal-title">Registrar estudo de hoje</div><p class="modal-message">Confira o que avançou. Este resumo organiza o dia sem duplicar o progresso já salvo em cada bloco.</p><div class="schedule-day-close-summary" id="scheduleDayCloseSummary"></div><form onsubmit="KingSchedule.saveDayClose(event)"><input type="hidden" id="scheduleDayCloseWeek"><input type="hidden" id="scheduleDayCloseDay"><div class="cycle-form-group"><label class="cycle-label" for="scheduleDayCloseNotes">Observações do dia</label><textarea class="cycle-input" id="scheduleDayCloseNotes" rows="4" maxlength="700" placeholder="O que funcionou bem? O que precisa mudar amanhã?"></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingSchedule.closeDayLater()">Fazer depois</button><button type="submit" class="cycle-btn primary">Salvar progresso</button></div></form></div></div>
+        <div class="modal-overlay" id="scheduleDayCloseModal"><div class="modal-box schedule-day-close-modal"><button type="button" class="modal-close" onclick="KingSchedule.closeDayLater()" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO FINAL</span><div class="cycle-modal-title">Registrar estudo de hoje</div><p class="modal-message">Confira o que avançou. Este resumo organiza o dia sem duplicar o progresso já salvo em cada bloco.</p><div class="schedule-day-close-summary" id="scheduleDayCloseSummary"></div><section class="day-close-reviews" id="scheduleDayCloseReviews"><header><div><span>REVISÕES ADICIONADAS HOJE</span><strong id="scheduleDayCloseReviewsCount">0 revisões registradas</strong></div><button type="button" onclick="showSection('revisoes');KingSchedule.closeDayLater()">Abrir caixa</button></header><div id="scheduleDayCloseReviewsList"></div></section><form onsubmit="KingSchedule.saveDayClose(event)"><input type="hidden" id="scheduleDayCloseWeek"><input type="hidden" id="scheduleDayCloseDay"><div class="cycle-form-group"><label class="cycle-label" for="scheduleDayCloseNotes">Observações do dia</label><textarea class="cycle-input" id="scheduleDayCloseNotes" rows="4" maxlength="700" placeholder="O que funcionou bem? O que precisa mudar amanhã?"></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingSchedule.closeDayLater()">Fazer depois</button><button type="submit" class="cycle-btn primary">Salvar progresso</button></div></form></div></div>
 
         <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Salvar sessão</button></div></form></div></div>
 
@@ -1264,13 +1265,13 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260918-topic-analytics-v2"></script>
-    <script src="schedule.js?v=20260916-session-safe-v1"></script>
+    <script src="script.js?v=20260921-review-inbox-v1"></script>
+    <script src="schedule.js?v=20260921-review-inbox-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
-    <script src="ai-assistant.js?v=20260918-content-intelligence-v1"></script>
+    <script src="ai-assistant.js?v=20260921-review-inbox-v1"></script>
     <script src="productivity.js?v=20260916-session-safe-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260916-session-safe-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20260921-review-inbox-v1"></script>
 </body>
 </html>

@@ -671,6 +671,44 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         await firestoreSdk.deleteDoc(errorImageDocument(imageId));
     }
 
+    function reviewImageDocument(imageId) {
+        if (!currentUser?.uid) throw new Error('Entre na sua conta antes de anexar uma foto.');
+        const safeId = String(imageId || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 90);
+        if (!safeId) throw new Error('A foto não recebeu um identificador válido.');
+        return firestoreSdk.doc(db, 'users', currentUser.uid, 'reviewImages', safeId);
+    }
+
+    async function saveReviewImage(image) {
+        if (!image?.dataUrl || !/^data:image\/(png|jpeg|webp);base64,/i.test(image.dataUrl)) throw new Error('Formato de imagem inválido.');
+        if (image.dataUrl.length > 720000) throw new Error('A foto continua grande demais após a otimização.');
+        await appCheckSdk.getToken(appCheck, false);
+        const metadata = {
+            ownerUid: currentUser.uid,
+            reviewId: String(image.reviewId || '').slice(0, 40),
+            name: String(image.name || 'Foto da revisão').slice(0, 100),
+            contentType: String(image.type || 'image/webp').slice(0, 30),
+            width: Math.max(1, Math.min(2400, Number(image.width) || 1)),
+            height: Math.max(1, Math.min(2400, Number(image.height) || 1)),
+            dataUrl: image.dataUrl,
+            updatedAt: firestoreSdk.serverTimestamp()
+        };
+        await firestoreSdk.setDoc(reviewImageDocument(image.id), metadata);
+        return { id: String(image.id), name: metadata.name, type: metadata.contentType, width: metadata.width, height: metadata.height };
+    }
+
+    async function getReviewImage(imageId) {
+        const snapshot = await firestoreSdk.getDoc(reviewImageDocument(imageId));
+        if (!snapshot.exists()) throw new Error('Foto da revisão não encontrada na nuvem.');
+        const data = snapshot.data();
+        if (!/^data:image\/(png|jpeg|webp);base64,/i.test(data?.dataUrl || '')) throw new Error('A foto salva está inválida.');
+        return { id: String(imageId), name: data.name || 'Foto da revisão', type: data.contentType || 'image/webp', width: data.width || 1, height: data.height || 1, dataUrl: data.dataUrl };
+    }
+
+    async function deleteReviewImage(imageId) {
+        await appCheckSdk.getToken(appCheck, false);
+        await firestoreSdk.deleteDoc(reviewImageDocument(imageId));
+    }
+
     window.addEventListener('king-master-data-changed', () => {
         if (!currentUser || applyingRemote) return;
         clearTimeout(uploadTimer);
@@ -799,7 +837,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         syncNow: () => currentUser ? reconcile(currentUser) : startSignIn(googleProvider, 'do Google').catch(error => updateCloudUi('error', null, describeAuthError(error))),
         saveErrorImage,
         getErrorImage,
-        deleteErrorImage
+        deleteErrorImage,
+        saveReviewImage,
+        getReviewImage,
+        deleteReviewImage
     };
     } catch (error) {
         finishGeminiInitialization();

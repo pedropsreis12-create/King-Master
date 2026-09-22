@@ -21,12 +21,10 @@ test('subjects expose accessible content and mastery views with useful summaries
   assert.doesNotMatch(html, /Seu mapa de domínio/);
   assert.match(script, /function navegarAbasHub\(event\)/);
   assert.match(script, /setAttribute\('aria-selected'/);
-  assert.match(script, /function abrirTopicoPelaCentral\(materiaId, topicoIndex\)/);
   assert.match(script, /pontuacaoAcaoTopico\(a\.materia, a\.topico\)/);
-  assert.match(html, /id="subjectWorkspaceMount"/);
-  assert.match(html, /Voltar às matérias/);
-  assert.match(script, /workspace\.classList\.remove\('modal-overlay'\)/);
-  assert.match(script, /is-subject-workspace/);
+  assert.doesNotMatch(html, /id="subjectWorkspaceMount"|id="assuntosModal"|id="topicControlPanel"/);
+  assert.doesNotMatch(script, /function abrirModalAssuntos\(|function abrirTopicoPelaCentral\(/);
+  assert.match(script, /onclick="editarMateriaCiclo\(\$\{i\.id\}\)"/);
 });
 
 test('agenda and reviews can be reduced to the next actionable items', () => {
@@ -128,34 +126,12 @@ test('profile keeps an independent persistent banner', () => {
   assert.match(script, /appData\.profileBanner = canvas\.toDataURL/);
 });
 
-test('topic organizer prioritizes next actions, mastery and spaced review controls', () => {
-  assert.match(html, /id="assuntosBuscaInput"/);
-  assert.match(html, /data-topic-filter="acao"/);
-  assert.match(html, /data-topic-filter="revisar"/);
-  assert.match(html, /id="assuntosOrdenacao"/);
-  assert.match(html, /id="topicControlPanel"/);
-  assert.match(html, /id="assuntosDominadosValue"/);
-  assert.match(script, /function filtrarAssuntos/);
+test('removing the subject screen keeps stored topic and review operations intact', () => {
+  assert.doesNotMatch(html, /id="assuntosBuscaInput"|id="assuntosOrdenacao"|id="topicControlPanel"/);
   assert.match(script, /function registrarTopicoEstudado/);
-  assert.match(script, /function registrarDesempenhoTopico/);
-  assert.match(script, /function definirNivelDominioTopico/);
-  assert.match(script, /function agendarRevisaoTopico/);
-  assert.match(script, /Recuperação ativa/);
-  assert.match(script, /registroRapido: true/);
-  assert.match(usability, /\.topics-control-workspace/);
-  assert.match(script, /function solicitarRegistroTopico/);
-  assert.match(script, /repeatTopicStudy/);
   assert.match(script, /function removerRevisaoTopico/);
-  assert.match(html, /id="assuntosErrosValue"/);
-  assert.match(script, /function obterAnaliseTopico/);
-  assert.match(script, /Tempo geral do tópico/);
-  assert.match(script, /Todo o histórico, agrupado por mês/);
-  assert.match(script, /Acertos x erros/);
-  assert.match(script, /Evolução da precisão/);
-  assert.doesNotMatch(script, /Tempo nos últimos 7 dias/);
-  assert.match(usability, /\.topic-answer-ring/);
-  assert.match(usability, /\.topic-performance-chart/);
-  assert.doesNotMatch(html, /Marque teoria, prática e domínio/);
+  assert.match(script, /function obterNivelDominioTopico/);
+  assert.match(html, /id="cycleInitialTopics"/);
 });
 
 test('subject creation starts simple and progressively reveals planning tools', () => {

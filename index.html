@@ -20,8 +20,7 @@
     <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
-    <link rel="stylesheet" href="domain-center.css?v=20260922-domain-center-v1">
-    <link rel="stylesheet" href="subject-workspace-inline.css?v=20260922-inline-v1">
+    <link rel="stylesheet" href="domain-center.css?v=20260922-no-subject-screen-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <style>
@@ -500,7 +499,6 @@
                     <section class="domain-center-subjects widget" aria-labelledby="domainSubjectsTitle"><div class="domain-center-section-heading"><div><span class="workspace-kicker">POR MATÉRIA</span><h3 id="domainSubjectsTitle">Seu avanço</h3></div></div><div id="mapaContainer"></div></section>
                 </div>
             </div>
-            <div id="subjectWorkspaceMount"></div>
         </section>
 
         <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
@@ -946,61 +944,6 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="assuntosModal">
-            <div class="modal-box topics-organizer-modal subject-workspace-modal">
-                <button type="button" class="subject-workspace-back" onclick="fecharModal('assuntosModal')">← Voltar às matérias</button>
-                <div class="topics-organizer-heading subject-workspace-heading">
-                    <div>
-                        <span class="workspace-kicker">ASSUNTOS DA MATÉRIA</span>
-                        <h3 id="assuntosModalTitle">Assuntos</h3>
-                        <p>Use tempo, questões, erros e revisões para decidir o próximo passo em cada conteúdo.</p>
-                    </div>
-                    <div class="topics-time-pill">
-                            <span>Tempo estudado</span>
-                            <span id="assuntosModalTimeValue">0h 00m</span>
-                    </div>
-                </div>
-                <div class="topics-organizer-stats" aria-label="Resumo da matéria">
-                    <span><strong id="assuntosTotalValue">0</strong><small>cadastrados</small></span>
-                    <span><strong id="assuntosEstudadosValue">0</strong><small>em progresso</small></span>
-                    <span class="attention"><strong id="assuntosRevisoesValue">0</strong><small>para revisar</small></span>
-                    <span class="success"><strong id="assuntosDominadosValue">0</strong><small>dominados</small></span>
-                    <span class="danger"><strong id="assuntosErrosValue">0</strong><small>erros registrados</small></span>
-                </div>
-                <div class="topics-organizer-toolbar">
-                    <label class="topics-search" for="assuntosBuscaInput"><span aria-hidden="true">⌕</span><input type="search" id="assuntosBuscaInput" placeholder="Pesquisar tópico ou anotação" autocomplete="off" oninput="filtrarAssuntos(this.value)"><kbd id="assuntosBuscaResultado">Todos</kbd></label>
-                    <select class="cycle-input topics-sort" id="assuntosOrdenacao" onchange="ordenarAssuntos(this.value)" aria-label="Ordenar tópicos">
-                        <option value="acao">Próxima ação</option>
-                        <option value="revisao">Próxima revisão</option>
-                        <option value="prioridade">Prioridade</option>
-                        <option value="nome">Nome A–Z</option>
-                    </select>
-                </div>
-                <div class="topics-filter-chips" role="group" aria-label="Filtrar tópicos">
-                    <button type="button" class="active" data-topic-filter="acao" aria-pressed="true" onclick="definirFiltroAssuntos('acao')">Próxima ação</button>
-                    <button type="button" data-topic-filter="todos" aria-pressed="false" onclick="definirFiltroAssuntos('todos')">Todos</button>
-                    <button type="button" data-topic-filter="novos" aria-pressed="false" onclick="definirFiltroAssuntos('novos')">Não iniciados</button>
-                    <button type="button" data-topic-filter="estudo" aria-pressed="false" onclick="definirFiltroAssuntos('estudo')">Em estudo</button>
-                    <button type="button" data-topic-filter="revisar" aria-pressed="false" onclick="definirFiltroAssuntos('revisar')">Revisar</button>
-                    <button type="button" data-topic-filter="dominados" aria-pressed="false" onclick="definirFiltroAssuntos('dominados')">Dominados</button>
-                </div>
-                <form id="formAddTopico" class="topics-add-form" onsubmit="adicionarTopico(event)">
-                    <input type="hidden" id="assuntosMateriaId">
-                    <input type="text" id="novoTopicoInput" class="cycle-input" required placeholder="Novo tópico ou conteúdo" autocomplete="off">
-                    <button type="submit" class="cycle-btn primary">Adicionar</button>
-                </form>
-                <div class="topics-control-workspace">
-                    <section class="topics-list-column" aria-label="Lista de tópicos">
-                        <div class="topics-list-heading"><strong>Rota de conteúdos</strong><small>Selecione um tópico para controlar</small></div>
-                        <ul class="task-list topics-organizer-list" id="listaAssuntos"></ul>
-                    </section>
-                    <aside class="topic-control-panel" id="topicControlPanel" aria-live="polite">
-                        <div class="topics-empty"><strong>Escolha um tópico</strong><small>Os controles de domínio e revisão aparecerão aqui.</small></div>
-                    </aside>
-                </div>
-            </div>
-        </div>
-
         <div class="modal-overlay" id="syllabusAiModal">
             <div class="modal-box syllabus-ai-modal">
                 <button type="button" class="modal-close" onclick="KingSubjectLab.closeSyllabus()" aria-label="Fechar">×</button>
@@ -1323,7 +1266,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-inline-subject-v1"></script>
+    <script src="script.js?v=20260922-no-subject-screen-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
     <script src="schedule.js?v=20260922-block-isolation-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>

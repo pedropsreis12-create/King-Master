@@ -474,7 +474,6 @@ function mostrarFraseMotivacional() {
 function showSection(sectionId) {
     const secao = document.getElementById(sectionId);
     if (!secao?.classList.contains('content-section')) return;
-    if (sectionId !== 'planejamento' && document.getElementById('planejamento')?.classList.contains('is-subject-workspace')) fecharModal('assuntosModal');
     fecharMenuMovel();
     document.getElementById('settingsPanel')?.classList.remove('active');
     document.getElementById('settingsToggleBtn')?.setAttribute('aria-expanded', 'false');
@@ -636,10 +635,7 @@ function toggleVisualMode() {
 // ==========================================
 let itemToDelete = null, deleteType = '';
 
-function fecharModal(id) {
-    document.getElementById(id)?.classList.remove('active');
-    if (id === 'assuntosModal') document.getElementById('planejamento')?.classList.remove('is-subject-workspace');
-}
+function fecharModal(id) { document.getElementById(id)?.classList.remove('active'); }
 
 function abrirModalDeletar(tipo, id, titulo, msg, rotuloAcao = 'Apagar', perigoso = true) {
     itemToDelete = id; 
@@ -2618,36 +2614,8 @@ function renderizarCiclo() {
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
         const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
-        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><button type="button" class="disc-title-button" onclick="abrirModalAssuntos(${i.id})" aria-label="Abrir ${nome}">${nome}</button><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="abrirModalAssuntos(${i.id})" aria-label="Abrir conteúdo de ${nome}" title="Abrir conteúdo">↗</button><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div></article>`;
+        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div></article>`;
     }).join('');
-}
-
-function abrirModalAssuntos(id) {
-    const mat = appData.cycleItems.find(m => m.id === id); if (!mat) return;
-    const workspace = document.getElementById('assuntosModal');
-    const mount = document.getElementById('subjectWorkspaceMount');
-    if (workspace.parentElement !== mount) {
-        mount.append(workspace);
-        workspace.classList.remove('modal-overlay');
-        workspace.classList.add('subject-workspace-inline');
-    }
-    showSection('planejamento');
-    document.getElementById('assuntosMateriaId').value = id; document.getElementById('assuntosModalTitle').textContent = mat.subject;
-    buscaAssuntosAtual = '';
-    assuntoSelecionadoIndice = null;
-    abaDetalheTopicoAtual = 'visao';
-    document.getElementById('assuntosBuscaInput').value = '';
-    document.getElementById('assuntosOrdenacao').value = ordenacaoAssuntosAtual;
-    document.querySelectorAll('[data-topic-filter]').forEach(botao => {
-        const ativo = botao.dataset.topicFilter === filtroAssuntosAtual;
-        botao.classList.toggle('active', ativo);
-        botao.setAttribute('aria-pressed', String(ativo));
-    });
-    let segs = 0; appData.historyItems.forEach(h => { if(h.materia.trim().toLowerCase() === mat.subject.trim().toLowerCase()) segs += h.tempoSegundos; });
-    document.getElementById('assuntosModalTimeValue').textContent = `${Math.floor(segs/3600)}h ${Math.floor((segs%3600)/60).toString().padStart(2,'0')}m`;
-    renderizarListaAssuntos(id);
-    document.getElementById('planejamento').classList.add('is-subject-workspace');
-    workspace.classList.add('active');
 }
 
 function filtrarAssuntos(valor = '') {
@@ -3628,14 +3596,12 @@ function obterContextoRevisaoRapida() {
     const agora = new Date();
     const bloco = obterBlocoCronogramaRevisao();
     const seletorSessao = document.getElementById('sessionCompleteModal')?.classList.contains('active') ? document.getElementById('sessionSubject')?.value : '';
-    const materiaId = bloco?.subjectId || seletorSessao || document.getElementById('activeSubjectSelect')?.value || document.getElementById('assuntosMateriaId')?.value || '';
+    const materiaId = bloco?.subjectId || seletorSessao || document.getElementById('activeSubjectSelect')?.value || '';
     const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId)) || null;
-    const topicoAberto = document.getElementById('assuntosModal')?.classList.contains('active') && Number.isInteger(assuntoSelecionadoIndice)
-        ? materia?.topicos?.[assuntoSelecionadoIndice]?.nome : '';
     const assuntoSessao = document.getElementById('sessionCompleteModal')?.classList.contains('active') ? document.getElementById('sessionTopic')?.value?.trim() : '';
     return {
         materia,
-        assunto: assuntoSessao || bloco?.topic || topicoAberto || '',
+        assunto: assuntoSessao || bloco?.topic || '',
         dataEstudo: dataLocalISO(agora),
         horaEstudo: agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         scheduleBlockId: bloco?.id || '',
@@ -5227,21 +5193,6 @@ function navegarAbasHub(event) {
     alternarAbasHub(abas[proxima].id === 'tab-ciclo' ? 'ciclo' : 'dominio');
 }
 
-function abrirTopicoPelaCentral(materiaId, topicoIndex) {
-    abrirModalAssuntos(materiaId);
-    if (!Number.isInteger(topicoIndex)) return;
-    filtroAssuntosAtual = 'todos';
-    buscaAssuntosAtual = '';
-    document.getElementById('assuntosBuscaInput').value = '';
-    document.querySelectorAll('[data-topic-filter]').forEach(botao => {
-        const ativo = botao.dataset.topicFilter === 'todos';
-        botao.classList.toggle('active', ativo);
-        botao.setAttribute('aria-pressed', String(ativo));
-    });
-    selecionarTopicoControle(materiaId, topicoIndex);
-    renderizarListaAssuntos(materiaId);
-}
-
 function renderizarMapaDominio() {
     const container = document.getElementById('mapaContainer');
     if (!container) return;
@@ -5275,7 +5226,7 @@ function renderizarMapaDominio() {
         const rotulos = { revisar: 'Revisar', novo: 'Começar', aprendendo: 'Continuar', consolidando: 'Praticar' };
         const revisao = item.estado === 'revisar' ? obterRevisaoAtivaTopico(item.materia, item.topico) : null;
         const detalhe = revisao ? rotuloDataRevisao(revisao.dataAlvo) : (item.topico.prioridade === 'alta' ? 'Prioridade alta' : `Nível ${item.nivel} de 3`);
-        return `<button type="button" class="domain-center-action" onclick="abrirTopicoPelaCentral(${item.materia.id},${item.indice})" aria-label="Abrir ${nome} em ${materia}"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Abrir'}</span><span aria-hidden="true">↗</span></button>`;
+        return `<div class="domain-center-action"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Acompanhar'}</span></div>`;
     }).join('') : '<p class="domain-center-empty-note">Todos os tópicos cadastrados estão dominados. Revise quando precisar ou adicione novos conteúdos.</p>';
     container.innerHTML = appData.cycleItems.map(materia => {
         const topicos = materia.topicos || [];
@@ -5286,7 +5237,7 @@ function renderizarMapaDominio() {
         const nomeMateria = escaparRevisaoHtml(materia.subject || 'Matéria');
         const distribuicao = [0, 1, 2, 3].map(nivel => topicos.filter(topico => obterNivelDominioTopico(topico) === nivel).length);
         const segmentos = distribuicao.map((quantidade, nivel) => quantidade ? `<span class="is-level-${nivel}" style="flex:${quantidade}" title="${['Não iniciados','Em estudo','Consolidando','Dominados'][nivel]}: ${quantidade}"></span>` : '').join('');
-        return `<article class="domain-center-subject" style="--subject-color:${cor}"><div class="domain-center-subject-head"><div><strong>${nomeMateria}</strong><small>${concluidos} de ${topicos.length} tópicos dominados${revisoes ? ` · ${revisoes} para revisar` : ''}</small></div><b>${pct}%</b></div><div class="domain-center-distribution" role="img" aria-label="${nomeMateria}: ${distribuicao[0]} não iniciados, ${distribuicao[1]} em estudo, ${distribuicao[2]} consolidando e ${distribuicao[3]} dominados">${segmentos || '<span class="is-empty"></span>'}</div><button type="button" onclick="abrirTopicoPelaCentral(${materia.id})">${topicos.length ? 'Ver tópicos e dados' : 'Adicionar tópicos'} <span aria-hidden="true">↗</span></button></article>`;
+        return `<article class="domain-center-subject" style="--subject-color:${cor}"><div class="domain-center-subject-head"><div><strong>${nomeMateria}</strong><small>${concluidos} de ${topicos.length} tópicos dominados${revisoes ? ` · ${revisoes} para revisar` : ''}</small></div><b>${pct}%</b></div><div class="domain-center-distribution" role="img" aria-label="${nomeMateria}: ${distribuicao[0]} não iniciados, ${distribuicao[1]} em estudo, ${distribuicao[2]} consolidando e ${distribuicao[3]} dominados">${segmentos || '<span class="is-empty"></span>'}</div><button type="button" onclick="editarMateriaCiclo(${materia.id})">Editar matéria <span aria-hidden="true">↗</span></button></article>`;
     }).join('');
 }
 

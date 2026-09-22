@@ -17,8 +17,8 @@
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260921-review-inbox-v1">
+    <link rel="stylesheet" href="sidebar-icons.css?v=20260922-icons-v1">
     <link rel="stylesheet" href="schedule.css?v=20260916-session-safe-v1">
-    <link rel="stylesheet" href="enem-coach.css?v=20260921-enem-coach-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -124,7 +124,6 @@
                 <button type="button" class="menu-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span class="nav-item-icon" aria-hidden="true">⌂</span><span class="nav-item-label"><strong>Hoje</strong><small>Foco e progresso</small></span></button>
                 <button type="button" class="menu-btn" data-section="agendamento" aria-controls="agendamento" onclick="showSection('agendamento')"><span class="nav-item-icon" aria-hidden="true">◷</span><span class="nav-item-label"><strong>Agenda</strong><small>Seu próximo bloco</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
                 <button type="button" class="menu-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Cronograma</strong><small>Planeje sua semana</small></span></button>
-                <button type="button" class="menu-btn" data-section="plano-enem" aria-controls="plano-enem" onclick="showSection('plano-enem')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Plano ENEM</strong><small>Estratégia e disciplina</small></span><span class="nav-count" id="navPlanBadge" hidden>!</span></button>
             </div>
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Aprender</span>
@@ -216,7 +215,7 @@
                 <label class="settings-select-row"><span><strong>Primeira revisão</strong><small>Prazo sugerido depois do estudo</small></span><select id="autoReviewDelaySelect"><option value="1">No dia seguinte</option><option value="3">Depois de 3 dias</option><option value="7">Depois de 7 dias</option><option value="14">Depois de 14 dias</option><option value="30">Depois de 30 dias</option></select></label>
             </div>
             <div class="settings-group">
-                <h3><span>✦</span> Treinador do QG</h3>
+                <h3><span>✦</span> Gemini do QG</h3>
                 <label class="settings-select-row"><span><strong>Apagar conversas</strong><small>Mensagens antigas somem automaticamente</small></span><select id="aiRetentionSelect"><option value="1">Depois de 24 horas</option><option value="7">Depois de 7 dias</option><option value="30">Depois de 30 dias</option></select></label>
                 <button type="button" class="cycle-btn settings-full-button" onclick="limparConversaIa()">Limpar conversa agora</button>
             </div>
@@ -230,30 +229,7 @@
 
     <main>
         <section id="dashboard" class="content-section active">
-            <div class="workspace-heading today-heading">
-                <div><span class="workspace-kicker">EXECUTE O PRÓXIMO PASSO</span><h1>Hoje</h1><p>Um plano claro para estudar sem a sensação de estar fazendo tudo errado.</p></div>
-                <button type="button" class="cycle-btn" onclick="showSection('plano-enem')">Abrir Plano ENEM</button>
-            </div>
-
-            <section class="today-command-center" id="todayCommandCenter" aria-labelledby="todayCommandTitle">
-                <div class="today-command-copy">
-                    <div class="today-command-eyebrow"><span id="todayCommandDate">HOJE</span><b id="todayModeBadge">META COMPLETA · 4H</b></div>
-                    <h2 id="todayCommandTitle">Seu próximo passo está sendo preparado</h2>
-                    <p id="todayCommandHint">O King Master usa seu cronograma, revisões e registros para escolher uma ação possível.</p>
-                    <div class="today-command-actions">
-                        <button type="button" class="today-primary-action" id="todayPrimaryAction" onclick="KingEnemCoach.runNextAction()">Começar agora <span aria-hidden="true">→</span></button>
-                        <button type="button" class="today-survival-action" id="todaySurvivalAction" onclick="KingEnemCoach.toggleSurvivalMode()">Ativar dia difícil</button>
-                    </div>
-                </div>
-                <div class="today-routine" aria-label="Roteiro de estudo de hoje">
-                    <article data-routine-step="1"><span>01</span><div><small>14:00–15:40</small><strong>Primeiro bloco</strong><em>Aprender e compreender</em></div></article>
-                    <i aria-hidden="true"></i>
-                    <article data-routine-step="2"><span>02</span><div><small>15:55–17:35</small><strong>Segundo bloco</strong><em>15–20 questões e correção</em></div></article>
-                    <i aria-hidden="true"></i>
-                    <article data-routine-step="3"><span>03</span><div><small>17:35–18:00</small><strong>Fechamento</strong><em>Erros, revisão e amanhã</em></div></article>
-                </div>
-                <div class="today-progress-line"><span><b id="todayStudiedTime">0m</b> estudados hoje</span><span><b id="todayGoalTime">4h</b> de meta</span><div><i id="todayGoalProgress"></i></div></div>
-            </section>
+            <h1>Foco e Execução</h1>
             
             <button type="button" class="widget dashboard-agenda-glance" onclick="showSection('agendamento')" aria-label="Abrir o Agendamento Diário">
                 <span class="dashboard-agenda-copy">
@@ -378,60 +354,6 @@
                         </table>
                     </div>
             </div>
-        </section>
-
-        <section id="plano-enem" class="content-section enem-plan-section">
-            <div class="workspace-heading enem-plan-heading">
-                <div><span class="workspace-kicker">MISSÃO UESC · DIREITO</span><h1>Plano ENEM</h1><p>Diagnóstico, rotina e disciplina reunidos em uma estratégia flexível para buscar uma nota de excelência.</p></div>
-                <button type="button" class="cycle-btn primary" onclick="KingEnemCoach.openDiagnostic()">Registrar diagnóstico</button>
-            </div>
-
-            <section class="enem-goal-hero">
-                <div><span>OBJETIVO PRINCIPAL</span><h2>Direito na UESC</h2><p>Preparação com ambição de nota competitiva para Medicina — sem confundir intensidade com desorganização.</p></div>
-                <div class="enem-goal-facts"><span><small>Ano escolar</small><strong>3º ano</strong></span><span><small>Janela diária</small><strong>14h–18h</strong></span><span><small>Questões por assunto</small><strong>15–20</strong></span><span><small>Redação</small><strong>1 por semana</strong></span></div>
-            </section>
-
-            <div class="enem-plan-grid">
-                <article class="widget diagnostic-card">
-                    <header><div><span class="workspace-kicker">PONTO DE PARTIDA</span><h2>Diagnóstico ENEM</h2></div><span class="diagnostic-status" id="diagnosticStatus">Ainda não iniciado</span></header>
-                    <p>Faça uma etapa por área. O resultado serve para ajustar prioridades, não para rotular sua capacidade.</p>
-                    <div class="diagnostic-area-list" id="diagnosticAreaList"></div>
-                    <div class="diagnostic-summary" id="diagnosticSummary"></div>
-                    <button type="button" class="cycle-btn primary" onclick="KingEnemCoach.openDiagnostic()">Registrar uma etapa</button>
-                </article>
-
-                <article class="widget routine-blueprint-card">
-                    <header><span class="workspace-kicker">ROTINA FLEXÍVEL</span><h2>Seu protocolo diário</h2><p>Nos dias bons, execução completa. Nos dias ruins, a meta mínima mantém sua identidade de estudante.</p></header>
-                    <div class="routine-blueprint-list">
-                        <span><b>1</b><strong>Conteúdo com objetivo</strong><small>Saiba o que precisa conseguir explicar ao final.</small></span>
-                        <span><b>2</b><strong>15–20 questões</strong><small>Transforme entendimento em evidência.</small></span>
-                        <span><b>3</b><strong>Correção ativa</strong><small>Separe conteúdo, interpretação, cálculo e atenção.</small></span>
-                        <span><b>4</b><strong>Revisões 1 · 7 · 21</strong><small>O intervalo muda conforme seu desempenho.</small></span>
-                    </div>
-                    <div class="minimum-day-card"><span aria-hidden="true">↘</span><div><strong>Meta de sobrevivência: 2 horas</strong><small>Dia reduzido não é dia abandonado.</small></div><button type="button" onclick="KingEnemCoach.toggleSurvivalMode()">Usar hoje</button></div>
-                </article>
-            </div>
-
-            <div class="enem-plan-grid discipline-layout">
-                <article class="widget discipline-card">
-                    <header><div><span class="workspace-kicker">CHECK-IN PRIVADO</span><h2>Painel de disciplina</h2></div><strong id="disciplineScore">0/4</strong></header>
-                    <p id="disciplineCoachMessage">Disciplina é cumprir o próximo passo mesmo sem vontade.</p>
-                    <div class="discipline-checklist" id="disciplineChecklist"></div>
-                    <div class="discipline-streak" id="disciplineStreak"></div>
-                </article>
-                <article class="widget commitment-card">
-                    <span class="workspace-kicker">COMPROMISSO REGISTRADO</span>
-                    <blockquote id="commitmentText">Às 14h eu começo antes de negociar comigo mesmo. O celular fica longe; nos dias ruins, cumpro ao menos duas horas.</blockquote>
-                    <div class="commitment-rules"><span><b>Celular</b> fora do alcance durante os blocos</span><span><b>Procrastinação</b> começar por apenas 10 minutos</span><span><b>Hábito pessoal</b> registrar gatilho sem culpa nem exposição</span></div>
-                    <button type="button" class="cycle-btn" onclick="KingEnemCoach.openCommitmentEditor()">Editar compromisso</button>
-                </article>
-            </div>
-
-            <section class="widget coach-contract-card">
-                <div><span class="workspace-kicker">TREINADOR FIRME</span><h2>O QG não deixa você se esconder atrás do planejamento</h2><p>Ele usa seus dados para cobrar ação concreta, mas nunca humilha nem inventa resultados.</p></div>
-                <div class="coach-contract-points"><span>Mostra a próxima ação</span><span>Detecta sessões adiadas</span><span>Distingue dia difícil de abandono</span><span>Cobra questões e correção</span></div>
-                <button type="button" class="cycle-btn primary" onclick="KingEnemCoach.askCoach()">Conversar com o treinador</button>
-            </section>
         </section>
 
         <!-- CRONOGRAMA SEMANAL -->
@@ -704,11 +626,6 @@
                 <div class="stat-card"><div class="stat-label">Maior força</div><div class="stat-value" id="red-forte" style="color: #34c759;">-</div></div>
                 <div class="stat-card"><div class="stat-label">Próximo foco</div><div class="stat-value" id="red-gargalo" style="color: #ff3b30;">-</div></div>
             </div>
-            <section class="writing-path widget" aria-labelledby="writingPathTitle">
-                <div class="writing-path-heading"><div><span class="workspace-kicker">UMA HABILIDADE POR VEZ</span><h2 id="writingPathTitle">Caminho da redação</h2><p>Aprenda por partes e feche a semana com uma redação completa.</p></div><strong id="writingWeeklyStatus">0/1 nesta semana</strong></div>
-                <div class="writing-path-steps" id="writingPathSteps"></div>
-                <div class="writing-path-action"><div><small>PRÓXIMO TREINO</small><strong id="writingNextStep">Faça sua redação diagnóstica</strong><span id="writingNextHint">Ela mostrará por onde começar sem adivinhação.</span></div><button type="button" class="cycle-btn primary" onclick="KingEnemCoach.advanceWritingPath()">Marcar etapa concluída</button></div>
-            </section>
             <div class="learning-insight-grid">
                 <div class="learning-insight widget">
                     <div class="learning-insight-heading"><div><span class="workspace-kicker">NOTA TOTAL</span><h2>Evolução recente</h2></div><strong id="redTrendCaption">Sem dados</strong></div>
@@ -1157,8 +1074,6 @@
                         </div>
                         <div class="error-image-preview" id="errorImagePreview"></div>
                         <p class="error-image-status" id="errorImageStatus" role="status"></p>
-                        <button type="button" class="error-ai-scan" id="errorAiScanButton" onclick="analisarImagemCadernoErroComIa()"><span aria-hidden="true">✦</span><span><strong>Preencher pela foto</strong><small>A IA identifica matéria, assunto e cria um rascunho para você conferir.</small></span><b aria-hidden="true">→</b></button>
-                        <div class="cycle-form-group error-personal-cause"><label class="cycle-label" for="errorCauseInput">Por que eu errei? <span>única reflexão obrigatória</span></label><textarea class="cycle-input" id="errorCauseInput" rows="2" maxlength="500" placeholder="Ex.: li rápido demais e não percebi que a pergunta pedia o valor final." required></textarea></div>
                         <div class="form-grid two">
                             <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta <span>(opcional)</span></label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
                             <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta <span>(opcional)</span></label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme."></textarea></div>
@@ -1294,7 +1209,7 @@
                     <input type="hidden" id="scheduleBlockId"><input type="hidden" id="scheduleBlockWeek">
                     <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockSubject">Matéria</label><select class="cycle-input" id="scheduleBlockSubject" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockKind">Tipo de foco</label><select class="cycle-input" id="scheduleBlockKind"><option value="teoria">Teoria</option><option value="questoes">Questões</option><option value="revisao">Revisão</option><option value="simulado">Simulado</option><option value="redacao">Redação</option></select></div></div>
                     <div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockTopic">Objetivo do bloco <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="scheduleBlockTopic" maxlength="120" placeholder="Ex.: Função quadrática — lista 2"></div>
-                    <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDay">Dia</label><select class="cycle-input" id="scheduleBlockDay" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStart">Começa</label><input type="time" class="cycle-input" id="scheduleBlockStart" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDuration">Duração</label><select class="cycle-input" id="scheduleBlockDuration"><option value="25">25 min</option><option value="40">40 min</option><option value="50">50 min</option><option value="60">1 hora</option><option value="90">1h30</option><option value="100" selected>1h40</option><option value="120">2 horas</option></select></div></div>
+                    <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDay">Dia</label><select class="cycle-input" id="scheduleBlockDay" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStart">Começa</label><input type="time" class="cycle-input" id="scheduleBlockStart" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDuration">Duração</label><select class="cycle-input" id="scheduleBlockDuration"><option value="25">25 min</option><option value="40">40 min</option><option value="50" selected>50 min</option><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option></select></div></div>
                     <div class="cycle-form-group schedule-status-field"><label class="cycle-label" for="scheduleBlockStatus">Situação</label><select class="cycle-input" id="scheduleBlockStatus"><option value="pending">Planejado</option><option value="running">Em andamento</option><option value="missed">Não realizado</option><option value="completed" disabled>Concluído e registrado</option></select></div>
                     <div class="cycle-modal-actions schedule-block-actions"><button type="button" class="cycle-btn subtle-danger" id="scheduleDeleteBlock" onclick="KingSchedule.deleteEditingBlock()" hidden>Excluir bloco</button><button type="submit" class="cycle-btn primary">Salvar bloco</button></div>
                 </form>
@@ -1312,42 +1227,24 @@
         <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registro?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="fecharModalDeletar()">Cancelar</button><button class="cycle-btn btn-danger" id="deleteConfirmAction" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
         <div class="modal-overlay onboarding-modal" id="onboardingModal"><div class="modal-box onboarding-box"><div class="onboarding-mark">KM</div><div class="cycle-modal-title">Seu QG está pronto</div><p class="modal-message">Três passos para começar sem se perder entre as ferramentas.</p><div class="onboarding-steps"><span><b>1</b><strong>Adicione suas matérias</strong><small>Monte o conteúdo que realmente estuda.</small></span><span><b>2</b><strong>Inicie um bloco</strong><small>O cronômetro salva o tempo e o XP.</small></span><span><b>3</b><strong>Revise seu avanço</strong><small>Use gráficos, missões e revisões.</small></span></div><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="concluirOnboarding(false)">Explorar primeiro</button><button class="cycle-btn primary" type="button" onclick="concluirOnboarding(true)">Adicionar primeira matéria</button></div></div></div>
 
-        <div class="modal-overlay" id="diagnosticModal">
-            <div class="modal-box diagnostic-modal-box">
-                <button type="button" class="modal-close" onclick="fecharModal('diagnosticModal')" aria-label="Fechar">×</button>
-                <span class="workspace-kicker">DIAGNÓSTICO PROGRESSIVO</span><div class="cycle-modal-title">Registrar etapa do ENEM</div>
-                <p class="modal-message">Use uma prova anterior ou um conjunto representativo. O objetivo é descobrir prioridades, não obter uma nota perfeita.</p>
-                <form id="diagnosticForm" onsubmit="KingEnemCoach.saveDiagnostic(event)">
-                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="diagnosticArea">Área</label><select class="cycle-input" id="diagnosticArea" required><option value="matematica">Matemática</option><option value="natureza">Ciências da Natureza</option><option value="linguagens">Linguagens</option><option value="humanas">Ciências Humanas</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="diagnosticDate">Data</label><input class="cycle-input" id="diagnosticDate" type="date" required></div></div>
-                    <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="diagnosticTotal">Questões</label><input class="cycle-input" id="diagnosticTotal" type="number" min="5" max="90" value="45" required oninput="KingEnemCoach.updateDiagnosticPreview()"></div><div class="cycle-form-group"><label class="cycle-label" for="diagnosticHits">Acertos</label><input class="cycle-input" id="diagnosticHits" type="number" min="0" value="0" required oninput="KingEnemCoach.updateDiagnosticPreview()"></div><div class="cycle-form-group"><label class="cycle-label" for="diagnosticBlanks">Em branco</label><input class="cycle-input" id="diagnosticBlanks" type="number" min="0" value="0" oninput="KingEnemCoach.updateDiagnosticPreview()"></div></div>
-                    <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="diagnosticTime">Tempo utilizado</label><div class="result-input-unit"><input class="cycle-input" id="diagnosticTime" type="number" min="1" value="90" required><span>min</span></div></div><div class="cycle-form-group"><label class="cycle-label" for="diagnosticGuess">Acertos no chute <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="diagnosticGuess" type="number" min="0" value="0"></div></div>
-                    <div class="cycle-form-group"><label class="cycle-label" for="diagnosticCause">Principal causa dos erros</label><select class="cycle-input" id="diagnosticCause"><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="tempo">Tempo e estratégia</option></select></div>
-                    <div class="diagnostic-live-preview" id="diagnosticPreview"><strong>0%</strong><span>de acertos confirmados</span></div>
-                    <div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('diagnosticModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar diagnóstico</button></div>
-                </form>
-            </div>
-        </div>
-
-        <div class="modal-overlay" id="commitmentModal"><div class="modal-box commitment-modal-box"><button type="button" class="modal-close" onclick="fecharModal('commitmentModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ACORDO COM VOCÊ MESMO</span><div class="cycle-modal-title">Editar compromisso</div><p class="modal-message">Escreva algo direto e executável. Este texto é privado e acompanha sua conta.</p><form onsubmit="KingEnemCoach.saveCommitment(event)"><div class="cycle-form-group"><label class="cycle-label" for="commitmentInput">Meu compromisso</label><textarea class="cycle-input" id="commitmentInput" rows="5" maxlength="280" required></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('commitmentModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar compromisso</button></div></form></div></div>
-
     </main>
 
     <button class="ai-qg-launcher" id="aiQgLauncher" type="button" aria-controls="aiQgPanel" aria-expanded="false" onclick="toggleIaQg()">
         <span class="ai-qg-launcher-orb" aria-hidden="true">✦</span>
-        <span><strong>Treinador do QG</strong><small>Firme, direto e conectado</small></span>
+        <span><strong>Gemini do QG</strong><small>Inteligência conectada</small></span>
     </button>
 
     <aside class="ai-qg-panel" id="aiQgPanel" aria-label="IA do QG" aria-hidden="true">
         <header class="ai-qg-header">
             <div class="ai-qg-avatar" aria-hidden="true">✦</div>
-            <div><strong>Treinador do QG</strong><small><i></i> Analisa, cobra e age no King Master</small></div>
+            <div><strong>Gemini do QG</strong><small><i></i> Conversa, analisa e age no King Master</small></div>
             <button type="button" aria-label="Fechar IA do QG" onclick="toggleIaQg(false)">×</button>
         </header>
         <div class="ai-qg-capabilities" aria-label="Sugestões de comandos">
-            <button type="button" onclick="usarSugestaoIa('O que devo estudar agora? Dê uma única ação concreta.')">Próxima ação</button>
-            <button type="button" onclick="usarSugestaoIa('Seja firme: onde estou falhando hoje?')">Cobrar meu dia</button>
-            <button type="button" onclick="usarSugestaoIa('Analise meu diagnóstico e minhas matérias fracas.')">Analisar diagnóstico</button>
-            <button type="button" onclick="usarSugestaoIa('Organize minhas revisões de hoje.')">Organizar revisões</button>
+            <button type="button" onclick="usarSugestaoIa('Adicione a matéria Matemática')">+ Matéria</button>
+            <button type="button" onclick="usarSugestaoIa('O que devo estudar agora?')">Plano agora</button>
+            <button type="button" onclick="usarSugestaoIa('Como está meu progresso?')">Meu progresso</button>
+            <button type="button" onclick="usarSugestaoIa('Abra minhas revisões')">Abrir revisões</button>
         </div>
         <div class="ai-qg-messages" id="aiQgMessages" role="log" aria-live="polite"></div>
         <div class="ai-qg-thinking" id="aiQgThinking" hidden><i></i><i></i><i></i><span>Analisando e executando</span></div>
@@ -1358,7 +1255,7 @@
                 <button class="ai-qg-voice" id="aiQgVoice" type="button" aria-label="Falar comando" onclick="ouvirComandoIa()">◉</button>
                 <button class="ai-qg-send" type="submit" aria-label="Enviar comando">➜</button>
             </div>
-            <small>O treinador usa seus dados atuais e mostra cada alteração antes de aplicar.</small>
+            <small>O Gemini mostra cada alteração antes de aplicar. Você também pode desfazer a última ação.</small>
         </form>
     </aside>
 
@@ -1369,14 +1266,14 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260921-enem-coach-v1"></script>
-    <script src="schedule.js?v=20260921-enem-coach-v1"></script>
-    <script src="enem-coach.js?v=20260921-enem-coach-v1"></script>
+    <script src="script.js?v=20260921-review-inbox-v1"></script>
+    <script src="sidebar-icons.js?v=20260922-icons-v1"></script>
+    <script src="schedule.js?v=20260921-review-inbox-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
-    <script src="ai-assistant.js?v=20260921-enem-coach-v1"></script>
+    <script src="ai-assistant.js?v=20260921-review-inbox-v1"></script>
     <script src="productivity.js?v=20260916-session-safe-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260921-enem-coach-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20260921-review-inbox-v1"></script>
 </body>
 </html>

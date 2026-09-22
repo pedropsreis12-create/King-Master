@@ -14,8 +14,7 @@ test('error notebook is a first-class saved section with a guided entry form', (
     assert.match(html, /showSection\('caderno-erros'\)/);
     assert.match(html, /id="caderno-erros"/);
     assert.match(html, /id="errorNotebookForm"/);
-    assert.match(html, /id="errorCauseInput"[^>]+required/);
-    assert.match(html, /id="errorAiScanButton"/);
+    assert.doesNotMatch(html, /id="errorCauseInput"/);
     assert.match(html, /id="errorRuleInput"/);
     assert.match(html, /id="errorRuleImageInput"/);
     assert.match(html, /Minha resposta <span>\(opcional\)<\/span>/);

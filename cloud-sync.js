@@ -330,10 +330,7 @@ if (!firebaseConfigured) {
     };
 
     const firebaseAI = aiSdk.getAI(firebaseApp, { backend: new aiSdk.GoogleAIBackend() });
-    const systemInstruction = `Você é o Treinador do QG, tutor e assistente pessoal de estudos dentro do King Master. Responda em português do Brasil, com clareza, iniciativa e atenção ao que o usuário realmente perguntou.
-O estudante está no 3º ano do ensino médio e busca Direito na UESC com ambição de nota de excelência. A rotina preferida é flexível, normalmente das 14h às 18h, com dois blocos de 1h40, 15 a 20 questões após o conteúdo, fechamento do dia e meta mínima de 2h em dias ruins. Use o planoEnem do contexto como fonte atualizada.
-Quando o usuário pedir cobrança, plano de hoje, disciplina ou disser que está procrastinando, adote um tom firme, direto e respeitoso: confronte a diferença entre intenção e execução usando dados reais, elimine desculpas vagas e termine com uma única próxima ação pequena. Nunca humilhe, moralize hábitos pessoais ou confunda sofrimento com preguiça. Sugira apoio profissional quando houver sofrimento, perda de controle ou risco.
-Não recomende apenas assistir aulas. Um estudo completo deve produzir evidência: objetivo claro, conteúdo, 15–20 questões, correção por causa do erro e revisão. Use revisões em 1, 7 e 21 dias como base, ajustando quando o desempenho justificar. Trate redação como habilidade construída por partes e incentive uma produção completa por semana.
+    const systemInstruction = `Você é o Gemini do QG, tutor e assistente pessoal de estudos dentro do King Master. Responda em português do Brasil, com clareza, iniciativa e atenção ao que o usuário realmente perguntou.
 Você pode ensinar assuntos, resolver exercícios, explicar erros, montar planos, conversar e operar as ferramentas do aplicativo. Não transforme toda pergunta numa lista de comandos nem repita uma apresentação genérica.
 Use o histórico para entender continuações como "explique melhor", "agora faça para Física" e "sim". Adapte a profundidade ao pedido: uma pergunta simples merece resposta curta; uma dúvida difícil merece explicação, exemplo resolvido e uma forma de conferir o resultado. Raciocine e confira contas antes de responder; mostre somente a explicação útil ao aluno.
 Consulte o CONTEXTO ATUAL para fatos pessoais e estudo, que prevalece sobre dados antigos da conversa. Use minutos de hoje, meta, sessões, revisões vencidas e desempenho para sugerir prioridades concretas e viáveis. Não trate ausência de questões como 0% de conhecimento. Se faltarem registros, diga a limitação e ainda ofereça um plano inicial. Não invente notas, horários livres, editais, navegação na internet, arquivos ou resultados.
@@ -385,27 +382,6 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
 
     window.kingGemini = {
         available: true,
-        async analyzeStudyImage(dataUrl, subjects = []) {
-            if (!await appCheckReady) await appCheckSdk.getToken(appCheck, false);
-            const match = String(dataUrl || '').match(/^data:(image\/(?:png|jpeg|webp));base64,(.+)$/);
-            if (!match) throw new Error('A imagem não está em um formato compatível.');
-            const prompt = `Analise a foto de uma questão de estudo. Responda SOMENTE com JSON válido, sem markdown, usando exatamente estas chaves: materia, assunto, origem, tipo, questao, respostaCorreta, regra.\n
-Matérias cadastradas: ${subjects.join(', ') || 'nenhuma'}. Prefira exatamente um desses nomes quando houver correspondência.\n
-tipo deve ser um de: conteudo, interpretacao, calculo, atencao, estrategia.\n
-questao deve resumir ou transcrever somente o necessário. respostaCorreta deve ser curta. regra deve ser uma regra anti-erro concreta em uma frase. Não invente texto ilegível; use string vazia quando não puder identificar.`;
-            const result = await modelosGemini.tutor.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType: match[1], data: match[2] } }] }] }, { timeout: 22000 });
-            const response = await result.response;
-            const raw = String(response.text() || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
-            let parsed;
-            try { parsed = JSON.parse(raw); }
-            catch { throw new Error('A IA leu a imagem, mas não conseguiu organizar os dados. Tente uma foto mais nítida.'); }
-            return {
-                materia: String(parsed.materia || '').slice(0, 60), assunto: String(parsed.assunto || '').slice(0, 80),
-                origem: String(parsed.origem || '').slice(0, 80), tipo: String(parsed.tipo || 'conteudo'),
-                questao: String(parsed.questao || '').slice(0, 1200), respostaCorreta: String(parsed.respostaCorreta || '').slice(0, 900),
-                regra: String(parsed.regra || '').slice(0, 240)
-            };
-        },
         async send(message, context, options = {}) {
             if (!window.KingMasterAI?.executeTool) throw new Error('As ferramentas do King Master ainda não estão prontas.');
             const actions = [];

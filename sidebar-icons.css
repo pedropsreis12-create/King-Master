@@ -1,0 +1,19 @@
+.nav-item-icon svg,
+.mobile-dock .dock-btn > svg {
+    width: 18px;
+    height: 18px;
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.nav-item-icon {
+    border-radius: 10px !important;
+}
+
+.menu-btn.active .nav-item-icon {
+    box-shadow: 0 5px 14px rgba(var(--accent-rgb), .18);
+}

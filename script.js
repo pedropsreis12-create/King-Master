@@ -46,15 +46,7 @@ const defaultAppData = {
     onboardingCompleted: false,
     accessibility: { fontScale: 'normal', highContrast: false, motionMode: 'auto' },
     studyLogging: { autoReview: true, reviewDelayDays: 1 },
-    studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], blockMinutes: 100, pauseMinutes: 15, closingMinutes: 25, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
-    enemPlan: {
-        version: 1,
-        profile: { schoolYear: 3, goalCourse: 'Direito', goalUniversity: 'UESC', ambition: 'Nota de excelência', strongSubjects: ['Matemática', 'Física', 'Biologia'], weakSubjects: ['Sociologia', 'Filosofia', 'História'] },
-        routine: { startTime: '14:00', endTime: '18:00', blockMinutes: 100, pauseMinutes: 15, closingMinutes: 25, fullGoalMinutes: 240, minimumGoalMinutes: 120, questionsMin: 15, questionsMax: 20, reviewIntervals: [1, 7, 21] },
-        diagnosticAttempts: [],
-        discipline: { coachMode: 'firm', commitment: 'Às 14h eu começo antes de negociar comigo mesmo. O celular fica longe; nos dias ruins, cumpro ao menos duas horas.', checkins: {}, survivalDates: [] },
-        writing: { weeklyTarget: 1, stage: 0 }
-    },
+    studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
     activeScheduleBlock: null,
     aiSettings: { retentionDays: 7 },
     aiConversation: [],
@@ -125,21 +117,6 @@ if (!appData.studySchedule.settings || typeof appData.studySchedule.settings !==
 appData.studySchedule.settings = { ...defaultAppData.studySchedule.settings, ...appData.studySchedule.settings };
 if (!appData.studySchedule.weeks || typeof appData.studySchedule.weeks !== 'object' || Array.isArray(appData.studySchedule.weeks)) appData.studySchedule.weeks = {};
 if (!Array.isArray(appData.studySchedule.suggestions)) appData.studySchedule.suggestions = [];
-const criandoPlanoEnem = !appData.enemPlan || typeof appData.enemPlan !== 'object';
-if (criandoPlanoEnem) {
-    appData.enemPlan = JSON.parse(JSON.stringify(defaultAppData.enemPlan));
-    appData.studySchedule.settings = { ...appData.studySchedule.settings, startTime: '14:00', blockMinutes: 100, pauseMinutes: 15, closingMinutes: 25, maxSubjectsPerDay: 2 };
-    appData.dailyGoalMinutes = 240;
-}
-appData.enemPlan = { ...defaultAppData.enemPlan, ...appData.enemPlan };
-appData.enemPlan.profile = { ...defaultAppData.enemPlan.profile, ...(appData.enemPlan.profile || {}) };
-appData.enemPlan.routine = { ...defaultAppData.enemPlan.routine, ...(appData.enemPlan.routine || {}) };
-appData.enemPlan.discipline = { ...defaultAppData.enemPlan.discipline, ...(appData.enemPlan.discipline || {}) };
-appData.enemPlan.writing = { ...defaultAppData.enemPlan.writing, ...(appData.enemPlan.writing || {}) };
-if (!Array.isArray(appData.enemPlan.diagnosticAttempts)) appData.enemPlan.diagnosticAttempts = [];
-if (!appData.enemPlan.discipline.checkins || typeof appData.enemPlan.discipline.checkins !== 'object') appData.enemPlan.discipline.checkins = {};
-if (!Array.isArray(appData.enemPlan.discipline.survivalDates)) appData.enemPlan.discipline.survivalDates = [];
-if (Number(appData.enemPlan.version || 0) < 1) appData.enemPlan.version = 1;
 if (!appData.activeScheduleBlock || typeof appData.activeScheduleBlock !== 'object') appData.activeScheduleBlock = null;
 if (!appData.aiSettings || typeof appData.aiSettings !== 'object') appData.aiSettings = { ...defaultAppData.aiSettings };
 appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
@@ -187,7 +164,6 @@ function saveAppData() {
     if (timerPersistenceReady) persistTimerCheckpoint();
     updateDashboardStats(); 
     atualizarIndicadoresNavegacao();
-    window.KingEnemCoach?.render?.();
 }
 
 window.kingMasterCloudBridge = {
@@ -402,7 +378,6 @@ function showSection(sectionId) {
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
-    if(sectionId === 'plano-enem' || sectionId === 'dashboard' || sectionId === 'redacao') window.KingEnemCoach?.render?.();
     atualizarIndicadoresNavegacao();
 }
 
@@ -423,9 +398,6 @@ function atualizarIndicadoresNavegacao() {
     aplicar('navAgendaBadge', compromissosHoje);
     aplicar('navReviewBadge', revisoesDevidas);
     aplicar('navErrorBadge', errosDevidos);
-    const planoPendente = !(appData.enemPlan?.diagnosticAttempts || []).length;
-    const planoBadge = document.getElementById('navPlanBadge');
-    if (planoBadge) planoBadge.hidden = !planoPendente;
 }
 
 function toggleSettings() {
@@ -1685,7 +1657,7 @@ function criarRevisaoAutomaticaRegistro(materia, assunto, dias = 1, origem = 'se
         && item.dataAlvo === dataAlvo);
     if (duplicada) return false;
     appData.revisoesItems.push(normalizarItemRevisao({ id: Date.now() + Math.floor(Math.random() * 1000), materia: materiaSegura, assunto: assuntoSeguro,
-        motivos: ['reforcar'], dataEstudo: dataLocalISO(new Date()), dataAlvo, origem, tags: [], spacedPlan: true, repetitionIndex: 0, atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() }));
+        motivos: ['reforcar'], dataEstudo: dataLocalISO(new Date()), dataAlvo, origem, tags: [], atualizadoEm: Date.now(), status: 'pendente', criadoEm: Date.now() }));
     return true;
 }
 
@@ -3414,8 +3386,6 @@ function normalizarItemRevisao(item = {}) {
         tags: [...new Set((Array.isArray(item.tags) ? item.tags : []).map(String).filter(Boolean).slice(0, 12))],
         status,
         estimativaMin: Math.max(1, Math.min(60, Number(item.estimativaMin) || 5)),
-        spacedPlan: item.spacedPlan !== false,
-        repetitionIndex: Math.max(0, Math.min(2, Number(item.repetitionIndex) || 0)),
         historicoRevisoes: Array.isArray(item.historicoRevisoes) ? item.historicoRevisoes.slice(-20) : [],
         criadoEm,
         atualizadoEm: Number(item.atualizadoEm) || criadoEm,
@@ -3666,7 +3636,7 @@ async function salvarRevisao(e) {
         if (indice < 0) return;
         appData.revisoesItems[indice] = normalizarItemRevisao({ ...appData.revisoesItems[indice], ...dados });
     } else {
-        appData.revisoesItems.push(normalizarItemRevisao({ id: idRegistro, ...dados, spacedPlan: true, repetitionIndex: 0, status: 'pendente', criadoEm: Date.now() }));
+        appData.revisoesItems.push(normalizarItemRevisao({ id: idRegistro, ...dados, status: 'pendente', criadoEm: Date.now() }));
     }
     saveAppData();
     renderizarRevisoes();
@@ -3691,17 +3661,10 @@ function marcarRevisao(id, novoStatus) {
     item.status = novoStatus;
     item.atualizadoEm = Date.now();
     item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: novoStatus === 'revisado' ? 'concluida' : 'ainda-fraca', em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
-    let proximaEtapa = false;
-    if (novoStatus === 'revisado' && item.spacedPlan !== false && Number(item.repetitionIndex || 0) < 2) {
-        const atrasos = [6, 14];
-        item.repetitionIndex = Number(item.repetitionIndex || 0) + 1;
-        item.dataAlvo = dataRevisaoComDias(atrasos[item.repetitionIndex - 1] || 7);
-        item.status = 'pendente';
-        proximaEtapa = true;
-    } else if (novoStatus === 'revisado') item.revisadoEm = Date.now();
+    if (novoStatus === 'revisado') item.revisadoEm = Date.now();
     saveAppData();
     renderizarRevisoes();
-    showToast(novoStatus === 'fraco' ? 'Revisão voltou à fila como ainda fraca.' : proximaEtapa ? `✓ Etapa concluída. Próxima revisão no ciclo de ${Number(item.repetitionIndex) === 1 ? '7' : '21'} dias.` : 'Revisão concluída e preservada no histórico.');
+    showToast(novoStatus === 'fraco' ? 'Revisão voltou à fila como ainda fraca.' : 'Revisão concluída e preservada no histórico.');
 }
 
 function adiarRevisao(id, dias = 1) {
@@ -4087,8 +4050,7 @@ function renderizarRevisoes() {
         const acoesDeFluxo = revisado
             ? `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
             : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button><button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`;
-        const ciclo = item.spacedPlan !== false ? `<span class="revision-badge review-cycle-badge">Ciclo ${Math.min(3, Number(item.repetitionIndex || 0) + 1)}/3 · 1–7–21</span>` : '';
-        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>Adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge">${origemTexto}</span>${ciclo}<span class="revision-badge review-due-badge">Próxima revisão: ${formatarPrazoRevisao(item)}</span></div></div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></article>`;
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>Adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge">${origemTexto}</span><span class="revision-badge review-due-badge">Próxima revisão: ${formatarPrazoRevisao(item)}</span></div></div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></article>`;
     }).join('');
     carregarMiniaturasRevisao();
     renderDashboardRevisoes();
@@ -4239,36 +4201,6 @@ async function processarImagensCadernoErro(files, contexto = 'question') {
         if (imagens.length > vagas) showToast(`O limite é de 4 imagens por registro. ${imagens.length - vagas} não ${imagens.length - vagas === 1 ? 'foi adicionada' : 'foram adicionadas'}.`, true);
     } catch (error) {
         definirStatusImagemCadernoErro(error.message || 'Não foi possível preparar a imagem.', true, contexto);
-    }
-}
-
-async function analisarImagemCadernoErroComIa() {
-    const botao = document.getElementById('errorAiScanButton');
-    const imagem = cadernoErroImagensRascunho.find(item => item.context !== 'rule');
-    if (!imagem) return showToast('Anexe primeiro uma foto da questão.', true);
-    if (!window.kingGemini?.analyzeStudyImage) return showToast('A leitura inteligente ainda está conectando. Aguarde um instante.', true);
-    if (botao) { botao.disabled = true; botao.classList.add('loading'); botao.querySelector('strong').textContent = 'Lendo a questão…'; }
-    definirStatusImagemCadernoErro('A IA está identificando matéria, assunto e pontos úteis.');
-    try {
-        const completa = imagem.dataUrl ? imagem : await obterImagemCadernoErro(imagem.id);
-        const resultado = await window.kingGemini.analyzeStudyImage(completa.dataUrl, appData.cycleItems.map(item => item.subject));
-        const materia = appData.cycleItems.find(item => normalizarRevisaoTexto(item.subject) === normalizarRevisaoTexto(resultado.materia))
-            || appData.cycleItems.find(item => normalizarRevisaoTexto(resultado.materia).includes(normalizarRevisaoTexto(item.subject)) || normalizarRevisaoTexto(item.subject).includes(normalizarRevisaoTexto(resultado.materia)));
-        if (materia) document.getElementById('errorSubjectInput').value = materia.subject;
-        if (resultado.assunto) document.getElementById('errorTopicInput').value = resultado.assunto.slice(0, 80);
-        if (resultado.origem) document.getElementById('errorSourceInput').value = resultado.origem.slice(0, 80);
-        if (CADERNO_ERROS_TIPOS[resultado.tipo]) document.getElementById('errorTypeInput').value = resultado.tipo;
-        if (resultado.questao) document.getElementById('errorQuestionInput').value = resultado.questao.slice(0, 1200);
-        if (resultado.respostaCorreta) document.getElementById('errorCorrectInput').value = resultado.respostaCorreta.slice(0, 900);
-        if (resultado.regra) document.getElementById('errorRuleInput').value = resultado.regra.slice(0, 240);
-        definirStatusImagemCadernoErro('Rascunho preenchido. Confira os dados e explique somente por que você errou.');
-        document.getElementById('errorCauseInput')?.focus();
-        showToast('✦ Foto analisada. Agora registre por que você errou.');
-    } catch (error) {
-        definirStatusImagemCadernoErro(error.message || 'Não foi possível analisar esta foto.', true);
-        showToast('Não consegui ler a foto. Você ainda pode preencher o registro manualmente.', true);
-    } finally {
-        if (botao) { botao.disabled = false; botao.classList.remove('loading'); botao.querySelector('strong').textContent = 'Preencher pela foto'; }
     }
 }
 
@@ -4426,7 +4358,6 @@ function abrirModalCadernoErro(id = null) {
         document.getElementById('errorQuestionInput').value = item.questao;
         document.getElementById('errorAttemptInput').value = item.minhaResposta;
         document.getElementById('errorCorrectInput').value = item.respostaCorreta;
-        document.getElementById('errorCauseInput').value = item.causa;
         document.getElementById('errorRuleInput').value = item.regra;
     }
     document.getElementById('errorNotebookModal').classList.add('active');
@@ -4446,11 +4377,10 @@ async function salvarCadernoErro(event) {
         questao: document.getElementById('errorQuestionInput').value.trim(),
         minhaResposta: document.getElementById('errorAttemptInput').value.trim(),
         respostaCorreta: document.getElementById('errorCorrectInput').value.trim(),
-        causa: document.getElementById('errorCauseInput').value.trim(),
         regra: document.getElementById('errorRuleInput').value.trim(),
         atualizadoEm: Date.now()
     };
-    if (!dados.materia || !dados.assunto || !dados.questao || !dados.regra || !dados.causa) return showToast('Confira os dados identificados e explique por que você errou.', true);
+    if (!dados.materia || !dados.assunto || !dados.questao || !dados.regra) return showToast('Preencha matéria, assunto, questão e regra anti-erro.', true);
     if (submit) { submit.disabled = true; submit.textContent = cadernoErroImagensRascunho.some(imagem => imagem.nova) ? 'Enviando imagens…' : 'Salvando…'; }
     try {
         const imagensSalvas = [];

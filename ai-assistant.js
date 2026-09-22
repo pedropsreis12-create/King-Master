@@ -11,7 +11,6 @@ const CORES_IA = {
 
 const ROTAS_IA = {
     painel: 'dashboard', inicio: 'dashboard', cronometro: 'dashboard',
-    plano: 'plano-enem', estrategia: 'plano-enem', disciplina: 'plano-enem', diagnostico: 'plano-enem',
     materias: 'planejamento', materia: 'planejamento', hub: 'planejamento',
     agenda: 'agendamento', agendamento: 'agendamento', calendario: 'agendamento',
     revisoes: 'revisoes', revisao: 'revisoes', simulados: 'simulados', simulado: 'simulados',
@@ -331,20 +330,6 @@ function contextoGeminiIa(pedido = '') {
             minutosNestaSemana: Math.round((appData.weeklyChart || []).reduce((total, segundos) => total + (Number(segundos) || 0), 0) / 60),
             metaDiariaMinutos: appData.dailyGoalMinutes || 60
         },
-        planoEnem: {
-            objetivo: `${appData.enemPlan?.profile?.goalCourse || 'Direito'} na ${appData.enemPlan?.profile?.goalUniversity || 'UESC'}`,
-            anoEscolar: appData.enemPlan?.profile?.schoolYear || 3,
-            janelaDeEstudo: `${appData.enemPlan?.routine?.startTime || '14:00'}–${appData.enemPlan?.routine?.endTime || '18:00'}`,
-            blocosMinutos: appData.enemPlan?.routine?.blockMinutes || 100,
-            metaMinimaMinutos: appData.enemPlan?.routine?.minimumGoalMinutes || 120,
-            questoesPorAssunto: `${appData.enemPlan?.routine?.questionsMin || 15}–${appData.enemPlan?.routine?.questionsMax || 20}`,
-            revisoesDias: appData.enemPlan?.routine?.reviewIntervals || [1, 7, 21],
-            materiasFortes: appData.enemPlan?.profile?.strongSubjects || [],
-            materiasFracas: appData.enemPlan?.profile?.weakSubjects || [],
-            modoTreinador: appData.enemPlan?.discipline?.coachMode || 'firm',
-            diagnosticos: (appData.enemPlan?.diagnosticAttempts || []).slice(-8),
-            checkinHoje: appData.enemPlan?.discipline?.checkins?.[hoje] || {}
-        },
         materias: materiasDoContexto.map(item => ({
             nome: item.subject,
             minutos: item.executedMin || 0,
@@ -654,7 +639,7 @@ function recomendacaoEstudoIa() {
     });
     const alvo = ordenadas[0];
     const topico = (alvo.topicos || []).find(item => !item.concluido);
-    return `Minha prioridade para agora é ${alvo.subject}${topico ? `, começando por “${topico.nome}”` : ''}. Faça um bloco de 1h40 e finalize com 15 a 20 questões para transformar o estudo em evidência.`;
+    return `Minha prioridade para agora é ${alvo.subject}${topico ? `, começando por “${topico.nome}”` : ''}. Faça um bloco de 25 minutos e depois registre 10 questões para eu recalcular sua prioridade.`;
 }
 
 function respostaAjudaIa() {

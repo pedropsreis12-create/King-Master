@@ -2,11 +2,13 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, script, usability, style] = await Promise.all([
+const [html, script, usability, style, sidebarIcons, sidebarIconStyles] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../script.js', import.meta.url), 'utf8'),
   readFile(new URL('../usability.css', import.meta.url), 'utf8'),
-  readFile(new URL('../style.css', import.meta.url), 'utf8')
+  readFile(new URL('../style.css', import.meta.url), 'utf8'),
+  readFile(new URL('../sidebar-icons.js', import.meta.url), 'utf8'),
+  readFile(new URL('../sidebar-icons.css', import.meta.url), 'utf8')
 ]);
 
 test('primary navigation is grouped by study intent and identifies the current destination', () => {
@@ -40,4 +42,14 @@ test('discard confirmation stays above the session form that opened it', () => {
   assert.match(usability, /\.session-complete-overlay \{ z-index:\s*1500/);
   assert.match(style, /#deleteConfirmModal \{ z-index:\s*1800/);
   assert.match(style, /body:has\(#deleteConfirmModal\.active\)[^{]+\{[^}]*pointer-events:\s*none/);
+});
+
+test('sidebar keeps the approved coherent vector icon family', () => {
+  assert.match(html, /sidebar-icons\.css\?v=20260922-icons-v1/);
+  assert.match(html, /sidebar-icons\.js\?v=20260922-icons-v1/);
+  for (const section of ['dashboard', 'agendamento', 'cronograma', 'planejamento', 'revisoes', 'caderno-erros', 'simulados', 'redacao', 'historico', 'perfil']) {
+    assert.match(sidebarIcons, new RegExp(`(?:'${section}'|${section}):`));
+  }
+  assert.match(sidebarIcons, /viewBox="0 0 24 24"/);
+  assert.match(sidebarIconStyles, /\.nav-item-icon svg/);
 });

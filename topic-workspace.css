@@ -1,0 +1,48 @@
+.topic-nav-slot { position: relative; margin: -3px 0 6px 17px; padding-left: 10px; border-left: 2px solid rgba(var(--accent-rgb), .28); }
+.subject-chapters-link { width: 100%; margin-top: 14px; padding: 11px 13px; border: 1px solid rgba(var(--accent-rgb), .25); border-radius: 11px; background: rgba(var(--accent-rgb), .07); color: var(--text-main); font: 750 .72rem Poppins, sans-serif; text-align: left; cursor: pointer; }
+.subject-chapters-link:hover, .subject-chapters-link:focus-visible { border-color: var(--accent-color); background: rgba(var(--accent-rgb), .14); }
+.subject-chapters-link:disabled { opacity: .55; cursor: default; }
+.topic-nav-slot[hidden], .topic-workspace-panel[hidden] { display: none !important; }
+nav .topic-nav-button { width: 100%; padding-right: 34px; background: rgba(var(--accent-rgb), .045); }
+.topic-nav-button .nav-item-icon { font-size: .8rem; }
+.topic-nav-button .nav-item-label { min-width: 0; }
+.topic-nav-button .nav-item-label strong, .topic-nav-button .nav-item-label small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topic-nav-close { position: absolute; z-index: 1; top: 50%; right: 7px; width: 26px; height: 26px; transform: translateY(-50%); border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font: 700 1.1rem Poppins, sans-serif; cursor: pointer; }
+.topic-nav-close:hover, .topic-nav-close:focus-visible { background: rgba(var(--accent-rgb), .12); color: var(--text-main); }
+.topic-workspace-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 24px; }
+.topic-workspace-heading h1 { margin: 6px 0 5px; color: var(--text-main); font-size: clamp(1.4rem, 2.8vw, 2.2rem); line-height: 1.2; overflow-wrap: anywhere; }
+.topic-workspace-heading p { margin: 0; color: var(--text-muted); font-size: .78rem; line-height: 1.55; }
+.topic-workspace-heading .chapter-back { margin-bottom: 14px; font-size: .73rem; }
+.topic-workspace-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0 14px; }
+.topic-workspace-tabs button { min-height: 42px; padding: 9px 16px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); color: var(--text-muted); font: 750 .76rem Poppins, sans-serif; cursor: pointer; }
+.topic-workspace-tabs button:hover, .topic-workspace-tabs button:focus-visible { border-color: var(--accent-color); color: var(--text-main); }
+.topic-workspace-tabs button[aria-selected="true"] { border-color: rgba(var(--accent-rgb), .45); background: rgba(var(--accent-rgb), .11); color: var(--text-main); }
+.topic-workspace-top-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.topic-workspace-context, .topic-workspace-review, .topic-workspace-history-card { min-width: 0; padding: 22px; }
+.topic-workspace-context h2, .topic-workspace-review h2, .topic-workspace-history-card h2 { margin: 8px 0 6px; color: var(--text-main); font-size: 1.06rem; line-height: 1.3; }
+.topic-workspace-context p, .topic-workspace-review p { min-height: 40px; margin: 0 0 16px; color: var(--text-muted); font-size: .72rem; line-height: 1.65; }
+.topic-workspace-context label { display: block; margin-bottom: 7px; color: var(--text-main); font-size: .68rem; font-weight: 800; }
+.topic-workspace-context textarea { width: 100%; min-height: 95px; padding: 13px; resize: vertical; border: 1px solid var(--border-color); border-radius: 12px; outline: 0; background: var(--hover-bg); color: var(--text-main); font: 500 .76rem/1.6 Poppins, sans-serif; }
+.topic-workspace-context textarea:focus { border-color: var(--accent-color); }
+.topic-workspace-context > small { display: block; margin-top: 6px; color: var(--text-muted); font-size: .64rem; }
+.topic-workspace-review-status { padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--hover-bg); }
+.topic-workspace-review-status strong, .topic-workspace-review-status small { display: block; }
+.topic-workspace-review-status strong { color: var(--text-main); font-size: .82rem; }
+.topic-workspace-review-status small { margin-top: 3px; color: var(--text-muted); font-size: .66rem; }
+.topic-workspace-review-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.topic-workspace-remove-review { margin-top: 9px; padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: 650 .66rem Poppins, sans-serif; text-decoration: underline; cursor: pointer; }
+#topicWorkspaceAnalytics .topic-evidence-grid { margin-top: 15px; gap: 10px; }
+#topicWorkspaceAnalytics .topic-evidence-card { padding: 14px; }
+#topicWorkspaceAnalytics .topic-evidence-card small { font-size: .62rem; }
+#topicWorkspaceAnalytics .topic-evidence-card strong { font-size: 1.2rem; }
+#topicWorkspaceAnalytics .topic-analytics-grid { gap: 12px; margin-top: 12px; }
+#topicWorkspaceAnalytics .topic-chart-card { padding: 20px; }
+#topicWorkspaceAnalytics .topic-chart-heading strong { font-size: .84rem; }
+#topicWorkspaceAnalytics .topic-chart-heading small, #topicWorkspaceAnalytics .topic-chart-heading > b { font-size: .66rem; }
+#topicWorkspaceAnalytics .topic-chart-empty { font-size: .72rem; }
+#topicWorkspaceAnalytics .topic-time-value, #topicWorkspaceAnalytics .topic-time-day > span:last-child, #topicWorkspaceAnalytics .topic-performance-period small, #topicWorkspaceAnalytics .topic-error-cause span { font-size: .65rem; }
+#topicWorkspaceAnalytics .topic-answer-legend b, #topicWorkspaceAnalytics .topic-answer-legend strong { font-size: .72rem; }
+#topicWorkspaceNotebook > .chapter-notebook { margin-top: 0; }
+.topic-workspace-history-card .topic-history-list { margin-top: 16px; }
+@media (max-width: 900px) { .topic-workspace-top-grid { grid-template-columns: 1fr; } #topicWorkspaceAnalytics .topic-evidence-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 580px) { .topic-workspace-heading { flex-direction: column; padding: 18px; } .topic-workspace-heading > .cycle-btn { width: 100%; } .topic-workspace-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; } .topic-workspace-tabs button { padding: 7px 4px; font-size: .65rem; } .topic-workspace-context, .topic-workspace-review, .topic-workspace-history-card { padding: 17px; } #topicWorkspaceAnalytics .topic-evidence-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } #topicWorkspaceAnalytics .topic-chart-card { padding: 15px; } }

@@ -472,6 +472,15 @@ function mostrarFraseMotivacional() {
 }
 
 function showSection(sectionId) {
+    if (document.getElementById('topic-workspace')?.classList.contains('active') && sectionId !== 'topic-workspace') {
+        salvarCadernoPendente();
+        salvarContextoEspacoTopico();
+    }
+    if (sectionId === 'topic-workspace' && !localizarEspacoTopico().topico) {
+        document.getElementById('topicNavSlot').hidden = true;
+        sessionStorage.removeItem('kingMasterOpenTopic');
+        sectionId = 'planejamento';
+    }
     const secao = document.getElementById(sectionId);
     if (!secao?.classList.contains('content-section')) return;
     fecharMenuMovel();
@@ -507,9 +516,11 @@ function showSection(sectionId) {
     const tituloAba = abaAtiva?.querySelector('strong')?.textContent || 'King Master';
     document.title = `${tituloAba} · King Master`;
     document.querySelector('main')?.scrollTo?.({ top: 0, behavior: 'auto' });
+    window.scrollTo({ top: 0, behavior: 'auto' });
     
     if(sectionId === 'historico') renderizarHistorico();
     if(sectionId === 'planejamento') renderizarCiclo();
+    if(sectionId === 'topic-workspace') renderizarEspacoTopico();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
     if(sectionId === 'cronograma') window.KingSchedule?.render();
@@ -2618,7 +2629,7 @@ function renderizarCiclo() {
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
         const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
-        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div></article>`;
+        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div><button type="button" class="subject-chapters-link" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${i.id})" ${totalTopicos ? '' : 'disabled'}>${totalTopicos ? 'Abrir assuntos e cadernos ↗' : 'Adicione um assunto para começar'}</button></div></article>`;
     }).join('');
 }
 
@@ -2971,6 +2982,7 @@ function removerRevisaoTopico(id, tIdx) {
         || normalizarRevisaoTexto(item.assunto) !== topicoChave);
     topico.proximaRevisaoEm = '';
     saveAppData(); renderizarListaAssuntos(id); renderizarRevisoes();
+    if (document.getElementById('topic-workspace')?.classList.contains('active')) renderizarEspacoTopico();
     showToast(quantidadeAnterior === appData.revisoesItems.length ? 'Não havia revisão ativa para remover.' : 'Revisão removida da agenda.');
 }
 
@@ -5200,6 +5212,111 @@ function navegarAbasHub(event) {
 
 const cadernoCapituloAtual = { materiaId: null, topicoIndice: null, paginaId: null, busca: '' };
 let temporizadorCadernoCapitulo = null;
+const espacoTopicoAtual = { materiaId: null, topicoIndice: null, nome: '', aba: 'visao' };
+let temporizadorContextoTopico = null;
+
+function localizarEspacoTopico() {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(espacoTopicoAtual.materiaId));
+    const topico = materia?.topicos?.[espacoTopicoAtual.topicoIndice];
+    if (!topico || topico.nome !== espacoTopicoAtual.nome) return { materia, topico: null };
+    return { materia, topico };
+}
+
+function abrirEspacoTopico(materiaId, topicoIndice, aba = 'visao') {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId));
+    const topico = materia?.topicos?.[topicoIndice];
+    if (!topico) return;
+    salvarCadernoPendente();
+    salvarContextoEspacoTopico();
+    espacoTopicoAtual.materiaId = materia.id;
+    espacoTopicoAtual.topicoIndice = topicoIndice;
+    espacoTopicoAtual.nome = topico.nome;
+    espacoTopicoAtual.aba = ['visao', 'caderno', 'historico'].includes(aba) ? aba : 'visao';
+    const slot = document.getElementById('topicNavSlot');
+    slot.hidden = false;
+    document.getElementById('topicNavTitle').textContent = topico.nome;
+    document.getElementById('topicNavSubject').textContent = materia.subject;
+    sessionStorage.setItem('kingMasterOpenTopic', JSON.stringify({ materiaId: materia.id, nome: topico.nome, aba: espacoTopicoAtual.aba }));
+    showSection('topic-workspace');
+}
+
+function renderizarEspacoTopico() {
+    const { materia, topico } = localizarEspacoTopico();
+    if (!topico) { fecharEspacoTopico(); return; }
+    document.getElementById('topicWorkspaceSubject').textContent = materia.subject;
+    document.getElementById('topicWorkspaceTitle').textContent = topico.nome;
+    document.getElementById('topicNavTitle').textContent = topico.nome;
+    document.getElementById('topicNavSubject').textContent = materia.subject;
+    document.getElementById('topicWorkspaceContext').value = topico.contexto || '';
+    const analise = obterAnaliseTopico(materia, topico);
+    document.getElementById('topicWorkspaceAnalytics').innerHTML = htmlAnaliseTopico(analise);
+    document.getElementById('topicWorkspaceHistoryList').innerHTML = htmlHistoricoTopico(analise);
+    const revisao = obterRevisaoAtivaTopico(materia, topico);
+    const concluidas = (appData.revisoesItems || []).filter(item => item.status === 'revisado' && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome)).length;
+    document.getElementById('topicWorkspaceReviewState').innerHTML = revisao
+        ? `<div class="topic-workspace-review-status"><strong>${escaparRevisaoHtml(rotuloDataRevisao(revisao.dataAlvo) || 'Revisão pendente')}</strong><small>${concluidas} ${concluidas === 1 ? 'revisão concluída' : 'revisões concluídas'} neste assunto</small></div><button type="button" class="topic-workspace-remove-review" onclick="solicitarRemocaoRevisaoTopico(${materia.id},${espacoTopicoAtual.topicoIndice})">Remover agendamento</button>`
+        : `<div class="topic-workspace-review-status"><strong>Sem revisão agendada</strong><small>${concluidas ? `${concluidas} ${concluidas === 1 ? 'revisão concluída' : 'revisões concluídas'}` : 'Você pode marcar a primeira para amanhã.'}</small></div>`;
+    document.getElementById('topicWorkspaceReviewButton').textContent = revisao ? 'Mudar para amanhã' : 'Revisar amanhã';
+    alternarAbaEspacoTopico(espacoTopicoAtual.aba, false);
+}
+
+function alternarAbaEspacoTopico(aba, atualizarSessao = true) {
+    if (!['visao', 'caderno', 'historico'].includes(aba) || !localizarEspacoTopico().topico) return;
+    if (espacoTopicoAtual.aba === 'caderno' && aba !== 'caderno') salvarCadernoPendente();
+    if (espacoTopicoAtual.aba === 'visao' && aba !== 'visao') salvarContextoEspacoTopico();
+    espacoTopicoAtual.aba = aba;
+    for (const [chave, painelId, tabId] of [['visao', 'topicWorkspaceOverview', 'topicWorkspaceTabOverview'], ['caderno', 'topicWorkspaceNotebook', 'topicWorkspaceTabNotebook'], ['historico', 'topicWorkspaceHistory', 'topicWorkspaceTabHistory']]) {
+        const ativo = chave === aba;
+        document.getElementById(painelId).hidden = !ativo;
+        const botao = document.getElementById(tabId);
+        botao.setAttribute('aria-selected', String(ativo));
+        botao.tabIndex = ativo ? 0 : -1;
+    }
+    if (aba === 'caderno') inicializarCadernoCapitulo(espacoTopicoAtual.materiaId, espacoTopicoAtual.topicoIndice);
+    if (atualizarSessao) sessionStorage.setItem('kingMasterOpenTopic', JSON.stringify({ materiaId: espacoTopicoAtual.materiaId, nome: espacoTopicoAtual.nome, aba }));
+}
+
+function atualizarContextoEspacoTopico(valor) {
+    const { topico } = localizarEspacoTopico();
+    if (!topico) return;
+    topico.contexto = String(valor).slice(0, 1500);
+    document.getElementById('topicWorkspaceContextStatus').textContent = 'Salvando…';
+    clearTimeout(temporizadorContextoTopico);
+    temporizadorContextoTopico = setTimeout(salvarContextoEspacoTopico, 650);
+}
+
+function salvarContextoEspacoTopico() {
+    if (!temporizadorContextoTopico) return;
+    clearTimeout(temporizadorContextoTopico);
+    temporizadorContextoTopico = null;
+    try {
+        saveAppData();
+        document.getElementById('topicWorkspaceContextStatus').textContent = 'Salvo automaticamente';
+    } catch {
+        document.getElementById('topicWorkspaceContextStatus').textContent = 'Não foi possível salvar';
+        showToast('Não foi possível salvar o contexto deste assunto.', true);
+    }
+}
+
+function agendarRevisaoEspacoTopico() {
+    const { materia, topico } = localizarEspacoTopico();
+    if (!topico) return;
+    definirRevisaoTopicoDias(materia.id, espacoTopicoAtual.topicoIndice, 1);
+    renderizarEspacoTopico();
+}
+
+function fecharEspacoTopico() {
+    salvarCadernoPendente();
+    salvarContextoEspacoTopico();
+    document.getElementById('topicNavSlot').hidden = true;
+    sessionStorage.removeItem('kingMasterOpenTopic');
+    espacoTopicoAtual.materiaId = null;
+    espacoTopicoAtual.topicoIndice = null;
+    espacoTopicoAtual.nome = '';
+    espacoTopicoAtual.aba = 'visao';
+    fecharCadernosDominio();
+    showSection('planejamento');
+}
 
 function localizarCadernoCapitulo() {
     const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
@@ -5256,11 +5373,15 @@ function renderizarListaCapitulosCaderno() {
     lista.innerHTML = topicos.length ? topicos.map(({ topico, indice }) => {
         const paginas = Array.isArray(topico.caderno?.paginas) ? topico.caderno.paginas.length : 0;
         const total = paginas + (topico.notas && !topico.cadernoMigrado ? 1 : 0);
-        return `<button type="button" class="chapter-item" onclick="abrirCadernoCapitulo(${materia.id},${indice})"><span>${String(indice + 1).padStart(2, '0')}</span><span><strong>${escaparRevisaoHtml(topico.nome || 'Capítulo')}</strong><small>${total ? `${total} ${total === 1 ? 'página' : 'páginas'}` : 'Caderno vazio · pronto para começar'}</small></span><span aria-hidden="true">↗</span></button>`;
+        return `<button type="button" class="chapter-item" onclick="abrirEspacoTopico(${materia.id},${indice})"><span>${String(indice + 1).padStart(2, '0')}</span><span><strong>${escaparRevisaoHtml(topico.nome || 'Capítulo')}</strong><small>${total ? `${total} ${total === 1 ? 'página' : 'páginas'}` : 'Caderno vazio · pronto para começar'}</small></span><span aria-hidden="true">↗</span></button>`;
     }).join('') : `<p class="chapter-page-empty">${materia.topicos?.length ? 'Nenhum capítulo encontrado. Tente outra busca.' : 'Esta matéria ainda não tem capítulos. Adicione-os ao editar a matéria.'}</p>`;
 }
 
 function abrirCadernoCapitulo(materiaId, topicoIndice) {
+    abrirEspacoTopico(materiaId, topicoIndice, 'caderno');
+}
+
+function inicializarCadernoCapitulo(materiaId, topicoIndice) {
     salvarCadernoPendente();
     const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId));
     const topico = materia?.topicos?.[topicoIndice];
@@ -5276,11 +5397,11 @@ function abrirCadernoCapitulo(materiaId, topicoIndice) {
     }
     if (!topico.caderno.paginas.some(pagina => pagina.id === cadernoCapituloAtual.paginaId)) cadernoCapituloAtual.paginaId = topico.caderno.paginas[0]?.id || null;
     document.getElementById('chapterBrowser').hidden = true;
+    document.getElementById('topicWorkspaceNotebook').append(document.getElementById('chapterNotebook'));
     document.getElementById('chapterNotebook').hidden = false;
     document.getElementById('chapterNotebookSubject').textContent = materia.subject || 'Matéria';
     document.getElementById('chapterNotebookTitle').textContent = topico.nome || 'Capítulo';
     renderizarCadernoCapitulo();
-    document.getElementById('chapterNotebook').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderizarListaPaginasCaderno() {
@@ -5358,8 +5479,10 @@ function excluirPaginaCaderno(id) {
 function voltarAosCapitulos() {
     salvarCadernoPendente();
     document.getElementById('chapterNotebook').hidden = true;
-    document.getElementById('chapterBrowser').hidden = false;
-    renderizarListaCapitulosCaderno();
+    const materiaId = espacoTopicoAtual.materiaId;
+    fecharEspacoTopico();
+    alternarAbasHub('dominio');
+    if (materiaId != null) abrirCadernosMateria(materiaId);
 }
 
 function fecharCadernosDominio() {
@@ -5371,8 +5494,8 @@ function fecharCadernosDominio() {
     cadernoCapituloAtual.paginaId = null;
 }
 
-window.addEventListener('pagehide', salvarCadernoPendente);
-document.addEventListener('visibilitychange', () => { if (document.hidden) salvarCadernoPendente(); });
+window.addEventListener('pagehide', () => { salvarCadernoPendente(); salvarContextoEspacoTopico(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { salvarCadernoPendente(); salvarContextoEspacoTopico(); } });
 
 function renderizarMapaDominio() {
     const container = document.getElementById('mapaContainer');
@@ -5407,7 +5530,7 @@ function renderizarMapaDominio() {
         const rotulos = { revisar: 'Revisar', novo: 'Começar', aprendendo: 'Continuar', consolidando: 'Praticar' };
         const revisao = item.estado === 'revisar' ? obterRevisaoAtivaTopico(item.materia, item.topico) : null;
         const detalhe = revisao ? rotuloDataRevisao(revisao.dataAlvo) : (item.topico.prioridade === 'alta' ? 'Prioridade alta' : `Nível ${item.nivel} de 3`);
-        return `<div class="domain-center-action"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Acompanhar'}</span><button type="button" onclick="abrirCadernoCapitulo(${item.materia.id},${item.indice})" aria-label="Abrir caderno de ${nome}">Caderno ↗</button></div>`;
+        return `<div class="domain-center-action"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Acompanhar'}</span><button type="button" onclick="abrirEspacoTopico(${item.materia.id},${item.indice})" aria-label="Abrir espaço de ${nome}">Abrir ↗</button></div>`;
     }).join('') : '<p class="domain-center-empty-note">Todos os tópicos cadastrados estão dominados. Revise quando precisar ou adicione novos conteúdos.</p>';
     container.innerHTML = appData.cycleItems.map(materia => {
         const topicos = materia.topicos || [];
@@ -5481,4 +5604,18 @@ renderizarSimulados();
 renderizarRedacoes();
 atualizarIndicadoresNavegacao();
 const secaoInicial = sessionStorage.getItem('kingMasterActiveSection');
+try {
+    const anterior = JSON.parse(sessionStorage.getItem('kingMasterOpenTopic') || 'null');
+    const materia = appData.cycleItems.find(item => String(item.id) === String(anterior?.materiaId));
+    const indice = materia?.topicos?.findIndex(topico => topico.nome === anterior?.nome) ?? -1;
+    if (indice >= 0) {
+        espacoTopicoAtual.materiaId = materia.id;
+        espacoTopicoAtual.topicoIndice = indice;
+        espacoTopicoAtual.nome = anterior.nome;
+        espacoTopicoAtual.aba = ['visao', 'caderno', 'historico'].includes(anterior.aba) ? anterior.aba : 'visao';
+        document.getElementById('topicNavSlot').hidden = false;
+        document.getElementById('topicNavTitle').textContent = anterior.nome;
+        document.getElementById('topicNavSubject').textContent = materia.subject;
+    }
+} catch { sessionStorage.removeItem('kingMasterOpenTopic'); }
 showSection(document.getElementById(secaoInicial)?.classList.contains('content-section') ? secaoInicial : 'dashboard');

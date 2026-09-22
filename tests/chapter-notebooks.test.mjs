@@ -9,7 +9,7 @@ const [html, script, styles, cloud] = await Promise.all([
   readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8')
 ]);
 
-test('each chapter opens its own notebook inside the mastery center, not the removed subject screen', () => {
+test('chapters retain their own notebook data without restoring the removed subject screen', () => {
   assert.match(html, /id="chapterBrowser"/);
   assert.match(html, /id="chapterNotebook"/);
   assert.match(html, /id="chapterPageList"/);
@@ -21,12 +21,26 @@ test('each chapter opens its own notebook inside the mastery center, not the rem
 
 test('pages autosave through the existing local and cloud flow, and deletion requires confirmation', () => {
   assert.match(script, /setTimeout\(salvarAlteracoesCadernoCapitulo, 650\)/);
-  assert.match(script, /window\.addEventListener\('pagehide', salvarCadernoPendente\)/);
+  assert.match(script, /window\.addEventListener\('pagehide'.*salvarCadernoPendente\(\)/);
   assert.match(script, /saveAppData\(\)/);
   assert.match(cloud, /king-master-data-changed/);
   assert.match(script, /abrirModalDeletar\('chapterPage'/);
   assert.match(script, /tipo === 'chapterPage'/);
   assert.match(script, /topico\.cadernoMigrado = true/);
+});
+
+test('clicking a chapter opens a switchable subject subtab with analytics and reviews', () => {
+  assert.match(html, /id="topicNavSlot"/);
+  assert.match(html, /data-section="topic-workspace"/);
+  assert.match(html, /id="topicWorkspaceAnalytics"/);
+  assert.match(html, /id="topicWorkspaceReviewState"/);
+  assert.match(html, /id="topicWorkspaceNotebook"/);
+  assert.match(script, /function abrirEspacoTopico\(materiaId, topicoIndice/);
+  assert.match(script, /onclick="abrirEspacoTopico\(\$\{materia\.id\},\$\{indice\}\)"/);
+  assert.match(script, /htmlAnaliseTopico\(analise\)/);
+  assert.match(script, /obterRevisaoAtivaTopico\(materia, topico\)/);
+  assert.match(script, /topicWorkspaceNotebook'\)\.append\(document\.getElementById\('chapterNotebook'\)\)/);
+  assert.match(script, /sessionStorage\.setItem\('kingMasterOpenTopic'/);
 });
 
 test('chapter notebook reflows on mobile without a full-screen subject overlay', () => {

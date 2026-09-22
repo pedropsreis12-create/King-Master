@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="domain-center.css?v=20260922-chapter-notebooks-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-notebooks-v1">
+    <link rel="stylesheet" href="topic-workspace.css?v=20260922-topic-workspace-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <style>
@@ -106,6 +107,7 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Aprender</span>
                 <button type="button" class="menu-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Matérias</strong><small>Conteúdo e domínio</small></span></button>
+                <div class="topic-nav-slot" id="topicNavSlot" hidden><button type="button" class="menu-btn topic-nav-button" data-section="topic-workspace" aria-controls="topic-workspace" onclick="showSection('topic-workspace')"><span class="nav-item-icon" aria-hidden="true">↳</span><span class="nav-item-label"><strong id="topicNavTitle">Assunto</strong><small id="topicNavSubject">Matéria</small></span></button><button type="button" class="topic-nav-close" onclick="fecharEspacoTopico()" aria-label="Fechar a aba do assunto" title="Fechar a aba do assunto">×</button></div>
                 <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Caixa de Revisões</strong><small>Capture e retome depois</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
                 <button type="button" class="menu-btn" data-section="caderno-erros" aria-controls="caderno-erros" onclick="showSection('caderno-erros')"><span class="nav-item-icon" aria-hidden="true">⌁</span><span class="nav-item-label"><strong>Caderno de Erros</strong><small>Corrigir padrões</small></span><span class="nav-count urgent" id="navErrorBadge" hidden>0</span></button>
             </div>
@@ -505,10 +507,31 @@
                     <div class="chapter-list" id="chapterList"></div>
                 </section>
                 <section class="chapter-notebook widget" id="chapterNotebook" aria-labelledby="chapterNotebookTitle" hidden>
-                    <div class="chapter-heading"><div><button type="button" class="chapter-back" onclick="voltarAosCapitulos()">← Capítulos</button><span class="workspace-kicker" id="chapterNotebookSubject">CADERNO DO CAPÍTULO</span><h3 id="chapterNotebookTitle">Caderno</h3><p>Suas anotações deste capítulo ficam juntas e são salvas automaticamente.</p></div><span class="chapter-save-state" id="chapterSaveState" role="status" aria-live="polite">Salvo</span></div>
+                    <div class="chapter-heading"><div><span class="workspace-kicker" id="chapterNotebookSubject">CADERNO DO CAPÍTULO</span><h3 id="chapterNotebookTitle">Caderno</h3><p>Suas anotações deste capítulo ficam juntas e são salvas automaticamente.</p></div><span class="chapter-save-state" id="chapterSaveState" role="status" aria-live="polite">Salvo</span></div>
                     <div class="chapter-notebook-layout"><aside class="chapter-pages" aria-label="Páginas do caderno"><div class="chapter-pages-heading"><strong>Páginas</strong><button type="button" onclick="criarPaginaCaderno()">+ Nova página</button></div><div id="chapterPageList"></div></aside><div class="chapter-editor" id="chapterEditor"></div></div>
                 </section>
             </div>
+        </section>
+
+        <section id="topic-workspace" class="content-section" aria-hidden="true">
+            <div class="topic-workspace-heading widget">
+                <div><button type="button" class="chapter-back" onclick="voltarAosCapitulos()">← Matérias e capítulos</button><span class="workspace-kicker" id="topicWorkspaceSubject">CADERNO DO ASSUNTO</span><h1 id="topicWorkspaceTitle">Assunto</h1><p>Seu espaço para entender o conteúdo, acompanhar resultados e voltar a revisar.</p></div>
+                <button type="button" class="cycle-btn" onclick="fecharEspacoTopico()">Fechar aba</button>
+            </div>
+            <div class="topic-workspace-tabs" role="tablist" aria-label="Espaço do assunto">
+                <button type="button" id="topicWorkspaceTabOverview" role="tab" aria-controls="topicWorkspaceOverview" aria-selected="true" onclick="alternarAbaEspacoTopico('visao')">Visão geral</button>
+                <button type="button" id="topicWorkspaceTabNotebook" role="tab" aria-controls="topicWorkspaceNotebook" aria-selected="false" onclick="alternarAbaEspacoTopico('caderno')">Meu caderno</button>
+                <button type="button" id="topicWorkspaceTabHistory" role="tab" aria-controls="topicWorkspaceHistory" aria-selected="false" onclick="alternarAbaEspacoTopico('historico')">Registros</button>
+            </div>
+            <div id="topicWorkspaceOverview" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabOverview">
+                <div class="topic-workspace-top-grid">
+                    <article class="widget topic-workspace-context"><span class="workspace-kicker">CONTEXTO DO ASSUNTO</span><h2>O essencial, do seu jeito</h2><p>Resuma o que é, quando usar e o que costuma confundir você. Pode ser só uma frase.</p><label for="topicWorkspaceContext">Minha referência rápida</label><textarea id="topicWorkspaceContext" maxlength="1500" rows="4" placeholder="Ex.: Regra de três relaciona grandezas. Antes de calcular, verifico se são diretamente ou inversamente proporcionais." oninput="atualizarContextoEspacoTopico(this.value)"></textarea><small id="topicWorkspaceContextStatus" role="status">Salvo automaticamente</small></article>
+                    <article class="widget topic-workspace-review"><span class="workspace-kicker">REVISÃO</span><h2>Volte a lembrar, não só a reler</h2><p>Revisar é tentar recuperar a ideia sem olhar a resposta; depois confira o caderno e resolva uma questão curta.</p><div id="topicWorkspaceReviewState"></div><div class="topic-workspace-review-actions"><button type="button" class="cycle-btn primary" onclick="agendarRevisaoEspacoTopico()" id="topicWorkspaceReviewButton">Revisar amanhã</button><button type="button" class="cycle-btn" onclick="showSection('revisoes')">Caixa de Revisões</button></div></article>
+                </div>
+                <div id="topicWorkspaceAnalytics"></div>
+            </div>
+            <div id="topicWorkspaceNotebook" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabNotebook" hidden></div>
+            <div id="topicWorkspaceHistory" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabHistory" hidden><article class="widget topic-workspace-history-card"><span class="workspace-kicker">HISTÓRICO DO ASSUNTO</span><h2>O que você já estudou</h2><div id="topicWorkspaceHistoryList"></div></article></div>
         </section>
 
         <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
@@ -1276,7 +1299,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-chapter-notebooks-v1"></script>
+    <script src="script.js?v=20260922-topic-workspace-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
     <script src="schedule.js?v=20260922-block-isolation-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>

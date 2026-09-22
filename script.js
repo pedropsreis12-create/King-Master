@@ -5501,9 +5501,7 @@ function renderizarMapaDominio() {
     const container = document.getElementById('mapaContainer');
     if (!container) return;
     const estatisticas = document.getElementById('domainCenterStats');
-    const prioridades = document.getElementById('domainPriorityList');
-    const contador = document.getElementById('domainPriorityCount');
-    const itens = appData.cycleItems.flatMap(materia => (materia.topicos || []).map((topico, indice) => ({ materia, topico, indice, estado: obterEstadoTopicoControle(materia, topico), nivel: obterNivelDominioTopico(topico) })));
+    const itens = appData.cycleItems.flatMap(materia => (materia.topicos || []).map(topico => ({ estado: obterEstadoTopicoControle(materia, topico), nivel: obterNivelDominioTopico(topico) })));
     const totais = { novo: 0, aprendendo: 0, consolidando: 0, dominado: 0, revisar: 0 };
     itens.forEach(item => { totais[['novo', 'aprendendo', 'consolidando', 'dominado'][item.nivel]]++; if (item.estado === 'revisar') totais.revisar++; });
     const total = itens.length;
@@ -5518,20 +5516,8 @@ function renderizarMapaDominio() {
     ].map(([chave, rotulo, detalhe]) => `<article class="domain-center-stat is-${chave}"><span>${rotulo}</span><strong>${totais[chave]}</strong><small>${detalhe}</small></article>`).join('');
     if (!appData.cycleItems.length) {
         container.innerHTML = '<div class="domain-center-empty"><strong>Comece com uma matéria</strong><p>Seus dados de estudo e domínio aparecerão aqui, sem precisar cadastrar nada duas vezes.</p><button type="button" class="cycle-btn primary" onclick="alternarAbasHub(\'ciclo\');abrirModalCiclo()">Adicionar matéria</button></div>';
-        prioridades.innerHTML = '<p class="domain-center-empty-note">Ao cadastrar tópicos, a central mostrará por onde começar.</p>';
-        contador.textContent = '';
         return;
     }
-    const proximos = itens.filter(item => item.estado !== 'dominado').sort((a, b) => pontuacaoAcaoTopico(a.materia, a.topico) - pontuacaoAcaoTopico(b.materia, b.topico)).slice(0, 5);
-    contador.textContent = proximos.length ? `${proximos.length} em destaque` : 'Em dia';
-    prioridades.innerHTML = proximos.length ? proximos.map((item, ordem) => {
-        const nome = escaparRevisaoHtml(item.topico.nome || 'Tópico');
-        const materia = escaparRevisaoHtml(item.materia.subject || 'Matéria');
-        const rotulos = { revisar: 'Revisar', novo: 'Começar', aprendendo: 'Continuar', consolidando: 'Praticar' };
-        const revisao = item.estado === 'revisar' ? obterRevisaoAtivaTopico(item.materia, item.topico) : null;
-        const detalhe = revisao ? rotuloDataRevisao(revisao.dataAlvo) : (item.topico.prioridade === 'alta' ? 'Prioridade alta' : `Nível ${item.nivel} de 3`);
-        return `<div class="domain-center-action"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Acompanhar'}</span><button type="button" onclick="abrirEspacoTopico(${item.materia.id},${item.indice})" aria-label="Abrir espaço de ${nome}">Abrir ↗</button></div>`;
-    }).join('') : '<p class="domain-center-empty-note">Todos os tópicos cadastrados estão dominados. Revise quando precisar ou adicione novos conteúdos.</p>';
     container.innerHTML = appData.cycleItems.map(materia => {
         const topicos = materia.topicos || [];
         const concluidos = topicos.filter(topico => obterNivelDominioTopico(topico) === 3).length;

@@ -38,8 +38,6 @@
 .chapter-editor input:focus, .chapter-editor textarea:focus { border-color: var(--accent-color); }
 .chapter-editor textarea { min-height: 270px; resize: vertical; line-height: 1.7; font-weight: 500; }
 .chapter-editor-hint { margin: 0; color: var(--text-muted); font-size: .52rem; line-height: 1.45; }
-.domain-center-action { grid-template-columns: 30px minmax(0, 1fr) auto auto; }
-.domain-center-action > button { padding: 7px 9px; border: 1px solid rgba(var(--accent-rgb), .3); border-radius: 9px; background: rgba(var(--accent-rgb), .08); color: var(--accent-color); font: 800 .51rem Poppins, sans-serif; white-space: nowrap; cursor: pointer; }
 .domain-center-subject > div:last-child { display: flex; flex-wrap: wrap; gap: 13px; }
 @media (max-width: 900px) { .chapter-notebook-layout { grid-template-columns: 1fr; } .chapter-list { grid-template-columns: 1fr; } }
-@media (max-width: 580px) { .chapter-browser, .chapter-notebook { padding: 17px; } .chapter-heading { flex-wrap: wrap; } .chapter-heading .cycle-btn { width: 100%; } .chapter-pages, .chapter-editor { padding: 12px; } .domain-center-action { grid-template-columns: 27px minmax(0, 1fr) auto; } .domain-center-action > button { grid-column: 2 / -1; justify-self: start; } }
+@media (max-width: 580px) { .chapter-browser, .chapter-notebook { padding: 17px; } .chapter-heading { flex-wrap: wrap; } .chapter-heading .cycle-btn { width: 100%; } .chapter-pages, .chapter-editor { padding: 12px; } }

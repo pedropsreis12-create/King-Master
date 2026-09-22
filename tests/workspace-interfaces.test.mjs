@@ -17,11 +17,11 @@ test('subjects expose accessible content and mastery views with useful summaries
   assert.match(html, /id="mapaContainer"/);
   assert.match(html, /Central de domínio/);
   assert.match(html, /id="domainCenterStats"/);
-  assert.match(html, /id="domainPriorityList"/);
+  assert.doesNotMatch(html, /id="domainPriorityList"/);
   assert.doesNotMatch(html, /Seu mapa de domínio/);
   assert.match(script, /function navegarAbasHub\(event\)/);
   assert.match(script, /setAttribute\('aria-selected'/);
-  assert.match(script, /pontuacaoAcaoTopico\(a\.materia, a\.topico\)/);
+  assert.match(script, /function pontuacaoAcaoTopico\(materia, topico\)/);
   assert.doesNotMatch(html, /id="subjectWorkspaceMount"|id="assuntosModal"|id="topicControlPanel"/);
   assert.doesNotMatch(script, /function abrirModalAssuntos\(|function abrirTopicoPelaCentral\(/);
   assert.match(script, /onclick="editarMateriaCiclo\(\$\{i\.id\}\)"/);

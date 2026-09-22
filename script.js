@@ -2588,7 +2588,7 @@ function renderizarCiclo() {
 
     const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
     const topicos = materias.flatMap(item => Array.isArray(item.topicos) ? item.topicos : []);
-    const dominados = topicos.filter(item => item.concluido || item.dominio?.dominio).length;
+    const dominados = topicos.filter(item => obterNivelDominioTopico(item) === 3).length;
     const definirTexto = (id, texto) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = texto; };
     definirTexto('materiasTotal', materias.length);
     definirTexto('materiasTopicos', topicos.length);
@@ -2610,7 +2610,7 @@ function renderizarCiclo() {
     grid.innerHTML = visiveis.map(i => {
         let exec = i.executedMin || 0; 
         let txtExec = exec >= 60 ? `${Math.floor(exec/60)}h${Math.floor(exec%60).toString().padStart(2,'0')}m` : `${Math.floor(exec%60)}m`;
-        let concluidos = i.topicos ? i.topicos.filter(t => t.concluido).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
+        let concluidos = i.topicos ? i.topicos.filter(t => obterNivelDominioTopico(t) === 3).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
         const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
@@ -5213,47 +5213,67 @@ function navegarAbasHub(event) {
     alternarAbasHub(abas[proxima].id === 'tab-ciclo' ? 'ciclo' : 'dominio');
 }
 
-function toggleMapaCard(id) {
-    const corpo = document.getElementById(`mapa-body-${id}`);
-    const botao = document.querySelector(`[data-mapa-toggle="${id}"]`);
-    if (!corpo) return;
-    const aberto = corpo.classList.toggle('open');
-    botao?.setAttribute('aria-expanded', String(aberto));
-}
-
-function toggleTopicoDominio(materiaId, topicoIndex, nivel) {
-    const materia = appData.cycleItems.find(item => item.id === materiaId);
-    if (!materia?.topicos?.[topicoIndex]) return;
-    definirNivelDominioTopico(materiaId, topicoIndex, nivel);
+function abrirTopicoPelaCentral(materiaId, topicoIndex) {
+    abrirModalAssuntos(materiaId);
+    if (!Number.isInteger(topicoIndex)) return;
+    filtroAssuntosAtual = 'todos';
+    buscaAssuntosAtual = '';
+    document.getElementById('assuntosBuscaInput').value = '';
+    document.querySelectorAll('[data-topic-filter]').forEach(botao => {
+        const ativo = botao.dataset.topicFilter === 'todos';
+        botao.classList.toggle('active', ativo);
+        botao.setAttribute('aria-pressed', String(ativo));
+    });
+    selecionarTopicoControle(materiaId, topicoIndex);
+    renderizarListaAssuntos(materiaId);
 }
 
 function renderizarMapaDominio() {
     const container = document.getElementById('mapaContainer');
     if (!container) return;
-    let total = 0, completos = 0;
+    const estatisticas = document.getElementById('domainCenterStats');
+    const prioridades = document.getElementById('domainPriorityList');
+    const contador = document.getElementById('domainPriorityCount');
+    const itens = appData.cycleItems.flatMap(materia => (materia.topicos || []).map((topico, indice) => ({ materia, topico, indice, estado: obterEstadoTopicoControle(materia, topico), nivel: obterNivelDominioTopico(topico) })));
+    const totais = { novo: 0, aprendendo: 0, consolidando: 0, dominado: 0, revisar: 0 };
+    itens.forEach(item => { totais[['novo', 'aprendendo', 'consolidando', 'dominado'][item.nivel]]++; if (item.estado === 'revisar') totais.revisar++; });
+    const total = itens.length;
+    const pctGeral = total ? Math.round(totais.dominado / total * 100) : 0;
+    document.getElementById('global-mapa-pct').textContent = `${pctGeral}%`;
+    estatisticas.innerHTML = [
+        ['revisar', 'Revisar agora', 'Pendências de revisão'],
+        ['novo', 'Não iniciados', 'Prontos para começar'],
+        ['aprendendo', 'Em estudo', 'Construindo a base'],
+        ['consolidando', 'Consolidando', 'Falta praticar mais'],
+        ['dominado', 'Dominados', 'Já conquistados']
+    ].map(([chave, rotulo, detalhe]) => `<article class="domain-center-stat is-${chave}"><span>${rotulo}</span><strong>${totais[chave]}</strong><small>${detalhe}</small></article>`).join('');
     if (!appData.cycleItems.length) {
-        container.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">◎</b><strong>Seu mapa ainda está vazio</strong><p>Adicione uma matéria e seus tópicos para acompanhar aprendizado, consolidação e domínio.</p><button type="button" class="cycle-btn primary" onclick="alternarAbasHub(\'ciclo\');abrirModalCiclo()">Adicionar matéria</button></div>';
-        document.getElementById('global-mapa-pct').textContent = '0%';
+        container.innerHTML = '<div class="domain-center-empty"><strong>Comece com uma matéria</strong><p>Seus dados de estudo e domínio aparecerão aqui, sem precisar cadastrar nada duas vezes.</p><button type="button" class="cycle-btn primary" onclick="alternarAbasHub(\'ciclo\');abrirModalCiclo()">Adicionar matéria</button></div>';
+        prioridades.innerHTML = '<p class="domain-center-empty-note">Ao cadastrar tópicos, a central mostrará por onde começar.</p>';
+        contador.textContent = '';
         return;
     }
+    const proximos = itens.filter(item => item.estado !== 'dominado').sort((a, b) => pontuacaoAcaoTopico(a.materia, a.topico) - pontuacaoAcaoTopico(b.materia, b.topico)).slice(0, 5);
+    contador.textContent = proximos.length ? `${proximos.length} em destaque` : 'Em dia';
+    prioridades.innerHTML = proximos.length ? proximos.map((item, ordem) => {
+        const nome = escaparRevisaoHtml(item.topico.nome || 'Tópico');
+        const materia = escaparRevisaoHtml(item.materia.subject || 'Matéria');
+        const rotulos = { revisar: 'Revisar', novo: 'Começar', aprendendo: 'Continuar', consolidando: 'Praticar' };
+        const revisao = item.estado === 'revisar' ? obterRevisaoAtivaTopico(item.materia, item.topico) : null;
+        const detalhe = revisao ? rotuloDataRevisao(revisao.dataAlvo) : (item.topico.prioridade === 'alta' ? 'Prioridade alta' : `Nível ${item.nivel} de 3`);
+        return `<button type="button" class="domain-center-action" onclick="abrirTopicoPelaCentral(${item.materia.id},${item.indice})" aria-label="Abrir ${nome} em ${materia}"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Abrir'}</span><span aria-hidden="true">↗</span></button>`;
+    }).join('') : '<p class="domain-center-empty-note">Todos os tópicos cadastrados estão dominados. Revise quando precisar ou adicione novos conteúdos.</p>';
     container.innerHTML = appData.cycleItems.map(materia => {
         const topicos = materia.topicos || [];
-        total += topicos.length;
-        const concluidos = topicos.filter(t => obterNivelDominioTopico(t) === 3).length;
-        completos += concluidos;
+        const concluidos = topicos.filter(topico => obterNivelDominioTopico(topico) === 3).length;
+        const revisoes = topicos.filter(topico => obterEstadoTopicoControle(materia, topico) === 'revisar').length;
         const pct = topicos.length ? Math.round(concluidos / topicos.length * 100) : 0;
-        const linhas = topicos.length ? topicos.map((topico, index) => {
-            const nivel = obterNivelDominioTopico(topico);
-            const cor = corSegura(materia.color);
-            const nome = escaparRevisaoHtml(topico.nome || 'Tópico');
-            const opcoes = [['0','Novo'],['1','Aprendendo'],['2','Consolidando'],['✓','Dominado']].map(([simbolo, rotulo], opcao) => `<button type="button" class="tpd-btn ${nivel === opcao ? 'active' : ''}" style="${nivel === opcao ? `background:${cor}` : ''}" onclick="toggleTopicoDominio(${materia.id},${index},${opcao})" aria-pressed="${nivel === opcao}" title="${rotulo}">${simbolo}</button>`).join('');
-            return `<div class="mapa-topic-row"><span class="mapa-topic-name">${nome}</span><div class="mapa-tpd-group" aria-label="Nível de domínio de ${nome}">${opcoes}</div></div>`;
-        }).join('') : '<div class="workspace-empty"><strong>Nenhum tópico nesta matéria</strong><p>Abra a matéria e adicione o primeiro tópico.</p></div>';
         const cor = corSegura(materia.color);
         const nomeMateria = escaparRevisaoHtml(materia.subject || 'Matéria');
-        return `<article class="mapa-card"><button type="button" class="mapa-card-toggle" data-mapa-toggle="${materia.id}" aria-expanded="true" aria-controls="mapa-body-${materia.id}" onclick="toggleMapaCard(${materia.id})"><div class="mapa-title-area"><div class="mapa-title">${nomeMateria}</div><div class="mapa-progress-bg"><div class="mapa-progress-fill" style="width:${pct}%;background:${cor}"></div></div></div><span class="mapa-pct">${pct}%</span><span class="mapa-arrow" aria-hidden="true">⌃</span></button><div class="mapa-body open" id="mapa-body-${materia.id}">${linhas}</div></article>`;
+        const distribuicao = [0, 1, 2, 3].map(nivel => topicos.filter(topico => obterNivelDominioTopico(topico) === nivel).length);
+        const segmentos = distribuicao.map((quantidade, nivel) => quantidade ? `<span class="is-level-${nivel}" style="flex:${quantidade}" title="${['Não iniciados','Em estudo','Consolidando','Dominados'][nivel]}: ${quantidade}"></span>` : '').join('');
+        return `<article class="domain-center-subject" style="--subject-color:${cor}"><div class="domain-center-subject-head"><div><strong>${nomeMateria}</strong><small>${concluidos} de ${topicos.length} tópicos dominados${revisoes ? ` · ${revisoes} para revisar` : ''}</small></div><b>${pct}%</b></div><div class="domain-center-distribution" role="img" aria-label="${nomeMateria}: ${distribuicao[0]} não iniciados, ${distribuicao[1]} em estudo, ${distribuicao[2]} consolidando e ${distribuicao[3]} dominados">${segmentos || '<span class="is-empty"></span>'}</div><button type="button" onclick="abrirTopicoPelaCentral(${materia.id})">${topicos.length ? 'Ver tópicos e dados' : 'Adicionar tópicos'} <span aria-hidden="true">↗</span></button></article>`;
     }).join('');
-    document.getElementById('global-mapa-pct').textContent = total ? `${Math.round(completos / total * 100)}%` : '0%';
 }
 
 document.addEventListener('keydown', event => {

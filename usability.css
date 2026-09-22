@@ -210,29 +210,7 @@ html.reduce-motion :is(.nav-item-icon,.dock-btn) { transition: none !important; 
 .disc-progress span { display: block; height: 100%; border-radius: inherit; background: var(--subject-color,var(--accent-color)); }
 .disc-open-row { width: 100%; min-height: 43px; padding: 10px 22px; display: flex; align-items: center; justify-content: space-between; border: 0; border-top: 1px solid var(--border-color); background: var(--hover-bg); color: var(--text-main); font: 750 .66rem Poppins,sans-serif; cursor: pointer; }
 .disc-open-row span:last-child { color: var(--subject-color,var(--accent-color)); font-size: 1rem; }
-.domain-overview { margin-bottom: 18px; padding: 23px; display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 16px 24px; }
-.domain-overview h2,.learning-insight-heading h2,.section-list-heading h2 { margin: 3px 0 4px; color: var(--text-main); font-size: 1rem; }
-.domain-overview p { margin: 0; color: var(--text-muted); font-size: .7rem; }
-.domain-overview > strong { color: var(--accent-color); font-size: 2.2rem; }
-.domain-legend { grid-column: 1/-1; display: flex; flex-wrap: wrap; gap: 8px; }
-.domain-legend span { padding: 6px 9px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-muted); font-size: .61rem; font-weight: 700; }
-.domain-legend b { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 7px; background: rgba(var(--accent-rgb),.12); color: var(--accent-color); }
-.domain-map-grid { display: grid; gap: 12px; }
-.mapa-card { overflow: hidden; border: 1px solid var(--border-color); border-radius: 18px; background: var(--card-bg); box-shadow: var(--card-shadow); }
-.mapa-card-toggle { width: 100%; padding: 17px 19px; display: grid; grid-template-columns: minmax(0,1fr) auto auto; align-items: center; gap: 14px; border: 0; background: transparent; color: var(--text-main); text-align: left; cursor: pointer; }
-.mapa-title { font-size: .82rem; font-weight: 850; }
-.mapa-progress-bg { height: 5px; margin-top: 8px; overflow: hidden; border-radius: 99px; background: var(--border-color); }
-.mapa-progress-fill { height: 100%; border-radius: inherit; }
-.mapa-pct { color: var(--text-muted); font-size: .67rem; font-weight: 850; }
-.mapa-arrow { color: var(--text-muted); font-size: 1rem; transition: transform .2s ease; }
-.mapa-card-toggle[aria-expanded="true"] .mapa-arrow { transform: rotate(180deg); }
-.mapa-body { display: none; padding: 0 19px 17px; }
-.mapa-body.open { display: grid; gap: 7px; }
-.mapa-topic-row { min-height: 49px; padding: 8px 10px 8px 13px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--hover-bg); }
-.mapa-topic-name { min-width: 0; overflow: hidden; color: var(--text-main); font-size: .68rem; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
-.mapa-tpd-group { display: flex; gap: 5px; }
-.tpd-btn { width: 31px; height: 31px; padding: 0; border: 1px solid var(--border-color); border-radius: 9px; background: var(--card-bg); color: var(--text-muted); font: 850 .62rem Poppins,sans-serif; cursor: pointer; }
-.tpd-btn.active { color: #fff; }
+.learning-insight-heading h2,.section-list-heading h2 { margin: 3px 0 4px; color: var(--text-main); font-size: 1rem; }
 
 .agenda-summary { grid-template-columns: repeat(3,minmax(0,1fr)); }
 .next-action-card { margin-bottom: 18px; padding: 20px 22px; border-left: 4px solid var(--accent-color); }
@@ -322,11 +300,9 @@ html.reduce-motion :is(.nav-item-icon,.dock-btn) { transition: none !important; 
     .result-card-metrics.five > div:last-child { grid-column: 1/-1; }
     .history-session-main { align-items: flex-start; flex-direction: column; }
     .history-session-meta { width: 100%; justify-content: flex-start; }
-    .domain-overview { grid-template-columns: 1fr; }
-    .domain-overview > strong { grid-row: 1; }
 }
 @media (max-width: 380px) { .workspace-metric-strip { grid-template-columns: 1fr; } }
-html.reduce-motion :is(.workspace-tabs button,.filter-chips button,.workspace-icon-button,.mapa-arrow,.disc-card) { transition: none !important; }
+html.reduce-motion :is(.workspace-tabs button,.filter-chips button,.workspace-icon-button,.disc-card) { transition: none !important; }
 
 /* Qualidade gráfica adaptativa: preserva identidade sem exigir a mesma GPU em todo aparelho. */
 .motion-page-hidden *, .motion-page-hidden *::before, .motion-page-hidden *::after,

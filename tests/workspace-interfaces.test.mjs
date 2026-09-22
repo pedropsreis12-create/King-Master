@@ -15,8 +15,14 @@ test('subjects expose accessible content and mastery views with useful summaries
   assert.match(html, /id="tab-dominio" role="tab" aria-selected="false"/);
   assert.match(html, /id="materiasDominio"/);
   assert.match(html, /id="mapaContainer"/);
+  assert.match(html, /Central de domínio/);
+  assert.match(html, /id="domainCenterStats"/);
+  assert.match(html, /id="domainPriorityList"/);
+  assert.doesNotMatch(html, /Seu mapa de domínio/);
   assert.match(script, /function navegarAbasHub\(event\)/);
   assert.match(script, /setAttribute\('aria-selected'/);
+  assert.match(script, /function abrirTopicoPelaCentral\(materiaId, topicoIndex\)/);
+  assert.match(script, /pontuacaoAcaoTopico\(a\.materia, a\.topico\)/);
 });
 
 test('agenda and reviews can be reduced to the next actionable items', () => {

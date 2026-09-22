@@ -21,7 +21,7 @@
     <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
-    <link rel="stylesheet" href="quick-improvements.css?v=20260922-notes-review-v1">
+    <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -143,7 +143,7 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Desenvolvimento</span>
                 <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Disciplina e direção</small></span></button>
-                <button type="button" class="menu-btn" onclick="abrirNotasRapidas();fecharMenuMovel()"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Notas rápidas</strong><small>Ideias e problemas do site</small></span></button>
+                <button type="button" class="menu-btn" data-action="notes" onclick="abrirNotasRapidas();fecharMenuMovel()"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Notas</strong><small>Cadernos e tópicos</small></span></button>
             </div>
             <div class="nav-cluster nav-cluster-account">
                 <span class="nav-cluster-label">Conta</span>
@@ -174,14 +174,13 @@
         <div class="modal-box quick-notes-box">
             <button type="button" class="modal-close" onclick="fecharModal('quickNotesModal')" aria-label="Fechar notas">×</button>
             <span class="workspace-kicker">SEM SAIR DO ESTUDO</span>
-            <h2 id="quickNotesTitle">Notas rápidas</h2>
-            <p>Guarde um bug, uma ideia ou algo para resolver depois. O cronômetro continua contando.</p>
-            <form id="quickNotesForm" onsubmit="salvarNotaRapida(event)">
-                <label for="quickNoteText">O que aconteceu?</label>
-                <textarea id="quickNoteText" class="cycle-input" maxlength="1000" rows="3" placeholder="Ex.: o botão não abriu no celular…" required></textarea>
-                <div class="quick-notes-actions"><span id="quickNotesContext"></span><button type="submit" class="cycle-btn primary">Guardar nota</button></div>
-            </form>
-            <div id="quickNotesList" class="quick-notes-list" aria-live="polite"></div>
+            <h2 id="quickNotesTitle">Meus cadernos</h2>
+            <p>Crie um caderno, como “Concentração total”, e organize tópicos dentro dele sem parar o cronômetro.</p>
+            <form id="quickNoteBookForm" class="quick-book-form" onsubmit="salvarCadernoNota(event)"><input type="hidden" id="quickBookEditId"><label for="quickBookName">Caderno</label><div><input id="quickBookName" class="cycle-input" maxlength="60" placeholder="Ex.: Concentração total" required><button type="submit" class="cycle-btn primary" id="quickBookSaveButton">Criar</button><button type="button" class="cycle-btn" id="quickBookCancelButton" onclick="cancelarEdicaoCadernoNota()" hidden>Cancelar</button></div></form>
+            <div class="quick-notes-layout"><div id="quickNoteBooksList" class="quick-note-books-list" aria-label="Cadernos de notas"></div><section id="quickNoteWorkspace" class="quick-note-workspace" hidden><header class="quick-note-book-heading"><strong id="quickBookCurrentTitle"></strong><div><button type="button" class="cycle-btn" onclick="editarCadernoNota()">Renomear</button><button type="button" class="cycle-btn subtle-danger" onclick="excluirCadernoNota()">Apagar</button></div></header>
+                <form id="quickNotesForm" onsubmit="salvarNotaRapida(event)"><input type="hidden" id="quickNoteEditId"><label for="quickNoteTitle">Novo tópico</label><input id="quickNoteTitle" class="cycle-input" maxlength="80" placeholder="Ex.: Distrações no celular" required><label for="quickNoteText">Anotação <span class="schedule-optional">opcional</span></label><textarea id="quickNoteText" class="cycle-input" maxlength="1500" rows="3" placeholder="O que aconteceu? O que deseja lembrar?"></textarea><div class="quick-notes-actions"><span id="quickNotesContext"></span><div><button type="button" class="cycle-btn" id="quickNoteCancelButton" onclick="cancelarEdicaoNotaRapida()" hidden>Cancelar</button><button type="submit" class="cycle-btn primary" id="quickNoteSaveButton">Adicionar tópico</button></div></div></form>
+                <div id="quickNotesList" class="quick-notes-list" aria-live="polite"></div>
+            </section></div>
         </div>
     </div>
 
@@ -289,7 +288,7 @@
             </div>
 
             <div class="widget daily-missions" id="dailyMissions" aria-labelledby="dailyMissionsTitle">
-                <div class="daily-missions-heading"><div><span>MISSÕES DE HOJE</span><h2 id="dailyMissionsTitle">Avance uma etapa por vez</h2></div><strong id="dailyMissionsScore">0/8</strong></div>
+                <div class="daily-missions-heading"><div><span>MISSÕES DE HOJE</span><h2 id="dailyMissionsTitle">Avance uma etapa por vez</h2></div><strong id="dailyMissionsScore">0/3</strong></div>
                 <div class="daily-missions-grid" id="dailyMissionsGrid"></div>
             </div>
             
@@ -533,8 +532,9 @@
                     <h1>Agenda</h1>
                     <p>Veja o que vence hoje, o que vem depois e o que já foi concluído.</p>
                 </div>
-                <button class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button>
+                <div class="cycle-btn-group"><button type="button" class="cycle-btn" id="googleCalendarButton" onclick="window.kingCalendar?.connect()">Vincular Google Agenda</button><button class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button></div>
             </div>
+            <p class="calendar-sync-status" id="googleCalendarStatus" role="status">Opcional: envie seus compromissos ao Google Agenda. Só eventos criados pelo King Master serão alterados ou removidos.</p>
             <div class="workspace-metric-strip agenda-summary" aria-label="Resumo da agenda">
                 <article><small>Hoje</small><strong id="agendaHojeTotal">0</strong><span>pendentes</span></article>
                 <article><small>Atrasados</small><strong id="agendaAtrasadosTotal">0</strong><span>pedem ajuste</span></article>
@@ -1064,6 +1064,7 @@
                             <option value="Pessoal">👤 Pessoal</option>
                         </select>
                     </div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDurationInput">Duração</label><select id="agendamentoDurationInput" class="cycle-input"><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="90">1 hora e meia</option><option value="120">2 horas</option></select></div>
                     <div class="cycle-form-group"><label class="cycle-label">Notas</label><textarea id="agendamentoDescInput" class="cycle-input" rows="2"></textarea></div>
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Agendar</button></div>
                 </form>
@@ -1343,16 +1344,17 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-notes-review-v1"></script>
-    <script src="sidebar-icons.js?v=20260922-personal-v1"></script>
-    <script src="schedule.js?v=20260922-notes-review-v1"></script>
+    <script src="script.js?v=20260922-notebooks-v1"></script>
+    <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
+    <script src="schedule.js?v=20260922-block-isolation-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>
-    <script src="subject-lab.js?v=20260922-subject-lab-v1"></script>
+    <script src="subject-lab.js?v=20260922-pdf-v2"></script>
+    <script type="module" src="syllabus-pdf.js?v=20260922-pdf-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
     <script src="ai-assistant.js?v=20260922-personal-v1"></script>
-    <script src="productivity.js?v=20260922-notes-review-v1"></script>
+    <script src="productivity.js?v=20260922-missions-3-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260922-notes-review-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20260922-pdf-v2"></script>
 </body>
 </html>

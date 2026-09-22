@@ -31,23 +31,63 @@
     async function analyze() {
         if (!state.file) return;
         const button = byId('syllabusAnalyzeButton'); button.disabled = true; button.textContent = 'Lendo e organizando…';
+        byId('syllabusFileInput').disabled = true;
         byId('syllabusStatus').textContent = 'A IA está separando somente os conteúdos que consegue identificar com segurança.';
         try {
             await window.kingGeminiReady;
             if (!window.kingGemini?.analyzeSyllabus) throw new Error('A leitura inteligente ainda não está disponível.');
-            const textMode = /^text\//.test(state.file.type) || /\.(md|txt)$/i.test(state.file.name);
-            const raw = await readFile(state.file, textMode);
-            const payload = textMode ? { name: state.file.name, mimeType: 'text/plain', text: String(raw).slice(0, 80000) }
-                : { name: state.file.name, mimeType: state.file.type, base64: String(raw).split(',')[1] || '' };
-            const response = await window.kingGemini.analyzeSyllabus({ ...payload, subjects: appData.cycleItems.map(item => item.subject) });
-            state.results = Array.isArray(response?.materias) ? response.materias.filter(item => item?.topicos?.length) : [];
+            const file = state.file;
+            const textMode = /^text\//.test(file.type) || /\.(md|txt)$/i.test(file.name);
+            const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+            let parts;
+            if (isPdf) {
+                if (!window.KingSyllabusPdf?.extract) throw new Error('O leitor de PDF ainda está carregando. Tente novamente em alguns segundos.');
+                byId('syllabusStatus').textContent = 'Extraindo o texto do PDF no seu dispositivo…';
+                const pages = await window.KingSyllabusPdf.extract(file);
+                parts = [];
+                let batch = '';
+                for (const page of pages) {
+                    if (batch && batch.length + page.length > 18000) { parts.push(batch); batch = ''; }
+                    batch += `${page}\n`;
+                }
+                if (batch) parts.push(batch);
+            } else if (textMode) {
+                const text = String(await readFile(file, true));
+                parts = text.match(/[\s\S]{1,18000}/g) || [];
+            } else {
+                const raw = await readFile(file, false);
+                parts = [{ image: String(raw).split(',')[1] || '' }];
+            }
+            if (!parts.length) throw new Error('O arquivo está vazio.');
+            const groups = new Map();
+            for (let index = 0; index < parts.length; index++) {
+                byId('syllabusStatus').textContent = `Analisando parte ${index + 1} de ${parts.length}… Seus tópicos ainda não serão adicionados.`;
+                const payload = typeof parts[index] === 'string'
+                    ? { name: file.name, mimeType: 'text/plain', text: parts[index] }
+                    : { name: file.name, mimeType: file.type, base64: parts[index].image };
+                const response = await window.kingGemini.analyzeSyllabus({ ...payload, subjects: appData.cycleItems.map(item => item.subject) });
+                for (const group of response?.materias || []) {
+                    const key = normalized(group.nome);
+                    if (!key) continue;
+                    if (!groups.has(key)) groups.set(key, { nome: group.nome, topicos: [] });
+                    const saved = groups.get(key);
+                    const known = new Set(saved.topicos.map(normalized));
+                    for (const topic of group.topicos || []) {
+                        const topicKey = normalized(topic);
+                        if (topicKey && !known.has(topicKey)) { saved.topicos.push(topic); known.add(topicKey); }
+                    }
+                }
+            }
+            state.results = [...groups.values()].filter(item => item.topicos.length);
             if (!state.results.length) throw new Error('Não encontrei uma lista clara de conteúdos neste arquivo.');
             renderResults();
             byId('syllabusStatus').textContent = `${state.results.reduce((sum, item) => sum + item.topicos.length, 0)} assuntos encontrados. Confira o destino de cada grupo.`;
         } catch (error) {
-            byId('syllabusStatus').textContent = error.message || 'Não foi possível analisar este edital.';
+            byId('syllabusStatus').textContent = /timeout|timed out|deadline/i.test(error?.message || '')
+                ? 'A análise demorou mais que o esperado. O arquivo continua selecionado; tente novamente.'
+                : error.message || 'Não foi possível analisar este edital.';
             showToast(byId('syllabusStatus').textContent, true);
-        } finally { button.disabled = false; button.textContent = 'Analisar e separar assuntos'; }
+        } finally { button.disabled = false; button.textContent = 'Analisar e separar assuntos'; byId('syllabusFileInput').disabled = false; }
     }
     function subjectOptions(resultName) {
         const match = appData.cycleItems.find(item => normalized(item.subject) === normalized(resultName))

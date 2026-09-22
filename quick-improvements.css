@@ -2,20 +2,37 @@
 .quick-notes-launch { position: fixed; right: 20px; bottom: 90px; z-index: 690; min-height: 42px; padding: 0 15px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(var(--accent-rgb),.35); border-radius: 999px; background: var(--card-bg); color: var(--text-main); box-shadow: 0 8px 24px #0002; font: 800 .7rem Poppins,sans-serif; cursor: pointer; }
 .quick-notes-launch:hover { border-color: var(--accent-color); color: var(--accent-color); }
 .quick-notes-overlay { z-index: 1750; }
-.quick-notes-box { width: min(500px,calc(100vw - 28px)); max-height: min(85dvh,700px); padding: 26px; overflow-y: auto; }
+.quick-notes-box { width: min(760px,calc(100vw - 28px)); max-height: min(88dvh,780px); padding: 26px; overflow-y: auto; }
 .quick-notes-box h2 { margin: 3px 0 4px; color: var(--text-main); font-size: 1.2rem; }
 .quick-notes-box > p { margin: 0 32px 20px 0; color: var(--text-muted); font-size: .68rem; line-height: 1.5; }
 .quick-notes-box form { display: grid; gap: 9px; }
 .quick-notes-box label { color: var(--text-main); font-size: .65rem; font-weight: 800; }
-.quick-notes-box textarea { width: 100%; min-height: 90px; resize: vertical; }
+.quick-notes-box textarea { width: 100%; min-height: 78px; resize: vertical; }
+.quick-book-form { padding: 13px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--hover-bg); }
+.quick-book-form > div { display: flex; gap: 8px; }
+.quick-book-form input { min-width: 0; flex: 1; }
+.quick-notes-layout { display: grid; grid-template-columns: minmax(145px, .62fr) minmax(0, 1.8fr); gap: 16px; margin-top: 16px; }
+.quick-note-books-list { align-self: start; display: grid; gap: 7px; max-height: 480px; overflow-y: auto; }
+.quick-book-tab { width: 100%; padding: 11px 12px; display: grid; gap: 3px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--hover-bg); color: var(--text-main); text-align: left; cursor: pointer; }
+.quick-book-tab.active { border-color: var(--accent-color); background: rgba(var(--accent-rgb), .1); }
+.quick-book-tab strong { overflow-wrap: anywhere; font-size: .7rem; }
+.quick-book-tab small { color: var(--text-muted); font-size: .57rem; }
+.quick-note-workspace { min-width: 0; }
+.quick-note-workspace[hidden] { display: none; }
+.quick-note-book-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.quick-note-book-heading strong { overflow-wrap: anywhere; color: var(--text-main); font-size: .84rem; }
+.quick-note-book-heading > div, .quick-notes-actions > div { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick-note-book-heading .cycle-btn { padding: 7px 10px; font-size: .57rem; }
 .quick-notes-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .quick-notes-actions > span { color: var(--text-muted); font-size: .58rem; }
-.quick-notes-list { display: grid; gap: 8px; max-height: 260px; margin-top: 20px; overflow-y: auto; }
+.quick-notes-list { display: grid; gap: 8px; max-height: 260px; margin-top: 16px; overflow-y: auto; }
 .quick-note-item { padding: 11px 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 9px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--hover-bg); }
 .quick-note-item span { color: var(--accent-color); font-size: .55rem; font-weight: 800; }
+.quick-note-item h3 { margin: 4px 0 0; color: var(--text-main); font-size: .72rem; }
 .quick-note-item p { margin: 4px 0 0; overflow-wrap: anywhere; color: var(--text-main); font-size: .66rem; line-height: 1.5; white-space: pre-wrap; }
 .quick-note-item button { align-self: start; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; }
 .quick-note-item button:hover { background: #ff453a1a; color: #e14339; }
+.quick-note-item-actions { display: flex; gap: 3px; }
 .quick-notes-empty { margin: 0; padding: 16px; color: var(--text-muted); font-size: .64rem; text-align: center; }
 
 /* Caixa de Revisões: leitura rápida, menos bordas e comandos secundários discretos. */
@@ -49,9 +66,18 @@
     .quick-notes-launch { right: 12px; bottom: 76px; padding: 0; width: 42px; justify-content: center; }
     .quick-notes-launch span { display: none; }
     .quick-notes-box { width: 100%; max-height: 85dvh; padding: 20px 16px; border-radius: 20px 20px 0 0; align-self: end; }
+    .quick-notes-layout { grid-template-columns: 1fr; gap: 12px; }
+    .quick-note-books-list { grid-auto-flow: column; grid-auto-columns: minmax(130px, 1fr); overflow-x: auto; overflow-y: hidden; }
+    .quick-note-book-heading { align-items: flex-start; flex-direction: column; }
     .review-inbox-card .review-card-content { grid-template-columns: auto minmax(0,1fr); }
     .review-inbox-card .review-card-image { width: 58px; height: 58px; }
     .review-inbox-card .review-card-image img { min-height: 58px; }
     .review-inbox-card .revision-actions { display: flex; flex-wrap: wrap; }
     .review-inbox-card .revision-actions .cycle-btn { width: auto; flex: 1 1 auto; }
+}
+.calendar-sync-status {
+    margin: -8px 0 20px;
+    color: var(--text-muted);
+    font-size: .82rem;
+    line-height: 1.55;
 }

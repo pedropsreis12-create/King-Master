@@ -30,8 +30,17 @@
             { icon: '▦', title: 'Ampliar o repertório', copy: 'Estudar duas matérias', value: distinctSubjects, goal: 2, unit: 'matérias' },
             { icon: '✎', title: 'Capturar uma ideia', copy: 'Guardar uma nota rápida', value: notes, goal: 1, unit: 'nota' }
         ];
-        document.getElementById('dailyMissionsScore').textContent = `${missions.filter(item => item.value >= item.goal).length}/${missions.length}`;
-        grid.innerHTML = missions.map(item => {
+        // A seleção depende apenas da data local: progresso e recargas não trocam as missões do dia.
+        const [year, month, day] = todayIso().split('-').map(Number);
+        const daySeed = Math.floor(Date.UTC(year, month - 1, day) / 86400000);
+        const varied = missions.slice(3);
+        const dailyMissions = [
+            missions[daySeed % 3],
+            varied[daySeed % varied.length],
+            varied[(daySeed + 2) % varied.length]
+        ];
+        document.getElementById('dailyMissionsScore').textContent = `${dailyMissions.filter(item => item.value >= item.goal).length}/${dailyMissions.length}`;
+        grid.innerHTML = dailyMissions.map(item => {
             const complete = item.value >= item.goal;
             const percent = Math.min(100, item.value / item.goal * 100);
             const progress = item.unit ? `${Math.min(item.value, item.goal)}/${item.goal} ${item.unit}` : item.goal === 1 ? `${Math.min(item.value, 1)}/1 sessão` : `${Math.floor(item.value / 60)}/${Math.floor(item.goal / 60)} min`;

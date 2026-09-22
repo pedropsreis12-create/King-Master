@@ -20,12 +20,14 @@ const defaultAppData = {
     historyItems: [], 
     agendaItems: [], 
     agendamentoItems: [],
+    calendarDeletedIds: [],
     simuladosItems: [],
     redacaoItems: [],
     revisoesItems: [],
     revisaoTags: [],
     cadernoErrosItems: [],
     quickNotes: [],
+    quickNoteBooks: [],
     dailyGoalMinutes: 240,
     lastWeekStart: '', 
     themeColor: '', 
@@ -87,10 +89,17 @@ if (!appData.cycleItems) appData.cycleItems = [];
 if (!appData.historyItems) appData.historyItems = [];
 if (!appData.agendaItems) appData.agendaItems = [];
 if (!appData.agendamentoItems) appData.agendamentoItems = [];
+if (!Array.isArray(appData.calendarDeletedIds)) appData.calendarDeletedIds = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!Array.isArray(appData.revisoesItems)) appData.revisoesItems = [];
 if (!Array.isArray(appData.quickNotes)) appData.quickNotes = [];
+if (!Array.isArray(appData.quickNoteBooks)) appData.quickNoteBooks = [];
+if (appData.quickNotes.some(nota => !nota.bookId)) {
+    const legacyId = 'notas-anteriores';
+    if (!appData.quickNoteBooks.some(caderno => caderno.id === legacyId)) appData.quickNoteBooks.push({ id: legacyId, title: 'Anotações anteriores', createdAt: Date.now() });
+    appData.quickNotes.forEach(nota => { if (!nota.bookId) { nota.bookId = legacyId; nota.title = String(nota.title || nota.text || 'Anotação').split('\n')[0].slice(0, 80); } });
+}
 appData.revisoesItems = appData.revisoesItems.map(normalizarItemRevisao);
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!Array.isArray(appData.cadernoErrosItems)) appData.cadernoErrosItems = [];
@@ -178,33 +187,123 @@ function saveAppData() {
     window.KingPersonalDevelopment?.render?.();
 }
 
+let cadernoNotaAtivoId = '';
 function renderizarNotasRapidas() {
-    const lista = document.getElementById('quickNotesList');
-    if (!lista) return;
-    const notas = appData.quickNotes.slice().sort((a, b) => b.createdAt - a.createdAt);
-    lista.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span><p>${escaparRevisaoHtml(nota.text)}</p></div><button type="button" onclick="excluirNotaRapida('${nota.id}')" aria-label="Excluir nota" title="Excluir nota">×</button></article>`).join('') : '<p class="quick-notes-empty">Nenhuma nota ainda. Escreva e volte ao estudo.</p>';
+    const listaCadernos = document.getElementById('quickNoteBooksList');
+    const listaNotas = document.getElementById('quickNotesList');
+    if (!listaCadernos || !listaNotas) return;
+    const cadernos = appData.quickNoteBooks || [];
+    if (!cadernos.some(caderno => caderno.id === cadernoNotaAtivoId)) cadernoNotaAtivoId = cadernos[0]?.id || '';
+    listaCadernos.innerHTML = cadernos.length ? cadernos.map(caderno => {
+        const count = appData.quickNotes.filter(nota => nota.bookId === caderno.id).length;
+        return `<button type="button" class="quick-book-tab${caderno.id === cadernoNotaAtivoId ? ' active' : ''}" onclick="selecionarCadernoNota('${caderno.id}')" aria-current="${caderno.id === cadernoNotaAtivoId ? 'true' : 'false'}"><strong>${escaparRevisaoHtml(caderno.title)}</strong><small>${count} ${count === 1 ? 'tópico' : 'tópicos'}</small></button>`;
+    }).join('') : '<p class="quick-notes-empty">Crie seu primeiro caderno acima.</p>';
+    const caderno = cadernos.find(item => item.id === cadernoNotaAtivoId);
+    document.getElementById('quickNoteWorkspace').hidden = !caderno;
+    if (!caderno) { listaNotas.innerHTML = ''; return; }
+    document.getElementById('quickBookCurrentTitle').textContent = caderno.title;
+    const notas = appData.quickNotes.filter(nota => nota.bookId === caderno.id).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
+    listaNotas.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span><h3>${escaparRevisaoHtml(nota.title || 'Anotação')}</h3>${nota.text ? `<p>${escaparRevisaoHtml(nota.text)}</p>` : ''}</div><div class="quick-note-item-actions"><button type="button" onclick="editarNotaRapida('${nota.id}')" aria-label="Editar tópico" title="Editar tópico">✎</button><button type="button" onclick="excluirNotaRapida('${nota.id}')" aria-label="Excluir tópico" title="Excluir tópico">×</button></div></article>`).join('') : '<p class="quick-notes-empty">Este caderno está vazio. Adicione o primeiro tópico.</p>';
 }
 function abrirNotasRapidas() {
     const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
-    document.getElementById('quickNotesContext').textContent = materia ? `Estudando ${materia.subject}` : 'Nota geral';
+    document.getElementById('quickNotesContext').textContent = materia ? `Estudando ${materia.subject}` : 'Anotação geral';
     renderizarNotasRapidas();
     document.getElementById('quickNotesModal').classList.add('active');
-    setTimeout(() => document.getElementById('quickNoteText')?.focus(), 50);
+    setTimeout(() => document.getElementById(cadernoNotaAtivoId ? 'quickNoteTitle' : 'quickBookName')?.focus(), 50);
+}
+function selecionarCadernoNota(id) {
+    if (!appData.quickNoteBooks.some(caderno => caderno.id === id)) return;
+    if (document.getElementById('quickNoteTitle').value.trim() || document.getElementById('quickNoteText').value.trim()) {
+        if (!confirm('Trocar de caderno e descartar o tópico que ainda não foi salvo?')) return;
+    }
+    cancelarEdicaoNotaRapida();
+    cadernoNotaAtivoId = id;
+    renderizarNotasRapidas();
+}
+function cancelarEdicaoCadernoNota() {
+    document.getElementById('quickNoteBookForm').reset();
+    document.getElementById('quickBookEditId').value = '';
+    document.getElementById('quickBookSaveButton').textContent = 'Criar';
+    document.getElementById('quickBookCancelButton').hidden = true;
+}
+function salvarCadernoNota(event) {
+    event.preventDefault();
+    const title = document.getElementById('quickBookName').value.trim();
+    const editId = document.getElementById('quickBookEditId').value;
+    if (!title) return;
+    if (appData.quickNoteBooks.some(caderno => caderno.id !== editId && caderno.title.toLocaleLowerCase('pt-BR') === title.toLocaleLowerCase('pt-BR'))) return showToast('Já existe um caderno com esse nome.', true);
+    const previous = JSON.parse(JSON.stringify(appData.quickNoteBooks));
+    if (editId) {
+        const caderno = appData.quickNoteBooks.find(item => item.id === editId);
+        if (caderno) caderno.title = title;
+    } else {
+        cadernoNotaAtivoId = `caderno-${crypto.randomUUID()}`;
+        appData.quickNoteBooks.push({ id: cadernoNotaAtivoId, title, createdAt: Date.now() });
+    }
+    try { saveAppData(); cancelarEdicaoCadernoNota(); renderizarNotasRapidas(); document.getElementById('quickNoteTitle').focus(); }
+    catch { appData.quickNoteBooks = previous; renderizarNotasRapidas(); showToast('Não foi possível salvar o caderno.', true); }
+}
+function editarCadernoNota() {
+    const caderno = appData.quickNoteBooks.find(item => item.id === cadernoNotaAtivoId);
+    if (!caderno) return;
+    document.getElementById('quickBookEditId').value = caderno.id;
+    document.getElementById('quickBookName').value = caderno.title;
+    document.getElementById('quickBookSaveButton').textContent = 'Salvar nome';
+    document.getElementById('quickBookCancelButton').hidden = false;
+    document.getElementById('quickBookName').focus();
+}
+function excluirCadernoNota() {
+    const caderno = appData.quickNoteBooks.find(item => item.id === cadernoNotaAtivoId);
+    if (!caderno || !confirm(`Apagar “${caderno.title}” e todos os tópicos deste caderno?`)) return;
+    const previousBooks = appData.quickNoteBooks;
+    const previousNotes = appData.quickNotes;
+    appData.quickNoteBooks = previousBooks.filter(item => item.id !== caderno.id);
+    appData.quickNotes = previousNotes.filter(item => item.bookId !== caderno.id);
+    try { saveAppData(); cadernoNotaAtivoId = ''; cancelarEdicaoNotaRapida(); cancelarEdicaoCadernoNota(); renderizarNotasRapidas(); }
+    catch { appData.quickNoteBooks = previousBooks; appData.quickNotes = previousNotes; showToast('Não foi possível apagar o caderno.', true); }
+}
+function cancelarEdicaoNotaRapida() {
+    document.getElementById('quickNotesForm').reset();
+    document.getElementById('quickNoteEditId').value = '';
+    document.getElementById('quickNoteSaveButton').textContent = 'Adicionar tópico';
+    document.getElementById('quickNoteCancelButton').hidden = true;
+}
+function editarNotaRapida(id) {
+    const nota = appData.quickNotes.find(item => item.id === id && item.bookId === cadernoNotaAtivoId);
+    if (!nota) return;
+    document.getElementById('quickNoteEditId').value = nota.id;
+    document.getElementById('quickNoteTitle').value = nota.title || 'Anotação';
+    document.getElementById('quickNoteText').value = nota.text || '';
+    document.getElementById('quickNoteSaveButton').textContent = 'Salvar tópico';
+    document.getElementById('quickNoteCancelButton').hidden = false;
+    document.getElementById('quickNoteTitle').focus();
 }
 function salvarNotaRapida(event) {
     event.preventDefault();
-    const campo = document.getElementById('quickNoteText');
-    const text = campo.value.trim();
-    if (!text) return;
-    const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
-    appData.quickNotes.push({ id: `nota-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, subject: materia?.subject || '', createdAt: Date.now() });
-    try { saveAppData(); campo.value = ''; renderizarNotasRapidas(); showToast('Nota guardada. Pode continuar estudando.'); }
-    catch { appData.quickNotes.pop(); showToast('Não foi possível guardar a nota. Copie o texto antes de fechar.', true); }
+    if (!appData.quickNoteBooks.some(item => item.id === cadernoNotaAtivoId)) return;
+    const title = document.getElementById('quickNoteTitle').value.trim();
+    const text = document.getElementById('quickNoteText').value.trim();
+    const editId = document.getElementById('quickNoteEditId').value;
+    if (!title) return;
+    const previous = JSON.parse(JSON.stringify(appData.quickNotes));
+    if (editId) {
+        const nota = appData.quickNotes.find(item => item.id === editId && item.bookId === cadernoNotaAtivoId);
+        if (!nota) return;
+        Object.assign(nota, { title, text, updatedAt: Date.now() });
+    } else {
+        const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
+        appData.quickNotes.push({ id: `nota-${crypto.randomUUID()}`, bookId: cadernoNotaAtivoId, title, text, subject: materia?.subject || '', createdAt: Date.now() });
+    }
+    try { saveAppData(); cancelarEdicaoNotaRapida(); renderizarNotasRapidas(); showToast('Tópico salvo. Pode continuar estudando.'); }
+    catch { appData.quickNotes = previous; showToast('Não foi possível guardar o tópico. Copie o texto antes de fechar.', true); }
 }
 function excluirNotaRapida(id) {
-    if (!confirm('Excluir esta nota?')) return;
-    appData.quickNotes = appData.quickNotes.filter(nota => nota.id !== id);
-    saveAppData(); renderizarNotasRapidas();
+    if (!confirm('Excluir este tópico?')) return;
+    const previous = appData.quickNotes;
+    appData.quickNotes = previous.filter(nota => nota.id !== id);
+    try { saveAppData(); if (document.getElementById('quickNoteEditId').value === id) cancelarEdicaoNotaRapida(); renderizarNotasRapidas(); }
+    catch { appData.quickNotes = previous; showToast('Não foi possível excluir o tópico.', true); }
 }
 
 window.kingMasterCloudBridge = {
@@ -641,8 +740,10 @@ function confirmarDelecao() {
         showToast('🗑️ Agendamento removido!'); 
     }
     else if (tipo === 'agendamentoTab') { 
+        if (appData.agendamentoItems.some(i => i.id === id)) appData.calendarDeletedIds.push(String(id));
         appData.agendamentoItems = appData.agendamentoItems.filter(i => i.id !== id); 
         saveAppData(); renderizarAgendamento(); 
+        window.kingCalendar?.syncIfConnected();
         showToast('🗑️ Compromisso removido!'); 
     }
     else if (tipo === 'simulado') { 
@@ -1782,7 +1883,7 @@ function registrarSessao(segundos, detalhes = null) {
     if (sourceSessionId) removerSessaoPendente(sourceSessionId);
     if (sourceSessionId) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== sourceSessionId), sourceSessionId].slice(-40);
     try {
-        if (pendenteCronograma) window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade });
+        if (pendenteCronograma) window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade, subjectId: materia?.id || '' });
         if (sessaoOrigem?.holdsTimer && !isRunning) currentSeconds = 0;
         if (String(appData.activeScheduleBlock?.blockId || '') === String(sessaoOrigem?.scheduleBlockId || '')) appData.activeScheduleBlock = null;
         saveAppData();
@@ -3284,14 +3385,16 @@ function salvarAgendamentoNovo(e) {
     const time = document.getElementById('agendamentoTimeInput').value;
     const type = document.getElementById('agendamentoTypeInput').value;
     const description = document.getElementById('agendamentoDescInput').value;
+    const duration = Number(document.getElementById('agendamentoDurationInput').value) || 60;
 
     if (idEdit) {
         const idx = appData.agendamentoItems.findIndex(i => i.id == idEdit);
-        if (idx > -1) appData.agendamentoItems[idx] = { ...appData.agendamentoItems[idx], title, date, time, type, description };
+        if (idx > -1) appData.agendamentoItems[idx] = { ...appData.agendamentoItems[idx], title, date, time, type, description, duration };
     } else {
-        appData.agendamentoItems.push({ id: Date.now(), title, date, time, type, description, completed: false });
+        appData.agendamentoItems.push({ id: Date.now(), title, date, time, type, description, duration, completed: false });
     }
     saveAppData(); renderizarAgendamento(); fecharModal('agendamentoModal'); showToast('📅 Agendado com sucesso!');
+    window.kingCalendar?.syncIfConnected();
 }
 
 function toggleAgendamentoStatus(id) {
@@ -3299,6 +3402,7 @@ function toggleAgendamentoStatus(id) {
     if(idx > -1) {
         appData.agendamentoItems[idx].completed = !appData.agendamentoItems[idx].completed;
         saveAppData(); renderizarAgendamento();
+        window.kingCalendar?.syncIfConnected();
     }
 }
 
@@ -3315,6 +3419,7 @@ function editarAgendamentoItem(id) {
         document.getElementById('agendamentoTitleInput').value = item.title;
         document.getElementById('agendamentoDateInput').value = item.date;
         document.getElementById('agendamentoTimeInput').value = item.time;
+        document.getElementById('agendamentoDurationInput').value = String(item.duration || 60);
         document.getElementById('agendamentoTypeInput').value = item.type === 'Treino Físico' ? 'Pessoal' : (item.type === 'Revisão' ? 'Estudo' : item.type);
         document.getElementById('agendamentoDescInput').value = item.description || "";
         document.getElementById('agendamentoModalTitle').textContent = "Editar Compromisso";

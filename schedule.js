@@ -337,19 +337,32 @@
                 if (!mat) continue;
                 const seconds = appData.historyItems.reduce((sum, item) => {
                     if (dataHistoricoISO(item) !== group.date) return sum;
-                    if (String(item.subjectId || '') !== String(mat.id) && (!item.subjectId && item.materia !== mat.subject)) return sum;
+                    const sameSubject = item.subjectId
+                        ? String(item.subjectId) === String(mat.id)
+                        : String(item.materia || '').trim().toLocaleLowerCase('pt-BR') === String(mat.subject || '').trim().toLocaleLowerCase('pt-BR');
+                    if (!sameSubject) return sum;
                     return sum + Math.max(0, Number(item.tempoSegundos) || 0);
                 }, 0);
-                const earned = Math.floor(seconds / (45 * 60));
                 const sorted = group.blocks.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-                let remaining = Math.max(0, earned - sorted.filter(block => block.status === 'completed').length);
+                const needed = block => Math.max(5, Number(block.duration) || settings().blockMinutes) * 60;
+                // Blocos concluídos pelo usuário já têm prioridade sobre a distribuição automática.
+                const reserved = sorted.filter(block => block.status === 'completed' && !block.result?.autoCompleted)
+                    .reduce((sum, block) => sum + needed(block), 0);
+                let remaining = Math.max(0, seconds - reserved);
                 for (const block of sorted) {
-                    if (!remaining || block.status === 'completed') continue;
-                    block.status = 'completed';
-                    block.registered = true;
-                    block.result = { ...(block.result || {}), activity: 'estudo', actualMinutes: 45,
-                        completedAt: Date.now(), autoCompleted: true, notes: block.result?.notes || 'Concluído automaticamente após 45 minutos nesta matéria.' };
-                    remaining--; changed = true;
+                    if (block.status === 'completed' && !block.result?.autoCompleted) continue;
+                    if (remaining >= needed(block)) {
+                        remaining -= needed(block);
+                        if (block.status === 'completed') continue;
+                        block.status = 'completed'; block.registered = true;
+                        block.result = { ...(block.result || {}), activity: 'estudo', actualMinutes: block.duration,
+                            completedAt: Date.now(), autoCompleted: true, notes: `Concluído automaticamente após ${block.duration} minutos nesta matéria.` };
+                        changed = true;
+                    } else if (block.result?.autoCompleted) {
+                        // Corrige blocos marcados pela regra antiga com tempo de outra matéria.
+                        block.status = 'pending'; block.registered = false; delete block.result;
+                        changed = true;
+                    }
                 }
             }
         }
@@ -529,16 +542,18 @@
     function completeFromSession(pending, details) {
         if (!pending?.scheduleBlockId) return;
         const block = findBlock(pending.scheduleBlockId, pending.scheduleWeekKey); if (!block) return;
+        if (String(details?.subjectId || '') !== String(block.subjectId)) return;
         const generic = details?.atividade === 'estudo' ? details.study || {} : details?.simulado || {};
         const seconds = Number(pending.seconds) || block.duration * 60;
-        block.status = seconds >= 45 * 60 ? 'completed' : 'pending'; block.registered = seconds >= 45 * 60;
-        block.result = { topic: details?.assunto || block.topic || '', questions: Number(generic.total ?? generic.questoes) || 0, hits: Number(generic.acertos) || 0, errors: Number(generic.erros) || 0, notes: details?.comentario || '', activity: details?.atividade || 'estudo', actualMinutes: Math.max(1, Math.round(seconds / 60)), completedAt: Date.now() };
+        const completed = seconds >= block.duration * 60;
+        block.status = completed ? 'completed' : 'pending'; block.registered = completed;
+        block.result = { topic: details?.assunto || block.topic || '', questions: Number(generic.total ?? generic.questoes) || 0, hits: Number(generic.acertos) || 0, errors: Number(generic.erros) || 0, notes: details?.comentario || '', activity: details?.atividade || 'estudo', actualMinutes: Math.max(1, Math.min(block.duration, Math.round(seconds / 60))), completedAt: Date.now() };
         if (pending.scheduleCreditNeeded) {
             appData.totalStudySeconds = Number(appData.totalStudySeconds || 0) + seconds;
             if (pending.scheduleWeekKey === currentWeekKey()) appData.weeklyChart[Number(block.day) - 1] = Number(appData.weeklyChart[Number(block.day) - 1] || 0) + seconds;
         }
         if (String(appData.activeScheduleBlock?.blockId) === String(block.id)) appData.activeScheduleBlock = null;
-        setTimeout(() => { render(); toast(block.status === 'completed' ? 'Bloco concluído automaticamente com 45 minutos de estudo.' : 'Sessão registrada. Ao somar 45 minutos nesta matéria hoje, o bloco será concluído.'); }, 80);
+        setTimeout(() => { render(); toast(block.status === 'completed' ? 'Bloco concluído; o restante do tempo fica para o próximo bloco da mesma matéria.' : `Sessão registrada. Este bloco precisa de ${block.duration} minutos nesta matéria.`); }, 80);
     }
 
     function openDayClose(day, key = visibleWeek) {

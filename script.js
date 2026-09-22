@@ -474,6 +474,7 @@ function mostrarFraseMotivacional() {
 function showSection(sectionId) {
     const secao = document.getElementById(sectionId);
     if (!secao?.classList.contains('content-section')) return;
+    if (sectionId !== 'planejamento' && document.getElementById('planejamento')?.classList.contains('is-subject-workspace')) fecharModal('assuntosModal');
     fecharMenuMovel();
     document.getElementById('settingsPanel')?.classList.remove('active');
     document.getElementById('settingsToggleBtn')?.setAttribute('aria-expanded', 'false');
@@ -635,7 +636,10 @@ function toggleVisualMode() {
 // ==========================================
 let itemToDelete = null, deleteType = '';
 
-function fecharModal(id) { document.getElementById(id)?.classList.remove('active'); }
+function fecharModal(id) {
+    document.getElementById(id)?.classList.remove('active');
+    if (id === 'assuntosModal') document.getElementById('planejamento')?.classList.remove('is-subject-workspace');
+}
 
 function abrirModalDeletar(tipo, id, titulo, msg, rotuloAcao = 'Apagar', perigoso = true) {
     itemToDelete = id; 
@@ -2620,6 +2624,14 @@ function renderizarCiclo() {
 
 function abrirModalAssuntos(id) {
     const mat = appData.cycleItems.find(m => m.id === id); if (!mat) return;
+    const workspace = document.getElementById('assuntosModal');
+    const mount = document.getElementById('subjectWorkspaceMount');
+    if (workspace.parentElement !== mount) {
+        mount.append(workspace);
+        workspace.classList.remove('modal-overlay');
+        workspace.classList.add('subject-workspace-inline');
+    }
+    showSection('planejamento');
     document.getElementById('assuntosMateriaId').value = id; document.getElementById('assuntosModalTitle').textContent = mat.subject;
     buscaAssuntosAtual = '';
     assuntoSelecionadoIndice = null;
@@ -2633,7 +2645,9 @@ function abrirModalAssuntos(id) {
     });
     let segs = 0; appData.historyItems.forEach(h => { if(h.materia.trim().toLowerCase() === mat.subject.trim().toLowerCase()) segs += h.tempoSegundos; });
     document.getElementById('assuntosModalTimeValue').textContent = `${Math.floor(segs/3600)}h ${Math.floor((segs%3600)/60).toString().padStart(2,'0')}m`;
-    renderizarListaAssuntos(id); document.getElementById('assuntosModal').classList.add('active');
+    renderizarListaAssuntos(id);
+    document.getElementById('planejamento').classList.add('is-subject-workspace');
+    workspace.classList.add('active');
 }
 
 function filtrarAssuntos(valor = '') {
@@ -2879,7 +2893,7 @@ function renderizarPainelControleTopico(id, indice) {
     const analise = obterAnaliseTopico(materia, topico);
     const revisaoStatus = revisao ? `<div class="topic-review-status"><span><strong>Revisão ativa</strong><small>${rotuloDataRevisao(revisao.dataAlvo) || 'Escolha uma data'}</small></span><button type="button" class="topic-review-remove" onclick="solicitarRemocaoRevisaoTopico(${id},${indice})">Remover revisão</button></div>` : '';
     painel.innerHTML = `<div class="topic-control-header"><div><span class="workspace-kicker">DOSSIÊ DO ASSUNTO</span><h4>${escaparRevisaoHtml(topico.nome || 'Tópico')}</h4><p>${Number(topico.vezesEstudado) || 0} estudos • último: ${ultimaData}</p></div><span class="topic-state-pill">${rotulosEstado[estado]}</span></div>
-        <nav class="topic-detail-tabs" role="tablist" aria-label="Detalhes do assunto"><button type="button" data-topic-detail-tab="visao" onclick="alternarAbaTopicoDetalhe('visao')">Visão geral</button><button type="button" data-topic-detail-tab="controle" onclick="alternarAbaTopicoDetalhe('controle')">Controle e revisão</button><button type="button" data-topic-detail-tab="registros" onclick="alternarAbaTopicoDetalhe('registros')">Registros</button></nav>
+        <div class="topic-detail-tabs" role="tablist" aria-label="Detalhes do assunto"><button type="button" role="tab" data-topic-detail-tab="visao" onclick="alternarAbaTopicoDetalhe('visao')">Visão geral</button><button type="button" role="tab" data-topic-detail-tab="controle" onclick="alternarAbaTopicoDetalhe('controle')">Controle e revisão</button><button type="button" role="tab" data-topic-detail-tab="registros" onclick="alternarAbaTopicoDetalhe('registros')">Registros</button></div>
         <div class="topic-detail-pane" data-topic-pane="visao">${htmlAnaliseTopico(analise)}</div>
         <div class="topic-detail-pane" data-topic-pane="controle">
         <section class="topic-control-section"><span class="topic-control-label">Nível de domínio</span><div class="topic-mastery-control" role="group" aria-label="Nível de domínio"><button type="button" class="${nivel === 0 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},0)"><b>0</b><span>Não iniciado</span></button><button type="button" class="${nivel === 1 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},1)"><b>1</b><span>Aprendendo</span></button><button type="button" class="${nivel === 2 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},2)"><b>2</b><span>Consolidando</span></button><button type="button" class="${nivel === 3 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},3)"><b>✓</b><span>Dominado</span></button></div></section>

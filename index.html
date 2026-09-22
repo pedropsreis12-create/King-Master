@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-center-v1">
+    <link rel="stylesheet" href="subject-workspace-inline.css?v=20260922-inline-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <style>
@@ -499,6 +500,7 @@
                     <section class="domain-center-subjects widget" aria-labelledby="domainSubjectsTitle"><div class="domain-center-section-heading"><div><span class="workspace-kicker">POR MATÉRIA</span><h3 id="domainSubjectsTitle">Seu avanço</h3></div></div><div id="mapaContainer"></div></section>
                 </div>
             </div>
+            <div id="subjectWorkspaceMount"></div>
         </section>
 
         <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
@@ -946,10 +948,10 @@
 
         <div class="modal-overlay" id="assuntosModal">
             <div class="modal-box topics-organizer-modal subject-workspace-modal">
-                <button type="button" class="modal-close" onclick="fecharModal('assuntosModal')" aria-label="Fechar">×</button>
+                <button type="button" class="subject-workspace-back" onclick="fecharModal('assuntosModal')">← Voltar às matérias</button>
                 <div class="topics-organizer-heading subject-workspace-heading">
                     <div>
-                        <span class="workspace-kicker">CENTRAL DE DOMÍNIO</span>
+                        <span class="workspace-kicker">ASSUNTOS DA MATÉRIA</span>
                         <h3 id="assuntosModalTitle">Assuntos</h3>
                         <p>Use tempo, questões, erros e revisões para decidir o próximo passo em cada conteúdo.</p>
                     </div>
@@ -1321,7 +1323,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-domain-center-v1"></script>
+    <script src="script.js?v=20260922-inline-subject-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
     <script src="schedule.js?v=20260922-block-isolation-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>

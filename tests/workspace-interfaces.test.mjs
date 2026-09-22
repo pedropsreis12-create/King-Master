@@ -23,6 +23,10 @@ test('subjects expose accessible content and mastery views with useful summaries
   assert.match(script, /setAttribute\('aria-selected'/);
   assert.match(script, /function abrirTopicoPelaCentral\(materiaId, topicoIndex\)/);
   assert.match(script, /pontuacaoAcaoTopico\(a\.materia, a\.topico\)/);
+  assert.match(html, /id="subjectWorkspaceMount"/);
+  assert.match(html, /Voltar às matérias/);
+  assert.match(script, /workspace\.classList\.remove\('modal-overlay'\)/);
+  assert.match(script, /is-subject-workspace/);
 });
 
 test('agenda and reviews can be reduced to the next actionable items', () => {

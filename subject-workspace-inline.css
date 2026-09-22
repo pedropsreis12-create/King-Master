@@ -1,0 +1,26 @@
+#planejamento.is-subject-workspace > :not(#subjectWorkspaceMount) { display: none !important; }
+.subject-workspace-inline { display: none; }
+.subject-workspace-inline.active { display: block; }
+.subject-workspace-inline .subject-workspace-modal { width: 100% !important; height: auto; max-width: none !important; max-height: none !important; margin: 0; padding: 0 !important; display: block; overflow: visible !important; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.subject-workspace-back { margin: 0 0 20px; padding: 10px 15px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); color: var(--text-main); font: 800 .69rem Poppins, sans-serif; cursor: pointer; }
+.subject-workspace-back:hover, .subject-workspace-back:focus-visible { border-color: var(--accent-color); color: var(--accent-color); }
+.subject-workspace-inline .topics-organizer-heading { padding-right: 0; }
+.subject-workspace-inline .topics-organizer-heading p, .subject-workspace-inline .topics-organizer-stats { display: none; }
+.subject-workspace-inline .topics-control-workspace { min-height: 0; height: auto; display: grid; grid-template-columns: minmax(245px, .68fr) minmax(0, 1.32fr); align-items: start; gap: 16px; }
+.subject-workspace-inline .topics-list-column, .subject-workspace-inline .topic-control-panel { min-height: 0; overflow: visible; }
+.subject-workspace-inline .topics-organizer-list { max-height: 620px; overflow-y: auto; }
+.subject-workspace-inline .topic-control-panel { max-height: none; padding: 18px; }
+.subject-workspace-inline .topic-detail-tabs { position: static; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+.subject-workspace-inline .topic-detail-tabs button { white-space: nowrap; }
+@media (max-width: 850px) {
+    .subject-workspace-inline .topics-control-workspace { grid-template-columns: 1fr; }
+    .subject-workspace-inline .topics-organizer-list { max-height: 300px; }
+}
+@media (max-width: 580px) {
+    .subject-workspace-inline .subject-workspace-modal { width: 100% !important; height: auto; padding: 0 !important; margin: 0; border-radius: 0 !important; }
+    .subject-workspace-inline .topics-organizer-heading { flex-direction: column; gap: 12px; }
+    .subject-workspace-inline .topics-time-pill { align-items: flex-start; }
+    .subject-workspace-inline .topics-control-workspace { display: grid; }
+    .subject-workspace-inline .topics-organizer-list { max-height: 300px; }
+    .subject-workspace-inline .topic-control-panel { padding: 14px; }
+}

@@ -354,9 +354,9 @@
         const submit = byId('scheduleSettingsForm')?.querySelector('button[type="submit"]');
         if (submit) submit.textContent = 'Salvar planejamento';
         byId('scheduleStartTime').value = value.startTime;
-        byId('scheduleBlockMinutes').value = String(value.blockMinutes);
+        setSelectValue(byId('scheduleBlockMinutes'), value.blockMinutes);
         byId('schedulePauseMinutes').value = String(value.pauseMinutes);
-        byId('scheduleClosingMinutes').value = String(value.closingMinutes);
+        setSelectValue(byId('scheduleClosingMinutes'), value.closingMinutes);
         byId('scheduleMaxSubjects').value = String(value.maxSubjectsPerDay);
         document.querySelectorAll('#scheduleSettingsModal .schedule-day-options input').forEach(input => input.checked = value.studyDays.includes(Number(input.value)));
         byId('scheduleSubjectPlans').innerHTML = appData.cycleItems.length ? appData.cycleItems.map(item => `<article class="schedule-subject-plan" data-subject-id="${safeId(item.id)}" style="--subject-color:${safeColor(item.color)}"><span class="schedule-plan-icon">${escape(item.schedule.icon)}</span><div class="schedule-plan-name"><strong>${escape(item.subject)}</strong><small>${escape(item.type || 'Estudo')}</small></div><label><span>Blocos/semana</span><input type="number" class="cycle-input" data-plan="blocks" min="0" max="30" value="${item.schedule.weeklyBlocks}"></label><label><span>Prioridade</span><select class="cycle-input" data-plan="priority"><option value="1" ${item.schedule.priority === 1 ? 'selected' : ''}>Baixa</option><option value="2" ${item.schedule.priority === 2 ? 'selected' : ''}>Normal</option><option value="3" ${item.schedule.priority === 3 ? 'selected' : ''}>Alta</option></select></label><label class="schedule-plan-consecutive"><input type="checkbox" data-plan="consecutive" ${item.schedule.consecutive ? 'checked' : ''}><span><b>Blocos juntos</b><small>Forma pares</small></span></label></article>`).join('') : '<div class="schedule-settings-empty"><strong>Nenhuma matéria ainda</strong><p>Crie matérias no Hub para montar sua carga semanal.</p></div>';

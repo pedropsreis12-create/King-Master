@@ -71,6 +71,18 @@ html.auth-pending,html.auth-pending body { overflow: hidden !important; }
 
 html[data-font-scale="large"] { font-size: 112.5%; } html[data-font-scale="xlarge"] { font-size: 125%; }
 html.high-contrast { --border-color: color-mix(in srgb,var(--text-main) 32%,transparent); --border-strong: color-mix(in srgb,var(--text-main) 52%,transparent); --text-muted: color-mix(in srgb,var(--text-main) 79%,var(--bg-body)); }
+/* Leitura assistida: melhora separação, ritmo e rastreio das linhas sem alterar os dados ou a cor escolhida. */
+html.dyslexia-friendly:not([data-theme="dark"]) { --bg-body: #f3efe5; --card-bg: #fffaf0; --hover-bg: #ece6d9; --text-main: #182033; --text-muted: #4b556b; }
+html.dyslexia-friendly[data-theme="dark"] { --bg-body: #151922; --card-bg: #1d222d; --hover-bg: #272d39; --text-main: #fff8e8; --text-muted: #c9c2b4; }
+html.dyslexia-friendly body,
+html.dyslexia-friendly :is(button,input,textarea,select,option) { font-family: Verdana, Tahoma, Arial, sans-serif !important; }
+html.dyslexia-friendly body { letter-spacing: .018em; word-spacing: .09em; }
+html.dyslexia-friendly :is(p,li,label,textarea,input,.modal-message,.ai-qg-message,.topic-history-item,.error-card) { line-height: 1.65 !important; }
+html.dyslexia-friendly :is(p,.modal-message,.cloud-account-note,.schedule-modal-intro) { max-width: 72ch; }
+html.dyslexia-friendly :is(em,.quote-card em) { font-style: normal !important; }
+html.dyslexia-friendly :is(.workspace-kicker,.cycle-label,.topic-control-label,.settings-group h3) { text-transform: none !important; letter-spacing: .045em !important; }
+html.dyslexia-friendly :is(.content-section,.modal-box,.settings-panel,.widget) { background-image: none !important; }
+html.dyslexia-friendly :focus-visible { outline: 3px solid var(--accent-color) !important; outline-offset: 3px; }
 html.reduce-motion { scroll-behavior: auto !important; }
 html.reduce-motion :is(.background-orb,.rank-world-aurora,.rank-world-particles i,.rank-world-energy i,.rank-world-sparks i,.rank-world-lightning i,.avatar-energy,.avatar-energy::before,.avatar-energy::after,.avatar-orbit,.avatar-orbit::before,.profile-rank-scene::before,.profile-rank-scene::after,.rank-frame-detail,.rank-frame-detail::before,.rank-frame-detail::after,.rank-emblem,.military-insignia,.league-frame,.league-frame::before,.league-frame::after) { animation: none !important; }
 html.reduce-motion :is(.rank-world-particles i,.rank-world-energy i,.rank-world-sparks i,.rank-world-lightning i) { opacity: .22 !important; }

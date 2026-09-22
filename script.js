@@ -44,7 +44,7 @@ const defaultAppData = {
     selectedFrames: { militar: '', aura: '' },
     frameVaultOpen: false,
     onboardingCompleted: false,
-    accessibility: { fontScale: 'normal', highContrast: false, motionMode: 'auto' },
+    accessibility: { fontScale: 'normal', highContrast: false, dyslexiaMode: false, motionMode: 'auto' },
     studyLogging: { autoReview: true, reviewDelayDays: 1 },
     studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], dailyCapacityMinutes: 240, blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
     personalDevelopment: {

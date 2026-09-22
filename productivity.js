@@ -65,11 +65,13 @@
         document.documentElement.dataset.motionChoice = prefs.motionMode;
         document.documentElement.dataset.motionLevel = motionLevel;
         document.documentElement.classList.toggle('high-contrast', prefs.highContrast);
+        document.documentElement.classList.toggle('dyslexia-friendly', prefs.dyslexiaMode === true);
         document.documentElement.classList.toggle('reduce-motion', motionLevel !== 'full');
         document.documentElement.classList.toggle('motion-off', motionLevel === 'off');
         const scale = document.getElementById('fontScaleSelect');
         if (scale) scale.value = prefs.fontScale;
         document.getElementById('contrastToggleBtn')?.setAttribute('aria-pressed', String(prefs.highContrast));
+        document.getElementById('dyslexiaToggleBtn')?.setAttribute('aria-pressed', String(prefs.dyslexiaMode === true));
         const motionSelect = document.getElementById('motionModeSelect');
         if (motionSelect) motionSelect.value = prefs.motionMode;
         const hint = document.getElementById('motionModeHint');
@@ -172,6 +174,7 @@
 
     document.getElementById('fontScaleSelect')?.addEventListener('change', event => savePreference('fontScale', event.target.value));
     document.getElementById('contrastToggleBtn')?.addEventListener('click', () => savePreference('highContrast', !appData.accessibility.highContrast));
+    document.getElementById('dyslexiaToggleBtn')?.addEventListener('click', () => savePreference('dyslexiaMode', appData.accessibility.dyslexiaMode !== true));
     document.getElementById('motionModeSelect')?.addEventListener('change', event => savePreference('motionMode', event.target.value));
     document.getElementById('autoReviewToggleBtn')?.addEventListener('click', () => { appData.studyLogging.autoReview = !appData.studyLogging.autoReview; syncStudySettingsUi(); saveAppData(); });
     document.getElementById('autoReviewDelaySelect')?.addEventListener('change', event => { appData.studyLogging.reviewDelayDays = Number(event.target.value) || 1; syncStudySettingsUi(); saveAppData(); });

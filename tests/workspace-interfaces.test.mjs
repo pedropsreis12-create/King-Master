@@ -58,6 +58,17 @@ test('motion quality can be automatic, full, reduced or disabled', () => {
   assert.doesNotMatch(html, /Backup de Segurança/);
 });
 
+test('dyslexia reading mode is persistent and improves tracking without removing the chosen accent', () => {
+  assert.match(html, /id="dyslexiaToggleBtn"[^>]+aria-pressed="false"/);
+  assert.match(script, /dyslexiaMode: false/);
+  assert.match(productivity, /classList\.toggle\('dyslexia-friendly', prefs\.dyslexiaMode === true\)/);
+  assert.match(productivity, /savePreference\('dyslexiaMode'/);
+  assert.match(usability, /html\.dyslexia-friendly body[\s\S]+Verdana/);
+  assert.match(usability, /line-height:\s*1\.65/);
+  assert.match(usability, /word-spacing:\s*\.09em/);
+  assert.match(usability, /:focus-visible/);
+});
+
 test('completed timers require a topic, keep notes optional and can feed specialist workspaces', () => {
   assert.match(html, /id="sessionCompleteForm"/);
   assert.match(html, /id="sessionTopic"[^>]+required/);

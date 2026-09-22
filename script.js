@@ -683,6 +683,7 @@ function renomearMateriaNosRegistros(nomeAnterior, nomeNovo) {
 function removerMateriaComRegistros(id) {
     const materia = appData.cycleItems.find(item => item.id === id);
     if (!materia) return false;
+    if (String(cadernoCapituloAtual.materiaId) === String(id)) fecharCadernosDominio();
     const chave = normalizarRevisaoTexto(materia.subject);
     const sessoesRemovidas = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) === chave);
     appData.historyItems = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) !== chave);
@@ -702,7 +703,10 @@ function confirmarDelecao() {
     const id = itemToDelete;
     fecharModalDeletar(); 
     
-    if (tipo === 'cycle') { 
+    if (tipo === 'chapterPage') {
+        excluirPaginaCaderno(id);
+    }
+    else if (tipo === 'cycle') {
         window.KingSchedule?.removeSubject(id);
         if (!removerMateriaComRegistros(id)) return;
         saveAppData(); renderizarCiclo(); renderizarHistorico(); renderizarRevisoes(); atualizarSeletorDeMaterias();
@@ -5169,6 +5173,7 @@ function handleFileSelect(e, labelId, hiddenDataId) {
 
 function alternarAbasHub(aba) {
     const ciclo = aba === 'ciclo';
+    if (ciclo) salvarCadernoPendente();
     const painelCiclo = document.getElementById('aba-ciclo-content');
     const painelDominio = document.getElementById('aba-dominio-content');
     const tabCiclo = document.getElementById('tab-ciclo');
@@ -5192,6 +5197,182 @@ function navegarAbasHub(event) {
     abas[proxima].focus();
     alternarAbasHub(abas[proxima].id === 'tab-ciclo' ? 'ciclo' : 'dominio');
 }
+
+const cadernoCapituloAtual = { materiaId: null, topicoIndice: null, paginaId: null, busca: '' };
+let temporizadorCadernoCapitulo = null;
+
+function localizarCadernoCapitulo() {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
+    const topico = materia?.topicos?.[cadernoCapituloAtual.topicoIndice];
+    return { materia, topico };
+}
+
+function salvarAlteracoesCadernoCapitulo() {
+    if (temporizadorCadernoCapitulo) clearTimeout(temporizadorCadernoCapitulo);
+    temporizadorCadernoCapitulo = null;
+    const status = document.getElementById('chapterSaveState');
+    try {
+        saveAppData();
+        if (status) { status.textContent = 'Salvo'; status.classList.remove('is-saving'); }
+        renderizarListaPaginasCaderno();
+        renderizarMapaDominio();
+    } catch {
+        if (status) { status.textContent = 'Não foi possível salvar'; status.classList.remove('is-saving'); }
+        showToast('Não foi possível salvar o caderno. Tente novamente.', true);
+    }
+}
+
+function abrirCadernosMateria(materiaId) {
+    salvarCadernoPendente();
+    const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId));
+    if (!materia) return;
+    cadernoCapituloAtual.materiaId = materia.id;
+    cadernoCapituloAtual.topicoIndice = null;
+    cadernoCapituloAtual.paginaId = null;
+    cadernoCapituloAtual.busca = '';
+    document.getElementById('chapterSearchInput').value = '';
+    document.getElementById('chapterNotebook').hidden = true;
+    document.getElementById('chapterBrowser').hidden = false;
+    renderizarListaCapitulosCaderno();
+    document.getElementById('chapterBrowser').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function salvarCadernoPendente() {
+    if (temporizadorCadernoCapitulo) salvarAlteracoesCadernoCapitulo();
+}
+
+function filtrarCadernosCapitulos(valor = '') {
+    cadernoCapituloAtual.busca = normalizarRevisaoTexto(valor);
+    renderizarListaCapitulosCaderno();
+}
+
+function renderizarListaCapitulosCaderno() {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
+    const lista = document.getElementById('chapterList');
+    if (!materia || !lista) return;
+    document.getElementById('chapterBrowserTitle').textContent = materia.subject || 'Capítulos';
+    const topicos = (materia.topicos || []).map((topico, indice) => ({ topico, indice }))
+        .filter(({ topico }) => !cadernoCapituloAtual.busca || normalizarRevisaoTexto(topico.nome).includes(cadernoCapituloAtual.busca));
+    lista.innerHTML = topicos.length ? topicos.map(({ topico, indice }) => {
+        const paginas = Array.isArray(topico.caderno?.paginas) ? topico.caderno.paginas.length : 0;
+        const total = paginas + (topico.notas && !topico.cadernoMigrado ? 1 : 0);
+        return `<button type="button" class="chapter-item" onclick="abrirCadernoCapitulo(${materia.id},${indice})"><span>${String(indice + 1).padStart(2, '0')}</span><span><strong>${escaparRevisaoHtml(topico.nome || 'Capítulo')}</strong><small>${total ? `${total} ${total === 1 ? 'página' : 'páginas'}` : 'Caderno vazio · pronto para começar'}</small></span><span aria-hidden="true">↗</span></button>`;
+    }).join('') : `<p class="chapter-page-empty">${materia.topicos?.length ? 'Nenhum capítulo encontrado. Tente outra busca.' : 'Esta matéria ainda não tem capítulos. Adicione-os ao editar a matéria.'}</p>`;
+}
+
+function abrirCadernoCapitulo(materiaId, topicoIndice) {
+    salvarCadernoPendente();
+    const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId));
+    const topico = materia?.topicos?.[topicoIndice];
+    if (!topico) return;
+    cadernoCapituloAtual.materiaId = materia.id;
+    cadernoCapituloAtual.topicoIndice = topicoIndice;
+    if (!topico.caderno || typeof topico.caderno !== 'object') topico.caderno = { paginas: [] };
+    if (!Array.isArray(topico.caderno.paginas)) topico.caderno.paginas = [];
+    if (String(topico.notas || '').trim() && !topico.cadernoMigrado) {
+        topico.caderno.paginas.push({ id: `legado-${Date.now()}`, titulo: 'Anotação anterior', texto: String(topico.notas).slice(0, 12000), criadoEm: Date.now(), atualizadoEm: Date.now() });
+        topico.cadernoMigrado = true;
+        salvarAlteracoesCadernoCapitulo();
+    }
+    if (!topico.caderno.paginas.some(pagina => pagina.id === cadernoCapituloAtual.paginaId)) cadernoCapituloAtual.paginaId = topico.caderno.paginas[0]?.id || null;
+    document.getElementById('chapterBrowser').hidden = true;
+    document.getElementById('chapterNotebook').hidden = false;
+    document.getElementById('chapterNotebookSubject').textContent = materia.subject || 'Matéria';
+    document.getElementById('chapterNotebookTitle').textContent = topico.nome || 'Capítulo';
+    renderizarCadernoCapitulo();
+    document.getElementById('chapterNotebook').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderizarListaPaginasCaderno() {
+    const { topico } = localizarCadernoCapitulo();
+    const lista = document.getElementById('chapterPageList');
+    if (!lista) return;
+    const paginas = topico?.caderno?.paginas || [];
+    lista.innerHTML = paginas.length ? paginas.map(pagina => `<button type="button" class="chapter-page-button ${pagina.id === cadernoCapituloAtual.paginaId ? 'active' : ''}" onclick="selecionarPaginaCaderno('${pagina.id}')" aria-current="${pagina.id === cadernoCapituloAtual.paginaId ? 'page' : 'false'}"><span>${escaparRevisaoHtml(pagina.titulo || 'Sem título')}</span><small>↗</small></button>`).join('') : '<p class="chapter-page-empty">Nenhuma página ainda. Crie a primeira para começar.</p>';
+}
+
+function renderizarCadernoCapitulo() {
+    const { topico } = localizarCadernoCapitulo();
+    const editor = document.getElementById('chapterEditor');
+    renderizarListaPaginasCaderno();
+    if (!editor) return;
+    const pagina = topico?.caderno?.paginas?.find(item => item.id === cadernoCapituloAtual.paginaId);
+    if (!pagina) { editor.innerHTML = '<div class="chapter-editor-empty"><strong>Um caderno para este capítulo</strong><p>Crie uma página para escrever um resumo, guardar exemplos ou anotar dúvidas sem misturar com outras matérias.</p><button type="button" class="cycle-btn primary" onclick="criarPaginaCaderno()">Criar primeira página</button></div>'; return; }
+    const data = new Date(pagina.atualizadoEm || pagina.criadoEm || Date.now()).toLocaleDateString('pt-BR');
+    editor.innerHTML = `<div class="chapter-editor-top"><span>Atualizada em ${data}</span><button type="button" onclick="solicitarExclusaoPaginaCaderno()">Excluir página</button></div><label>TÍTULO<input id="chapterPageTitle" maxlength="90" value="${escaparRevisaoHtml(pagina.titulo || '')}" placeholder="Ex.: Resumo e exemplos" oninput="atualizarPaginaCaderno('titulo',this.value)"></label><label>ANOTAÇÕES<textarea id="chapterPageText" maxlength="12000" placeholder="Escreva com suas palavras: o que é importante lembrar? Como resolver? Qual foi sua dúvida?" oninput="atualizarPaginaCaderno('texto',this.value)">${escaparRevisaoHtml(pagina.texto || '')}</textarea></label><p class="chapter-editor-hint">O texto é salvo automaticamente. Crie outras páginas para separar fórmulas, exemplos e dúvidas.</p>`;
+}
+
+function criarPaginaCaderno() {
+    salvarCadernoPendente();
+    const { topico } = localizarCadernoCapitulo();
+    if (!topico) return;
+    if (!topico.caderno || !Array.isArray(topico.caderno.paginas)) topico.caderno = { paginas: [] };
+    const pagina = { id: `pagina-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, titulo: 'Nova página', texto: '', criadoEm: Date.now(), atualizadoEm: Date.now() };
+    topico.caderno.paginas.push(pagina);
+    cadernoCapituloAtual.paginaId = pagina.id;
+    salvarAlteracoesCadernoCapitulo();
+    renderizarCadernoCapitulo();
+    document.getElementById('chapterPageTitle')?.select();
+}
+
+function selecionarPaginaCaderno(paginaId) {
+    salvarCadernoPendente();
+    const { topico } = localizarCadernoCapitulo();
+    if (!topico?.caderno?.paginas?.some(pagina => pagina.id === paginaId)) return;
+    cadernoCapituloAtual.paginaId = paginaId;
+    renderizarCadernoCapitulo();
+}
+
+function atualizarPaginaCaderno(campo, valor) {
+    if (!['titulo', 'texto'].includes(campo)) return;
+    const { topico } = localizarCadernoCapitulo();
+    const pagina = topico?.caderno?.paginas?.find(item => item.id === cadernoCapituloAtual.paginaId);
+    if (!pagina) return;
+    pagina[campo] = String(valor).slice(0, campo === 'titulo' ? 90 : 12000);
+    pagina.atualizadoEm = Date.now();
+    const status = document.getElementById('chapterSaveState');
+    if (status) { status.textContent = 'Salvando…'; status.classList.add('is-saving'); }
+    if (temporizadorCadernoCapitulo) clearTimeout(temporizadorCadernoCapitulo);
+    temporizadorCadernoCapitulo = setTimeout(salvarAlteracoesCadernoCapitulo, 650);
+}
+
+function solicitarExclusaoPaginaCaderno() {
+    const { topico } = localizarCadernoCapitulo();
+    if (!topico?.caderno?.paginas?.some(pagina => pagina.id === cadernoCapituloAtual.paginaId)) return;
+    const id = `${cadernoCapituloAtual.materiaId}:${cadernoCapituloAtual.topicoIndice}:${cadernoCapituloAtual.paginaId}`;
+    abrirModalDeletar('chapterPage', id, 'Excluir esta página?', 'A anotação desta página será apagada. As outras páginas do capítulo continuarão intactas.', 'Excluir página');
+}
+
+function excluirPaginaCaderno(id) {
+    const [materiaId, indiceTexto, ...partesId] = String(id).split(':');
+    const topico = appData.cycleItems.find(item => String(item.id) === materiaId)?.topicos?.[Number(indiceTexto)];
+    if (!topico?.caderno?.paginas) return;
+    const paginaId = partesId.join(':');
+    topico.caderno.paginas = topico.caderno.paginas.filter(pagina => pagina.id !== paginaId);
+    if (cadernoCapituloAtual.paginaId === paginaId) cadernoCapituloAtual.paginaId = topico.caderno.paginas[0]?.id || null;
+    salvarAlteracoesCadernoCapitulo();
+    renderizarCadernoCapitulo();
+    showToast('Página excluída do caderno.');
+}
+
+function voltarAosCapitulos() {
+    salvarCadernoPendente();
+    document.getElementById('chapterNotebook').hidden = true;
+    document.getElementById('chapterBrowser').hidden = false;
+    renderizarListaCapitulosCaderno();
+}
+
+function fecharCadernosDominio() {
+    salvarCadernoPendente();
+    document.getElementById('chapterBrowser').hidden = true;
+    document.getElementById('chapterNotebook').hidden = true;
+    cadernoCapituloAtual.materiaId = null;
+    cadernoCapituloAtual.topicoIndice = null;
+    cadernoCapituloAtual.paginaId = null;
+}
+
+window.addEventListener('pagehide', salvarCadernoPendente);
+document.addEventListener('visibilitychange', () => { if (document.hidden) salvarCadernoPendente(); });
 
 function renderizarMapaDominio() {
     const container = document.getElementById('mapaContainer');
@@ -5226,7 +5407,7 @@ function renderizarMapaDominio() {
         const rotulos = { revisar: 'Revisar', novo: 'Começar', aprendendo: 'Continuar', consolidando: 'Praticar' };
         const revisao = item.estado === 'revisar' ? obterRevisaoAtivaTopico(item.materia, item.topico) : null;
         const detalhe = revisao ? rotuloDataRevisao(revisao.dataAlvo) : (item.topico.prioridade === 'alta' ? 'Prioridade alta' : `Nível ${item.nivel} de 3`);
-        return `<div class="domain-center-action"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Acompanhar'}</span></div>`;
+        return `<div class="domain-center-action"><span class="domain-center-order">${ordem + 1}</span><span class="domain-center-action-copy"><strong>${nome}</strong><small>${materia} · ${escaparRevisaoHtml(detalhe)}</small></span><span class="domain-center-action-state is-${item.estado}">${rotulos[item.estado] || 'Acompanhar'}</span><button type="button" onclick="abrirCadernoCapitulo(${item.materia.id},${item.indice})" aria-label="Abrir caderno de ${nome}">Caderno ↗</button></div>`;
     }).join('') : '<p class="domain-center-empty-note">Todos os tópicos cadastrados estão dominados. Revise quando precisar ou adicione novos conteúdos.</p>';
     container.innerHTML = appData.cycleItems.map(materia => {
         const topicos = materia.topicos || [];
@@ -5235,9 +5416,10 @@ function renderizarMapaDominio() {
         const pct = topicos.length ? Math.round(concluidos / topicos.length * 100) : 0;
         const cor = corSegura(materia.color);
         const nomeMateria = escaparRevisaoHtml(materia.subject || 'Matéria');
+        const cadernosIniciados = topicos.filter(topico => (topico.caderno?.paginas?.length || 0) > 0 || Boolean(topico.notas && !topico.cadernoMigrado)).length;
         const distribuicao = [0, 1, 2, 3].map(nivel => topicos.filter(topico => obterNivelDominioTopico(topico) === nivel).length);
         const segmentos = distribuicao.map((quantidade, nivel) => quantidade ? `<span class="is-level-${nivel}" style="flex:${quantidade}" title="${['Não iniciados','Em estudo','Consolidando','Dominados'][nivel]}: ${quantidade}"></span>` : '').join('');
-        return `<article class="domain-center-subject" style="--subject-color:${cor}"><div class="domain-center-subject-head"><div><strong>${nomeMateria}</strong><small>${concluidos} de ${topicos.length} tópicos dominados${revisoes ? ` · ${revisoes} para revisar` : ''}</small></div><b>${pct}%</b></div><div class="domain-center-distribution" role="img" aria-label="${nomeMateria}: ${distribuicao[0]} não iniciados, ${distribuicao[1]} em estudo, ${distribuicao[2]} consolidando e ${distribuicao[3]} dominados">${segmentos || '<span class="is-empty"></span>'}</div><button type="button" onclick="editarMateriaCiclo(${materia.id})">Editar matéria <span aria-hidden="true">↗</span></button></article>`;
+        return `<article class="domain-center-subject" style="--subject-color:${cor}"><div class="domain-center-subject-head"><div><strong>${nomeMateria}</strong><small>${concluidos} de ${topicos.length} tópicos dominados${revisoes ? ` · ${revisoes} para revisar` : ''} · ${cadernosIniciados} ${cadernosIniciados === 1 ? 'caderno iniciado' : 'cadernos iniciados'}</small></div><b>${pct}%</b></div><div class="domain-center-distribution" role="img" aria-label="${nomeMateria}: ${distribuicao[0]} não iniciados, ${distribuicao[1]} em estudo, ${distribuicao[2]} consolidando e ${distribuicao[3]} dominados">${segmentos || '<span class="is-empty"></span>'}</div><div><button type="button" onclick="abrirCadernosMateria(${materia.id})">Ver capítulos e cadernos <span aria-hidden="true">↗</span></button><button type="button" onclick="editarMateriaCiclo(${materia.id})">Editar matéria</button></div></article>`;
     }).join('');
 }
 

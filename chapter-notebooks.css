@@ -1,0 +1,45 @@
+.chapter-browser, .chapter-notebook { margin-top: 16px; padding: 23px; }
+.chapter-browser[hidden], .chapter-notebook[hidden] { display: none !important; }
+.chapter-heading { margin-bottom: 17px; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.chapter-heading h3 { margin: 4px 0 3px; color: var(--text-main); font-size: 1.08rem; line-height: 1.3; overflow-wrap: anywhere; }
+.chapter-heading p { margin: 0; color: var(--text-muted); font-size: .63rem; line-height: 1.5; }
+.chapter-heading .cycle-btn { flex: 0 0 auto; }
+.chapter-search { min-height: 47px; margin-bottom: 13px; padding: 0 13px; display: flex; align-items: center; gap: 9px; border: 1px solid var(--border-color); border-radius: 13px; background: var(--hover-bg); }
+.chapter-search > span { color: var(--accent-color); font-size: 1rem; }
+.chapter-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-main); font: 650 .68rem Poppins, sans-serif; }
+.chapter-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.chapter-item { min-height: 72px; padding: 12px 14px; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 11px; border: 1px solid var(--border-color); border-radius: 14px; background: var(--hover-bg); color: var(--text-main); text-align: left; cursor: pointer; }
+.chapter-item:hover, .chapter-item:focus-visible { border-color: var(--accent-color); background: rgba(var(--accent-rgb), .07); outline: none; }
+.chapter-item > span:first-child { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 11px; background: var(--card-bg); color: var(--accent-color); font-size: .68rem; font-weight: 900; }
+.chapter-item strong, .chapter-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chapter-item strong { font-size: .66rem; }.chapter-item small { margin-top: 3px; color: var(--text-muted); font-size: .53rem; }
+.chapter-item > span:last-child { color: var(--accent-color); font-size: .95rem; }
+.chapter-back { display: block; margin: 0 0 12px; padding: 0; border: 0; background: transparent; color: var(--accent-color); font: 800 .6rem Poppins, sans-serif; cursor: pointer; }
+#chapterNotebookSubject { display: block; }
+.chapter-save-state { padding: 6px 9px; border: 1px solid var(--border-color); border-radius: 999px; color: var(--text-muted); font-size: .52rem; font-weight: 800; white-space: nowrap; }
+.chapter-save-state.is-saving { color: var(--accent-color); border-color: rgba(var(--accent-rgb), .35); }
+.chapter-notebook-layout { display: grid; grid-template-columns: minmax(210px, .34fr) minmax(0, .66fr); align-items: start; gap: 14px; }
+.chapter-pages, .chapter-editor { min-width: 0; padding: 15px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--hover-bg); }
+.chapter-pages-heading { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+.chapter-pages-heading strong { color: var(--text-main); font-size: .67rem; }
+.chapter-pages-heading button { padding: 7px 9px; border: 1px solid rgba(var(--accent-rgb), .35); border-radius: 9px; background: rgba(var(--accent-rgb), .1); color: var(--accent-color); font: 800 .54rem Poppins, sans-serif; white-space: nowrap; cursor: pointer; }
+#chapterPageList { display: grid; gap: 7px; }
+.chapter-page-button { width: 100%; padding: 11px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid var(--border-color); border-radius: 11px; background: var(--card-bg); color: var(--text-main); text-align: left; cursor: pointer; }
+.chapter-page-button.active { border-color: var(--accent-color); background: rgba(var(--accent-rgb), .08); }
+.chapter-page-button span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .6rem; font-weight: 750; }
+.chapter-page-button small { flex: 0 0 auto; color: var(--text-muted); font-size: .48rem; }
+.chapter-page-empty, .chapter-editor-empty { margin: 0; padding: 23px 10px; color: var(--text-muted); font-size: .61rem; line-height: 1.5; text-align: center; }
+.chapter-editor { background: var(--card-bg); }
+.chapter-editor-top { margin-bottom: 11px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.chapter-editor-top span { color: var(--text-muted); font-size: .52rem; }
+.chapter-editor-top button { padding: 6px 9px; border: 1px solid #ff453a55; border-radius: 9px; background: transparent; color: #d9362b; font: 800 .52rem Poppins, sans-serif; cursor: pointer; }
+.chapter-editor label { display: block; margin-bottom: 9px; color: var(--text-muted); font-size: .56rem; font-weight: 800; }
+.chapter-editor input, .chapter-editor textarea { width: 100%; margin-top: 5px; padding: 12px 13px; border: 1px solid var(--border-color); border-radius: 12px; outline: 0; background: var(--hover-bg); color: var(--text-main); font: 600 .68rem Poppins, sans-serif; }
+.chapter-editor input:focus, .chapter-editor textarea:focus { border-color: var(--accent-color); }
+.chapter-editor textarea { min-height: 270px; resize: vertical; line-height: 1.7; font-weight: 500; }
+.chapter-editor-hint { margin: 0; color: var(--text-muted); font-size: .52rem; line-height: 1.45; }
+.domain-center-action { grid-template-columns: 30px minmax(0, 1fr) auto auto; }
+.domain-center-action > button { padding: 7px 9px; border: 1px solid rgba(var(--accent-rgb), .3); border-radius: 9px; background: rgba(var(--accent-rgb), .08); color: var(--accent-color); font: 800 .51rem Poppins, sans-serif; white-space: nowrap; cursor: pointer; }
+.domain-center-subject > div:last-child { display: flex; flex-wrap: wrap; gap: 13px; }
+@media (max-width: 900px) { .chapter-notebook-layout { grid-template-columns: 1fr; } .chapter-list { grid-template-columns: 1fr; } }
+@media (max-width: 580px) { .chapter-browser, .chapter-notebook { padding: 17px; } .chapter-heading { flex-wrap: wrap; } .chapter-heading .cycle-btn { width: 100%; } .chapter-pages, .chapter-editor { padding: 12px; } .domain-center-action { grid-template-columns: 27px minmax(0, 1fr) auto; } .domain-center-action > button { grid-column: 2 / -1; justify-self: start; } }

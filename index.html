@@ -20,7 +20,8 @@
     <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
-    <link rel="stylesheet" href="domain-center.css?v=20260922-no-subject-screen-v1">
+    <link rel="stylesheet" href="domain-center.css?v=20260922-chapter-notebooks-v1">
+    <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-notebooks-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <style>
@@ -498,6 +499,15 @@
                     <section class="domain-center-priority widget" aria-labelledby="domainPriorityTitle"><div class="domain-center-section-heading"><div><span class="workspace-kicker">PRÓXIMOS PASSOS</span><h3 id="domainPriorityTitle">O que merece atenção</h3></div><span id="domainPriorityCount"></span></div><div id="domainPriorityList"></div></section>
                     <section class="domain-center-subjects widget" aria-labelledby="domainSubjectsTitle"><div class="domain-center-section-heading"><div><span class="workspace-kicker">POR MATÉRIA</span><h3 id="domainSubjectsTitle">Seu avanço</h3></div></div><div id="mapaContainer"></div></section>
                 </div>
+                <section class="chapter-browser widget" id="chapterBrowser" aria-labelledby="chapterBrowserTitle" hidden>
+                    <div class="chapter-heading"><div><span class="workspace-kicker">CADERNOS POR CAPÍTULO</span><h3 id="chapterBrowserTitle">Capítulos</h3><p>Escolha um capítulo para abrir o caderno dele.</p></div><button type="button" class="cycle-btn" onclick="fecharCadernosDominio()">Fechar</button></div>
+                    <label class="chapter-search"><span aria-hidden="true">⌕</span><input type="search" id="chapterSearchInput" placeholder="Buscar capítulo" aria-label="Buscar capítulo" oninput="filtrarCadernosCapitulos(this.value)"></label>
+                    <div class="chapter-list" id="chapterList"></div>
+                </section>
+                <section class="chapter-notebook widget" id="chapterNotebook" aria-labelledby="chapterNotebookTitle" hidden>
+                    <div class="chapter-heading"><div><button type="button" class="chapter-back" onclick="voltarAosCapitulos()">← Capítulos</button><span class="workspace-kicker" id="chapterNotebookSubject">CADERNO DO CAPÍTULO</span><h3 id="chapterNotebookTitle">Caderno</h3><p>Suas anotações deste capítulo ficam juntas e são salvas automaticamente.</p></div><span class="chapter-save-state" id="chapterSaveState" role="status" aria-live="polite">Salvo</span></div>
+                    <div class="chapter-notebook-layout"><aside class="chapter-pages" aria-label="Páginas do caderno"><div class="chapter-pages-heading"><strong>Páginas</strong><button type="button" onclick="criarPaginaCaderno()">+ Nova página</button></div><div id="chapterPageList"></div></aside><div class="chapter-editor" id="chapterEditor"></div></div>
+                </section>
             </div>
         </section>
 
@@ -1266,7 +1276,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-no-subject-screen-v1"></script>
+    <script src="script.js?v=20260922-chapter-notebooks-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
     <script src="schedule.js?v=20260922-block-isolation-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>

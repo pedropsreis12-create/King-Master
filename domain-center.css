@@ -38,8 +38,8 @@
 .domain-center-distribution .is-level-1 { background: color-mix(in srgb, var(--subject-color) 35%, var(--card-bg)); }
 .domain-center-distribution .is-level-2 { background: color-mix(in srgb, var(--subject-color) 65%, var(--card-bg)); }
 .domain-center-distribution .is-level-3 { background: var(--subject-color); }
-.domain-center-subject > button { padding: 3px 0; border: 0; background: transparent; color: var(--accent-color); font: 800 .57rem Poppins, sans-serif; cursor: pointer; }
-.domain-center-subject > button:hover, .domain-center-subject > button:focus-visible { text-decoration: underline; }
+.domain-center-subject > div:last-child > button { padding: 3px 0; border: 0; background: transparent; color: var(--accent-color); font: 800 .57rem Poppins, sans-serif; cursor: pointer; }
+.domain-center-subject > div:last-child > button:hover, .domain-center-subject > div:last-child > button:focus-visible { text-decoration: underline; }
 .domain-center-empty, .domain-center-empty-note { color: var(--text-muted); font-size: .63rem; line-height: 1.5; }
 .domain-center-empty { padding: 16px 0; }
 .domain-center-empty strong { display: block; color: var(--text-main); font-size: .8rem; }

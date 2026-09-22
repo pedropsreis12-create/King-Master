@@ -21,6 +21,7 @@
     <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
+    <link rel="stylesheet" href="quick-improvements.css?v=20260922-notes-review-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -142,6 +143,7 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Desenvolvimento</span>
                 <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Disciplina e direção</small></span></button>
+                <button type="button" class="menu-btn" onclick="abrirNotasRapidas();fecharMenuMovel()"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Notas rápidas</strong><small>Ideias e problemas do site</small></span></button>
             </div>
             <div class="nav-cluster nav-cluster-account">
                 <span class="nav-cluster-label">Conta</span>
@@ -166,6 +168,22 @@
             </div>
         </div>
     </nav>
+
+    <button type="button" class="quick-notes-launch" onclick="abrirNotasRapidas()" aria-label="Abrir notas rápidas" title="Anotar sem interromper o estudo">✎ <span>Anotar</span></button>
+    <div class="modal-overlay quick-notes-overlay" id="quickNotesModal" role="dialog" aria-modal="true" aria-labelledby="quickNotesTitle">
+        <div class="modal-box quick-notes-box">
+            <button type="button" class="modal-close" onclick="fecharModal('quickNotesModal')" aria-label="Fechar notas">×</button>
+            <span class="workspace-kicker">SEM SAIR DO ESTUDO</span>
+            <h2 id="quickNotesTitle">Notas rápidas</h2>
+            <p>Guarde um bug, uma ideia ou algo para resolver depois. O cronômetro continua contando.</p>
+            <form id="quickNotesForm" onsubmit="salvarNotaRapida(event)">
+                <label for="quickNoteText">O que aconteceu?</label>
+                <textarea id="quickNoteText" class="cycle-input" maxlength="1000" rows="3" placeholder="Ex.: o botão não abriu no celular…" required></textarea>
+                <div class="quick-notes-actions"><span id="quickNotesContext"></span><button type="submit" class="cycle-btn primary">Guardar nota</button></div>
+            </form>
+            <div id="quickNotesList" class="quick-notes-list" aria-live="polite"></div>
+        </div>
+    </div>
 
     <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
         <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Hoje</small></button>
@@ -271,7 +289,7 @@
             </div>
 
             <div class="widget daily-missions" id="dailyMissions" aria-labelledby="dailyMissionsTitle">
-                <div class="daily-missions-heading"><div><span>MISSÕES DE HOJE</span><h2 id="dailyMissionsTitle">Avance uma etapa por vez</h2></div><strong id="dailyMissionsScore">0/3</strong></div>
+                <div class="daily-missions-heading"><div><span>MISSÕES DE HOJE</span><h2 id="dailyMissionsTitle">Avance uma etapa por vez</h2></div><strong id="dailyMissionsScore">0/8</strong></div>
                 <div class="daily-missions-grid" id="dailyMissionsGrid"></div>
             </div>
             
@@ -1325,16 +1343,16 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-personal-v1"></script>
+    <script src="script.js?v=20260922-notes-review-v1"></script>
     <script src="sidebar-icons.js?v=20260922-personal-v1"></script>
-    <script src="schedule.js?v=20260922-personal-v1"></script>
+    <script src="schedule.js?v=20260922-notes-review-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>
     <script src="subject-lab.js?v=20260922-subject-lab-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
     <script src="ai-assistant.js?v=20260922-personal-v1"></script>
-    <script src="productivity.js?v=20260922-dyslexia-v1"></script>
+    <script src="productivity.js?v=20260922-notes-review-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260922-personal-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20260922-notes-review-v1"></script>
 </body>
 </html>

@@ -313,10 +313,47 @@
     function render() {
         ensureData();
         if (!byId('scheduleTimeline')) return;
+        reconcileStudiedBlocks();
         byId('scheduleWeekRange').textContent = formatRange(visibleWeek);
         byId('scheduleWeekEyebrow').textContent = visibleWeek === currentWeekKey() ? 'SEMANA ATUAL' : visibleWeek < currentWeekKey() ? 'SEMANA ANTERIOR' : 'PRÓXIMA SEMANA';
         renderSummary(); renderNext(); renderBalance(); renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderNotice(); renderReplanButton(); performanceSuggestion();
         if (typeof atualizarResumoRevisoesCronograma === 'function') atualizarResumoRevisoesCronograma();
+    }
+
+    function reconcileStudiedBlocks() {
+        const today = Core.iso(new Date());
+        let changed = false;
+        for (const [key, scheduleWeek] of Object.entries(appData.studySchedule.weeks)) {
+            const groups = new Map();
+            for (const block of scheduleWeek.blocks || []) {
+                const date = dateForDay(key, block.day);
+                if (date > today) continue;
+                const groupKey = `${date}|${block.subjectId}`;
+                if (!groups.has(groupKey)) groups.set(groupKey, { date, subjectId: block.subjectId, blocks: [] });
+                groups.get(groupKey).blocks.push(block);
+            }
+            for (const group of groups.values()) {
+                const mat = subject(group.subjectId);
+                if (!mat) continue;
+                const seconds = appData.historyItems.reduce((sum, item) => {
+                    if (dataHistoricoISO(item) !== group.date) return sum;
+                    if (String(item.subjectId || '') !== String(mat.id) && (!item.subjectId && item.materia !== mat.subject)) return sum;
+                    return sum + Math.max(0, Number(item.tempoSegundos) || 0);
+                }, 0);
+                const earned = Math.floor(seconds / (45 * 60));
+                const sorted = group.blocks.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+                let remaining = Math.max(0, earned - sorted.filter(block => block.status === 'completed').length);
+                for (const block of sorted) {
+                    if (!remaining || block.status === 'completed') continue;
+                    block.status = 'completed';
+                    block.registered = true;
+                    block.result = { ...(block.result || {}), activity: 'estudo', actualMinutes: 45,
+                        completedAt: Date.now(), autoCompleted: true, notes: block.result?.notes || 'Concluído automaticamente após 45 minutos nesta matéria.' };
+                    remaining--; changed = true;
+                }
+            }
+        }
+        if (changed) saveAppData();
     }
 
     function organizeCurrentWeek() {
@@ -494,14 +531,14 @@
         const block = findBlock(pending.scheduleBlockId, pending.scheduleWeekKey); if (!block) return;
         const generic = details?.atividade === 'estudo' ? details.study || {} : details?.simulado || {};
         const seconds = Number(pending.seconds) || block.duration * 60;
-        block.status = 'completed'; block.registered = true;
+        block.status = seconds >= 45 * 60 ? 'completed' : 'pending'; block.registered = seconds >= 45 * 60;
         block.result = { topic: details?.assunto || block.topic || '', questions: Number(generic.total ?? generic.questoes) || 0, hits: Number(generic.acertos) || 0, errors: Number(generic.erros) || 0, notes: details?.comentario || '', activity: details?.atividade || 'estudo', actualMinutes: Math.max(1, Math.round(seconds / 60)), completedAt: Date.now() };
         if (pending.scheduleCreditNeeded) {
             appData.totalStudySeconds = Number(appData.totalStudySeconds || 0) + seconds;
             if (pending.scheduleWeekKey === currentWeekKey()) appData.weeklyChart[Number(block.day) - 1] = Number(appData.weeklyChart[Number(block.day) - 1] || 0) + seconds;
         }
         if (String(appData.activeScheduleBlock?.blockId) === String(block.id)) appData.activeScheduleBlock = null;
-        setTimeout(() => { render(); toast('Bloco concluído. O fechamento do dia ficou disponível quando você quiser.'); }, 80);
+        setTimeout(() => { render(); toast(block.status === 'completed' ? 'Bloco concluído automaticamente com 45 minutos de estudo.' : 'Sessão registrada. Ao somar 45 minutos nesta matéria hoje, o bloco será concluído.'); }, 80);
     }
 
     function openDayClose(day, key = visibleWeek) {

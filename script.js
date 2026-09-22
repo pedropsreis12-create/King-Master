@@ -25,6 +25,7 @@ const defaultAppData = {
     revisoesItems: [],
     revisaoTags: [],
     cadernoErrosItems: [],
+    quickNotes: [],
     dailyGoalMinutes: 240,
     lastWeekStart: '', 
     themeColor: '', 
@@ -89,6 +90,7 @@ if (!appData.agendamentoItems) appData.agendamentoItems = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!Array.isArray(appData.revisoesItems)) appData.revisoesItems = [];
+if (!Array.isArray(appData.quickNotes)) appData.quickNotes = [];
 appData.revisoesItems = appData.revisoesItems.map(normalizarItemRevisao);
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!Array.isArray(appData.cadernoErrosItems)) appData.cadernoErrosItems = [];
@@ -174,6 +176,35 @@ function saveAppData() {
     updateDashboardStats(); 
     atualizarIndicadoresNavegacao();
     window.KingPersonalDevelopment?.render?.();
+}
+
+function renderizarNotasRapidas() {
+    const lista = document.getElementById('quickNotesList');
+    if (!lista) return;
+    const notas = appData.quickNotes.slice().sort((a, b) => b.createdAt - a.createdAt);
+    lista.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span><p>${escaparRevisaoHtml(nota.text)}</p></div><button type="button" onclick="excluirNotaRapida('${nota.id}')" aria-label="Excluir nota" title="Excluir nota">×</button></article>`).join('') : '<p class="quick-notes-empty">Nenhuma nota ainda. Escreva e volte ao estudo.</p>';
+}
+function abrirNotasRapidas() {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
+    document.getElementById('quickNotesContext').textContent = materia ? `Estudando ${materia.subject}` : 'Nota geral';
+    renderizarNotasRapidas();
+    document.getElementById('quickNotesModal').classList.add('active');
+    setTimeout(() => document.getElementById('quickNoteText')?.focus(), 50);
+}
+function salvarNotaRapida(event) {
+    event.preventDefault();
+    const campo = document.getElementById('quickNoteText');
+    const text = campo.value.trim();
+    if (!text) return;
+    const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
+    appData.quickNotes.push({ id: `nota-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, subject: materia?.subject || '', createdAt: Date.now() });
+    try { saveAppData(); campo.value = ''; renderizarNotasRapidas(); showToast('Nota guardada. Pode continuar estudando.'); }
+    catch { appData.quickNotes.pop(); showToast('Não foi possível guardar a nota. Copie o texto antes de fechar.', true); }
+}
+function excluirNotaRapida(id) {
+    if (!confirm('Excluir esta nota?')) return;
+    appData.quickNotes = appData.quickNotes.filter(nota => nota.id !== id);
+    saveAppData(); renderizarNotasRapidas();
 }
 
 window.kingMasterCloudBridge = {
@@ -1728,7 +1759,7 @@ function registrarSessao(segundos, detalhes = null) {
     const acertos = Math.max(0, Number(metricas?.acertos) || 0);
     const erros = Math.max(0, Number(metricas?.erros) || 0);
     const historico = criarItemHistoricoRegistro({ segundos, materia: nome, assunto, cor, tipo, comentario, atividade });
-    Object.assign(historico, { questoes, acertos, erros, sourceSessionId });
+    Object.assign(historico, { questoes, acertos, erros, sourceSessionId, subjectId: materia?.id || '' });
     appData.historyItems.push(historico);
     if (materia && questoes) { materia.questoes = Number(materia.questoes || 0) + questoes; materia.acertos = Number(materia.acertos || 0) + acertos; materia.erros = Number(materia.erros || 0) + erros; }
     if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
@@ -1877,6 +1908,33 @@ function prepararRegistroSessao(segundos = currentSeconds, origem = 'manual') {
     renderizarAvisoSessaoPendente();
     abrirRegistroSessaoPendente();
     return true;
+}
+
+function guardarTempoAoTrocarContexto(origem) {
+    if (currentMode !== 'estudo') return;
+    tickTimer();
+    clearInterval(timerInterval);
+    const segundos = Math.floor(currentSeconds);
+    isRunning = false;
+    playPauseBtn.textContent = '▶';
+    cancelarAvisoMetaTimer();
+    stopAlarm();
+    if (segundos >= 5) {
+        const createdAt = Date.now();
+        const pendente = { id: `sessao-${createdAt}-${Math.random().toString(36).slice(2, 8)}`, seconds: segundos,
+            subjectId: document.getElementById('activeSubjectSelect').value, origem, createdAt,
+            scheduleWeekKey: appData.activeScheduleBlock?.weekKey || '', scheduleBlockId: appData.activeScheduleBlock?.blockId || '',
+            scheduleCreditNeeded: false, holdsTimer: false, deferredAt: createdAt };
+        appData.pendingStudySessions = [pendente, ...sincronizarFilaSessoesPendentes()];
+        appData.pendingStudySession = pendente;
+        appData.activeScheduleBlock = null;
+        currentSeconds = 0;
+        alarmTriggered = false;
+        lastTickTime = 0;
+        renderizarAvisoSessaoPendente();
+        showToast('Tempo protegido para registrar depois. O cronômetro foi pausado.');
+    }
+    saveAppData(); updateProgress(); toggleBotaoStopHistorico();
 }
 
 function adiarRegistroSessao() {
@@ -2182,8 +2240,9 @@ function encerrarSessaoDashboard() {
 function setDescansoTime(mins) { descansoTempoAtual = mins; document.getElementById('btn-descanso-5').classList.remove('primary'); document.getElementById('btn-descanso-10').classList.remove('primary'); document.getElementById(`btn-descanso-${mins}`).classList.add('primary'); executarResetTimer(); }
 
 function setMode(mode) {
-    tickTimer();
-    if (mode !== currentMode && currentMode === 'estudo' && currentSeconds >= 5) { prepararRegistroSessao(currentSeconds, 'troca-modo'); return; }
+    if (mode === currentMode) return;
+    if (currentMode === 'estudo' && currentSeconds >= 5) guardarTempoAoTrocarContexto('troca-modo');
+    else tickTimer();
     currentMode = mode;
     alarmTriggered = false;
     document.getElementById('btn-estudo').classList.remove('active'); document.getElementById('btn-descanso').classList.remove('active'); document.getElementById(`btn-${mode}`).classList.add('active');
@@ -2212,8 +2271,9 @@ function atualizarSeletorDeMaterias() {
     
     document.querySelectorAll('.custom-option').forEach(opt => opt.addEventListener('click', function() { 
         if(this.dataset.value === undefined) return; 
+        if (hid.value !== this.dataset.value && currentMode === 'estudo' && currentSeconds >= 5) guardarTempoAoTrocarContexto('troca-materia');
         hid.value = this.dataset.value; 
-        persistTimerCheckpoint();
+        saveAppData();
         trig.innerHTML = this.innerHTML; 
         document.querySelector('.custom-select-wrapper').classList.remove('open'); 
         atualizarSeletorDeMaterias(); 
@@ -2453,7 +2513,7 @@ function renderizarCiclo() {
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
         const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
-        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><button type="button" class="disc-title-button" onclick="abrirModalAssuntos(${i.id})">${nome}</button><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div><button type="button" class="disc-open-row" onclick="abrirModalAssuntos(${i.id})"><span>Ver e organizar tópicos</span><span aria-hidden="true">›</span></button></article>`;
+        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><button type="button" class="disc-title-button" onclick="abrirModalAssuntos(${i.id})" aria-label="Abrir ${nome}">${nome}</button><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="abrirModalAssuntos(${i.id})" aria-label="Abrir conteúdo de ${nome}" title="Abrir conteúdo">↗</button><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div></div></article>`;
     }).join('');
 }
 
@@ -3483,6 +3543,7 @@ function renderTagsRevisaoSelecionaveis(selecionadas = []) {
 }
 
 let revisaoImagemRascunho = null;
+let revisaoImagemProcessando = false;
 let revisaoImagemOriginalId = '';
 const revisaoImagemCache = new Map();
 
@@ -3531,16 +3592,19 @@ function renderizarPreviaImagemRevisao() {
 async function selecionarImagemRevisao(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file) return;
+    if (!file || revisaoImagemProcessando) return;
+    const fingerprint = `${file.name}:${file.size}:${file.lastModified}`;
+    if (revisaoImagemRascunho?.fingerprint === fingerprint) return definirStatusImagemRevisao('Essa foto já foi selecionada.');
+    revisaoImagemProcessando = true;
     definirStatusImagemRevisao('Otimizando a foto para a nuvem…');
     try {
         const imagem = await otimizarImagemCadernoErro(file, 'question');
-        revisaoImagemRascunho = { ...imagem, name: file.name || 'Foto da revisão', nova: true };
+        revisaoImagemRascunho = { ...imagem, name: file.name || 'Foto da revisão', fingerprint, nova: true };
         renderizarPreviaImagemRevisao();
         definirStatusImagemRevisao('Foto pronta para salvar.');
     } catch (error) {
         definirStatusImagemRevisao(error.message || 'Não foi possível preparar a foto.', true);
-    }
+    } finally { revisaoImagemProcessando = false; }
 }
 
 function removerImagemRevisao() {
@@ -3566,6 +3630,7 @@ function sincronizarPrazoRevisaoRapida() {
 }
 
 function abrirModalRevisao(id = null) {
+    if (isRunning && currentMode === 'estudo') toggleTimer();
     const form = document.getElementById('formAddRevisao');
     const select = document.getElementById('revisaoMateria');
     const assunto = document.getElementById('revisaoAssunto');
@@ -3632,6 +3697,7 @@ function atualizarAssuntosRevisao() {
 
 async function salvarRevisao(e) {
     e.preventDefault();
+    if (document.getElementById('revisaoSalvarBotao')?.disabled) return;
     const idEdit = Number(document.getElementById('revisaoEditId').value) || null;
     if (!appData.cycleItems.length && !idEdit) return;
     const motivos = [...document.querySelectorAll('#revisaoMotivos input[type="checkbox"]:checked')].map(input => input.value).filter(motivo => REVISAO_MOTIVOS[motivo]);
@@ -4086,10 +4152,10 @@ function renderizarRevisoes() {
         const detalhes = [item.fonte, item.numeroQuestao ? `Questão ${item.numeroQuestao}` : '', item.blocoTitulo].filter(Boolean).map(valor => `<span>${escaparRevisaoHtml(valor)}</span>`).join('');
         const imagem = item.imagem ? `<button type="button" class="review-card-image" onclick="abrirImagemRevisao('${item.imagem.id}','${encodeURIComponent(item.imagem.name)}')" aria-label="Abrir foto de ${escaparRevisaoHtml(item.assunto)}"><img data-review-image-id="${item.imagem.id}" alt="${escaparRevisaoHtml(item.imagem.name)}" loading="lazy"><span aria-hidden="true">▧</span></button>` : '';
         const link = item.link ? `<a class="review-source-link" href="${escaparRevisaoHtml(item.link)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : '';
-        const acoesDeFluxo = revisado
+        const acaoPrincipal = revisado
             ? `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
-            : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button><button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`;
-        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>Adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<div class="revision-meta"><span class="revision-badge">${origemTexto}</span><span class="revision-badge review-due-badge">Próxima revisão: ${formatarPrazoRevisao(item)}</span></div></div></div><div class="revision-actions">${acoesDeFluxo}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></article>`;
+            : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button>`;
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></div></details></div></article>`;
     }).join('');
     carregarMiniaturasRevisao();
     renderDashboardRevisoes();
@@ -4106,6 +4172,7 @@ const CADERNO_ERROS_INTERVALOS = [1, 3, 7, 14, 30];
 let cadernoErrosFiltros = { busca: '', materia: 'todas', tipo: 'todos', status: 'ativos' };
 let cadernoErroEmRevisaoId = null;
 let cadernoErroImagensRascunho = [];
+let cadernoErroProcessandoImagens = false;
 let cadernoErroImagensOriginais = [];
 const cadernoErroImagemCache = new Map();
 
@@ -4228,19 +4295,23 @@ async function otimizarImagemCadernoErro(file, contexto = 'question') {
 
 async function processarImagensCadernoErro(files, contexto = 'question') {
     contexto = contexto === 'rule' ? 'rule' : 'question';
+    if (cadernoErroProcessandoImagens) return definirStatusImagemCadernoErro('Aguarde o preparo das imagens selecionadas.', false, contexto);
     const imagens = [...(files || [])].filter(file => file?.type?.startsWith('image/'));
     if (!imagens.length) return definirStatusImagemCadernoErro('Nenhuma imagem compatível foi encontrada.', true, contexto);
+    const novas = imagens.filter(file => !cadernoErroImagensRascunho.some(imagem => imagem.context === contexto && imagem.fingerprint === `${file.name}:${file.size}:${file.lastModified}`));
+    if (!novas.length) return definirStatusImagemCadernoErro('Essa imagem já foi anexada.', false, contexto);
     const vagas = 4 - cadernoErroImagensRascunho.filter(imagem => imagem.context === contexto).length;
     if (vagas <= 0) return definirStatusImagemCadernoErro('Você já anexou o limite de 4 imagens nesta parte.', true, contexto);
+    cadernoErroProcessandoImagens = true;
     definirStatusImagemCadernoErro('Otimizando as imagens para a nuvem…', false, contexto);
     try {
-        for (const file of imagens.slice(0, vagas)) cadernoErroImagensRascunho.push(await otimizarImagemCadernoErro(file, contexto));
+        for (const file of novas.slice(0, vagas)) cadernoErroImagensRascunho.push({ ...await otimizarImagemCadernoErro(file, contexto), fingerprint: `${file.name}:${file.size}:${file.lastModified}` });
         renderizarPreviaImagensCadernoErro();
         definirStatusImagemCadernoErro(`${Math.min(imagens.length, vagas)} ${Math.min(imagens.length, vagas) === 1 ? 'imagem pronta' : 'imagens prontas'} para salvar.`, false, contexto);
         if (imagens.length > vagas) showToast(`O limite é de 4 imagens por registro. ${imagens.length - vagas} não ${imagens.length - vagas === 1 ? 'foi adicionada' : 'foram adicionadas'}.`, true);
     } catch (error) {
         definirStatusImagemCadernoErro(error.message || 'Não foi possível preparar a imagem.', true, contexto);
-    }
+    } finally { cadernoErroProcessandoImagens = false; }
 }
 
 function selecionarImagensCadernoErro(event, contexto = 'question') {
@@ -4405,6 +4476,7 @@ function abrirModalCadernoErro(id = null) {
 
 async function salvarCadernoErro(event) {
     event.preventDefault();
+    if (document.querySelector('#errorNotebookForm button[type="submit"]')?.disabled) return;
     const idEditado = Number(document.getElementById('errorNotebookEditId').value) || null;
     const idRegistro = idEditado || Date.now();
     const submit = document.querySelector('#errorNotebookForm button[type="submit"]');
@@ -5101,9 +5173,7 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventL
 (() => {
     const nav = document.getElementById('mainNavigation');
     const handle = document.getElementById('navReveal');
-    let hideTimer;
     const open = () => {
-        clearTimeout(hideTimer);
         nav.classList.add('is-revealed');
         handle.setAttribute('aria-expanded', 'true');
     };
@@ -5115,21 +5185,10 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventL
         nav.classList.remove('is-revealed');
         handle.setAttribute('aria-expanded', 'false');
     };
-    const leave = () => { hideTimer = setTimeout(() => { if (!nav.matches(':hover,:focus-within') && !handle.matches(':hover,:focus')) close(); }, 220); };
-    handle.addEventListener('pointerenter', open);
-    handle.addEventListener('click', () => { open(); nav.querySelector('.menu-btn')?.focus(); });
-    handle.addEventListener('pointerleave', leave);
-    handle.addEventListener('blur', leave);
-    nav.addEventListener('pointerenter', open);
-    nav.addEventListener('focusin', open);
-    nav.addEventListener('pointerleave', () => {
-        // Cliques de mouse não devem prender a barra aberta pelo foco residual.
-        if (nav.contains(document.activeElement) && document.activeElement.matches(':focus:not(:focus-visible)')) document.activeElement.blur();
-        leave();
-    });
-    nav.addEventListener('focusout', leave);
-    document.addEventListener('keydown', event => { if (event.key === 'Escape' && nav.classList.contains('is-revealed')) { handle.focus(); close(); } });
-    document.querySelector('main')?.addEventListener('pointerdown', close);
+    handle.addEventListener('click', () => nav.classList.contains('is-revealed') ? close() : open());
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && nav.classList.contains('is-revealed')) close(); });
+    document.addEventListener('pointerdown', event => { if (!nav.contains(event.target) && !handle.contains(event.target)) close(); });
+    nav.querySelectorAll('.menu-btn[data-section],.site-brand').forEach(button => button.addEventListener('click', close));
 })();
 fecharModalDeletar(); 
 syncVisualModeControl();

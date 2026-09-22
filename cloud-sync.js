@@ -668,11 +668,23 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         return firestoreSdk.doc(db, 'users', currentUser.uid, 'errorImages', safeId);
     }
 
+    async function imageRequest(operation) {
+        try { return await operation(); }
+        catch (error) {
+            const code = String(error?.code || '');
+            const message = String(error?.message || '');
+            if (!/unauthenticated|permission-denied|app-check|expired|expirad|token/i.test(`${code} ${message}`)) throw error;
+            await currentUser?.getIdToken(true);
+            await appCheckSdk.getToken(appCheck, true);
+            return operation();
+        }
+    }
+
     async function saveErrorImage(image) {
         if (!currentUser?.uid) throw new Error('Entre na sua conta antes de anexar imagens.');
         if (!image?.dataUrl || !/^data:image\/(png|jpeg|webp);base64,/i.test(image.dataUrl)) throw new Error('Formato de imagem inválido.');
         if (image.dataUrl.length > 720000) throw new Error('A imagem continua grande demais após a otimização.');
-        await appCheckSdk.getToken(appCheck, false);
+        await imageRequest(() => appCheckSdk.getToken(appCheck, false));
         const metadata = {
             ownerUid: currentUser.uid,
             errorId: String(image.errorId || '').slice(0, 40),
@@ -684,12 +696,12 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             dataUrl: image.dataUrl,
             updatedAt: firestoreSdk.serverTimestamp()
         };
-        await firestoreSdk.setDoc(errorImageDocument(image.id), metadata);
+        await imageRequest(() => firestoreSdk.setDoc(errorImageDocument(image.id), metadata));
         return { id: String(image.id), name: metadata.name, context: metadata.context, type: metadata.contentType, width: metadata.width, height: metadata.height };
     }
 
     async function getErrorImage(imageId) {
-        const snapshot = await firestoreSdk.getDoc(errorImageDocument(imageId));
+        const snapshot = await imageRequest(() => firestoreSdk.getDoc(errorImageDocument(imageId)));
         if (!snapshot.exists()) throw new Error('Imagem não encontrada na nuvem.');
         const data = snapshot.data();
         if (!/^data:image\/(png|jpeg|webp);base64,/i.test(data?.dataUrl || '')) throw new Error('A imagem salva está inválida.');
@@ -697,8 +709,8 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     }
 
     async function deleteErrorImage(imageId) {
-        await appCheckSdk.getToken(appCheck, false);
-        await firestoreSdk.deleteDoc(errorImageDocument(imageId));
+        await imageRequest(() => appCheckSdk.getToken(appCheck, false));
+        await imageRequest(() => firestoreSdk.deleteDoc(errorImageDocument(imageId)));
     }
 
     function reviewImageDocument(imageId) {
@@ -709,9 +721,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     }
 
     async function saveReviewImage(image) {
+        if (!currentUser?.uid) throw new Error('Entre na sua conta antes de anexar uma foto.');
         if (!image?.dataUrl || !/^data:image\/(png|jpeg|webp);base64,/i.test(image.dataUrl)) throw new Error('Formato de imagem inválido.');
         if (image.dataUrl.length > 720000) throw new Error('A foto continua grande demais após a otimização.');
-        await appCheckSdk.getToken(appCheck, false);
+        await imageRequest(() => appCheckSdk.getToken(appCheck, false));
         const metadata = {
             ownerUid: currentUser.uid,
             reviewId: String(image.reviewId || '').slice(0, 40),
@@ -722,12 +735,12 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             dataUrl: image.dataUrl,
             updatedAt: firestoreSdk.serverTimestamp()
         };
-        await firestoreSdk.setDoc(reviewImageDocument(image.id), metadata);
+        await imageRequest(() => firestoreSdk.setDoc(reviewImageDocument(image.id), metadata));
         return { id: String(image.id), name: metadata.name, type: metadata.contentType, width: metadata.width, height: metadata.height };
     }
 
     async function getReviewImage(imageId) {
-        const snapshot = await firestoreSdk.getDoc(reviewImageDocument(imageId));
+        const snapshot = await imageRequest(() => firestoreSdk.getDoc(reviewImageDocument(imageId)));
         if (!snapshot.exists()) throw new Error('Foto da revisão não encontrada na nuvem.');
         const data = snapshot.data();
         if (!/^data:image\/(png|jpeg|webp);base64,/i.test(data?.dataUrl || '')) throw new Error('A foto salva está inválida.');
@@ -735,8 +748,8 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     }
 
     async function deleteReviewImage(imageId) {
-        await appCheckSdk.getToken(appCheck, false);
-        await firestoreSdk.deleteDoc(reviewImageDocument(imageId));
+        await imageRequest(() => appCheckSdk.getToken(appCheck, false));
+        await imageRequest(() => firestoreSdk.deleteDoc(reviewImageDocument(imageId)));
     }
 
     window.addEventListener('king-master-data-changed', () => {

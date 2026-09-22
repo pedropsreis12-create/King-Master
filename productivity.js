@@ -12,18 +12,29 @@
         const grid = document.getElementById('dailyMissionsGrid');
         if (!grid) return;
         const seconds = Number(appData.weeklyChart[weekdayIndex()] || 0);
-        const sessions = completedToday().length;
+        const todaySessions = completedToday();
+        const sessions = todaySessions.length;
         const operationMinutes = Math.min(120, Math.max(30, Number(appData.dailyGoalMinutes || 60)));
+        const questions = todaySessions.reduce((sum, item) => sum + (Number(item.questoes) || 0), 0);
+        const reviews = (appData.revisoesItems || []).filter(item => item.status === 'revisado' && dataLocalISO(new Date(Number(item.revisadoEm || 0))) === todayIso()).length;
+        const errors = (appData.cadernoErrosItems || []).filter(item => dataLocalISO(new Date(Number(item.criadoEm || 0))) === todayIso()).length;
+        const notes = (appData.quickNotes || []).filter(item => dataLocalISO(new Date(Number(item.createdAt || 0))) === todayIso()).length;
+        const distinctSubjects = new Set(todaySessions.map(item => item.materia).filter(Boolean)).size;
         const missions = [
             { icon: '⚡', title: 'Quebrar a inércia', copy: '10 minutos de foco', value: seconds, goal: 600 },
             { icon: '✓', title: 'Bloco concluído', copy: 'Finalizar uma sessão', value: sessions, goal: 1 },
-            { icon: '◆', title: 'Operação do dia', copy: `${operationMinutes} minutos estudados`, value: seconds, goal: operationMinutes * 60 }
+            { icon: '◆', title: 'Operação do dia', copy: `${operationMinutes} minutos estudados`, value: seconds, goal: operationMinutes * 60 },
+            { icon: '◎', title: 'Praticar de verdade', copy: 'Resolver 15 questões', value: questions, goal: 15, unit: 'questões' },
+            { icon: '↻', title: 'Memória em dia', copy: 'Concluir uma revisão', value: reviews, goal: 1, unit: 'revisão' },
+            { icon: '⌁', title: 'Aprender com o erro', copy: 'Registrar um erro', value: errors, goal: 1, unit: 'erro' },
+            { icon: '▦', title: 'Ampliar o repertório', copy: 'Estudar duas matérias', value: distinctSubjects, goal: 2, unit: 'matérias' },
+            { icon: '✎', title: 'Capturar uma ideia', copy: 'Guardar uma nota rápida', value: notes, goal: 1, unit: 'nota' }
         ];
-        document.getElementById('dailyMissionsScore').textContent = `${missions.filter(item => item.value >= item.goal).length}/3`;
+        document.getElementById('dailyMissionsScore').textContent = `${missions.filter(item => item.value >= item.goal).length}/${missions.length}`;
         grid.innerHTML = missions.map(item => {
             const complete = item.value >= item.goal;
             const percent = Math.min(100, item.value / item.goal * 100);
-            const progress = item.goal === 1 ? `${Math.min(item.value, 1)}/1 sessão` : `${Math.floor(item.value / 60)}/${Math.floor(item.goal / 60)} min`;
+            const progress = item.unit ? `${Math.min(item.value, item.goal)}/${item.goal} ${item.unit}` : item.goal === 1 ? `${Math.min(item.value, 1)}/1 sessão` : `${Math.floor(item.value / 60)}/${Math.floor(item.goal / 60)} min`;
             return `<article class="daily-mission${complete ? ' completed' : ''}"><span class="daily-mission-icon" aria-hidden="true">${complete ? '✓' : item.icon}</span><div><strong>${item.title}</strong><small>${item.copy}</small><div class="daily-mission-progress"><i style="width:${percent}%"></i></div><em>${complete ? 'Concluída' : progress}</em></div></article>`;
         }).join('');
     }

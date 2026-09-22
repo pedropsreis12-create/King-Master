@@ -17,8 +17,10 @@
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260921-review-inbox-v1">
-    <link rel="stylesheet" href="sidebar-icons.css?v=20260922-icons-v1">
-    <link rel="stylesheet" href="schedule.css?v=20260916-session-safe-v1">
+    <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
+    <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
+    <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
+    <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <style>
         /* Correção Global de Grids (Impede que os cards fiquem esticados e com espaços vazios) */
         .mapa-grid, .disciplinas-grid { align-items: start !important; }
@@ -136,6 +138,10 @@
                 <button type="button" class="menu-btn" data-section="simulados" aria-controls="simulados" onclick="showSection('simulados')"><span class="nav-item-icon" aria-hidden="true">◎</span><span class="nav-item-label"><strong>Simulados</strong><small>Resultados e gargalos</small></span></button>
                 <button type="button" class="menu-btn" data-section="redacao" aria-controls="redacao" onclick="showSection('redacao')"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Redação</strong><small>Notas por competência</small></span></button>
                 <button type="button" class="menu-btn" data-section="historico" aria-controls="historico" onclick="showSection('historico')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Histórico</strong><small>Sessões e dedicação</small></span></button>
+            </div>
+            <div class="nav-cluster">
+                <span class="nav-cluster-label">Desenvolvimento</span>
+                <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Disciplina e direção</small></span></button>
             </div>
             <div class="nav-cluster nav-cluster-account">
                 <span class="nav-cluster-label">Conta</span>
@@ -390,7 +396,7 @@
                         <span class="workspace-kicker">RITMO DA SEMANA</span>
                         <h2 id="scheduleProgressHeadline">Sua semana começa aqui</h2>
                         <p id="scheduleProgressHint">Monte os blocos e deixe o King Master cuidar da visão geral.</p>
-                        <div><span><b id="scheduleBlockCount">0/0</b> blocos</span><span><b id="schedulePlannedHours">0h</b> planejadas</span><span><b id="scheduleCompletedHours">0h</b> feitas</span></div>
+                        <div><span><b id="scheduleBlockCount">0/0</b> blocos</span><span><b id="schedulePlannedHours">0h</b> planejadas</span><span><b id="scheduleTargetHours">0h</b> indicadas</span><span><b id="scheduleCompletedHours">0h</b> feitas</span></div>
                     </div>
                 </article>
                 <article class="schedule-next-card widget" id="scheduleNextCard">
@@ -402,6 +408,12 @@
                     <div class="schedule-balance-list" id="scheduleBalanceList"></div>
                 </article>
             </div>
+
+            <article class="schedule-load-guide widget" id="scheduleLoadGuide">
+                <div class="schedule-load-copy"><span class="workspace-kicker">CARGA HORÁRIA INDICADA</span><h2 id="scheduleLoadHeadline">Defina sua disponibilidade</h2><p id="scheduleLoadHint">O King Master compara a carga planejada com o tempo que você realmente tem.</p></div>
+                <div class="schedule-load-meter" aria-label="Comparação entre carga planejada e indicada"><div><span id="scheduleLoadFill"></span></div><p><strong id="scheduleLoadPlanned">0h planejadas</strong><b id="scheduleLoadTarget">0h disponíveis</b></p></div>
+                <button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()">Ajustar disponibilidade</button>
+            </article>
 
             <div class="schedule-notice" id="scheduleNotice" hidden role="status"></div>
             <button type="button" class="schedule-review-queue widget" id="scheduleReviewQueue" onclick="iniciarFilaRevisoesHoje()" hidden><span class="schedule-review-icon" aria-hidden="true">↻</span><span><small>CAIXA DE REVISÕES</small><strong id="scheduleReviewQueueTitle">Nenhuma revisão para hoje</strong><em>As revisões ficam separadas dos blocos normais.</em></span><b>Abrir fila <i aria-hidden="true">›</i></b></button>
@@ -429,6 +441,26 @@
             </div>
         </section>
 
+        <section id="desenvolvimento" class="content-section personal-development-section">
+            <div class="workspace-heading">
+                <div><span class="workspace-kicker">VIDA QUE SUSTENTA O ESTUDO</span><h1>Desenvolvimento Pessoal</h1><p>Disciplina prática para reduzir ansiedade, procrastinação e decisões demais ao longo do dia.</p></div>
+                <button type="button" class="cycle-btn" onclick="KingPersonalDevelopment.openCommitment()">Editar compromisso</button>
+            </div>
+            <article class="growth-hero widget">
+                <div class="growth-hero-copy"><span class="workspace-kicker">DIREÇÃO</span><h2>Construir constância para chegar preparado ao ENEM</h2><p>Seu objetivo não exige perfeição diária. Exige começar, proteger dois blocos e terminar sabendo qual é o próximo passo.</p><div><span><b>Meta principal</b> 4h de estudo</span><span><b>Dia difícil</b> mínimo de 2h</span><span><b>Regra</b> ação antes da ansiedade</span></div></div>
+                <div class="growth-score"><span id="growthScoreValue">0%</span><small>disciplina nesta semana</small><i><b id="growthScoreBar"></b></i></div>
+            </article>
+            <div class="growth-grid">
+                <section class="growth-checkin widget"><header><div><span class="workspace-kicker">CHECK-IN DE HOJE</span><h2>Quatro decisões que mudam o dia</h2></div><strong id="growthCheckinCount">0/4</strong></header><div class="growth-checklist" id="growthChecklist"></div><p>Marque fatos, não intenções. Um dia difícil ainda conta quando você cumpre o mínimo.</p></section>
+                <section class="growth-next-action widget"><span class="workspace-kicker">PRÓXIMA AÇÃO</span><h2 id="growthNextTitle">Comece sem negociar</h2><p id="growthNextHint">Escolha uma ação pequena e executável agora.</p><button type="button" class="cycle-btn primary" id="growthNextButton" onclick="KingPersonalDevelopment.doNextAction()">Ir para o foco</button></section>
+            </div>
+            <section class="growth-pillars widget"><header><div><span class="workspace-kicker">SEU SISTEMA PESSOAL</span><h2>O que precisa funcionar fora do conteúdo</h2></div><p>Baseado no que você relatou sobre ansiedade, organização, revisão e distrações.</p></header><div class="growth-pillar-grid"><article><b>01</b><strong>Clareza</strong><p>Defina antes do bloco qual assunto será estudado e quais questões encerrarão a sessão.</p></article><article><b>02</b><strong>Ambiente</strong><p>Celular fora do alcance e apenas o material necessário aberto durante o bloco.</p></article><article><b>03</b><strong>Evidência</strong><p>O estudo só termina com questões, correção dos erros e um próximo passo registrado.</p></article><article><b>04</b><strong>Recuperação</strong><p>Use pausas reais, sono e o mínimo de duas horas para impedir que um dia ruim vire abandono.</p></article></div></section>
+            <div class="growth-bottom-grid">
+                <section class="growth-week widget"><header><div><span class="workspace-kicker">ÚLTIMOS 7 DIAS</span><h2>Consistência visível</h2></div></header><div class="growth-week-days" id="growthWeekDays"></div></section>
+                <section class="growth-commitment widget"><span class="workspace-kicker">COMPROMISSO PESSOAL</span><blockquote id="growthCommitmentText">Às 14h eu começo antes de negociar comigo mesmo. Nos dias ruins, protejo pelo menos duas horas.</blockquote><button type="button" class="cycle-btn" onclick="KingPersonalDevelopment.openCommitment()">Ajustar minhas palavras</button></section>
+            </div>
+        </section>
+
         <!-- HUB DE MATÉRIAS -->
         <section id="planejamento" class="content-section">
             <div class="workspace-heading">
@@ -442,6 +474,11 @@
                     <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
                 </div>
             </div>
+            <article class="subject-ai-card widget">
+                <span class="subject-ai-mark" aria-hidden="true">✦</span>
+                <div><span class="workspace-kicker">IA INTEGRADA ÀS MATÉRIAS</span><h2>Transforme um edital em tópicos organizados</h2><p>Envie PDF, imagem ou texto. A IA separa os assuntos e você confere tudo antes de adicionar às matérias existentes.</p></div>
+                <button type="button" class="cycle-btn primary" onclick="KingSubjectLab.openSyllabus()">Ler edital com IA</button>
+            </article>
             <div class="workspace-tabs" role="tablist" aria-label="Visualização das matérias" onkeydown="navegarAbasHub(event)">
                 <button type="button" id="tab-ciclo" role="tab" aria-selected="true" aria-controls="aba-ciclo-content" tabindex="0" onclick="alternarAbasHub('ciclo')"><span aria-hidden="true">▦</span> Minhas matérias</button>
                 <button type="button" id="tab-dominio" role="tab" aria-selected="false" aria-controls="aba-dominio-content" tabindex="-1" onclick="alternarAbasHub('dominio')"><span aria-hidden="true">◎</span> Mapa de domínio</button>
@@ -912,9 +949,9 @@
         </div>
 
         <div class="modal-overlay" id="assuntosModal">
-            <div class="modal-box topics-organizer-modal">
+            <div class="modal-box topics-organizer-modal subject-workspace-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('assuntosModal')" aria-label="Fechar">×</button>
-                <div class="topics-organizer-heading">
+                <div class="topics-organizer-heading subject-workspace-heading">
                     <div>
                         <span class="workspace-kicker">CENTRAL DE DOMÍNIO</span>
                         <h3 id="assuntosModalTitle">Assuntos</h3>
@@ -964,6 +1001,27 @@
                     </aside>
                 </div>
             </div>
+        </div>
+
+        <div class="modal-overlay" id="syllabusAiModal">
+            <div class="modal-box syllabus-ai-modal">
+                <button type="button" class="modal-close" onclick="KingSubjectLab.closeSyllabus()" aria-label="Fechar">×</button>
+                <span class="workspace-kicker">LEITURA INTELIGENTE DE EDITAL</span>
+                <div class="cycle-modal-title">Organizar assuntos com IA</div>
+                <p class="schedule-modal-intro">O arquivo será analisado somente para separar conteúdos. Nada será adicionado antes da sua confirmação.</p>
+                <section class="syllabus-upload-stage" id="syllabusUploadStage">
+                    <label class="syllabus-drop-zone" for="syllabusFileInput"><span aria-hidden="true">▧</span><strong>Escolher edital ou conteúdo programático</strong><small>PDF, TXT, imagem ou arquivo Markdown · até 7 MB</small><input type="file" id="syllabusFileInput" accept="application/pdf,text/plain,text/markdown,image/png,image/jpeg,image/webp" onchange="KingSubjectLab.selectFile(event)"></label>
+                    <div class="syllabus-file-summary" id="syllabusFileSummary" hidden></div>
+                    <button type="button" class="cycle-btn primary" id="syllabusAnalyzeButton" onclick="KingSubjectLab.analyze()" disabled>Analisar e separar assuntos</button>
+                </section>
+                <div class="syllabus-status" id="syllabusStatus" role="status"></div>
+                <div class="syllabus-results" id="syllabusResults" hidden></div>
+                <div class="cycle-modal-actions syllabus-actions" id="syllabusActions" hidden><button type="button" class="cycle-btn" onclick="KingSubjectLab.reset()">Trocar arquivo</button><button type="button" class="cycle-btn primary" onclick="KingSubjectLab.apply()">Adicionar tópicos selecionados</button></div>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="growthCommitmentModal">
+            <div class="modal-box growth-commitment-modal"><button type="button" class="modal-close" onclick="fecharModal('growthCommitmentModal')" aria-label="Fechar">×</button><span class="workspace-kicker">COMPROMISSO PESSOAL</span><div class="cycle-modal-title">Escreva uma regra que você aceita cumprir</div><p class="schedule-modal-intro">Curta, concreta e possível inclusive em um dia ruim.</p><form onsubmit="KingPersonalDevelopment.saveCommitment(event)"><textarea class="cycle-input" id="growthCommitmentInput" rows="5" maxlength="280" required></textarea><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('growthCommitmentModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar compromisso</button></div></form></div>
         </div>
 
         <div class="modal-overlay" id="agendamentoModal">
@@ -1216,7 +1274,7 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="scheduleSettingsModal"><div class="modal-box schedule-settings-modal schedule-sheet"><button type="button" class="modal-close" onclick="fecharModal('scheduleSettingsModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ESTÚDIO DE PLANEJAMENTO</span><div class="cycle-modal-title">Desenhe uma semana possível</div><p class="schedule-modal-intro">Escolha seu ritmo e a carga de cada matéria. O organizador apenas distribui o que você decidir.</p><form id="scheduleSettingsForm" onsubmit="KingSchedule.saveSettings(event)"><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>01</span><div><strong>Ritmo base</strong><small>Os horários podem ser alterados depois em cada bloco.</small></div></div><div class="schedule-settings-grid"><div class="cycle-form-group"><label class="cycle-label" for="scheduleStartTime">Começar às</label><input type="time" class="cycle-input" id="scheduleStartTime" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockMinutes">Bloco padrão</label><select class="cycle-input" id="scheduleBlockMinutes"><option value="25">25 min</option><option value="40">40 min</option><option value="50">50 min</option><option value="60">1 hora</option><option value="90">1h30</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa</label><select class="cycle-input" id="schedulePauseMinutes"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleClosingMinutes">Fechamento</label><select class="cycle-input" id="scheduleClosingMinutes"><option value="0">Sem fechamento</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleMaxSubjects">Matérias por dia</label><select class="cycle-input" id="scheduleMaxSubjects"><option value="1">Até 1</option><option value="2">Até 2</option><option value="3">Até 3</option><option value="4">Até 4</option></select></div></div><fieldset class="schedule-day-options"><legend>Dias disponíveis</legend><label><input type="checkbox" value="1"><span><b>SEG</b><small>Segunda</small></span></label><label><input type="checkbox" value="2"><span><b>TER</b><small>Terça</small></span></label><label><input type="checkbox" value="3"><span><b>QUA</b><small>Quarta</small></span></label><label><input type="checkbox" value="4"><span><b>QUI</b><small>Quinta</small></span></label><label><input type="checkbox" value="5"><span><b>SEX</b><small>Sexta</small></span></label><label><input type="checkbox" value="6"><span><b>SÁB</b><small>Sábado</small></span></label></fieldset></section><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>02</span><div><strong>Carga por matéria</strong><small>Zero blocos mantém a matéria fora da organização automática.</small></div><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal');showSection('planejamento');abrirModalCiclo()">＋ Nova matéria</button></div><div class="schedule-subject-plans" id="scheduleSubjectPlans"></div></section><div class="schedule-settings-footer"><p><b>Sem surpresas:</b> a organização é previsível e nunca altera uma semana sem você pedir.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar e organizar</button></div></div></form></div></div>
+        <div class="modal-overlay" id="scheduleSettingsModal"><div class="modal-box schedule-settings-modal schedule-sheet"><button type="button" class="modal-close" onclick="fecharModal('scheduleSettingsModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ESTÚDIO DE PLANEJAMENTO</span><div class="cycle-modal-title">Desenhe uma semana possível</div><p class="schedule-modal-intro">Escolha seu ritmo e a carga de cada matéria. O organizador apenas distribui o que você decidir.</p><form id="scheduleSettingsForm" onsubmit="KingSchedule.saveSettings(event)"><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>01</span><div><strong>Ritmo e disponibilidade</strong><small>A carga indicada compara seu tempo disponível com os blocos planejados.</small></div></div><div class="schedule-settings-grid"><div class="cycle-form-group"><label class="cycle-label" for="scheduleStartTime">Começar às</label><input type="time" class="cycle-input" id="scheduleStartTime" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleDailyCapacity">Disponibilidade por dia</label><select class="cycle-input" id="scheduleDailyCapacity"><option value="120">2 horas</option><option value="180">3 horas</option><option value="240">4 horas</option><option value="300">5 horas</option><option value="360">6 horas</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockMinutes">Bloco padrão</label><select class="cycle-input" id="scheduleBlockMinutes"><option value="25">25 min</option><option value="40">40 min</option><option value="50">50 min</option><option value="60">1 hora</option><option value="90">1h30</option><option value="100">1h40</option><option value="120">2 horas</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa</label><select class="cycle-input" id="schedulePauseMinutes"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleClosingMinutes">Fechamento</label><select class="cycle-input" id="scheduleClosingMinutes"><option value="0">Sem fechamento</option><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="25">25 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleMaxSubjects">Matérias por dia</label><select class="cycle-input" id="scheduleMaxSubjects"><option value="1">Até 1</option><option value="2">Até 2</option><option value="3">Até 3</option><option value="4">Até 4</option></select></div></div><fieldset class="schedule-day-options"><legend>Dias disponíveis</legend><label><input type="checkbox" value="1"><span><b>SEG</b><small>Segunda</small></span></label><label><input type="checkbox" value="2"><span><b>TER</b><small>Terça</small></span></label><label><input type="checkbox" value="3"><span><b>QUA</b><small>Quarta</small></span></label><label><input type="checkbox" value="4"><span><b>QUI</b><small>Quinta</small></span></label><label><input type="checkbox" value="5"><span><b>SEX</b><small>Sexta</small></span></label><label><input type="checkbox" value="6"><span><b>SÁB</b><small>Sábado</small></span></label></fieldset></section><section class="schedule-settings-section"><div class="schedule-settings-section-title"><span>02</span><div><strong>Carga por matéria</strong><small>Zero blocos mantém a matéria fora da organização automática.</small></div><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal');showSection('planejamento');abrirModalCiclo()">＋ Nova matéria</button></div><div class="schedule-subject-plans" id="scheduleSubjectPlans"></div></section><div class="schedule-settings-footer"><p><b>Sem surpresas:</b> a organização é previsível e nunca altera uma semana sem você pedir.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('scheduleSettingsModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar e organizar</button></div></div></form></div></div>
 
         <div class="modal-overlay" id="scheduleDayCloseModal"><div class="modal-box schedule-day-close-modal"><button type="button" class="modal-close" onclick="KingSchedule.closeDayLater()" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO FINAL</span><div class="cycle-modal-title">Registrar estudo de hoje</div><p class="modal-message">Confira o que avançou. Este resumo organiza o dia sem duplicar o progresso já salvo em cada bloco.</p><div class="schedule-day-close-summary" id="scheduleDayCloseSummary"></div><section class="day-close-reviews" id="scheduleDayCloseReviews"><header><div><span>REVISÕES ADICIONADAS HOJE</span><strong id="scheduleDayCloseReviewsCount">0 revisões registradas</strong></div><button type="button" onclick="showSection('revisoes');KingSchedule.closeDayLater()">Abrir caixa</button></header><div id="scheduleDayCloseReviewsList"></div></section><form onsubmit="KingSchedule.saveDayClose(event)"><input type="hidden" id="scheduleDayCloseWeek"><input type="hidden" id="scheduleDayCloseDay"><div class="cycle-form-group"><label class="cycle-label" for="scheduleDayCloseNotes">Observações do dia</label><textarea class="cycle-input" id="scheduleDayCloseNotes" rows="4" maxlength="700" placeholder="O que funcionou bem? O que precisa mudar amanhã?"></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingSchedule.closeDayLater()">Fazer depois</button><button type="submit" class="cycle-btn primary">Salvar progresso</button></div></form></div></div>
 
@@ -1265,15 +1323,17 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
-    <script src="schedule-core.js?v=20260914-schedule-v3"></script>
-    <script src="script.js?v=20260921-review-inbox-v1"></script>
-    <script src="sidebar-icons.js?v=20260922-icons-v1"></script>
-    <script src="schedule.js?v=20260921-review-inbox-v1"></script>
+    <script src="schedule-core.js?v=20260922-personal-v1"></script>
+    <script src="script.js?v=20260922-personal-v1"></script>
+    <script src="sidebar-icons.js?v=20260922-personal-v1"></script>
+    <script src="schedule.js?v=20260922-personal-v1"></script>
+    <script src="personal-development.js?v=20260922-growth-v1"></script>
+    <script src="subject-lab.js?v=20260922-subject-lab-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
-    <script src="ai-assistant.js?v=20260921-review-inbox-v1"></script>
+    <script src="ai-assistant.js?v=20260922-personal-v1"></script>
     <script src="productivity.js?v=20260916-session-safe-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260921-review-inbox-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20260922-personal-v1"></script>
 </body>
 </html>

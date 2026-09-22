@@ -27,9 +27,11 @@
         const days = [...new Set((Array.isArray(input?.studyDays) ? input.studyDays : [1, 2, 3, 4, 5, 6]).map(Number).filter(day => day >= 1 && day <= 6))].sort();
         const pause = Number(input?.pauseMinutes);
         const closing = Number(input?.closingMinutes);
+        const capacity = Number(input?.dailyCapacityMinutes);
         return {
             startTime: /^\d{2}:\d{2}$/.test(input?.startTime || '') ? input.startTime : '14:00',
             studyDays: days.length ? days : [1, 2, 3, 4, 5, 6],
+            dailyCapacityMinutes: Math.min(720, Math.max(60, Number.isFinite(capacity) ? capacity : 240)),
             blockMinutes: Math.min(240, Math.max(10, Number(input?.blockMinutes) || 50)),
             pauseMinutes: Math.min(90, Math.max(0, Number.isFinite(pause) ? pause : 15)),
             closingMinutes: Math.min(60, Math.max(0, Number.isFinite(closing) ? closing : 5)),

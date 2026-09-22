@@ -10,6 +10,7 @@
         simulados: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 8.5V12l2.5 1.5"/>',
         redacao: '<path d="m4 17-.5 3.5L7 20l11-11-3-3z"/><path d="m13.5 7.5 3 3M4 14V4h8"/>',
         historico: '<path d="M4.5 7.5H9V3"/><path d="M5.2 7A8.5 8.5 0 1 1 3.5 12"/><path d="M12 7.5V12l3 2"/>',
+        desenvolvimento: '<path d="M12 21V10"/><path d="M12 14c-4 0-7-2.5-7-6 4 0 7 2.5 7 6Z"/><path d="M12 11c4 0 7-2.5 7-6-4 0-7 2.5-7 6Z"/><path d="M8 21h8"/>',
         perfil: '<circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>'
     };
 

@@ -14,7 +14,8 @@ const ROTAS_IA = {
     materias: 'planejamento', materia: 'planejamento', hub: 'planejamento',
     agenda: 'agendamento', agendamento: 'agendamento', calendario: 'agendamento',
     revisoes: 'revisoes', revisao: 'revisoes', simulados: 'simulados', simulado: 'simulados',
-    redacoes: 'redacao', redacao: 'redacao', historico: 'historico', perfil: 'perfil'
+    redacoes: 'redacao', redacao: 'redacao', historico: 'historico', perfil: 'perfil',
+    desenvolvimento: 'desenvolvimento', disciplina: 'desenvolvimento', habitos: 'desenvolvimento'
 };
 
 function normalizarIa(texto = '') {
@@ -329,6 +330,12 @@ function contextoGeminiIa(pedido = '') {
             minutosHoje,
             minutosNestaSemana: Math.round((appData.weeklyChart || []).reduce((total, segundos) => total + (Number(segundos) || 0), 0) / 60),
             metaDiariaMinutos: appData.dailyGoalMinutes || 60
+        },
+        desenvolvimentoPessoal: {
+            compromisso: appData.personalDevelopment?.commitment || '',
+            checkinHoje: appData.personalDevelopment?.checkins?.[hoje] || {},
+            disponibilidadeDiariaMinutos: appData.studySchedule?.settings?.dailyCapacityMinutes || 240,
+            diasDeEstudo: appData.studySchedule?.settings?.studyDays || []
         },
         materias: materiasDoContexto.map(item => ({
             nome: item.subject,

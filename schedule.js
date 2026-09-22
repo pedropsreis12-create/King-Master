@@ -107,10 +107,13 @@
 
     function renderSummary() {
         const data = allMetrics();
+        const targetMinutes = settings().studyDays.length * settings().dailyCapacityMinutes;
+        const loadPercent = targetMinutes ? Math.round(data.plannedMinutes / targetMinutes * 100) : 0;
         byId('scheduleProgressText').textContent = `${data.percent}%`;
         byId('scheduleProgressRing').style.setProperty('--schedule-progress', `${data.percent * 3.6}deg`);
         byId('scheduleBlockCount').textContent = `${data.completed.length}/${data.blocks.length}`;
         byId('schedulePlannedHours').textContent = minutesText(data.plannedMinutes);
+        byId('scheduleTargetHours').textContent = minutesText(targetMinutes);
         byId('scheduleCompletedHours').textContent = minutesText(data.completedMinutes);
         const headline = data.percent === 100 ? 'Semana concluída' : data.percent >= 70 ? 'Você está na reta final' : data.percent >= 30 ? 'Ritmo em construção' : data.blocks.length ? 'Um bloco de cada vez' : 'Sua semana começa aqui';
         const hint = data.percent === 100 ? 'Feche a semana, reconheça o que funcionou e leve só o necessário adiante.'
@@ -118,6 +121,19 @@
                 : 'Monte os blocos e deixe o King Master cuidar da visão geral.';
         byId('scheduleProgressHeadline').textContent = headline;
         byId('scheduleProgressHint').textContent = hint;
+        byId('scheduleLoadFill').style.width = `${Math.min(100, loadPercent)}%`;
+        byId('scheduleLoadPlanned').textContent = `${minutesText(data.plannedMinutes)} planejadas`;
+        byId('scheduleLoadTarget').textContent = `${minutesText(targetMinutes)} disponíveis`;
+        const gap = targetMinutes - data.plannedMinutes;
+        byId('scheduleLoadHeadline').textContent = !data.blocks.length ? `Você dispõe de ${minutesText(targetMinutes)} nesta semana`
+            : gap > settings().blockMinutes ? `Ainda cabem ${minutesText(gap)} no seu plano`
+                : gap < -settings().blockMinutes ? `Sua semana excede a disponibilidade em ${minutesText(Math.abs(gap))}`
+                    : 'Carga planejada compatível com seu tempo';
+        byId('scheduleLoadHint').textContent = !data.blocks.length ? `${settings().studyDays.length} dias × ${minutesText(settings().dailyCapacityMinutes)} por dia. Distribua somente o que é possível cumprir.`
+            : loadPercent > 110 ? 'Reduza ou mova blocos para evitar uma semana impossível.'
+                : loadPercent < 70 ? 'Há espaço disponível. Acrescente apenas conteúdos prioritários.'
+                    : 'A carga está em uma faixa sustentável para a disponibilidade informada.';
+        byId('scheduleLoadGuide').classList.toggle('overloaded', loadPercent > 110);
     }
 
     function orderedPendingBlocks() {
@@ -162,7 +178,8 @@
         }
         container.innerHTML = entries.slice(0, 6).map(item => {
             const percent = Math.round(item.done / item.total * 100);
-            return `<div class="schedule-balance-row" style="--subject-color:${safeColor(item.mat.color)}"><span>${escape(item.mat.schedule?.icon || '●')}</span><div><p><strong>${escape(item.mat.subject)}</strong><small>${item.done}/${item.total}</small></p><i><b style="width:${percent}%"></b></i></div></div>`;
+            const minutes = blocks.filter(block => String(block.subjectId) === String(item.mat.id)).reduce((sum, block) => sum + Number(block.duration || 0), 0);
+            return `<div class="schedule-balance-row" style="--subject-color:${safeColor(item.mat.color)}"><span>${escape(item.mat.schedule?.icon || '●')}</span><div><p><strong>${escape(item.mat.subject)}</strong><small>${minutesText(minutes)} · ${item.done}/${item.total}</small></p><i><b style="width:${percent}%"></b></i></div></div>`;
         }).join('');
     }
 
@@ -354,6 +371,7 @@
         const submit = byId('scheduleSettingsForm')?.querySelector('button[type="submit"]');
         if (submit) submit.textContent = 'Salvar planejamento';
         byId('scheduleStartTime').value = value.startTime;
+        setSelectValue(byId('scheduleDailyCapacity'), value.dailyCapacityMinutes);
         byId('scheduleBlockMinutes').value = String(value.blockMinutes);
         byId('schedulePauseMinutes').value = String(value.pauseMinutes);
         byId('scheduleClosingMinutes').value = String(value.closingMinutes);
@@ -367,7 +385,7 @@
         const days = [...document.querySelectorAll('#scheduleSettingsModal .schedule-day-options input:checked')].map(input => Number(input.value));
         if (!days.length) return toast('Escolha pelo menos um dia disponível.', true);
         appData.studySchedule.settings = Core.normalizeSettings({
-            startTime: byId('scheduleStartTime').value, studyDays: days, blockMinutes: byId('scheduleBlockMinutes').value,
+            startTime: byId('scheduleStartTime').value, studyDays: days, dailyCapacityMinutes: byId('scheduleDailyCapacity').value, blockMinutes: byId('scheduleBlockMinutes').value,
             pauseMinutes: byId('schedulePauseMinutes').value, closingMinutes: byId('scheduleClosingMinutes').value, maxSubjectsPerDay: byId('scheduleMaxSubjects').value
         });
         document.querySelectorAll('#scheduleSubjectPlans .schedule-subject-plan').forEach(card => {

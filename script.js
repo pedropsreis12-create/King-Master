@@ -46,7 +46,12 @@ const defaultAppData = {
     onboardingCompleted: false,
     accessibility: { fontScale: 'normal', highContrast: false, motionMode: 'auto' },
     studyLogging: { autoReview: true, reviewDelayDays: 1 },
-    studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
+    studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], dailyCapacityMinutes: 240, blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
+    personalDevelopment: {
+        commitment: 'Às 14h eu começo antes de negociar comigo mesmo. Nos dias ruins, protejo pelo menos duas horas.',
+        checkins: {},
+        version: 1
+    },
     activeScheduleBlock: null,
     aiSettings: { retentionDays: 7 },
     aiConversation: [],
@@ -117,6 +122,10 @@ if (!appData.studySchedule.settings || typeof appData.studySchedule.settings !==
 appData.studySchedule.settings = { ...defaultAppData.studySchedule.settings, ...appData.studySchedule.settings };
 if (!appData.studySchedule.weeks || typeof appData.studySchedule.weeks !== 'object' || Array.isArray(appData.studySchedule.weeks)) appData.studySchedule.weeks = {};
 if (!Array.isArray(appData.studySchedule.suggestions)) appData.studySchedule.suggestions = [];
+if (!appData.personalDevelopment || typeof appData.personalDevelopment !== 'object') appData.personalDevelopment = { ...defaultAppData.personalDevelopment };
+appData.personalDevelopment = { ...defaultAppData.personalDevelopment, ...appData.personalDevelopment };
+if (!appData.personalDevelopment.checkins || typeof appData.personalDevelopment.checkins !== 'object' || Array.isArray(appData.personalDevelopment.checkins)) appData.personalDevelopment.checkins = {};
+appData.personalDevelopment.commitment = String(appData.personalDevelopment.commitment || defaultAppData.personalDevelopment.commitment).slice(0, 280);
 if (!appData.activeScheduleBlock || typeof appData.activeScheduleBlock !== 'object') appData.activeScheduleBlock = null;
 if (!appData.aiSettings || typeof appData.aiSettings !== 'object') appData.aiSettings = { ...defaultAppData.aiSettings };
 appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
@@ -164,6 +173,7 @@ function saveAppData() {
     if (timerPersistenceReady) persistTimerCheckpoint();
     updateDashboardStats(); 
     atualizarIndicadoresNavegacao();
+    window.KingPersonalDevelopment?.render?.();
 }
 
 window.kingMasterCloudBridge = {
@@ -378,6 +388,7 @@ function showSection(sectionId) {
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
+    if(sectionId === 'desenvolvimento') window.KingPersonalDevelopment?.render?.();
     atualizarIndicadoresNavegacao();
 }
 
@@ -2386,6 +2397,7 @@ let buscaAssuntosAtual = '';
 let filtroAssuntosAtual = 'acao';
 let ordenacaoAssuntosAtual = 'acao';
 let assuntoSelecionadoIndice = null;
+let abaDetalheTopicoAtual = 'visao';
 let filtroAgendamentoAtual = 'todos';
 let filtroRevisoesAtual = 'pendentes';
 let filtroSimuladosAtual = 'todas';
@@ -2450,6 +2462,7 @@ function abrirModalAssuntos(id) {
     document.getElementById('assuntosMateriaId').value = id; document.getElementById('assuntosModalTitle').textContent = mat.subject;
     buscaAssuntosAtual = '';
     assuntoSelecionadoIndice = null;
+    abaDetalheTopicoAtual = 'visao';
     document.getElementById('assuntosBuscaInput').value = '';
     document.getElementById('assuntosOrdenacao').value = ordenacaoAssuntosAtual;
     document.querySelectorAll('[data-topic-filter]').forEach(botao => {
@@ -2573,7 +2586,8 @@ function obterAnaliseTopico(materia, topico) {
         respondidas,
         taxaAcerto: respondidas ? Math.round(acertos / respondidas * 100) : null,
         taxaErro: respondidas ? Math.round(errosQuestoes / respondidas * 100) : null,
-        mediaSessao: sessoes.length ? Math.round(segundos / sessoes.length) : 0
+        mediaSessao: sessoes.length ? Math.round(segundos / sessoes.length) : 0,
+        sessoesItens: [...sessoes].sort((a, b) => Number(b.id || 0) - Number(a.id || 0)).slice(0, 40)
     };
 }
 
@@ -2594,6 +2608,17 @@ function htmlAnaliseTopico(analise) {
             <article class="topic-chart-card"><div class="topic-chart-heading"><div><strong>Causas dos erros</strong><small>Padrões encontrados no caderno</small></div><b>${analise.errosCaderno} registros</b></div>${causas ? `<div class="topic-error-causes">${causas}</div>` : '<div class="topic-chart-empty">Registre erros no caderno para descobrir os padrões mais frequentes.</div>'}</article>
             <article class="topic-chart-card wide"><div class="topic-chart-heading"><div><strong>Evolução da precisão</strong><small>Percentual mensal de acertos em todo o histórico</small></div><b>${analise.questoes} questões registradas</b></div>${graficoDesempenho}</article>
         </section>`;
+}
+
+function htmlHistoricoTopico(analise) {
+    if (!analise.sessoesItens.length) return '<div class="topic-history-empty">As sessões registradas com este assunto aparecerão aqui, com tempo e desempenho.</div>';
+    return `<div class="topic-history-list">${analise.sessoesItens.map(item => {
+        const data = dataHistoricoISO(item);
+        const dataLocal = dataISOParaLocal(data);
+        const rotulo = dataLocal ? dataLocal.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replace('.', '') : 'Data não informada';
+        const questoes = Math.max(0, Number(item.questoes) || 0), acertos = Math.max(0, Number(item.acertos) || 0), erros = Math.max(0, Number(item.erros) || 0);
+        return `<article class="topic-history-item"><time>${rotulo}</time><span><strong>${escaparRevisaoHtml(item.resumo || item.notas || 'Sessão de estudo')}</strong><small>${questoes ? `${questoes} questões · ${acertos} acertos · ${erros} erros` : 'Sem questões registradas'}</small></span><b>${formatShortTime(Math.max(0, Number(item.tempoSegundos) || 0))}</b></article>`;
+    }).join('')}</div>`;
 }
 
 function renderizarListaAssuntos(id) {
@@ -2662,7 +2687,17 @@ function renderizarListaAssuntos(id) {
 
 function selecionarTopicoControle(id, indice) {
     assuntoSelecionadoIndice = indice;
+    abaDetalheTopicoAtual = 'visao';
     renderizarListaAssuntos(id);
+}
+
+function alternarAbaTopicoDetalhe(aba = 'visao') {
+    abaDetalheTopicoAtual = ['visao', 'controle', 'registros'].includes(aba) ? aba : 'visao';
+    document.querySelectorAll('#topicControlPanel [data-topic-detail-tab]').forEach(botao => {
+        const ativo = botao.dataset.topicDetailTab === abaDetalheTopicoAtual;
+        botao.classList.toggle('active', ativo); botao.setAttribute('aria-selected', String(ativo));
+    });
+    document.querySelectorAll('#topicControlPanel [data-topic-pane]').forEach(painel => painel.hidden = painel.dataset.topicPane !== abaDetalheTopicoAtual);
 }
 
 function renderizarPainelControleTopico(id, indice) {
@@ -2682,13 +2717,17 @@ function renderizarPainelControleTopico(id, indice) {
     const hoje = dataLocalISO(new Date());
     const analise = obterAnaliseTopico(materia, topico);
     const revisaoStatus = revisao ? `<div class="topic-review-status"><span><strong>Revisão ativa</strong><small>${rotuloDataRevisao(revisao.dataAlvo) || 'Escolha uma data'}</small></span><button type="button" class="topic-review-remove" onclick="solicitarRemocaoRevisaoTopico(${id},${indice})">Remover revisão</button></div>` : '';
-    painel.innerHTML = `<div class="topic-control-header"><div><span class="workspace-kicker">CONTROLE DO ASSUNTO</span><h4>${escaparRevisaoHtml(topico.nome || 'Tópico')}</h4><p>${Number(topico.vezesEstudado) || 0} estudos • último: ${ultimaData}</p></div><span class="topic-state-pill">${rotulosEstado[estado]}</span></div>
-        ${htmlAnaliseTopico(analise)}
+    painel.innerHTML = `<div class="topic-control-header"><div><span class="workspace-kicker">DOSSIÊ DO ASSUNTO</span><h4>${escaparRevisaoHtml(topico.nome || 'Tópico')}</h4><p>${Number(topico.vezesEstudado) || 0} estudos • último: ${ultimaData}</p></div><span class="topic-state-pill">${rotulosEstado[estado]}</span></div>
+        <nav class="topic-detail-tabs" role="tablist" aria-label="Detalhes do assunto"><button type="button" data-topic-detail-tab="visao" onclick="alternarAbaTopicoDetalhe('visao')">Visão geral</button><button type="button" data-topic-detail-tab="controle" onclick="alternarAbaTopicoDetalhe('controle')">Controle e revisão</button><button type="button" data-topic-detail-tab="registros" onclick="alternarAbaTopicoDetalhe('registros')">Registros</button></nav>
+        <div class="topic-detail-pane" data-topic-pane="visao">${htmlAnaliseTopico(analise)}</div>
+        <div class="topic-detail-pane" data-topic-pane="controle">
         <section class="topic-control-section"><span class="topic-control-label">Nível de domínio</span><div class="topic-mastery-control" role="group" aria-label="Nível de domínio"><button type="button" class="${nivel === 0 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},0)"><b>0</b><span>Não iniciado</span></button><button type="button" class="${nivel === 1 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},1)"><b>1</b><span>Aprendendo</span></button><button type="button" class="${nivel === 2 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},2)"><b>2</b><span>Consolidando</span></button><button type="button" class="${nivel === 3 ? 'active' : ''}" onclick="definirNivelDominioTopico(${id},${indice},3)"><b>✓</b><span>Dominado</span></button></div></section>
         <form class="topic-control-section" onsubmit="salvarDetalhesTopico(event,${id},${indice})"><div class="topic-control-form-grid"><label><span class="topic-control-label">Nome do tópico</span><input class="cycle-input" id="topicControlName" maxlength="100" required value="${escaparRevisaoHtml(topico.nome || '')}"></label><label><span class="topic-control-label">Prioridade</span><select class="cycle-input" id="topicControlPriority"><option value="alta" ${topico.prioridade === 'alta' ? 'selected' : ''}>Alta</option><option value="media" ${!topico.prioridade || topico.prioridade === 'media' ? 'selected' : ''}>Média</option><option value="baixa" ${topico.prioridade === 'baixa' ? 'selected' : ''}>Baixa</option></select></label></div><label><span class="topic-control-label">Anotação de controle</span><textarea class="cycle-input" id="topicControlNotes" maxlength="500" placeholder="Ex.: erro comum, fórmula que falta fixar ou próximo exercício">${escaparRevisaoHtml(topico.notas || '')}</textarea></label><button type="submit" class="cycle-btn">Salvar ajustes</button></form>
         <section class="topic-control-section"><span class="topic-control-label">Próxima revisão</span><div class="topic-review-row"><input type="date" class="cycle-input" id="topicControlReviewDate" min="${hoje}" value="${escaparRevisaoHtml(revisao?.dataAlvo || '')}" onchange="agendarRevisaoTopico(${id},${indice},this.value)"><div class="topic-review-presets"><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},1)">+1 dia</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},3)">+3</button><button type="button" onclick="definirRevisaoTopicoDias(${id},${indice},7)">+7</button></div></div>${revisaoStatus}</section>
         <section class="topic-recall-box"><header><b>↻</b><span><strong>Depois de tentar lembrar sem olhar</strong><small>Registre o resultado e a próxima revisão será ajustada.</small></span></header><div class="topic-recall-actions"><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'dificil')">Difícil<small>revisar amanhã</small></button><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'parcial')">Parcial<small>revisar em 3 dias</small></button><button type="button" onclick="registrarDesempenhoTopico(${id},${indice},'seguro')">Seguro<small>revisar em 7 dias</small></button></div></section>
-        <footer class="topic-control-footer"><button type="button" class="cycle-btn topic-delete-button" onclick="solicitarExclusaoTopico(${id},${indice})">Excluir tópico</button><button type="button" class="cycle-btn primary" onclick="solicitarRegistroTopico(${id},${indice})">Estudei hoje</button></footer>`;
+        <footer class="topic-control-footer"><button type="button" class="cycle-btn topic-delete-button" onclick="solicitarExclusaoTopico(${id},${indice})">Excluir tópico</button><button type="button" class="cycle-btn primary" onclick="solicitarRegistroTopico(${id},${indice})">Estudei hoje</button></footer></div>
+        <div class="topic-detail-pane" data-topic-pane="registros">${htmlHistoricoTopico(analise)}</div>`;
+    alternarAbaTopicoDetalhe(abaDetalheTopicoAtual);
 }
 
 function adicionarTopico(e) {

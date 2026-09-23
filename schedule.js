@@ -17,6 +17,7 @@
     let visibleWeek = Core.monday(new Date());
     let selectedDay = Math.min(6, Math.max(1, new Date().getDay() || 1));
     let draggedBlockId = null;
+    let touchDrag = null;
 
     const byId = id => document.getElementById(id);
     const escape = value => typeof escaparRevisaoHtml === 'function'
@@ -193,7 +194,7 @@
         byId('scheduleDayStrip').innerHTML = DAYS.map(day => {
             const date = dayDate(visibleWeek, day), data = dayProgress(day), active = selectedDay === day;
             const classes = [active ? 'active' : '', isToday(visibleWeek, day) ? 'today' : '', activeDays.has(day) ? '' : 'rest-day'].filter(Boolean).join(' ');
-            return `<button type="button" role="tab" aria-selected="${active}" class="${classes}" style="--day-progress:${data.percent * 3.6}deg" onclick="KingSchedule.selectDay(${day})" ondragover="KingSchedule.dragOverDay(event)" ondragleave="KingSchedule.dragLeaveDay(event)" ondrop="KingSchedule.dropToDay(event,${day})"><span><b>${DAY_SHORT[day]}</b><small>${date.getDate()}</small></span><i><em>${data.done}/${data.blocks.length}</em></i></button>`;
+            return `<button type="button" role="tab" aria-selected="${active}" class="${classes}" data-drop-day="${day}" style="--day-progress:${data.percent * 3.6}deg" onclick="KingSchedule.selectDay(${day})" ondragover="KingSchedule.dragOverDay(event)" ondragleave="KingSchedule.dragLeaveDay(event)" ondrop="KingSchedule.dropToDay(event,${day})"><span><b>${DAY_SHORT[day]}</b><small>${date.getDate()}</small></span><i><em>${data.done}/${data.blocks.length}</em></i></button>`;
         }).join('');
     }
 
@@ -216,9 +217,9 @@
             const fim = rotuloFim ? `${String(Math.floor(rotuloFim / 60)).padStart(2, '0')}:${String(rotuloFim % 60).padStart(2, '0')}` : '';
             const celulas = DAYS.map(day => {
                 const block = blocks.find(item => Number(item.day) === day && item.start === horario);
-                if (!block) return `<button type="button" class="schedule-matrix-cell empty" onclick="KingSchedule.openBlock(null,${day})" aria-label="Adicionar bloco em ${DAY_NAMES[day]}"><span>＋</span></button>`;
+                if (!block) return `<button type="button" class="schedule-matrix-cell empty" data-drop-day="${day}" data-drop-start="${escape(horario)}" onclick="KingSchedule.openBlock(null,${day},'${escape(horario)}')" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnSlot(event,${day},'${escape(horario)}')" aria-label="Adicionar bloco em ${DAY_NAMES[day]} às ${escape(horario)}"><span>＋</span></button>`;
                 const mat = subject(block.subjectId), kind = KINDS[block.kind] || KINDS.teoria, state = STATUS[block.status] || STATUS.pending;
-                return `<button type="button" class="schedule-matrix-cell status-${block.status}" style="--block-color:${safeColor(mat?.color)}" onclick="KingSchedule.openBlock('${safeId(block.id)}')"><span class="schedule-matrix-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><span><strong>${escape(mat?.subject || 'Matéria removida')}</strong><small>${escape(block.topic || kind.label)}</small></span><i title="${escape(state.label)}">${state.icon}</i></button>`;
+                return `<button type="button" class="schedule-matrix-cell status-${block.status}" data-drop-block-id="${safeId(block.id)}" style="--block-color:${safeColor(mat?.color)}" draggable="true" ondragstart="KingSchedule.dragStart(event,'${safeId(block.id)}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${safeId(block.id)}')" onclick="KingSchedule.openBlock('${safeId(block.id)}')"><span class="schedule-matrix-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><span><strong>${escape(mat?.subject || 'Matéria removida')}</strong><small>${escape(block.topic || kind.label)}</small></span><i title="${escape(state.label)}">${state.icon}</i></button>`;
             }).join('');
             return `<div class="schedule-matrix-time"><strong>${escape(horario)}</strong><small>${escape(fim)}</small></div>${celulas}`;
         }).join('');
@@ -233,7 +234,7 @@
             : block.status === 'missed'
                 ? `<button type="button" class="cycle-btn" onclick="KingSchedule.setStatus('${id}','pending')">Replanejar</button>`
                 : `<button type="button" class="cycle-btn primary" onclick="KingSchedule.startBlock('${id}')">${block.status === 'running' ? 'Retomar' : 'Estudar'}</button><button type="button" class="cycle-btn" onclick="KingSchedule.openComplete('${id}')">Concluir</button>`;
-        return `<div class="schedule-timeline-row"><div class="schedule-time-rail"><strong>${escape(block.start)}</strong><span></span><small>${escape(end)}</small></div><article class="schedule-focus-block status-${block.status}" draggable="true" data-block-id="${id}" style="--block-color:${color}" ondragstart="KingSchedule.dragStart(event,'${id}')" ondragend="KingSchedule.dragEnd(event)"><header><span class="schedule-focus-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><div><span>${escape(kind.label)}</span><strong>${escape(mat?.subject || 'Matéria removida')}</strong></div><em class="schedule-status-chip">${state.icon} ${state.label}</em></header><h3>${escape(block.topic || `Bloco de ${kind.label.toLocaleLowerCase('pt-BR')}`)}</h3>${block.result?.notes ? `<p class="schedule-result-note">${escape(block.result.notes)}</p>` : ''}<footer><span>${block.duration} min${block.result?.questions ? ` · ${block.result.questions} questões` : ''}</span><div>${action}<button type="button" class="schedule-more-button" onclick="KingSchedule.openBlock('${id}')" aria-label="Editar bloco">•••</button></div></footer></article></div>`;
+        return `<div class="schedule-timeline-row"><div class="schedule-time-rail"><strong>${escape(block.start)}</strong><span></span><small>${escape(end)}</small></div><article class="schedule-focus-block status-${block.status}" draggable="true" data-block-id="${id}" data-drop-block-id="${id}" style="--block-color:${color}" onpointerdown="KingSchedule.pointerDown(event,'${id}')" ondragstart="KingSchedule.dragStart(event,'${id}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${id}')"><header><span class="schedule-focus-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><div><span>${escape(kind.label)}</span><strong>${escape(mat?.subject || 'Matéria removida')}</strong></div><em class="schedule-status-chip">${state.icon} ${state.label}</em></header><h3>${escape(block.topic || `Bloco de ${kind.label.toLocaleLowerCase('pt-BR')}`)}</h3>${block.result?.notes ? `<p class="schedule-result-note">${escape(block.result.notes)}</p>` : ''}<footer><span>${block.duration} min${block.result?.questions ? ` · ${block.result.questions} questões` : ''}</span><div>${action}<button type="button" class="schedule-more-button" onclick="KingSchedule.openBlock('${id}')" aria-label="Editar bloco">•••</button></div></footer></article></div>`;
     }
     function pauseHtml(minutes) {
         return `<div class="schedule-timeline-pause"><span></span><div><b>☕</b><strong>Pausa</strong><small>${minutes} minutos para recuperar o foco</small></div></div>`;
@@ -452,12 +453,18 @@
         if (selectedSubject != null) byId('scheduleBlockSubject').value = String(selectedSubject);
         byId('scheduleBlockDay').innerHTML = DAYS.map(value => `<option value="${value}">${DAY_NAMES[value]}</option>`).join('');
         byId('scheduleBlockDay').value = String(day);
+        updateTopicSuggestions();
+    }
+    function updateTopicSuggestions() {
+        const item = subject(byId('scheduleBlockSubject').value);
+        const topics = Array.isArray(item?.topicos) ? item.topicos : [];
+        byId('scheduleTopicSuggestions').innerHTML = topics.map(topic => `<option value="${escape(typeof topic === 'string' ? topic : topic?.nome || topic?.name || '')}"></option>`).join('');
     }
     function setSelectValue(select, value) {
         if (![...select.options].some(option => String(option.value) === String(value))) select.add(new Option(`${value} min`, String(value)));
         select.value = String(value);
     }
-    function openBlock(id = null, requestedDay = null) {
+    function openBlock(id = null, requestedDay = null, requestedStart = null) {
         ensureData();
         if (!appData.cycleItems.length) { toast('Adicione uma matéria antes de criar o bloco.', true); showSection('planejamento'); return abrirModalCiclo(); }
         const block = id != null ? findBlock(id) : null;
@@ -469,7 +476,7 @@
         fillBlockSelects(block?.subjectId, day);
         byId('scheduleBlockKind').value = block?.kind || 'teoria';
         byId('scheduleBlockTopic').value = block?.topic || '';
-        byId('scheduleBlockStart').value = block?.start || nextStart(day);
+        byId('scheduleBlockStart').value = block?.start || (/^\d{2}:\d{2}$/.test(String(requestedStart || '')) ? requestedStart : nextStart(day));
         setSelectValue(byId('scheduleBlockDuration'), block?.duration || settings().blockMinutes);
         byId('scheduleBlockStatus').value = block?.status || 'pending';
         byId('scheduleDeleteBlock').hidden = !block;
@@ -486,11 +493,13 @@
             duration: Math.min(240, Math.max(5, Number(byId('scheduleBlockDuration').value) || settings().blockMinutes)),
             status: statusValue === 'completed' && !existing?.registered ? 'pending' : statusValue, fixedStart: true
         };
-        const oldDay = existing?.day;
+        const oldDay = existing?.day, oldStart = existing?.start;
         if (existing) Object.assign(existing, values);
         else target.blocks.push({ id: `bloco-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, order: getDayBlocks(day, key).length, registered: false, ...values });
         if (oldDay && Number(oldDay) !== day) recomputeDay(oldDay, key);
-        target.blocks.filter(item => Number(item.day) === day).sort((a, b) => Core.toMinutes(a.start) - Core.toMinutes(b.start)).forEach((item, index) => item.order = index);
+        if (!existing || Number(oldDay) !== day || oldStart !== values.start) {
+            target.blocks.filter(item => Number(item.day) === day).sort((a, b) => Core.toMinutes(a.start) - Core.toMinutes(b.start) || (a.order ?? 999) - (b.order ?? 999)).forEach((item, index) => item.order = index);
+        }
         recomputeDay(day, key);
         saveAppData(); fecharModal('scheduleBlockModal'); selectedDay = day; render(); toast('✓ Bloco salvo na semana.');
     }
@@ -574,14 +583,67 @@
     }
 
     function dragStart(event, id) { draggedBlockId = String(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', draggedBlockId); event.currentTarget.classList.add('dragging'); }
-    function dragEnd(event) { event.currentTarget.classList.remove('dragging'); draggedBlockId = null; document.querySelectorAll('.schedule-day-strip button.drag-over').forEach(item => item.classList.remove('drag-over')); }
+    function clearDragTargets() { document.querySelectorAll('.drag-over, .dragging').forEach(item => item.classList.remove('drag-over', 'dragging')); }
+    function dragEnd() { draggedBlockId = null; clearDragTargets(); }
     function dragOverDay(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); event.dataTransfer.dropEffect = 'move'; }
     function dragLeaveDay(event) { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drag-over'); }
+    function dragOverBlock(event) { if (!draggedBlockId) return; event.preventDefault(); event.currentTarget.classList.add('drag-over'); event.dataTransfer.dropEffect = 'move'; }
+    function dragLeaveBlock(event) { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drag-over'); }
+    function pointerDown(event, id) {
+        if (event.pointerType === 'mouse' || event.target.closest('button, input, select, a')) return;
+        const startX = event.clientX, startY = event.clientY, source = event.currentTarget;
+        const state = { id, source, active: false, timer: null };
+        touchDrag = state;
+        state.timer = setTimeout(() => { if (touchDrag !== state) return; state.active = true; source.classList.add('dragging'); navigator.vibrate?.(20); }, 350);
+        const move = moveEvent => {
+            if (touchDrag !== state) return;
+            if (!state.active && Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > 12) { finish(); return; }
+            if (!state.active) return;
+            moveEvent.preventDefault();
+            document.querySelectorAll('.drag-over').forEach(item => item.classList.remove('drag-over'));
+            document.elementFromPoint(moveEvent.clientX, moveEvent.clientY)?.closest('[data-drop-block-id], [data-drop-day], [data-drop-start]')?.classList.add('drag-over');
+        };
+        const finish = endEvent => {
+            clearTimeout(state.timer);
+            document.removeEventListener('pointermove', move);
+            document.removeEventListener('pointerup', finish);
+            document.removeEventListener('pointercancel', finish);
+            if (touchDrag !== state) return;
+            touchDrag = null;
+            if (state.active && endEvent?.type === 'pointerup') {
+                const hit = document.elementFromPoint(endEvent.clientX, endEvent.clientY)?.closest('[data-drop-block-id], [data-drop-day], [data-drop-start]');
+                if (hit?.dataset.dropBlockId) moveBlock(id, findBlock(hit.dataset.dropBlockId)?.day, hit.dataset.dropBlockId);
+                else if (hit?.dataset.dropStart) moveBlock(id, hit.dataset.dropDay, null, hit.dataset.dropStart);
+                else if (hit?.dataset.dropDay) moveBlock(id, hit.dataset.dropDay);
+            }
+            clearDragTargets();
+        };
+        document.addEventListener('pointermove', move, { passive: false });
+        document.addEventListener('pointerup', finish);
+        document.addEventListener('pointercancel', finish);
+    }
+    function moveBlock(id, day, targetId = null, start = null) {
+        const block = findBlock(id), target = targetId ? findBlock(targetId) : null;
+        if (!block || (targetId && !target) || String(block.id) === String(targetId) || !DAYS.includes(Number(day))) return;
+        const oldDay = Number(block.day), destination = Number(day);
+        const oldList = getDayBlocks(oldDay).filter(item => item !== block);
+        const destinationList = oldDay === destination ? oldList : getDayBlocks(destination);
+        let index = target ? destinationList.findIndex(item => item === target) : destinationList.findIndex(item => Core.toMinutes(item.start) >= Core.toMinutes(start || '23:59'));
+        if (index < 0) index = destinationList.length;
+        destinationList.splice(index, 0, block);
+        block.day = destination;
+        oldList.forEach((item, position) => { item.order = position; item.fixedStart = false; });
+        destinationList.forEach((item, position) => { item.order = position; item.fixedStart = false; });
+        if (oldDay !== destination) recomputeDay(oldDay);
+        recomputeDay(destination);
+        saveAppData(); selectedDay = destination; render();
+        toast('✓ Posição do bloco atualizada.');
+    }
+    function dropOnBlock(event, id) { event.preventDefault(); event.stopPropagation(); const source = draggedBlockId || event.dataTransfer?.getData('text/plain'); clearDragTargets(); moveBlock(source, findBlock(id)?.day, id); draggedBlockId = null; }
+    function dropOnSlot(event, day, start) { event.preventDefault(); event.stopPropagation(); const source = draggedBlockId || event.dataTransfer?.getData('text/plain'); clearDragTargets(); moveBlock(source, day, null, start); draggedBlockId = null; }
     function dropToDay(event, day) {
         event.preventDefault(); event.currentTarget.classList.remove('drag-over');
-        const id = draggedBlockId || event.dataTransfer.getData('text/plain'), block = findBlock(id); if (!block) return;
-        const oldDay = Number(block.day); block.day = Number(day); block.fixedStart = false; block.order = getDayBlocks(day).length;
-        recomputeDay(oldDay); recomputeDay(Number(day)); saveAppData(); selectedDay = Number(day); render(); toast(`Bloco movido para ${DAY_NAMES[day]}.`);
+        const id = draggedBlockId || event.dataTransfer.getData('text/plain'); moveBlock(id, day); draggedBlockId = null;
     }
 
     function applySuggestion(id) { const item = subject(id); if (!item) return; item.schedule.priority = 3; appData.studySchedule.suggestions.push({ subjectId: item.id, status: 'applied', at: Date.now() }); saveAppData(); render(); toast(`${item.subject} ganhou prioridade alta para a próxima organização.`); }
@@ -593,9 +655,11 @@
         render, organizeCurrentWeek, changeWeek, goCurrentWeek, selectDay, copyToNextWeek, replanOverdue,
         openSettings, saveSettings, openBlock, saveBlock, deleteEditingBlock, setStatus, startBlock, openComplete,
         completeFromSession, openDayClose, closeDayLater, saveDayClose, dragStart, dragEnd, dragOverDay, dragLeaveDay,
-        dropToDay, applySuggestion, ignoreSuggestion, removeSubject, clearSubjects,
+        dropToDay, dragOverBlock, dragLeaveBlock, dropOnBlock, dropOnSlot, pointerDown, updateTopicSuggestions,
+        applySuggestion, ignoreSuggestion, removeSubject, clearSubjects,
         getVisibleWeek: () => visibleWeek, getSelectedDay: () => selectedDay
     };
+    byId('scheduleBlockSubject')?.addEventListener('change', updateTopicSuggestions);
     ensureData();
     if (byId('cronograma')?.classList.contains('active')) render();
 })();

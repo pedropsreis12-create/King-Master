@@ -13,6 +13,7 @@
     function reset() {
         state.file = null; state.results = [];
         if (byId('syllabusFileInput')) byId('syllabusFileInput').value = '';
+        if (byId('syllabusInstruction')) byId('syllabusInstruction').value = '';
         byId('syllabusFileSummary').hidden = true; byId('syllabusResults').hidden = true; byId('syllabusActions').hidden = true;
         byId('syllabusAnalyzeButton').disabled = true; byId('syllabusStatus').textContent = '';
     }
@@ -65,7 +66,7 @@
                 const payload = typeof parts[index] === 'string'
                     ? { name: file.name, mimeType: 'text/plain', text: parts[index] }
                     : { name: file.name, mimeType: file.type, base64: parts[index].image };
-                const response = await window.kingGemini.analyzeSyllabus({ ...payload, subjects: appData.cycleItems.map(item => item.subject) });
+                const response = await window.kingGemini.analyzeSyllabus({ ...payload, subjects: appData.cycleItems.map(item => item.subject), instruction: byId('syllabusInstruction')?.value.trim().slice(0, 500) || '' });
                 for (const group of response?.materias || []) {
                     const key = normalized(group.nome);
                     if (!key) continue;

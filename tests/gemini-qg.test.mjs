@@ -46,7 +46,7 @@ function modelResponse({ text = '', calls = [], parts } = {}) {
 }
 
 async function cloudHarness(replies, executeTool = () => ({ ok: true, message: 'Salvo.' }), persistChanges = () => {}) {
-    const records = { starts: [], requests: [], tools: [], saves: 0, warnings: [] };
+    const records = { starts: [], requests: [], fallbackRequests: [], tools: [], saves: 0, warnings: [] };
     const schema = new Proxy({}, { get: (_, key) => value => ({ type: key, ...value }) });
     const sdk = {
         'firebase-app': { initializeApp() { return {}; } },
@@ -55,7 +55,12 @@ async function cloudHarness(replies, executeTool = () => ({ ok: true, message: '
         'firebase-app-check': { initializeAppCheck() { return {}; }, ReCaptchaEnterpriseProvider: class {}, getToken: async () => ({ token: 'fixture-token' }) },
         'firebase-ai': { Schema: schema, ThinkingLevel: { LOW: 'LOW', MEDIUM: 'MEDIUM' }, getAI() { return {}; }, GoogleAIBackend: class {},
             getGenerativeModel(_ai, config) {
-                return { async generateContentStream(request, requestOptions) {
+                return { async generateContent(request, requestOptions) {
+                    records.fallbackRequests.push({ request: JSON.parse(JSON.stringify(request)), requestOptions });
+                    const reply = replies.shift();
+                    if (reply instanceof Error) throw reply;
+                    return { response: modelResponse(reply) };
+                }, async generateContentStream(request, requestOptions) {
                     records.requests.push({ config, request: JSON.parse(JSON.stringify(request)), requestOptions });
                     const reply = replies.shift();
                     if (reply instanceof Error) throw reply;
@@ -167,6 +172,15 @@ test('tool successes survive final response failure and repeated calls execute o
     assert.equal(result.actions.length, 1);
     assert.match(result.text, /Salvo/);
     assert.match(result.text, /já foram salvas/);
+});
+
+test('transport failure retries without repeating a tool or losing the request', async () => {
+    const h = await cloudHarness([new Error('network failure'), { text: 'Olá! Posso ajudar.' }]);
+    const result = await h.gemini.send('oi', { marker: 'current-context' });
+    assert.equal(result.text, 'Olá! Posso ajudar.');
+    assert.equal(h.records.fallbackRequests.length, 1);
+    assert.equal(h.records.fallbackRequests[0].request.contents.at(-1).parts[0].text.includes('current-context'), true);
+    assert.equal(h.records.tools.length, 0);
 });
 
 test('abort prevents a late response from executing any tool', async () => {
@@ -285,7 +299,7 @@ test('function responses preserve the exact call IDs for continuation', async ()
 
 test('diagnostic logs strip URLs, API keys, tokens and thought signatures', async () => {
     const err = Object.assign(new Error('Request https://example.invalid/path?key=secret failed apiKey: AIza123456789012345678901234567890 access_token: secret-token thoughtSignature: private-signature Bearer private-bearer'), { code: 'ai/fetch-error' });
-    const h = await cloudHarness([err]);
+    const h = await cloudHarness([err, err]);
     await assert.rejects(h.gemini.send('Teste', {}));
     const diagnostic = JSON.stringify(h.records.warnings);
     assert.match(diagnostic, /ai\/fetch-error/);

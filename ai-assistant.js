@@ -302,10 +302,12 @@ function atualizarRascunhoIa(texto) {
 function descreverErroGeminiIa(error) {
     const detalhe = `${error?.code || ''} ${error?.message || ''}`.toLowerCase();
     if (/429|quota|resource.exhausted/.test(detalhe)) return 'O limite de uso do Gemini foi atingido. Aguarde um pouco e tente novamente. Seu pedido não foi executado.';
-    if (/app.check|appcheck|recaptcha|403|permission.denied/.test(detalhe)) return 'O Google não conseguiu validar o acesso ao Gemini neste navegador. Recarregue a página; se continuar, teste pelo endereço oficial em outro navegador. Seu pedido não foi executado.';
+    if (/app.check|app-check|appcheck|recaptcha|403|permission.denied/.test(detalhe)) return 'O Google não conseguiu validar o acesso ao Gemini neste navegador. Recarregue a página; se estiver numa prévia local, teste também o endereço oficial. Seu pedido não foi executado.';
+    if (/401|unauthenticated/.test(detalhe)) return 'Sua sessão de conta expirou. Entre novamente no King Master e tente de novo. Seu pedido não foi executado.';
     if (/timeout|timed.out|deadline/.test(detalhe)) return 'O Gemini demorou demais para responder e a tentativa foi interrompida. Tente novamente com uma parte do pedido. Nenhuma ação foi executada.';
     if (/404|not.found|model.*not/.test(detalhe)) return 'O modelo do Gemini está indisponível para este projeto. A conexão precisa ser ajustada; seu pedido não foi executado.';
-    return 'Não consegui receber a resposta do Gemini. Confira sua conexão e tente novamente. Nenhuma ação foi executada.';
+    if (/fetch|network|offline|connection/.test(detalhe)) return 'A conexão com o Gemini falhou. Confira a internet e tente novamente; se persistir, use o endereço oficial do site. Nenhuma ação foi executada.';
+    return 'O Gemini não concluiu este pedido. Tente novamente; se persistir, informe o horário e a página em que aconteceu. Nenhuma ação foi executada.';
 }
 
 function contextoGeminiIa(pedido = '') {

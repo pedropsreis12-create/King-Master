@@ -23,7 +23,7 @@
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
     <link rel="stylesheet" href="topic-workspace.css?v=20260922-topic-workspace-v1">
-    <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
+    <link rel="stylesheet" href="schedule.css?v=20260923-blocks-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <link rel="stylesheet" href="chapter-refresh.css?v=20260922-chapter-profile-v1">
     <link rel="stylesheet" href="notes-workspace.css?v=20260922-notes-color-v1">
@@ -1003,6 +1003,7 @@
                 <section class="syllabus-upload-stage" id="syllabusUploadStage">
                     <label class="syllabus-drop-zone" for="syllabusFileInput"><span aria-hidden="true">▧</span><strong>Escolher edital ou conteúdo programático</strong><small>PDF, TXT, imagem ou arquivo Markdown · até 7 MB</small><input type="file" id="syllabusFileInput" accept="application/pdf,text/plain,text/markdown,image/png,image/jpeg,image/webp" onchange="KingSubjectLab.selectFile(event)"></label>
                     <div class="syllabus-file-summary" id="syllabusFileSummary" hidden></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="syllabusInstruction">Orientação para a IA <span class="schedule-optional">opcional</span></label><textarea class="cycle-input" id="syllabusInstruction" rows="2" maxlength="500" placeholder="Ex.: Extraia somente os tópicos de Física e ignore as outras matérias."></textarea><small class="field-help">A orientação filtra a extração. Você confere os tópicos antes de adicioná-los.</small></div>
                     <button type="button" class="cycle-btn primary" id="syllabusAnalyzeButton" onclick="KingSubjectLab.analyze()" disabled>Analisar e separar assuntos</button>
                 </section>
                 <div class="syllabus-status" id="syllabusStatus" role="status"></div>
@@ -1259,7 +1260,7 @@
                 <form id="scheduleBlockForm" onsubmit="KingSchedule.saveBlock(event)">
                     <input type="hidden" id="scheduleBlockId"><input type="hidden" id="scheduleBlockWeek">
                     <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockSubject">Matéria</label><select class="cycle-input" id="scheduleBlockSubject" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockKind">Tipo de foco</label><select class="cycle-input" id="scheduleBlockKind"><option value="teoria">Teoria</option><option value="questoes">Questões</option><option value="revisao">Revisão</option><option value="simulado">Simulado</option><option value="redacao">Redação</option></select></div></div>
-                    <div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockTopic">Objetivo do bloco <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="scheduleBlockTopic" maxlength="120" placeholder="Ex.: Função quadrática — lista 2"></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockTopic">Assunto deste bloco <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="scheduleBlockTopic" maxlength="120" list="scheduleTopicSuggestions" placeholder="Escolha um assunto ou escreva outro"><datalist id="scheduleTopicSuggestions"></datalist><small class="field-help">Este assunto será salvo somente no bloco que você abriu.</small></div>
                     <div class="form-grid three"><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDay">Dia</label><select class="cycle-input" id="scheduleBlockDay" required></select></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockStart">Começa</label><input type="time" class="cycle-input" id="scheduleBlockStart" required></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleBlockDuration">Duração</label><select class="cycle-input" id="scheduleBlockDuration"><option value="25">25 min</option><option value="40">40 min</option><option value="50" selected>50 min</option><option value="60">1 hora</option><option value="90">1h30</option><option value="120">2 horas</option></select></div></div>
                     <div class="cycle-form-group schedule-status-field"><label class="cycle-label" for="scheduleBlockStatus">Situação</label><select class="cycle-input" id="scheduleBlockStatus"><option value="pending">Planejado</option><option value="running">Em andamento</option><option value="missed">Não realizado</option><option value="completed" disabled>Concluído e registrado</option></select></div>
                     <div class="cycle-modal-actions schedule-block-actions"><button type="button" class="cycle-btn subtle-danger" id="scheduleDeleteBlock" onclick="KingSchedule.deleteEditingBlock()" hidden>Excluir bloco</button><button type="submit" class="cycle-btn primary">Salvar bloco</button></div>
@@ -1319,16 +1320,16 @@
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
     <script src="script.js?v=20260922-chapter-profile-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
-    <script src="schedule.js?v=20260922-block-isolation-v1"></script>
+    <script src="schedule.js?v=20260923-blocks-v1"></script>
     <script src="personal-development.js?v=20260922-flexible-v1"></script>
     <script src="subject-modules.js?v=20260922-v1"></script>
-    <script src="subject-lab.js?v=20260922-pdf-v2"></script>
+    <script src="subject-lab.js?v=20260923-instructions-v1"></script>
     <script type="module" src="syllabus-pdf.js?v=20260922-pdf-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
-    <script src="ai-assistant.js?v=20260922-flexible-v1"></script>
+    <script src="ai-assistant.js?v=20260923-gemini-v1"></script>
     <script src="productivity.js?v=20260922-missions-3-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260922-chapter-summary-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20260923-gemini-v1"></script>
 </body>
 </html>

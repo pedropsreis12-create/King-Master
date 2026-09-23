@@ -124,6 +124,7 @@
 .schedule-focus-block::after { content: ''; position: absolute; width: 110px; height: 110px; right: -65px; bottom: -70px; border-radius: 50%; background: color-mix(in srgb, var(--block-color) 8%, transparent); }
 .schedule-focus-block:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--block-color) 42%, var(--border-color)); box-shadow: 0 13px 30px rgba(0,0,0,.07); }
 .schedule-focus-block.dragging { opacity: .45; transform: scale(.985); }
+.schedule-focus-block.drag-over,.schedule-matrix-cell.drag-over { outline: 2px dashed var(--accent-color); outline-offset: 3px; box-shadow: 0 0 0 5px rgba(var(--accent-rgb), .12); }
 .schedule-focus-block.status-completed { border-left-color: #34c759; background: color-mix(in srgb, var(--card-bg) 94%, #34c759); }
 .schedule-focus-block.status-missed { opacity: .65; filter: saturate(.5); }
 .schedule-focus-block.status-running { box-shadow: inset 0 0 0 1px var(--block-color), 0 11px 28px color-mix(in srgb, var(--block-color) 13%, transparent); }
@@ -232,6 +233,7 @@
 .schedule-matrix-time strong { color: var(--text-main); font-size: .61rem; }.schedule-matrix-time small { color: var(--text-muted); font-size: .48rem; }
 .schedule-matrix-cell { min-width: 0; padding: 9px; display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: center; gap: 7px; border-color: color-mix(in srgb,var(--block-color) 42%,var(--border-color)); background: linear-gradient(135deg,color-mix(in srgb,var(--block-color) 18%,var(--card-bg)),color-mix(in srgb,var(--block-color) 6%,var(--card-bg))); color: var(--text-main); text-align: left; cursor: pointer; }
 .schedule-matrix-cell:hover { transform: translateY(-1px); border-color: var(--block-color); box-shadow: 0 7px 20px color-mix(in srgb,var(--block-color) 15%,transparent); }
+.schedule-matrix-cell.dragging { opacity: .45; }
 .schedule-matrix-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb,var(--block-color) 20%,var(--card-bg)); color: color-mix(in srgb,var(--block-color) 72%,var(--text-main)); font-weight: 900; }
 .schedule-matrix-cell > span:nth-child(2) { min-width: 0; }.schedule-matrix-cell strong,.schedule-matrix-cell small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.schedule-matrix-cell strong { color: var(--text-main); font-size: .6rem; }.schedule-matrix-cell small { margin-top: 2px; color: var(--text-muted); font-size: .48rem; }.schedule-matrix-cell i { color: var(--text-muted); font-style: normal; font-size: .55rem; }
 .schedule-matrix-cell.status-completed { opacity: .72; }.schedule-matrix-cell.status-completed i { color: #248a3d; }.schedule-matrix-cell.status-missed { filter: grayscale(.55); opacity: .62; }

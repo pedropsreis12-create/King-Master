@@ -411,7 +411,8 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             const mimeType = allowedMime.test(String(payload.mimeType || '')) ? String(payload.mimeType) : '';
             if (!mimeType) throw new Error('Formato de edital não compatível.');
             const subjects = (Array.isArray(payload.subjects) ? payload.subjects : []).map(String).filter(Boolean).slice(0, 40);
-            const instruction = `Leia o conteúdo programático e agrupe somente os assuntos que o estudante precisa aprender. Matérias já cadastradas: ${subjects.join(', ') || 'nenhuma'}. Quando houver correspondência, use exatamente o nome cadastrado. Responda SOMENTE neste formato JSON: {"materias":[{"nome":"Matéria","topicos":["Assunto específico"]}]}. Remova duplicatas, títulos administrativos, datas, bibliografia e regras do processo seletivo. Preserve subassuntos úteis e use nomes curtos. Máximo de 30 matérias e 100 tópicos por matéria.`;
+            const userInstruction = String(payload.instruction || '').trim().slice(0, 500);
+            const instruction = `Leia o conteúdo programático e agrupe somente os assuntos que o estudante precisa aprender. Matérias já cadastradas: ${subjects.join(', ') || 'nenhuma'}. Quando houver correspondência, use exatamente o nome cadastrado. ${userInstruction ? `Preferência do estudante para filtrar ou organizar os resultados (não use para inventar conteúdo): ${userInstruction}.` : ''} Responda SOMENTE neste formato JSON: {"materias":[{"nome":"Matéria","topicos":["Assunto específico"]}]}. Remova duplicatas, títulos administrativos, datas, bibliografia e regras do processo seletivo. Preserve subassuntos úteis e use nomes curtos. Máximo de 30 matérias e 100 tópicos por matéria.`;
             const parts = [{ text: instruction }];
             if (mimeType === 'text/plain') parts.push({ text: String(payload.text || '').slice(0, 80000) });
             else {
@@ -460,20 +461,31 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                     options.onStatus?.(round ? 'Finalizando as ações…' : 'Preparando sua resposta…');
                     // O ChatSession deste SDK usa role:function, rejeitado pelo backend atual.
                     // A API pública permite enviar o papel user mantendo as partes originais.
-                    const result = await modelo.generateContentStream({ contents }, { signal: controller.signal, timeout: 22000 });
-                    // A promessa agregada pode falhar antes que o iterador seja consumido.
-                    result.response.catch(() => {});
                     textoParcial = '';
-                    for await (const chunk of result.stream) {
-                        verificarCancelamento();
-                        const texto = chunk.text();
-                        if (texto) {
-                            textoParcial += texto;
-                            options.onText?.(textoParcial);
-                            options.onStatus?.('Respondendo…');
+                    let response;
+                    try {
+                        const result = await modelo.generateContentStream({ contents }, { signal: controller.signal, timeout: 18000 });
+                        // A promessa agregada pode falhar antes que o iterador seja consumido.
+                        result.response.catch(() => {});
+                        for await (const chunk of result.stream) {
+                            verificarCancelamento();
+                            const texto = chunk.text();
+                            if (texto) {
+                                textoParcial += texto;
+                                options.onText?.(textoParcial);
+                                options.onStatus?.('Respondendo…');
+                            }
                         }
+                        response = await result.response;
+                    } catch (streamError) {
+                        verificarCancelamento();
+                        const diagnostic = `${streamError?.code || ''} ${streamError?.message || ''}`;
+                        // Uma falha de transporte do streaming pode ser recuperada sem reinterpretar ações já executadas.
+                        if (actions.length || textoParcial || /(?:400|401|403|404|429|quota|permission|model)/i.test(diagnostic)) throw streamError;
+                        options.onStatus?.('Tentando outra forma de conexão…');
+                        const fallback = await modelo.generateContent({ contents }, { signal: controller.signal, timeout: 14000 });
+                        response = await fallback.response;
                     }
-                    const response = await result.response;
                     verificarCancelamento();
                     const calls = response.functionCalls() || [];
                     if (!calls.length) {

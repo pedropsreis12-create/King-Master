@@ -17,6 +17,7 @@ const defaultAppData = {
     totalStudySeconds: 0, 
     weeklyChart: [0, 0, 0, 0, 0, 0, 0], 
     cycleItems: [], 
+    subjectModules: [],
     historyItems: [], 
     agendaItems: [], 
     agendamentoItems: [],
@@ -87,6 +88,7 @@ if (appData.lastWeekStart !== getMonday(new Date())) {
 
 if (!appData.weeklyChart || appData.weeklyChart.length !== 7) appData.weeklyChart = [0, 0, 0, 0, 0, 0, 0];
 if (!appData.cycleItems) appData.cycleItems = [];
+if (!Array.isArray(appData.subjectModules)) appData.subjectModules = [];
 if (!appData.historyItems) appData.historyItems = [];
 if (!appData.agendaItems) appData.agendaItems = [];
 if (!appData.agendamentoItems) appData.agendamentoItems = [];
@@ -725,6 +727,9 @@ function confirmarDelecao() {
     
     if (tipo === 'chapterPage') {
         excluirPaginaCaderno(id);
+    }
+    else if (tipo === 'subjectModule') {
+        window.KingModules?.confirmDelete?.(id);
     }
     else if (tipo === 'personalSpace' || tipo === 'personalItem' || tipo === 'personalNote') {
         window.KingPersonalDevelopment?.confirmDelete?.(tipo, id);
@@ -2612,6 +2617,7 @@ function renderizarCiclo() {
     atualizarSeletorDeMaterias();
     const grid = document.getElementById('disciplinasGrid');
     if(!grid) return;
+    if (!document.getElementById('aba-modulos-content')?.hidden) window.KingModules?.render?.();
 
     const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
     const topicos = materias.flatMap(item => Array.isArray(item.topicos) ? item.topicos : []);
@@ -5196,20 +5202,19 @@ function handleFileSelect(e, labelId, hiddenDataId) {
 }
 
 function alternarAbasHub(aba) {
-    const ciclo = aba === 'ciclo';
-    if (ciclo) salvarCadernoPendente();
-    const painelCiclo = document.getElementById('aba-ciclo-content');
-    const painelDominio = document.getElementById('aba-dominio-content');
-    const tabCiclo = document.getElementById('tab-ciclo');
-    const tabDominio = document.getElementById('tab-dominio');
-    if (!painelCiclo || !painelDominio || !tabCiclo || !tabDominio) return;
-    painelCiclo.hidden = !ciclo;
-    painelDominio.hidden = ciclo;
-    tabCiclo.setAttribute('aria-selected', String(ciclo));
-    tabDominio.setAttribute('aria-selected', String(!ciclo));
-    tabCiclo.tabIndex = ciclo ? 0 : -1;
-    tabDominio.tabIndex = ciclo ? -1 : 0;
-    if (!ciclo) renderizarMapaDominio();
+    if (!['ciclo', 'dominio', 'modulos'].includes(aba)) return;
+    if (aba !== 'dominio') salvarCadernoPendente();
+    for (const nome of ['ciclo', 'dominio', 'modulos']) {
+        const painel = document.getElementById(`aba-${nome}-content`);
+        const tab = document.getElementById(`tab-${nome}`);
+        if (!painel || !tab) continue;
+        const ativa = nome === aba;
+        painel.hidden = !ativa;
+        tab.setAttribute('aria-selected', String(ativa));
+        tab.tabIndex = ativa ? 0 : -1;
+    }
+    if (aba === 'dominio') renderizarMapaDominio();
+    if (aba === 'modulos') window.KingModules?.render?.();
 }
 
 function navegarAbasHub(event) {
@@ -5219,7 +5224,7 @@ function navegarAbasHub(event) {
     let proxima = event.key === 'Home' ? 0 : (event.key === 'End' ? abas.length - 1 : (atual + (event.key === 'ArrowRight' ? 1 : -1) + abas.length) % abas.length);
     event.preventDefault();
     abas[proxima].focus();
-    alternarAbasHub(abas[proxima].id === 'tab-ciclo' ? 'ciclo' : 'dominio');
+    alternarAbasHub(abas[proxima].id.replace('tab-', ''));
 }
 
 const cadernoCapituloAtual = { materiaId: null, topicoIndice: null, paginaId: null, busca: '', filtro: 'todos', limite: 12 };

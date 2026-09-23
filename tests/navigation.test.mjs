@@ -73,3 +73,17 @@ test('free color controls share a visible, accessible picker treatment', async (
   assert.match(notesCss, /\.subject-custom-color:focus-within/);
   assert.match(script, /document\.querySelectorAll\('\.theme-circle'\)[\s\S]*?setAttribute\('aria-pressed'/);
 });
+
+test('modules group entire existing subjects without copying their topics or progress', async () => {
+  const modules = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
+  const moduleStyles = await readFile(new URL('../subject-modules.css', import.meta.url), 'utf8');
+  assert.match(html, /id="tab-modulos" role="tab"[^>]+aria-controls="aba-modulos-content"/);
+  assert.match(html, /id="aba-modulos-content"[^>]+role="tabpanel"/);
+  assert.match(script, /subjectModules: \[\]/);
+  assert.match(script, /if \(aba === 'modulos'\) window\.KingModules\?\.render/);
+  assert.match(modules, /subject\.moduleId = targetId/);
+  assert.match(modules, /delete subject\.moduleId/);
+  assert.match(modules, /abrirModalDeletar\('subjectModule'/);
+  assert.match(modules, /appData\.subjectModules = modules\(\)\.filter/);
+  assert.match(moduleStyles, /@media \(max-width: 780px\)/);
+});

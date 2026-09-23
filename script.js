@@ -5210,7 +5210,7 @@ function navegarAbasHub(event) {
     alternarAbasHub(abas[proxima].id === 'tab-ciclo' ? 'ciclo' : 'dominio');
 }
 
-const cadernoCapituloAtual = { materiaId: null, topicoIndice: null, paginaId: null, busca: '' };
+const cadernoCapituloAtual = { materiaId: null, topicoIndice: null, paginaId: null, busca: '', filtro: 'todos', limite: 12 };
 let temporizadorCadernoCapitulo = null;
 const espacoTopicoAtual = { materiaId: null, topicoIndice: null, nome: '', aba: 'visao' };
 let temporizadorContextoTopico = null;
@@ -5333,21 +5333,27 @@ function salvarAlteracoesCadernoCapitulo() {
         if (status) { status.textContent = 'Salvo'; status.classList.remove('is-saving'); }
         renderizarListaPaginasCaderno();
         renderizarMapaDominio();
+        return true;
     } catch {
         if (status) { status.textContent = 'Não foi possível salvar'; status.classList.remove('is-saving'); }
         showToast('Não foi possível salvar o caderno. Tente novamente.', true);
+        return false;
     }
 }
 
-function abrirCadernosMateria(materiaId) {
+function abrirCadernosMateria(materiaId, opcoes = {}) {
     salvarCadernoPendente();
     const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId));
     if (!materia) return;
     cadernoCapituloAtual.materiaId = materia.id;
     cadernoCapituloAtual.topicoIndice = null;
     cadernoCapituloAtual.paginaId = null;
-    cadernoCapituloAtual.busca = '';
-    document.getElementById('chapterSearchInput').value = '';
+    cadernoCapituloAtual.busca = opcoes.busca || '';
+    cadernoCapituloAtual.filtro = opcoes.filtro || 'todos';
+    cadernoCapituloAtual.limite = opcoes.limite || 12;
+    document.getElementById('chapterSearchInput').value = cadernoCapituloAtual.busca;
+    document.querySelector('.domain-center-subjects').hidden = true;
+    document.querySelectorAll('[data-chapter-filter]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.chapterFilter === cadernoCapituloAtual.filtro)));
     document.getElementById('chapterNotebook').hidden = true;
     document.getElementById('chapterBrowser').hidden = false;
     renderizarListaCapitulosCaderno();
@@ -5360,6 +5366,20 @@ function salvarCadernoPendente() {
 
 function filtrarCadernosCapitulos(valor = '') {
     cadernoCapituloAtual.busca = normalizarRevisaoTexto(valor);
+    cadernoCapituloAtual.limite = 12;
+    renderizarListaCapitulosCaderno();
+}
+
+function definirFiltroCadernosCapitulos(filtro) {
+    if (!['todos', 'novo', 'andamento', 'revisar', 'dominado'].includes(filtro)) return;
+    cadernoCapituloAtual.filtro = filtro;
+    cadernoCapituloAtual.limite = 12;
+    document.querySelectorAll('[data-chapter-filter]').forEach(botao => botao.setAttribute('aria-pressed', String(botao.dataset.chapterFilter === filtro)));
+    renderizarListaCapitulosCaderno();
+}
+
+function mostrarMaisCadernosCapitulos() {
+    cadernoCapituloAtual.limite += 12;
     renderizarListaCapitulosCaderno();
 }
 
@@ -5368,12 +5388,27 @@ function renderizarListaCapitulosCaderno() {
     const lista = document.getElementById('chapterList');
     if (!materia || !lista) return;
     document.getElementById('chapterBrowserTitle').textContent = materia.subject || 'Capítulos';
+    const todos = materia.topicos || [];
+    const emAndamento = todos.filter(topico => [1, 2].includes(obterNivelDominioTopico(topico))).length;
+    const paraRevisar = todos.filter(topico => obterEstadoTopicoControle(materia, topico) === 'revisar').length;
+    document.getElementById('chapterBrowserSummary').textContent = `${todos.length} assuntos · ${emAndamento} em andamento · ${paraRevisar} para revisar`;
     const topicos = (materia.topicos || []).map((topico, indice) => ({ topico, indice }))
-        .filter(({ topico }) => !cadernoCapituloAtual.busca || normalizarRevisaoTexto(topico.nome).includes(cadernoCapituloAtual.busca));
-    lista.innerHTML = topicos.length ? topicos.map(({ topico, indice }) => {
+        .filter(({ topico }) => {
+            const estado = obterEstadoTopicoControle(materia, topico);
+            const nivel = obterNivelDominioTopico(topico);
+            const filtro = cadernoCapituloAtual.filtro;
+            return (!cadernoCapituloAtual.busca || normalizarRevisaoTexto(topico.nome).includes(cadernoCapituloAtual.busca))
+                && (filtro === 'todos' || (filtro === 'revisar' && estado === 'revisar') || (filtro === 'novo' && nivel === 0 && estado !== 'revisar') || (filtro === 'andamento' && [1, 2].includes(nivel) && estado !== 'revisar') || (filtro === 'dominado' && nivel === 3 && estado !== 'revisar'));
+        });
+    document.getElementById('chapterResultCount').textContent = `${topicos.length} ${topicos.length === 1 ? 'assunto' : 'assuntos'}`;
+    document.getElementById('chapterLoadMore').hidden = topicos.length <= cadernoCapituloAtual.limite;
+    lista.innerHTML = topicos.length ? topicos.slice(0, cadernoCapituloAtual.limite).map(({ topico, indice }) => {
         const paginas = Array.isArray(topico.caderno?.paginas) ? topico.caderno.paginas.length : 0;
         const total = paginas + (topico.notas && !topico.cadernoMigrado ? 1 : 0);
-        return `<button type="button" class="chapter-item" onclick="abrirEspacoTopico(${materia.id},${indice})"><span>${String(indice + 1).padStart(2, '0')}</span><span><strong>${escaparRevisaoHtml(topico.nome || 'Capítulo')}</strong><small>${total ? `${total} ${total === 1 ? 'página' : 'páginas'}` : 'Caderno vazio · pronto para começar'}</small></span><span aria-hidden="true">↗</span></button>`;
+        const estado = obterEstadoTopicoControle(materia, topico);
+        const nivel = obterNivelDominioTopico(topico);
+        const rotulo = estado === 'revisar' ? 'Para revisar' : ['Não iniciado', 'Em estudo', 'Consolidando', 'Dominado'][nivel];
+        return `<button type="button" class="chapter-item" onclick="abrirEspacoTopico(${materia.id},${indice})"><span class="chapter-item-number">${String(indice + 1).padStart(2, '0')}</span><span class="chapter-item-copy"><strong>${escaparRevisaoHtml(topico.nome || 'Capítulo')}</strong><small>${total ? `${total} ${total === 1 ? 'página' : 'páginas'} no caderno` : 'Abrir espaço do assunto'}</small></span><span class="chapter-item-status is-${estado === 'revisar' ? 'revisar' : nivel}">${rotulo}</span><span class="chapter-item-arrow" aria-hidden="true">↗</span></button>`;
     }).join('') : `<p class="chapter-page-empty">${materia.topicos?.length ? 'Nenhum capítulo encontrado. Tente outra busca.' : 'Esta matéria ainda não tem capítulos. Adicione-os ao editar a matéria.'}</p>`;
 }
 
@@ -5399,8 +5434,8 @@ function inicializarCadernoCapitulo(materiaId, topicoIndice) {
     document.getElementById('chapterBrowser').hidden = true;
     document.getElementById('topicWorkspaceNotebook').append(document.getElementById('chapterNotebook'));
     document.getElementById('chapterNotebook').hidden = false;
-    document.getElementById('chapterNotebookSubject').textContent = materia.subject || 'Matéria';
-    document.getElementById('chapterNotebookTitle').textContent = topico.nome || 'Capítulo';
+    document.getElementById('chapterNotebookSubject').textContent = 'ANOTAÇÕES DO ASSUNTO';
+    document.getElementById('chapterNotebookTitle').textContent = 'Meu caderno';
     renderizarCadernoCapitulo();
 }
 
@@ -5409,6 +5444,8 @@ function renderizarListaPaginasCaderno() {
     const lista = document.getElementById('chapterPageList');
     if (!lista) return;
     const paginas = topico?.caderno?.paginas || [];
+    const contador = document.getElementById('chapterPageCount');
+    if (contador) contador.textContent = `${paginas.length} ${paginas.length === 1 ? 'página' : 'páginas'}`;
     lista.innerHTML = paginas.length ? paginas.map(pagina => `<button type="button" class="chapter-page-button ${pagina.id === cadernoCapituloAtual.paginaId ? 'active' : ''}" onclick="selecionarPaginaCaderno('${pagina.id}')" aria-current="${pagina.id === cadernoCapituloAtual.paginaId ? 'page' : 'false'}"><span>${escaparRevisaoHtml(pagina.titulo || 'Sem título')}</span><small>↗</small></button>`).join('') : '<p class="chapter-page-empty">Nenhuma página ainda. Crie a primeira para começar.</p>';
 }
 
@@ -5418,7 +5455,7 @@ function renderizarCadernoCapitulo() {
     renderizarListaPaginasCaderno();
     if (!editor) return;
     const pagina = topico?.caderno?.paginas?.find(item => item.id === cadernoCapituloAtual.paginaId);
-    if (!pagina) { editor.innerHTML = '<div class="chapter-editor-empty"><strong>Um caderno para este capítulo</strong><p>Crie uma página para escrever um resumo, guardar exemplos ou anotar dúvidas sem misturar com outras matérias.</p><button type="button" class="cycle-btn primary" onclick="criarPaginaCaderno()">Criar primeira página</button></div>'; return; }
+    if (!pagina) { editor.innerHTML = '<div class="chapter-editor-empty"><span class="chapter-empty-mark" aria-hidden="true">✎</span><strong>Comece por uma ideia</strong><p>Escreva com suas palavras, guarde um exemplo ou transforme um texto em resumo com o Gemini.</p><div class="chapter-empty-actions"><button type="button" class="cycle-btn primary" onclick="criarPaginaCaderno()">Criar página</button><button type="button" class="cycle-btn" onclick="abrirResumoCaderno()">✦ Resumir texto</button></div></div>'; return; }
     const data = new Date(pagina.atualizadoEm || pagina.criadoEm || Date.now()).toLocaleDateString('pt-BR');
     editor.innerHTML = `<div class="chapter-editor-top"><span>Atualizada em ${data}</span><button type="button" onclick="solicitarExclusaoPaginaCaderno()">Excluir página</button></div><label>TÍTULO<input id="chapterPageTitle" maxlength="90" value="${escaparRevisaoHtml(pagina.titulo || '')}" placeholder="Ex.: Resumo e exemplos" oninput="atualizarPaginaCaderno('titulo',this.value)"></label><label>ANOTAÇÕES<textarea id="chapterPageText" maxlength="12000" placeholder="Escreva com suas palavras: o que é importante lembrar? Como resolver? Qual foi sua dúvida?" oninput="atualizarPaginaCaderno('texto',this.value)">${escaparRevisaoHtml(pagina.texto || '')}</textarea></label><p class="chapter-editor-hint">O texto é salvo automaticamente. Crie outras páginas para separar fórmulas, exemplos e dúvidas.</p>`;
 }
@@ -5434,6 +5471,74 @@ function criarPaginaCaderno() {
     salvarAlteracoesCadernoCapitulo();
     renderizarCadernoCapitulo();
     document.getElementById('chapterPageTitle')?.select();
+}
+
+let resumoCadernoRequisicao = 0;
+function abrirResumoCaderno() {
+    const { topico } = localizarCadernoCapitulo();
+    if (!topico) return;
+    resumoCadernoRequisicao++;
+    document.getElementById('chapterSummarySource').value = '';
+    document.getElementById('chapterSummaryResult').value = '';
+    document.getElementById('chapterSummaryPreview').hidden = true;
+    document.getElementById('chapterSummaryStatus').textContent = '';
+    document.getElementById('chapterSummaryGenerate').disabled = false;
+    document.getElementById('chapterSummaryModal').classList.add('active');
+    document.getElementById('chapterSummarySource').focus();
+}
+
+function fecharResumoCaderno() {
+    resumoCadernoRequisicao++;
+    fecharModal('chapterSummaryModal');
+}
+
+async function gerarResumoCaderno() {
+    const fonte = document.getElementById('chapterSummarySource').value.trim();
+    const status = document.getElementById('chapterSummaryStatus');
+    if (fonte.length < 40) { status.textContent = 'Cole um texto com pelo menos 40 caracteres.'; return; }
+    const { materia, topico } = localizarCadernoCapitulo();
+    if (!topico) return;
+    const idRequisicao = ++resumoCadernoRequisicao;
+    const botao = document.getElementById('chapterSummaryGenerate');
+    botao.disabled = true;
+    document.getElementById('chapterSummaryPreview').hidden = true;
+    status.textContent = 'Gemini está preparando o resumo…';
+    try {
+        await window.kingGeminiReady;
+        if (!window.kingGemini?.summarizeText) throw new Error('Gemini indisponível. Verifique sua conexão e tente novamente.');
+        const resultado = await window.kingGemini.summarizeText({ text: fonte, subject: materia.subject, topic: topico.nome });
+        if (idRequisicao !== resumoCadernoRequisicao) return;
+        document.getElementById('chapterSummaryResult').value = resultado;
+        document.getElementById('chapterSummaryPreview').hidden = false;
+        status.textContent = 'Confira o resumo antes de adicionar.';
+    } catch (erro) {
+        if (idRequisicao === resumoCadernoRequisicao) status.textContent = erro?.message || 'Não foi possível gerar o resumo. Tente novamente.';
+    } finally {
+        if (idRequisicao === resumoCadernoRequisicao) botao.disabled = false;
+    }
+}
+
+function salvarResumoNoCaderno() {
+    const texto = document.getElementById('chapterSummaryResult').value.trim();
+    const status = document.getElementById('chapterSummaryStatus');
+    if (!texto) { status.textContent = 'O resumo está vazio.'; return; }
+    const { topico } = localizarCadernoCapitulo();
+    if (!topico || !document.getElementById('chapterSummaryModal').classList.contains('active')) return;
+    salvarCadernoPendente();
+    if (!topico.caderno || !Array.isArray(topico.caderno.paginas)) topico.caderno = { paginas: [] };
+    const agora = Date.now();
+    const pagina = { id: `resumo-${agora}-${Math.random().toString(36).slice(2, 8)}`, titulo: 'Resumo com Gemini', texto: texto.slice(0, 12000), criadoEm: agora, atualizadoEm: agora };
+    topico.caderno.paginas.push(pagina);
+    cadernoCapituloAtual.paginaId = pagina.id;
+    try {
+        if (!salvarAlteracoesCadernoCapitulo()) throw new Error('Falha ao salvar');
+        renderizarCadernoCapitulo();
+        fecharResumoCaderno();
+        showToast('Resumo adicionado ao caderno.');
+    } catch {
+        topico.caderno.paginas = topico.caderno.paginas.filter(item => item.id !== pagina.id);
+        status.textContent = 'Não foi possível salvar o resumo. Tente novamente.';
+    }
 }
 
 function selecionarPaginaCaderno(paginaId) {
@@ -5480,15 +5585,17 @@ function voltarAosCapitulos() {
     salvarCadernoPendente();
     document.getElementById('chapterNotebook').hidden = true;
     const materiaId = espacoTopicoAtual.materiaId;
+    const opcoes = { busca: cadernoCapituloAtual.busca, filtro: cadernoCapituloAtual.filtro, limite: cadernoCapituloAtual.limite };
     fecharEspacoTopico();
     alternarAbasHub('dominio');
-    if (materiaId != null) abrirCadernosMateria(materiaId);
+    if (materiaId != null) abrirCadernosMateria(materiaId, opcoes);
 }
 
 function fecharCadernosDominio() {
     salvarCadernoPendente();
     document.getElementById('chapterBrowser').hidden = true;
     document.getElementById('chapterNotebook').hidden = true;
+    document.querySelector('.domain-center-subjects').hidden = false;
     cadernoCapituloAtual.materiaId = null;
     cadernoCapituloAtual.topicoIndice = null;
     cadernoCapituloAtual.paginaId = null;

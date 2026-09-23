@@ -21,10 +21,11 @@
     <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
-    <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-domain-clean-v1">
+    <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
     <link rel="stylesheet" href="topic-workspace.css?v=20260922-topic-workspace-v1">
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
+    <link rel="stylesheet" href="chapter-refresh.css?v=20260922-chapter-profile-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -499,13 +500,15 @@
                 <div class="domain-center-stats" id="domainCenterStats" aria-label="Situação dos tópicos"></div>
                 <section class="domain-center-subjects widget" aria-labelledby="domainSubjectsTitle"><div class="domain-center-section-heading"><div><span class="workspace-kicker">POR MATÉRIA</span><h3 id="domainSubjectsTitle">Seu avanço</h3></div></div><div class="domain-center-legend" aria-label="Etapas de domínio"><span><i></i>Não iniciado</span><span><i></i>Em estudo</span><span><i></i>Consolidando</span><span><i></i>Dominado</span></div><div id="mapaContainer"></div></section>
                 <section class="chapter-browser widget" id="chapterBrowser" aria-labelledby="chapterBrowserTitle" hidden>
-                    <div class="chapter-heading"><div><span class="workspace-kicker">CADERNOS POR CAPÍTULO</span><h3 id="chapterBrowserTitle">Capítulos</h3><p>Escolha um capítulo para abrir o caderno dele.</p></div><button type="button" class="cycle-btn" onclick="fecharCadernosDominio()">Fechar</button></div>
-                    <label class="chapter-search"><span aria-hidden="true">⌕</span><input type="search" id="chapterSearchInput" placeholder="Buscar capítulo" aria-label="Buscar capítulo" oninput="filtrarCadernosCapitulos(this.value)"></label>
+                    <div class="chapter-heading"><div><button type="button" class="chapter-back" onclick="fecharCadernosDominio()">← Todas as matérias</button><span class="workspace-kicker">MATÉRIA EM FOCO</span><h3 id="chapterBrowserTitle">Capítulos</h3><p id="chapterBrowserSummary">Encontre o próximo assunto ou retome de onde parou.</p></div><button type="button" class="cycle-btn" id="chapterEditSubject" onclick="editarMateriaCiclo(cadernoCapituloAtual.materiaId)">Editar matéria</button></div>
+                    <div class="chapter-toolbar"><label class="chapter-search"><span aria-hidden="true">⌕</span><input type="search" id="chapterSearchInput" placeholder="Buscar assunto pelo nome" aria-label="Buscar assunto" oninput="filtrarCadernosCapitulos(this.value)"></label><span id="chapterResultCount" class="chapter-result-count" role="status"></span></div>
+                    <div class="chapter-filters" role="group" aria-label="Filtrar assuntos"><button type="button" data-chapter-filter="todos" aria-pressed="true" onclick="definirFiltroCadernosCapitulos('todos')">Todos</button><button type="button" data-chapter-filter="novo" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('novo')">Não iniciados</button><button type="button" data-chapter-filter="andamento" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('andamento')">Em andamento</button><button type="button" data-chapter-filter="revisar" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('revisar')">Para revisar</button><button type="button" data-chapter-filter="dominado" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('dominado')">Dominados</button></div>
                     <div class="chapter-list" id="chapterList"></div>
+                    <button type="button" class="cycle-btn chapter-load-more" id="chapterLoadMore" onclick="mostrarMaisCadernosCapitulos()" hidden>Mostrar mais assuntos</button>
                 </section>
                 <section class="chapter-notebook widget" id="chapterNotebook" aria-labelledby="chapterNotebookTitle" hidden>
-                    <div class="chapter-heading"><div><span class="workspace-kicker" id="chapterNotebookSubject">CADERNO DO CAPÍTULO</span><h3 id="chapterNotebookTitle">Caderno</h3><p>Suas anotações deste capítulo ficam juntas e são salvas automaticamente.</p></div><span class="chapter-save-state" id="chapterSaveState" role="status" aria-live="polite">Salvo</span></div>
-                    <div class="chapter-notebook-layout"><aside class="chapter-pages" aria-label="Páginas do caderno"><div class="chapter-pages-heading"><strong>Páginas</strong><button type="button" onclick="criarPaginaCaderno()">+ Nova página</button></div><div id="chapterPageList"></div></aside><div class="chapter-editor" id="chapterEditor"></div></div>
+                    <div class="chapter-heading"><div><span class="workspace-kicker" id="chapterNotebookSubject">ANOTAÇÕES DO ASSUNTO</span><h3 id="chapterNotebookTitle">Meu caderno</h3><p>Ideias, exemplos e resumos reunidos aqui. Salvamento automático.</p></div><div class="chapter-notebook-actions"><span class="chapter-save-state" id="chapterSaveState" role="status" aria-live="polite">Salvo</span><button type="button" class="cycle-btn" onclick="abrirResumoCaderno()">✦ Resumir texto</button><button type="button" class="cycle-btn primary" onclick="criarPaginaCaderno()">+ Nova página</button></div></div>
+                    <div class="chapter-notebook-layout"><aside class="chapter-pages" aria-label="Páginas do caderno"><div class="chapter-pages-heading"><strong>Páginas</strong><span id="chapterPageCount">0 páginas</span></div><div id="chapterPageList"></div></aside><div class="chapter-editor" id="chapterEditor"></div></div>
                 </section>
             </div>
         </section>
@@ -787,6 +790,7 @@
                 </form>
             </div>
 
+            <div class="profile-overview-grid">
             <div class="profile-hero widget">
                 <div class="profile-rank-scene" aria-hidden="true">
                     <strong id="profileRankEmblem">⌃</strong>
@@ -814,6 +818,14 @@
                         <p class="profile-xp-note" id="profileXpNote">Progresso para o próximo nível</p>
                 <div class="profile-evolution-caption" id="profileEvolutionCaption">Soldado do Foco • A base da tropa nasce da disciplina diária</div>
                 <div class="profile-reference-strip" id="profileReferenceStrip" aria-label="Referências visuais deste título"></div>
+            </div>
+            <section class="profile-stats-panel" aria-labelledby="profileStatsTitle"><div class="profile-stats-heading"><span class="workspace-kicker">SEU PROGRESSO</span><h3 id="profileStatsTitle">Em números</h3><p>O que você já construiu até aqui.</p></div>
+            <div class="profile-stats-grid">
+                <article class="profile-stat-card"><span class="profile-stat-icon">🔥</span><span class="profile-stat-value" id="profileStreak">0 dias</span><span class="profile-stat-label">Ofensiva atual</span></article>
+                <article class="profile-stat-card"><span class="profile-stat-icon">⏱</span><span class="profile-stat-value" id="profileTotalTime">0m</span><span class="profile-stat-label">Tempo focado vitalício</span></article>
+                <article class="profile-stat-card"><span class="profile-stat-icon">✓</span><span class="profile-stat-value" id="profileTopics">0</span><span class="profile-stat-label">Tópicos dominados</span></article>
+                <article class="profile-stat-card"><span class="profile-stat-icon">🎯</span><span class="profile-stat-value" id="profileAccuracy">0%</span><span class="profile-stat-label">Taxa global de acerto</span></article>
+            </div></section>
             </div>
 
             <div class="xp-test-panel widget is-locked" id="xpTestPanel" aria-labelledby="xpTestTitle">
@@ -870,16 +882,21 @@
                 </div>
             </div>
 
-            <h3 class="profile-section-title">Seu progresso</h3>
-            <div class="profile-stats-grid">
-                <article class="profile-stat-card"><span class="profile-stat-icon">🔥</span><span class="profile-stat-value" id="profileStreak">0 dias</span><span class="profile-stat-label">Ofensiva atual</span></article>
-                <article class="profile-stat-card"><span class="profile-stat-icon">⏱</span><span class="profile-stat-value" id="profileTotalTime">0m</span><span class="profile-stat-label">Tempo focado vitalício</span></article>
-                <article class="profile-stat-card"><span class="profile-stat-icon">✓</span><span class="profile-stat-value" id="profileTopics">0</span><span class="profile-stat-label">Tópicos dominados</span></article>
-                <article class="profile-stat-card"><span class="profile-stat-icon">🎯</span><span class="profile-stat-value" id="profileAccuracy">0%</span><span class="profile-stat-label">Taxa global de acerto</span></article>
-            </div>
         </section>
 
         <!-- MODAIS -->
+        <div class="modal-overlay" id="chapterSummaryModal" role="dialog" aria-modal="true" aria-labelledby="chapterSummaryTitle">
+            <div class="modal-box chapter-summary-modal">
+                <button type="button" class="modal-close" onclick="fecharResumoCaderno()" aria-label="Fechar resumo">×</button>
+                <span class="workspace-kicker">GEMINI DO QG · MEU CADERNO</span>
+                <h2 id="chapterSummaryTitle">Transformar texto em resumo</h2>
+                <p>Cole o trecho que quer estudar. Confira e ajuste o resultado antes de adicionar ao caderno.</p>
+                <label for="chapterSummarySource">Texto original</label>
+                <textarea id="chapterSummarySource" maxlength="16000" placeholder="Cole aqui o texto, suas anotações ou um trecho do material de estudo…"></textarea>
+                <div class="chapter-summary-actions"><span id="chapterSummaryStatus" role="status" aria-live="polite"></span><button type="button" class="cycle-btn primary" id="chapterSummaryGenerate" onclick="gerarResumoCaderno()">✦ Gerar resumo</button></div>
+                <div id="chapterSummaryPreview" hidden><label for="chapterSummaryResult">Prévia editável</label><textarea id="chapterSummaryResult" maxlength="12000" aria-describedby="chapterSummaryNotice"></textarea><p id="chapterSummaryNotice">A IA pode cometer erros. Confira o conteúdo antes de salvar.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharResumoCaderno()">Cancelar</button><button type="button" class="cycle-btn primary" id="chapterSummarySave" onclick="salvarResumoNoCaderno()">Adicionar como nova página</button></div></div>
+            </div>
+        </div>
         <div class="modal-overlay" id="cycleModal">
             <div class="modal-box subject-editor-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('cycleModal')" aria-label="Fechar cadastro de matéria">×</button>
@@ -1296,7 +1313,7 @@
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20260922-personal-v1"></script>
-    <script src="script.js?v=20260922-domain-clean-v1"></script>
+    <script src="script.js?v=20260922-chapter-profile-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
     <script src="schedule.js?v=20260922-block-isolation-v1"></script>
     <script src="personal-development.js?v=20260922-growth-v1"></script>
@@ -1307,6 +1324,6 @@
     <script src="productivity.js?v=20260922-missions-3-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260922-pdf-v2"></script>
+    <script type="module" src="cloud-sync.js?v=20260922-chapter-summary-v1"></script>
 </body>
 </html>

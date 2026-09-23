@@ -53,3 +53,23 @@ test('sidebar keeps the approved coherent vector icon family', () => {
   assert.match(sidebarIcons, /viewBox="0 0 24 24"/);
   assert.match(sidebarIconStyles, /\.nav-item-icon svg/);
 });
+
+test('notes are a dedicated page where each topic contains multiple saved annotations', async () => {
+  const notesCss = await readFile(new URL('../notes-workspace.css', import.meta.url), 'utf8');
+  assert.match(html, /data-section="notas"[^>]+aria-controls="notas"/);
+  assert.match(html, /<section id="notas" class="content-section notes-section">/);
+  assert.match(html, /id="quickNoteBooksList"/);
+  assert.match(html, /id="quickNotesList"/);
+  assert.match(script, /appData\.quickNotes\.filter\(nota => nota\.bookId === caderno\.id\)/);
+  assert.match(script, /if\(sectionId === 'notas'\) renderizarNotasRapidas\(\)/);
+  assert.match(notesCss, /@media \(max-width: 700px\)/);
+});
+
+test('free color controls share a visible, accessible picker treatment', async () => {
+  const notesCss = await readFile(new URL('../notes-workspace.css', import.meta.url), 'utf8');
+  for (const id of ['colorPicker', 'cycleColor', 'personalSpaceColor']) assert.match(html, new RegExp(`type="color" id="${id}"`));
+  assert.match(html, /class="color-choice-control"/);
+  assert.match(notesCss, /\.color-choice-control:focus-within/);
+  assert.match(notesCss, /\.subject-custom-color:focus-within/);
+  assert.match(script, /document\.querySelectorAll\('\.theme-circle'\)[\s\S]*?setAttribute\('aria-pressed'/);
+});

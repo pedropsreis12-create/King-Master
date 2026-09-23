@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260922-dyslexia-v1">
     <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
-    <link rel="stylesheet" href="personal-development.css?v=20260922-growth-v1">
+    <link rel="stylesheet" href="personal-development.css?v=20260922-flexible-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
@@ -26,6 +26,7 @@
     <link rel="stylesheet" href="schedule.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <link rel="stylesheet" href="chapter-refresh.css?v=20260922-chapter-profile-v1">
+    <link rel="stylesheet" href="notes-workspace.css?v=20260922-notes-color-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -120,8 +121,8 @@
             </div>
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Desenvolvimento</span>
-                <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Disciplina e direção</small></span></button>
-                <button type="button" class="menu-btn" data-action="notes" onclick="abrirNotasRapidas();fecharMenuMovel()"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Notas</strong><small>Cadernos e tópicos</small></span></button>
+                <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Seu espaço, suas prioridades</small></span></button>
+                <button type="button" class="menu-btn" data-section="notas" aria-controls="notas" onclick="showSection('notas')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Notas</strong><small>Tópicos e anotações</small></span></button>
             </div>
             <div class="nav-cluster nav-cluster-account">
                 <span class="nav-cluster-label">Conta</span>
@@ -148,19 +149,6 @@
     </nav>
 
     <button type="button" class="quick-notes-launch" onclick="abrirNotasRapidas()" aria-label="Abrir notas rápidas" title="Anotar sem interromper o estudo">✎ <span>Anotar</span></button>
-    <div class="modal-overlay quick-notes-overlay" id="quickNotesModal" role="dialog" aria-modal="true" aria-labelledby="quickNotesTitle">
-        <div class="modal-box quick-notes-box">
-            <button type="button" class="modal-close" onclick="fecharModal('quickNotesModal')" aria-label="Fechar notas">×</button>
-            <span class="workspace-kicker">SEM SAIR DO ESTUDO</span>
-            <h2 id="quickNotesTitle">Meus cadernos</h2>
-            <p>Crie um caderno, como “Concentração total”, e organize tópicos dentro dele sem parar o cronômetro.</p>
-            <form id="quickNoteBookForm" class="quick-book-form" onsubmit="salvarCadernoNota(event)"><input type="hidden" id="quickBookEditId"><label for="quickBookName">Caderno</label><div><input id="quickBookName" class="cycle-input" maxlength="60" placeholder="Ex.: Concentração total" required><button type="submit" class="cycle-btn primary" id="quickBookSaveButton">Criar</button><button type="button" class="cycle-btn" id="quickBookCancelButton" onclick="cancelarEdicaoCadernoNota()" hidden>Cancelar</button></div></form>
-            <div class="quick-notes-layout"><div id="quickNoteBooksList" class="quick-note-books-list" aria-label="Cadernos de notas"></div><section id="quickNoteWorkspace" class="quick-note-workspace" hidden><header class="quick-note-book-heading"><strong id="quickBookCurrentTitle"></strong><div><button type="button" class="cycle-btn" onclick="editarCadernoNota()">Renomear</button><button type="button" class="cycle-btn subtle-danger" onclick="excluirCadernoNota()">Apagar</button></div></header>
-                <form id="quickNotesForm" onsubmit="salvarNotaRapida(event)"><input type="hidden" id="quickNoteEditId"><label for="quickNoteTitle">Novo tópico</label><input id="quickNoteTitle" class="cycle-input" maxlength="80" placeholder="Ex.: Distrações no celular" required><label for="quickNoteText">Anotação <span class="schedule-optional">opcional</span></label><textarea id="quickNoteText" class="cycle-input" maxlength="1500" rows="3" placeholder="O que aconteceu? O que deseja lembrar?"></textarea><div class="quick-notes-actions"><span id="quickNotesContext"></span><div><button type="button" class="cycle-btn" id="quickNoteCancelButton" onclick="cancelarEdicaoNotaRapida()" hidden>Cancelar</button><button type="submit" class="cycle-btn primary" id="quickNoteSaveButton">Adicionar tópico</button></div></div></form>
-                <div id="quickNotesList" class="quick-notes-list" aria-live="polite"></div>
-            </section></div>
-        </div>
-    </div>
 
     <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
         <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Hoje</small></button>
@@ -189,7 +177,7 @@
                 </div>
                 <label class="custom-color-picker">
                     <span><strong>Cor personalizada</strong><small>Escolha qualquer tonalidade</small></span>
-                    <input type="color" id="colorPicker" value="#007aff" oninput="previewTheme(this.value)" onchange="handleColorPicker(this.value)">
+                    <span class="color-choice-control"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a2.1 2.1 0 0 0 1.6-3.5 1.5 1.5 0 0 1 1.1-2.5H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="11" r=".8"/><circle cx="10" cy="7.5" r=".8"/><circle cx="15" cy="7.5" r=".8"/></svg><input type="color" id="colorPicker" value="#007aff" aria-label="Escolher cor personalizada" oninput="previewTheme(this.value)" onchange="handleColorPicker(this.value)"></span>
                 </label>
             </div>
             <div class="settings-group cloud-account-group">
@@ -439,21 +427,29 @@
 
         <section id="desenvolvimento" class="content-section personal-development-section">
             <div class="workspace-heading">
-                <div><span class="workspace-kicker">VIDA QUE SUSTENTA O ESTUDO</span><h1>Desenvolvimento Pessoal</h1><p>Disciplina prática para reduzir ansiedade, procrastinação e decisões demais ao longo do dia.</p></div>
-                <button type="button" class="cycle-btn" onclick="KingPersonalDevelopment.openCommitment()">Editar compromisso</button>
+                <div><span class="workspace-kicker">UM ESPAÇO SEU</span><h1>Desenvolvimento Pessoal</h1><p>Organize o que importa para você, em qualquer fase da vida. Sem áreas ou metas prontas.</p></div>
+                <button type="button" class="cycle-btn primary" onclick="KingPersonalDevelopment.openSpace()">+ Criar área</button>
             </div>
-            <article class="growth-hero widget">
-                <div class="growth-hero-copy"><span class="workspace-kicker">DIREÇÃO</span><h2>Construir constância para chegar preparado ao ENEM</h2><p>Seu objetivo não exige perfeição diária. Exige começar, proteger dois blocos e terminar sabendo qual é o próximo passo.</p><div><span><b>Meta principal</b> 4h de estudo</span><span><b>Dia difícil</b> mínimo de 2h</span><span><b>Regra</b> ação antes da ansiedade</span></div></div>
-                <div class="growth-score"><span id="growthScoreValue">0%</span><small>disciplina nesta semana</small><i><b id="growthScoreBar"></b></i></div>
-            </article>
-            <div class="growth-grid">
-                <section class="growth-checkin widget"><header><div><span class="workspace-kicker">CHECK-IN DE HOJE</span><h2>Quatro decisões que mudam o dia</h2></div><strong id="growthCheckinCount">0/4</strong></header><div class="growth-checklist" id="growthChecklist"></div><p>Marque fatos, não intenções. Um dia difícil ainda conta quando você cumpre o mínimo.</p></section>
-                <section class="growth-next-action widget"><span class="workspace-kicker">PRÓXIMA AÇÃO</span><h2 id="growthNextTitle">Comece sem negociar</h2><p id="growthNextHint">Escolha uma ação pequena e executável agora.</p><button type="button" class="cycle-btn primary" id="growthNextButton" onclick="KingPersonalDevelopment.doNextAction()">Ir para o foco</button></section>
+            <div class="personal-metrics" id="personalMetrics" aria-label="Resumo das suas áreas"></div>
+            <div class="personal-workspace">
+                <aside class="personal-spaces widget" aria-label="Suas áreas"><div class="personal-spaces-head"><div><span class="workspace-kicker">ORGANIZAÇÃO</span><h2>Minhas áreas</h2></div><button type="button" class="personal-add-icon" onclick="KingPersonalDevelopment.openSpace()" aria-label="Criar área">+</button></div><div id="personalSpaceList"></div></aside>
+                <div id="personalSpaceDetail" class="personal-space-detail" aria-live="polite"></div>
             </div>
-            <section class="growth-pillars widget"><header><div><span class="workspace-kicker">SEU SISTEMA PESSOAL</span><h2>O que precisa funcionar fora do conteúdo</h2></div><p>Baseado no que você relatou sobre ansiedade, organização, revisão e distrações.</p></header><div class="growth-pillar-grid"><article><b>01</b><strong>Clareza</strong><p>Defina antes do bloco qual assunto será estudado e quais questões encerrarão a sessão.</p></article><article><b>02</b><strong>Ambiente</strong><p>Celular fora do alcance e apenas o material necessário aberto durante o bloco.</p></article><article><b>03</b><strong>Evidência</strong><p>O estudo só termina com questões, correção dos erros e um próximo passo registrado.</p></article><article><b>04</b><strong>Recuperação</strong><p>Use pausas reais, sono e o mínimo de duas horas para impedir que um dia ruim vire abandono.</p></article></div></section>
-            <div class="growth-bottom-grid">
-                <section class="growth-week widget"><header><div><span class="workspace-kicker">ÚLTIMOS 7 DIAS</span><h2>Consistência visível</h2></div></header><div class="growth-week-days" id="growthWeekDays"></div></section>
-                <section class="growth-commitment widget"><span class="workspace-kicker">COMPROMISSO PESSOAL</span><blockquote id="growthCommitmentText">Às 14h eu começo antes de negociar comigo mesmo. Nos dias ruins, protejo pelo menos duas horas.</blockquote><button type="button" class="cycle-btn" onclick="KingPersonalDevelopment.openCommitment()">Ajustar minhas palavras</button></section>
+        </section>
+
+        <section id="notas" class="content-section notes-section">
+            <div class="workspace-heading"><div><span class="workspace-kicker">ESPAÇO PARA SUAS IDEIAS</span><h1>Notas</h1><p>Crie um tópico para cada assunto seu e guarde quantas anotações quiser nele.</p></div></div>
+            <div class="notes-workspace-layout">
+                <aside class="notes-topics widget" aria-label="Tópicos de notas">
+                    <div class="notes-panel-heading"><span class="workspace-kicker">ORGANIZAÇÃO</span><h2>Seus tópicos</h2></div>
+                    <form id="quickNoteBookForm" class="quick-book-form" onsubmit="salvarCadernoNota(event)"><input type="hidden" id="quickBookEditId"><label for="quickBookName">Nome do tópico</label><input id="quickBookName" class="cycle-input" maxlength="60" placeholder="Ex.: Concentração total" required><div class="notes-form-actions"><button type="submit" class="cycle-btn primary" id="quickBookSaveButton">Criar tópico</button><button type="button" class="cycle-btn" id="quickBookCancelButton" onclick="cancelarEdicaoCadernoNota()" hidden>Cancelar</button></div></form>
+                    <div id="quickNoteBooksList" class="quick-note-books-list" aria-label="Seus tópicos"></div>
+                </aside>
+                <div class="notes-content widget"><section id="quickNoteWorkspace" class="quick-note-workspace" hidden>
+                    <header class="quick-note-book-heading"><div><span class="workspace-kicker">TÓPICO</span><h2 id="quickBookCurrentTitle"></h2><small id="quickBookNoteCount"></small></div><div><button type="button" class="cycle-btn" onclick="editarCadernoNota()">Renomear</button><button type="button" class="cycle-btn subtle-danger" onclick="excluirCadernoNota()">Apagar tópico</button></div></header>
+                    <form id="quickNotesForm" class="notes-entry-form" onsubmit="salvarNotaRapida(event)"><input type="hidden" id="quickNoteEditId"><label for="quickNoteTitle">Título <span class="schedule-optional">opcional</span></label><input id="quickNoteTitle" class="cycle-input" maxlength="80" placeholder="Dê um nome, se quiser"><label for="quickNoteText">Anotação</label><textarea id="quickNoteText" class="cycle-input" maxlength="5000" rows="5" placeholder="Escreva aqui sua ideia, dúvida ou lembrete…" required></textarea><div class="quick-notes-actions"><span id="quickNotesContext">O cronômetro continua enquanto você anota</span><div><button type="button" class="cycle-btn" id="quickNoteCancelButton" onclick="cancelarEdicaoNotaRapida()" hidden>Cancelar</button><button type="submit" class="cycle-btn primary" id="quickNoteSaveButton">Adicionar anotação</button></div></div></form>
+                    <div class="notes-list-heading"><h3>Anotações</h3></div><div id="quickNotesList" class="quick-notes-list" aria-live="polite"></div>
+                </section><div class="notes-no-topic" id="notesNoTopic"><span aria-hidden="true">✎</span><h2>Um lugar para organizar suas ideias</h2><p>Crie um tópico à esquerda para começar a anotar.</p></div></div>
             </div>
         </section>
 
@@ -933,7 +929,7 @@
                                         <button type="button" class="color-preset" data-color="#ff9500" style="--preset-color:#ff9500" onclick="selecionarCorPreset(this, '#ff9500')" aria-label="Laranja"></button>
                                         <button type="button" class="color-preset" data-color="#34c759" style="--preset-color:#34c759" onclick="selecionarCorPreset(this, '#34c759')" aria-label="Verde"></button>
                                         <button type="button" class="color-preset" data-color="#00a6a6" style="--preset-color:#00a6a6" onclick="selecionarCorPreset(this, '#00a6a6')" aria-label="Turquesa"></button>
-                                        <label class="subject-custom-color" title="Escolher outra cor"><input type="color" id="cycleColor" class="cycle-color-picker" value="#007aff" oninput="limparSelecaoPresets();atualizarPreviewMateria()"><span aria-hidden="true">＋</span><span class="sr-only">Escolher outra cor</span></label>
+                                        <label class="subject-custom-color" title="Escolher outra cor"><input type="color" id="cycleColor" class="cycle-color-picker" value="#007aff" aria-label="Escolher cor personalizada da matéria" oninput="limparSelecaoPresets();atualizarPreviewMateria()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a2.1 2.1 0 0 0 1.6-3.5 1.5 1.5 0 0 1 1.1-2.5H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="11" r=".8"/><circle cx="10" cy="7.5" r=".8"/><circle cx="15" cy="7.5" r=".8"/></svg><span class="sr-only">Escolher outra cor</span></label>
                                     </div>
                                 </fieldset>
                             </section>
@@ -1008,9 +1004,9 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="growthCommitmentModal">
-            <div class="modal-box growth-commitment-modal"><button type="button" class="modal-close" onclick="fecharModal('growthCommitmentModal')" aria-label="Fechar">×</button><span class="workspace-kicker">COMPROMISSO PESSOAL</span><div class="cycle-modal-title">Escreva uma regra que você aceita cumprir</div><p class="schedule-modal-intro">Curta, concreta e possível inclusive em um dia ruim.</p><form onsubmit="KingPersonalDevelopment.saveCommitment(event)"><textarea class="cycle-input" id="growthCommitmentInput" rows="5" maxlength="280" required></textarea><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('growthCommitmentModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar compromisso</button></div></form></div>
-        </div>
+        <div class="modal-overlay" id="personalSpaceModal" role="dialog" aria-modal="true" aria-labelledby="personalSpaceModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalSpaceModal')" aria-label="Fechar">×</button><span class="workspace-kicker">DO SEU JEITO</span><h2 id="personalSpaceModalTitle">Criar área</h2><p>Uma área pode ser sobre qualquer parte da sua vida.</p><form onsubmit="KingPersonalDevelopment.saveSpace(event)"><input type="hidden" id="personalSpaceId"><label>Nome da área<input class="cycle-input" id="personalSpaceName" maxlength="70" required placeholder="Ex.: Saúde, estudos, finanças, rotina…"></label><label>O que você quer acompanhar? <small>Opcional</small><textarea class="cycle-input" id="personalSpaceDescription" maxlength="280" rows="3" placeholder="Escreva com suas palavras; pode mudar depois."></textarea></label><label>Cor<span class="color-choice-control"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a2.1 2.1 0 0 0 1.6-3.5 1.5 1.5 0 0 1 1.1-2.5H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="11" r=".8"/><circle cx="10" cy="7.5" r=".8"/><circle cx="15" cy="7.5" r=".8"/></svg><input type="color" id="personalSpaceColor" value="#3288ed" aria-label="Cor da área"></span></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalSpaceModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar área</button></div></form></div></div>
+        <div class="modal-overlay" id="personalItemModal" role="dialog" aria-modal="true" aria-labelledby="personalItemModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalItemModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ACOMPANHAMENTO</span><h2 id="personalItemModalTitle">Adicionar acompanhamento</h2><p>Use um hábito para marcar dias ou uma meta para medir quantidade.</p><form onsubmit="KingPersonalDevelopment.saveItem(event)"><input type="hidden" id="personalItemId"><label>Tipo<select class="cycle-input" id="personalItemType" onchange="KingPersonalDevelopment.updateItemFields()"><option value="habit">Hábito diário</option><option value="goal">Meta numérica</option></select></label><label>Nome<input class="cycle-input" id="personalItemName" maxlength="90" required placeholder="O que você quer acompanhar?"></label><div id="personalGoalFields" class="personal-goal-fields" hidden><label>Alvo<input class="cycle-input" type="number" id="personalItemTarget" min="1" max="1000000" step="1" value="10"></label><label>Unidade <small>Opcional</small><input class="cycle-input" id="personalItemUnit" maxlength="24" placeholder="Ex.: livros, treinos, horas"></label></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalItemModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar</button></div></form></div></div>
+        <div class="modal-overlay" id="personalNoteModal" role="dialog" aria-modal="true" aria-labelledby="personalNoteModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalNoteModal')" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO LIVRE</span><h2 id="personalNoteModalTitle">Nova anotação</h2><p>Anote uma reflexão, conquista, dificuldade ou próximo passo.</p><form onsubmit="KingPersonalDevelopment.saveNote(event)"><input type="hidden" id="personalNoteId"><label>Anotação<textarea class="cycle-input" id="personalNoteText" maxlength="3000" rows="7" required placeholder="Escreva do seu jeito…"></textarea></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalNoteModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar anotação</button></div></form></div></div>
 
         <div class="modal-overlay" id="agendamentoModal">
             <!-- Modal de Compromissos com "Treino Físico" corrigido e "Redação" adicionada -->
@@ -1316,11 +1312,11 @@
     <script src="script.js?v=20260922-chapter-profile-v1"></script>
     <script src="sidebar-icons.js?v=20260922-notes-icon-v1"></script>
     <script src="schedule.js?v=20260922-block-isolation-v1"></script>
-    <script src="personal-development.js?v=20260922-growth-v1"></script>
+    <script src="personal-development.js?v=20260922-flexible-v1"></script>
     <script src="subject-lab.js?v=20260922-pdf-v2"></script>
     <script type="module" src="syllabus-pdf.js?v=20260922-pdf-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
-    <script src="ai-assistant.js?v=20260922-personal-v1"></script>
+    <script src="ai-assistant.js?v=20260922-flexible-v1"></script>
     <script src="productivity.js?v=20260922-missions-3-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>

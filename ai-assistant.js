@@ -332,10 +332,12 @@ function contextoGeminiIa(pedido = '') {
             metaDiariaMinutos: appData.dailyGoalMinutes || 60
         },
         desenvolvimentoPessoal: {
-            compromisso: appData.personalDevelopment?.commitment || '',
-            checkinHoje: appData.personalDevelopment?.checkins?.[hoje] || {},
-            disponibilidadeDiariaMinutos: appData.studySchedule?.settings?.dailyCapacityMinutes || 240,
-            diasDeEstudo: appData.studySchedule?.settings?.studyDays || []
+            areas: (appData.personalDevelopment?.spaces || []).slice(0, 12).map(area => ({
+                nome: String(area.name || '').slice(0, 70),
+                proposito: String(area.description || '').slice(0, 160),
+                habitos: (area.items || []).filter(item => item.type === 'habit').slice(0, 12).map(item => ({ nome: item.name, feitoHoje: Boolean(item.checkins?.[hoje]) })),
+                metas: (area.items || []).filter(item => item.type === 'goal').slice(0, 12).map(item => ({ nome: item.name, atual: item.current || 0, alvo: item.target || 0, unidade: item.unit || '' }))
+            }))
         },
         materias: materiasDoContexto.map(item => ({
             nome: item.subject,

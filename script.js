@@ -51,9 +51,10 @@ const defaultAppData = {
     studyLogging: { autoReview: true, reviewDelayDays: 1 },
     studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], dailyCapacityMinutes: 240, blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
     personalDevelopment: {
-        commitment: 'Às 14h eu começo antes de negociar comigo mesmo. Nos dias ruins, protejo pelo menos duas horas.',
+        commitment: '',
         checkins: {},
-        version: 1
+        spaces: [],
+        version: 2
     },
     activeScheduleBlock: null,
     aiSettings: { retentionDays: 7 },
@@ -136,7 +137,8 @@ if (!Array.isArray(appData.studySchedule.suggestions)) appData.studySchedule.sug
 if (!appData.personalDevelopment || typeof appData.personalDevelopment !== 'object') appData.personalDevelopment = { ...defaultAppData.personalDevelopment };
 appData.personalDevelopment = { ...defaultAppData.personalDevelopment, ...appData.personalDevelopment };
 if (!appData.personalDevelopment.checkins || typeof appData.personalDevelopment.checkins !== 'object' || Array.isArray(appData.personalDevelopment.checkins)) appData.personalDevelopment.checkins = {};
-appData.personalDevelopment.commitment = String(appData.personalDevelopment.commitment || defaultAppData.personalDevelopment.commitment).slice(0, 280);
+appData.personalDevelopment.commitment = String(appData.personalDevelopment.commitment || '').slice(0, 280);
+if (!Array.isArray(appData.personalDevelopment.spaces)) appData.personalDevelopment.spaces = [];
 if (!appData.activeScheduleBlock || typeof appData.activeScheduleBlock !== 'object') appData.activeScheduleBlock = null;
 if (!appData.aiSettings || typeof appData.aiSettings !== 'object') appData.aiSettings = { ...defaultAppData.aiSettings };
 appData.aiSettings = { ...defaultAppData.aiSettings, ...appData.aiSettings };
@@ -196,26 +198,25 @@ function renderizarNotasRapidas() {
     if (!cadernos.some(caderno => caderno.id === cadernoNotaAtivoId)) cadernoNotaAtivoId = cadernos[0]?.id || '';
     listaCadernos.innerHTML = cadernos.length ? cadernos.map(caderno => {
         const count = appData.quickNotes.filter(nota => nota.bookId === caderno.id).length;
-        return `<button type="button" class="quick-book-tab${caderno.id === cadernoNotaAtivoId ? ' active' : ''}" onclick="selecionarCadernoNota('${caderno.id}')" aria-current="${caderno.id === cadernoNotaAtivoId ? 'true' : 'false'}"><strong>${escaparRevisaoHtml(caderno.title)}</strong><small>${count} ${count === 1 ? 'tópico' : 'tópicos'}</small></button>`;
-    }).join('') : '<p class="quick-notes-empty">Crie seu primeiro caderno acima.</p>';
+        return `<button type="button" class="quick-book-tab${caderno.id === cadernoNotaAtivoId ? ' active' : ''}" onclick="selecionarCadernoNota('${caderno.id}')" aria-current="${caderno.id === cadernoNotaAtivoId ? 'true' : 'false'}"><strong>${escaparRevisaoHtml(caderno.title)}</strong><small>${count} ${count === 1 ? 'anotação' : 'anotações'}</small></button>`;
+    }).join('') : '<p class="quick-notes-empty">Nenhum tópico ainda. Crie o primeiro acima.</p>';
     const caderno = cadernos.find(item => item.id === cadernoNotaAtivoId);
     document.getElementById('quickNoteWorkspace').hidden = !caderno;
+    document.getElementById('notesNoTopic').hidden = !!caderno;
     if (!caderno) { listaNotas.innerHTML = ''; return; }
     document.getElementById('quickBookCurrentTitle').textContent = caderno.title;
     const notas = appData.quickNotes.filter(nota => nota.bookId === caderno.id).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
-    listaNotas.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span><h3>${escaparRevisaoHtml(nota.title || 'Anotação')}</h3>${nota.text ? `<p>${escaparRevisaoHtml(nota.text)}</p>` : ''}</div><div class="quick-note-item-actions"><button type="button" onclick="editarNotaRapida('${nota.id}')" aria-label="Editar tópico" title="Editar tópico">✎</button><button type="button" onclick="excluirNotaRapida('${nota.id}')" aria-label="Excluir tópico" title="Excluir tópico">×</button></div></article>`).join('') : '<p class="quick-notes-empty">Este caderno está vazio. Adicione o primeiro tópico.</p>';
+    document.getElementById('quickBookNoteCount').textContent = `${notas.length} ${notas.length === 1 ? 'anotação' : 'anotações'}`;
+    listaNotas.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span>${nota.title ? `<h3>${escaparRevisaoHtml(nota.title)}</h3>` : ''}${nota.text ? `<p>${escaparRevisaoHtml(nota.text)}</p>` : ''}</div><div class="quick-note-item-actions"><button type="button" onclick="editarNotaRapida('${nota.id}')" aria-label="Editar anotação" title="Editar anotação">✎</button><button type="button" onclick="excluirNotaRapida('${nota.id}')" aria-label="Excluir anotação" title="Excluir anotação">×</button></div></article>`).join('') : '<p class="quick-notes-empty">Nenhuma anotação neste tópico. Escreva a primeira acima.</p>';
 }
 function abrirNotasRapidas() {
-    const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
-    document.getElementById('quickNotesContext').textContent = materia ? `Estudando ${materia.subject}` : 'Anotação geral';
-    renderizarNotasRapidas();
-    document.getElementById('quickNotesModal').classList.add('active');
+    showSection('notas');
     setTimeout(() => document.getElementById(cadernoNotaAtivoId ? 'quickNoteTitle' : 'quickBookName')?.focus(), 50);
 }
 function selecionarCadernoNota(id) {
     if (!appData.quickNoteBooks.some(caderno => caderno.id === id)) return;
     if (document.getElementById('quickNoteTitle').value.trim() || document.getElementById('quickNoteText').value.trim()) {
-        if (!confirm('Trocar de caderno e descartar o tópico que ainda não foi salvo?')) return;
+        if (!confirm('Trocar de tópico e descartar a anotação que ainda não foi salva?')) return;
     }
     cancelarEdicaoNotaRapida();
     cadernoNotaAtivoId = id;
@@ -224,7 +225,7 @@ function selecionarCadernoNota(id) {
 function cancelarEdicaoCadernoNota() {
     document.getElementById('quickNoteBookForm').reset();
     document.getElementById('quickBookEditId').value = '';
-    document.getElementById('quickBookSaveButton').textContent = 'Criar';
+    document.getElementById('quickBookSaveButton').textContent = 'Criar tópico';
     document.getElementById('quickBookCancelButton').hidden = true;
 }
 function salvarCadernoNota(event) {
@@ -232,7 +233,7 @@ function salvarCadernoNota(event) {
     const title = document.getElementById('quickBookName').value.trim();
     const editId = document.getElementById('quickBookEditId').value;
     if (!title) return;
-    if (appData.quickNoteBooks.some(caderno => caderno.id !== editId && caderno.title.toLocaleLowerCase('pt-BR') === title.toLocaleLowerCase('pt-BR'))) return showToast('Já existe um caderno com esse nome.', true);
+    if (appData.quickNoteBooks.some(caderno => caderno.id !== editId && caderno.title.toLocaleLowerCase('pt-BR') === title.toLocaleLowerCase('pt-BR'))) return showToast('Já existe um tópico com esse nome.', true);
     const previous = JSON.parse(JSON.stringify(appData.quickNoteBooks));
     if (editId) {
         const caderno = appData.quickNoteBooks.find(item => item.id === editId);
@@ -242,7 +243,7 @@ function salvarCadernoNota(event) {
         appData.quickNoteBooks.push({ id: cadernoNotaAtivoId, title, createdAt: Date.now() });
     }
     try { saveAppData(); cancelarEdicaoCadernoNota(); renderizarNotasRapidas(); document.getElementById('quickNoteTitle').focus(); }
-    catch { appData.quickNoteBooks = previous; renderizarNotasRapidas(); showToast('Não foi possível salvar o caderno.', true); }
+    catch { appData.quickNoteBooks = previous; renderizarNotasRapidas(); showToast('Não foi possível salvar o tópico.', true); }
 }
 function editarCadernoNota() {
     const caderno = appData.quickNoteBooks.find(item => item.id === cadernoNotaAtivoId);
@@ -255,27 +256,27 @@ function editarCadernoNota() {
 }
 function excluirCadernoNota() {
     const caderno = appData.quickNoteBooks.find(item => item.id === cadernoNotaAtivoId);
-    if (!caderno || !confirm(`Apagar “${caderno.title}” e todos os tópicos deste caderno?`)) return;
+    if (!caderno || !confirm(`Apagar o tópico “${caderno.title}” e todas as anotações dele?`)) return;
     const previousBooks = appData.quickNoteBooks;
     const previousNotes = appData.quickNotes;
     appData.quickNoteBooks = previousBooks.filter(item => item.id !== caderno.id);
     appData.quickNotes = previousNotes.filter(item => item.bookId !== caderno.id);
     try { saveAppData(); cadernoNotaAtivoId = ''; cancelarEdicaoNotaRapida(); cancelarEdicaoCadernoNota(); renderizarNotasRapidas(); }
-    catch { appData.quickNoteBooks = previousBooks; appData.quickNotes = previousNotes; showToast('Não foi possível apagar o caderno.', true); }
+    catch { appData.quickNoteBooks = previousBooks; appData.quickNotes = previousNotes; showToast('Não foi possível apagar o tópico.', true); }
 }
 function cancelarEdicaoNotaRapida() {
     document.getElementById('quickNotesForm').reset();
     document.getElementById('quickNoteEditId').value = '';
-    document.getElementById('quickNoteSaveButton').textContent = 'Adicionar tópico';
+    document.getElementById('quickNoteSaveButton').textContent = 'Adicionar anotação';
     document.getElementById('quickNoteCancelButton').hidden = true;
 }
 function editarNotaRapida(id) {
     const nota = appData.quickNotes.find(item => item.id === id && item.bookId === cadernoNotaAtivoId);
     if (!nota) return;
     document.getElementById('quickNoteEditId').value = nota.id;
-    document.getElementById('quickNoteTitle').value = nota.title || 'Anotação';
+    document.getElementById('quickNoteTitle').value = nota.title || '';
     document.getElementById('quickNoteText').value = nota.text || '';
-    document.getElementById('quickNoteSaveButton').textContent = 'Salvar tópico';
+    document.getElementById('quickNoteSaveButton').textContent = 'Salvar anotação';
     document.getElementById('quickNoteCancelButton').hidden = false;
     document.getElementById('quickNoteTitle').focus();
 }
@@ -285,25 +286,24 @@ function salvarNotaRapida(event) {
     const title = document.getElementById('quickNoteTitle').value.trim();
     const text = document.getElementById('quickNoteText').value.trim();
     const editId = document.getElementById('quickNoteEditId').value;
-    if (!title) return;
+    if (!text) return showToast('Escreva a anotação antes de salvar.', true);
     const previous = JSON.parse(JSON.stringify(appData.quickNotes));
     if (editId) {
         const nota = appData.quickNotes.find(item => item.id === editId && item.bookId === cadernoNotaAtivoId);
         if (!nota) return;
         Object.assign(nota, { title, text, updatedAt: Date.now() });
     } else {
-        const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('activeSubjectSelect')?.value));
-        appData.quickNotes.push({ id: `nota-${crypto.randomUUID()}`, bookId: cadernoNotaAtivoId, title, text, subject: materia?.subject || '', createdAt: Date.now() });
+        appData.quickNotes.push({ id: `nota-${crypto.randomUUID()}`, bookId: cadernoNotaAtivoId, title, text, subject: '', createdAt: Date.now() });
     }
-    try { saveAppData(); cancelarEdicaoNotaRapida(); renderizarNotasRapidas(); showToast('Tópico salvo. Pode continuar estudando.'); }
-    catch { appData.quickNotes = previous; showToast('Não foi possível guardar o tópico. Copie o texto antes de fechar.', true); }
+    try { saveAppData(); cancelarEdicaoNotaRapida(); renderizarNotasRapidas(); showToast('Anotação salva.'); }
+    catch { appData.quickNotes = previous; showToast('Não foi possível guardar a anotação. Copie o texto antes de fechar.', true); }
 }
 function excluirNotaRapida(id) {
-    if (!confirm('Excluir este tópico?')) return;
+    if (!confirm('Excluir esta anotação?')) return;
     const previous = appData.quickNotes;
     appData.quickNotes = previous.filter(nota => nota.id !== id);
     try { saveAppData(); if (document.getElementById('quickNoteEditId').value === id) cancelarEdicaoNotaRapida(); renderizarNotasRapidas(); }
-    catch { appData.quickNotes = previous; showToast('Não foi possível excluir o tópico.', true); }
+    catch { appData.quickNotes = previous; showToast('Não foi possível excluir a anotação.', true); }
 }
 
 window.kingMasterCloudBridge = {
@@ -530,6 +530,7 @@ function showSection(sectionId) {
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
     if(sectionId === 'desenvolvimento') window.KingPersonalDevelopment?.render?.();
+    if(sectionId === 'notas') renderizarNotasRapidas();
     atualizarIndicadoresNavegacao();
 }
 
@@ -580,6 +581,14 @@ function syncSettingsUI() {
     if (dica) dica.textContent = escuro ? 'Usar interface clara' : 'Usar interface escura';
     if (botao) botao.classList.toggle('is-dark', escuro);
     if (seletor) seletor.value = appData.themeColor || '#007aff';
+    document.querySelectorAll('.theme-circle').forEach(button => {
+        button.setAttribute('aria-pressed', String(normalizarCorCss(button.style.backgroundColor) === String(appData.themeColor || '#007aff').toLowerCase()));
+    });
+}
+
+function normalizarCorCss(cor) {
+    const partes = String(cor).match(/\d+/g);
+    return partes?.length >= 3 ? `#${partes.slice(0, 3).map(valor => Number(valor).toString(16).padStart(2, '0')).join('')}` : String(cor).toLowerCase();
 }
 
 function aplicarCorDoSistema(hex) {
@@ -716,6 +725,9 @@ function confirmarDelecao() {
     
     if (tipo === 'chapterPage') {
         excluirPaginaCaderno(id);
+    }
+    else if (tipo === 'personalSpace' || tipo === 'personalItem' || tipo === 'personalNote') {
+        window.KingPersonalDevelopment?.confirmDelete?.(tipo, id);
     }
     else if (tipo === 'cycle') {
         window.KingSchedule?.removeSubject(id);

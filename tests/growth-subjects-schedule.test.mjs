@@ -13,13 +13,20 @@ const [html, script, schedule, core, growth, subjectLab, cloud, icons] = await P
   readFile(new URL('../sidebar-icons.js', import.meta.url), 'utf8')
 ]);
 
-test('personal development is a persisted, actionable workspace', () => {
+test('personal development starts clean and supports custom areas, habits, goals and notes', () => {
   assert.match(html, /data-section="desenvolvimento"/);
   assert.match(html, /id="desenvolvimento"/);
   assert.match(script, /personalDevelopment:\s*\{/);
-  assert.match(growth, /Quatro decisões que mudam o dia|CHECKS/);
-  assert.match(growth, /checkins\[todayKey\(\)\]/);
-  assert.match(growth, /minimum/);
+  assert.match(script, /spaces: \[\]/);
+  assert.match(growth, /function saveSpace\(event\)/);
+  assert.match(growth, /function toggleHabit\(spaceIndex, itemIndex\)/);
+  assert.match(growth, /function setGoal\(spaceIndex, itemIndex, value\)/);
+  assert.match(growth, /function saveNote\(event\)/);
+  assert.match(html, /id="personalSpaceModal"/);
+  assert.match(html, /id="personalItemModal"/);
+  assert.match(html, /id="personalNoteModal"/);
+  const panel = html.split('<section id="desenvolvimento"')[1].split('<!-- HUB DE MATÉRIAS -->')[0];
+  assert.doesNotMatch(panel, /Quatro decisões|Meta principal|Disciplina prática|Construir constância/);
   assert.match(icons, /desenvolvimento:/);
 });
 

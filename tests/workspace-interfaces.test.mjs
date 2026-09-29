@@ -24,7 +24,7 @@ test('subjects expose accessible content and mastery views with useful summaries
   assert.match(script, /function pontuacaoAcaoTopico\(materia, topico\)/);
   assert.doesNotMatch(html, /id="subjectWorkspaceMount"|id="assuntosModal"|id="topicControlPanel"/);
   assert.doesNotMatch(script, /function abrirModalAssuntos\(|function abrirTopicoPelaCentral\(/);
-  assert.match(script, /onclick="editarMateriaCiclo\(\$\{i\.id\}\)"/);
+  assert.match(script, /onclick="editarMateriaCiclo\(\$\{materiaId\}\)"/);
 });
 
 test('agenda and reviews can be reduced to the next actionable items', () => {

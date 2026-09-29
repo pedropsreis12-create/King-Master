@@ -6,6 +6,7 @@
         cronograma: '<rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M8 2.5V6M16 2.5V6M3.5 9h17M8 13h2M14 13h2M8 16.5h2M14 16.5h2"/>',
         planejamento: '<path d="M5 4.5h11a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M8 4.5V17a3 3 0 0 0 3 3M11 9h5M11 12.5h5"/>',
         revisoes: '<path d="M20 7v5h-5"/><path d="M18.2 16a8 8 0 1 1 .7-8.2L20 12"/><path d="M12 8v4l2.5 1.5"/>',
+        flashcards: '<rect x="4" y="5" width="13" height="15" rx="2"/><path d="M8 9h5M8 12h5M8 15h3M17 8h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-8"/>',
         'caderno-erros': '<path d="M5 3.5h11.5A2.5 2.5 0 0 1 19 6v14H7.5A2.5 2.5 0 0 1 5 17.5z"/><path d="M9 8h6M9 11.5h4M9 15l1.5 1.5L15 12"/>',
         simulados: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><path d="M12 8.5V12l2.5 1.5"/>',
         redacao: '<path d="m4 17-.5 3.5L7 20l11-11-3-3z"/><path d="m13.5 7.5 3 3M4 14V4h8"/>',

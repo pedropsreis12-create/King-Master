@@ -28,6 +28,7 @@ const defaultAppData = {
     revisoesItems: [],
     revisaoTags: [],
     cadernoErrosItems: [],
+    flashcards: { decks: [], cards: [], states: {}, reviews: [] },
     quickNotes: [],
     quickNoteBooks: [],
     dailyGoalMinutes: 240,
@@ -108,6 +109,7 @@ if (appData.quickNotes.some(nota => !nota.bookId)) {
 appData.revisoesItems = appData.revisoesItems.map(normalizarItemRevisao);
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!Array.isArray(appData.cadernoErrosItems)) appData.cadernoErrosItems = [];
+window.KingFlashcardsCore?.ensure(appData);
 if (!appData.xpLoginDates) appData.xpLoginDates = [];
 if (!Number.isFinite(Number(appData.xpResetOffset))) appData.xpResetOffset = 0;
 if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
@@ -190,6 +192,7 @@ function saveAppData() {
     if (timerPersistenceReady) persistTimerCheckpoint();
     updateDashboardStats(); 
     atualizarIndicadoresNavegacao();
+    window.KingFlashcards?.updateDashboard?.();
     window.KingPersonalDevelopment?.render?.();
 }
 
@@ -202,7 +205,7 @@ function renderizarNotasRapidas() {
     if (!cadernos.some(caderno => caderno.id === cadernoNotaAtivoId)) cadernoNotaAtivoId = cadernos[0]?.id || '';
     listaCadernos.innerHTML = cadernos.length ? cadernos.map(caderno => {
         const count = appData.quickNotes.filter(nota => nota.bookId === caderno.id).length;
-        return `<button type="button" class="quick-book-tab${caderno.id === cadernoNotaAtivoId ? ' active' : ''}" onclick="selecionarCadernoNota('${caderno.id}')" aria-current="${caderno.id === cadernoNotaAtivoId ? 'true' : 'false'}"><strong>${escaparRevisaoHtml(caderno.title)}</strong><small>${count} ${count === 1 ? 'anotação' : 'anotações'}</small></button>`;
+        return `<button type="button" class="quick-book-tab${caderno.id === cadernoNotaAtivoId ? ' active' : ''}" data-quick-book="${escaparRevisaoHtml(caderno.id)}" aria-current="${caderno.id === cadernoNotaAtivoId ? 'true' : 'false'}"><strong>${escaparRevisaoHtml(caderno.title)}</strong><small>${count} ${count === 1 ? 'anotação' : 'anotações'}</small></button>`;
     }).join('') : '<p class="quick-notes-empty">Nenhum tópico ainda. Crie o primeiro acima.</p>';
     const caderno = cadernos.find(item => item.id === cadernoNotaAtivoId);
     document.getElementById('quickNoteWorkspace').hidden = !caderno;
@@ -211,8 +214,18 @@ function renderizarNotasRapidas() {
     document.getElementById('quickBookCurrentTitle').textContent = caderno.title;
     const notas = appData.quickNotes.filter(nota => nota.bookId === caderno.id).sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
     document.getElementById('quickBookNoteCount').textContent = `${notas.length} ${notas.length === 1 ? 'anotação' : 'anotações'}`;
-    listaNotas.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span>${nota.title ? `<h3>${escaparRevisaoHtml(nota.title)}</h3>` : ''}${nota.text ? `<p>${escaparRevisaoHtml(nota.text)}</p>` : ''}</div><div class="quick-note-item-actions"><button type="button" onclick="editarNotaRapida('${nota.id}')" aria-label="Editar anotação" title="Editar anotação">✎</button><button type="button" onclick="excluirNotaRapida('${nota.id}')" aria-label="Excluir anotação" title="Excluir anotação">×</button></div></article>`).join('') : '<p class="quick-notes-empty">Nenhuma anotação neste tópico. Escreva a primeira acima.</p>';
+    listaNotas.innerHTML = notas.length ? notas.map(nota => `<article class="quick-note-item"><div><span>${new Date(nota.createdAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}${nota.subject ? ` · ${escaparRevisaoHtml(nota.subject)}` : ''}</span>${nota.title ? `<h3>${escaparRevisaoHtml(nota.title)}</h3>` : ''}${nota.text ? `<p>${escaparRevisaoHtml(nota.text)}</p>` : ''}</div><div class="quick-note-item-actions"><button type="button" data-quick-note-edit="${escaparRevisaoHtml(nota.id)}" aria-label="Editar anotação" title="Editar anotação">✎</button><button type="button" data-quick-note-delete="${escaparRevisaoHtml(nota.id)}" aria-label="Excluir anotação" title="Excluir anotação">×</button></div></article>`).join('') : '<p class="quick-notes-empty">Nenhuma anotação neste tópico. Escreva a primeira acima.</p>';
 }
+document.getElementById('quickNoteBooksList')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-quick-book]');
+    if (button) selecionarCadernoNota(button.dataset.quickBook);
+});
+document.getElementById('quickNotesList')?.addEventListener('click', event => {
+    const edit = event.target.closest('[data-quick-note-edit]');
+    const remove = event.target.closest('[data-quick-note-delete]');
+    if (edit) editarNotaRapida(edit.dataset.quickNoteEdit);
+    else if (remove) excluirNotaRapida(remove.dataset.quickNoteDelete);
+});
 function abrirNotasRapidas() {
     showSection('notas');
     setTimeout(() => document.getElementById(cadernoNotaAtivoId ? 'quickNoteTitle' : 'quickBookName')?.focus(), 50);
@@ -529,6 +542,7 @@ function showSection(sectionId) {
     if(sectionId === 'agendamento') renderizarAgendamento();
     if(sectionId === 'cronograma') window.KingSchedule?.render();
     if(sectionId === 'revisoes') renderizarRevisoes();
+    if(sectionId === 'flashcards') window.KingFlashcards?.render?.();
     if(sectionId === 'caderno-erros') renderizarCadernoErros();
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
@@ -707,7 +721,6 @@ function renomearMateriaNosRegistros(nomeAnterior, nomeNovo) {
 function removerMateriaComRegistros(id) {
     const materia = appData.cycleItems.find(item => item.id === id);
     if (!materia) return false;
-    window.KingModules?.removeSubject?.(id);
     if (String(cadernoCapituloAtual.materiaId) === String(id)) fecharCadernosDominio();
     const chave = normalizarRevisaoTexto(materia.subject);
     const sessoesRemovidas = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) === chave);
@@ -730,9 +743,6 @@ function confirmarDelecao() {
     
     if (tipo === 'chapterPage') {
         excluirPaginaCaderno(id);
-    }
-    else if (tipo === 'subjectContentModule') {
-        window.KingModules?.confirmDelete?.(id);
     }
     else if (tipo === 'personalSpace' || tipo === 'personalItem' || tipo === 'personalNote') {
         window.KingPersonalDevelopment?.confirmDelete?.(tipo, id);
@@ -836,7 +846,7 @@ function confirmarDelecao() {
 function showToast(msg, isError = false) {
     const toast = document.getElementById('toastNotification'); 
     if(!toast) return;
-    toast.innerHTML = msg;
+    toast.textContent = String(msg ?? '');
     if(isError) toast.classList.add('toast-error'); else toast.classList.remove('toast-error');
     toast.classList.add('show'); 
     setTimeout(() => toast.classList.remove('show'), 3500);
@@ -1287,11 +1297,12 @@ function salvarIdentidadePerfil(event) {
     showToast('✓ Perfil atualizado e salvo automaticamente');
 }
 
-function alterarFotoPerfil(event) {
+async function alterarFotoPerfil(event) {
     const input = event.target;
     const arquivo = input.files?.[0];
     if (!arquivo) return;
-    if (!arquivo.type.startsWith('image/')) {
+    const extensoes = { 'image/png': /\.png$/i, 'image/jpeg': /\.(jpg|jpeg)$/i, 'image/webp': /\.webp$/i };
+    if (!extensoes[arquivo.type]?.test(arquivo.name) || arquivo.size < 1 || await tipoRealAnexo(arquivo).catch(() => '') !== arquivo.type) {
         showToast('Escolha um arquivo de imagem válido.', true);
         input.value = '';
         return;
@@ -1305,6 +1316,9 @@ function alterarFotoPerfil(event) {
     const enderecoTemporario = URL.createObjectURL(arquivo);
     const imagemOriginal = new Image();
     imagemOriginal.onload = () => {
+        if (!imagemOriginal.naturalWidth || !imagemOriginal.naturalHeight || imagemOriginal.naturalWidth > 10000 || imagemOriginal.naturalHeight > 10000) {
+            URL.revokeObjectURL(enderecoTemporario); input.value = ''; showToast('A imagem tem dimensões incompatíveis.', true); return;
+        }
         const lado = Math.min(imagemOriginal.naturalWidth, imagemOriginal.naturalHeight);
         const origemX = (imagemOriginal.naturalWidth - lado) / 2;
         const origemY = (imagemOriginal.naturalHeight - lado) / 2;
@@ -1328,11 +1342,12 @@ function alterarFotoPerfil(event) {
     imagemOriginal.src = enderecoTemporario;
 }
 
-function alterarBannerPerfil(event) {
+async function alterarBannerPerfil(event) {
     const input = event.target;
     const arquivo = input.files?.[0];
     if (!arquivo) return;
-    if (!arquivo.type.startsWith('image/') || arquivo.size > 15 * 1024 * 1024) {
+    const extensoes = { 'image/png': /\.png$/i, 'image/jpeg': /\.(jpg|jpeg)$/i, 'image/webp': /\.webp$/i };
+    if (!extensoes[arquivo.type]?.test(arquivo.name) || arquivo.size < 1 || await tipoRealAnexo(arquivo).catch(() => '') !== arquivo.type || arquivo.size > 15 * 1024 * 1024) {
         showToast(arquivo.size > 15 * 1024 * 1024 ? 'O banner deve ter no máximo 15 MB.' : 'Escolha uma imagem válida.', true);
         input.value = '';
         return;
@@ -1340,6 +1355,9 @@ function alterarBannerPerfil(event) {
     const enderecoTemporario = URL.createObjectURL(arquivo);
     const imagemOriginal = new Image();
     imagemOriginal.onload = () => {
+        if (!imagemOriginal.naturalWidth || !imagemOriginal.naturalHeight || imagemOriginal.naturalWidth > 10000 || imagemOriginal.naturalHeight > 10000) {
+            URL.revokeObjectURL(enderecoTemporario); input.value = ''; showToast('O banner tem dimensões incompatíveis.', true); return;
+        }
         const proporcao = 1280 / 420;
         let origemX = 0, origemY = 0, largura = imagemOriginal.naturalWidth, altura = imagemOriginal.naturalHeight;
         if (largura / altura > proporcao) {
@@ -1552,28 +1570,10 @@ function alternarModoPatente() {
 function updateDashboardStats() {
     const tempoSemana = appData.weeklyChart.reduce((total, segundos) => total + (segundos || 0), 0);
     if(document.getElementById('top-time')) document.getElementById('top-time').textContent = formatShortTime(tempoSemana);
-    
-    let totalAcertos = 0, totalErros = 0, totalQuestoes = 0;
-
-    appData.cycleItems.forEach(mat => {
-        if(mat.acertos === undefined) mat.acertos = 0;
-        if(mat.erros === undefined) mat.erros = 0;
-        totalAcertos += mat.acertos;
-        totalErros += mat.erros;
-        totalQuestoes += (mat.acertos + mat.erros);
-    });
-
-    appData.simuladosItems.forEach(sim => {
-        let sAcertos = sim.acertos || 0;
-        let sErros = sim.erros || 0;
-        totalAcertos += sAcertos;
-        totalErros += sErros;
-        totalQuestoes += (sim.total || (sAcertos + sErros > 0 ? sAcertos + sErros : 1));
-    });
-
-    if(document.getElementById('top-acertos')) document.getElementById('top-acertos').textContent = `${totalAcertos} Acertos`;
-    if(document.getElementById('top-erros')) document.getElementById('top-erros').textContent = `${totalErros} Erros`;
-    if(document.getElementById('top-perc')) document.getElementById('top-perc').textContent = totalQuestoes > 0 ? `${Math.round((totalAcertos/totalQuestoes)*100)}%` : '0%';
+    const questoesSemana = renderizarQuestoesSemanaHistorico();
+    if(document.getElementById('top-acertos')) document.getElementById('top-acertos').textContent = `${questoesSemana.acertos} Acertos`;
+    if(document.getElementById('top-erros')) document.getElementById('top-erros').textContent = `${questoesSemana.erros} Erros`;
+    if(document.getElementById('top-perc')) document.getElementById('top-perc').textContent = questoesSemana.acertos + questoesSemana.erros ? `${Math.round(questoesSemana.acertos / (questoesSemana.acertos + questoesSemana.erros) * 100)}%` : '—';
     const chart = document.getElementById('weeklyChart');
     if(chart) {
         const dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -1895,7 +1895,7 @@ function registrarSessao(segundos, detalhes = null) {
     const acertos = Math.max(0, Number(metricas?.acertos) || 0);
     const erros = Math.max(0, Number(metricas?.erros) || 0);
     const historico = criarItemHistoricoRegistro({ segundos, materia: nome, assunto, cor, tipo, comentario, atividade });
-    Object.assign(historico, { questoes, acertos, erros, sourceSessionId, subjectId: materia?.id || '' });
+    Object.assign(historico, { questoes, acertos, erros, brancos: Math.max(0, Number(detalhes?.simulado?.brancos) || 0), sourceSessionId, subjectId: materia?.id || '' });
     appData.historyItems.push(historico);
     if (materia && questoes) { materia.questoes = Number(materia.questoes || 0) + questoes; materia.acertos = Number(materia.acertos || 0) + acertos; materia.erros = Number(materia.erros || 0) + erros; }
     if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
@@ -2400,7 +2400,7 @@ function atualizarSeletorDeMaterias() {
                     </div>`;
     
     if(appData.cycleItems.length > 0) { 
-        htmlOpts += appData.cycleItems.map(i => `<div class="custom-option ${hid.value == i.id ? 'selected' : ''}" data-value="${i.id}"><span class="color-dot" style="background:${i.color};"></span>${i.subject}</div>`).join('');
+        htmlOpts += appData.cycleItems.map(i => `<div class="custom-option ${hid.value == i.id ? 'selected' : ''}" data-value="${escaparRevisaoHtml(i.id)}"><span class="color-dot" style="background:${corSegura(i.color)};"></span>${escaparRevisaoHtml(i.subject)}</div>`).join('');
     }
     
     opts.innerHTML = htmlOpts;
@@ -2417,7 +2417,7 @@ function atualizarSeletorDeMaterias() {
     
     if(hid.value) { 
         const sel = appData.cycleItems.find(i => i.id == hid.value); 
-        if(sel) trig.innerHTML = `<span class="color-dot" style="background:${sel.color};"></span>${sel.subject}`; 
+        if(sel) trig.innerHTML = `<span class="color-dot" style="background:${corSegura(sel.color)};"></span>${escaparRevisaoHtml(sel.subject)}`;
     } else {
         trig.innerHTML = `<span class="color-dot" style="background:#515154;"></span>Sem matéria`;
     }
@@ -2620,7 +2620,6 @@ function renderizarCiclo() {
     atualizarSeletorDeMaterias();
     const grid = document.getElementById('disciplinasGrid');
     if(!grid) return;
-    if (!document.getElementById('aba-modulos-content')?.hidden) window.KingModules?.render?.();
 
     const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
     const topicos = materias.flatMap(item => Array.isArray(item.topicos) ? item.topicos : []);
@@ -2649,8 +2648,11 @@ function renderizarCiclo() {
         let concluidos = i.topicos ? i.topicos.filter(t => obterNivelDominioTopico(t) === 3).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
+        const cor = corSegura(i.color);
+        const materiaId = Number(i.id) || 0;
+        const questoes = Math.max(0, Number(i.acertos) || 0) + Math.max(0, Number(i.erros) || 0);
         const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
-        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões, módulos anexados e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div><button type="button" class="subject-chapters-link" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${i.id})" ${totalTopicos ? '' : 'disabled'}>${totalTopicos ? 'Abrir assuntos e cadernos ↗' : 'Adicione um assunto para começar'}</button></div></article>`;
+        return `<article class="disc-card" style="--subject-color:${cor};border-left-color:${cor};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${materiaId})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${materiaId}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Flashcards ficam guardados para realocação.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${cor};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${questoes}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div><button type="button" class="subject-chapters-link" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${materiaId})" ${totalTopicos ? '' : 'disabled'}>${totalTopicos ? 'Abrir assuntos e cadernos ↗' : 'Adicione um assunto para começar'}</button></div></article>`;
     }).join('');
 }
 
@@ -3063,9 +3065,81 @@ function filtrarHistorico(alteracao = {}) {
     renderizarHistorico();
 }
 
+function inicioSemanaQuestoes(data = new Date()) {
+    const segunda = new Date(data);
+    segunda.setHours(12, 0, 0, 0);
+    segunda.setDate(segunda.getDate() - ((segunda.getDay() + 6) % 7));
+    return dataLocalISO(segunda);
+}
+
+function renderizarQuestoesSemanaHistorico() {
+    const inicio = inicioSemanaQuestoes();
+    const segunda = dataISOParaLocal(inicio);
+    const dias = Array.from({ length: 7 }, (_, indice) => {
+        const data = new Date(segunda);
+        data.setDate(data.getDate() + indice);
+        return { iso: dataLocalISO(data), data, questoes: 0, acertos: 0, erros: 0, brancos: 0 };
+    });
+    const porData = new Map(dias.map(dia => [dia.iso, dia]));
+    const adicionar = (data, total, acertos, erros, brancos = 0) => {
+        const dia = porData.get(data);
+        if (!dia) return;
+        const positivo = numero => Math.max(0, Math.floor(Number(numero) || 0));
+        const hits = positivo(acertos), misses = positivo(erros), blank = positivo(brancos);
+        dia.questoes += Math.max(positivo(total), hits + misses + blank);
+        dia.acertos += hits; dia.erros += misses; dia.brancos += blank;
+    };
+    (appData.historyItems || []).forEach(item => adicionar(dataHistoricoISO(item), item.questoes, item.acertos, item.erros, item.brancos));
+    // Simulados criados pela conclusão de uma sessão já constam no histórico.
+    (appData.simuladosItems || []).filter(item => item.format !== 'sessao').forEach(item => adicionar(item.date, item.total, item.acertos, item.erros, item.brancos));
+    const resumo = dias.reduce((total, dia) => ({
+        questoes: total.questoes + dia.questoes, acertos: total.acertos + dia.acertos,
+        erros: total.erros + dia.erros, brancos: total.brancos + dia.brancos
+    }), { questoes: 0, acertos: 0, erros: 0, brancos: 0 });
+    const ultima = dias.at(-1).data;
+    const periodo = `${segunda.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${ultima.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`.replaceAll('.', '');
+    document.getElementById('historyQuestionsRange').textContent = periodo;
+    document.getElementById('hist-week-questions').textContent = resumo.questoes;
+    document.getElementById('hist-week-hits').textContent = resumo.acertos;
+    document.getElementById('hist-week-errors').textContent = resumo.erros;
+    document.getElementById('hist-week-rate').textContent = resumo.acertos + resumo.erros ? `${Math.round(resumo.acertos / (resumo.acertos + resumo.erros) * 100)}%` : '—';
+    const maximo = Math.max(1, ...dias.map(dia => dia.questoes));
+    const grafico = document.getElementById('historyQuestionChart');
+    grafico.setAttribute('aria-label', `Questões de ${periodo}: ${resumo.questoes} feitas, ${resumo.acertos} acertos e ${resumo.erros} erros`);
+    grafico.innerHTML = dias.map(dia => {
+        const rotulo = dia.data.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '').toUpperCase();
+        const acertos = dia.questoes ? Math.min(100, dia.acertos / dia.questoes * 100) : 0;
+        const erros = dia.questoes ? Math.min(100, (dia.acertos + dia.erros) / dia.questoes * 100) : 0;
+        const altura = dia.questoes ? Math.max(8, Math.round(dia.questoes / maximo * 100)) : 4;
+        return `<div class="history-question-day" title="${rotulo}: ${dia.questoes} questões, ${dia.acertos} acertos, ${dia.erros} erros"><strong>${dia.questoes}</strong><div class="history-question-track"><span style="height:${altura}%;background:linear-gradient(to right,#34c759 0 ${acertos}%,#ff453a ${acertos}% ${erros}%,var(--border-strong) ${erros}% 100%)"></span></div><small>${rotulo}</small></div>`;
+    }).join('');
+    const semResultado = Math.max(0, resumo.questoes - resumo.acertos - resumo.erros - resumo.brancos);
+    document.getElementById('historyQuestionsNote').textContent = `Sessões e simulados avulsos, sem duplicidade.${resumo.brancos ? ` ${resumo.brancos} em branco.` : ''}${semResultado ? ` ${semResultado} sem resultado informado.` : ''} A taxa usa apenas acertos e erros informados.`;
+    return resumo;
+}
+
+function renderizarQuestoesVitaliciasHistorico() {
+    const resumo = { questoes: 0, acertos: 0, erros: 0, brancos: 0 };
+    const adicionar = item => {
+        const positivo = numero => Math.max(0, Math.floor(Number(numero) || 0));
+        const acertos = positivo(item.acertos), erros = positivo(item.erros), brancos = positivo(item.brancos);
+        resumo.questoes += Math.max(positivo(item.questoes ?? item.total), acertos + erros + brancos);
+        resumo.acertos += acertos; resumo.erros += erros; resumo.brancos += brancos;
+    };
+    (appData.historyItems || []).forEach(adicionar);
+    (appData.simuladosItems || []).filter(item => item.format !== 'sessao').forEach(adicionar);
+    document.getElementById('hist-life-questions').textContent = resumo.questoes;
+    document.getElementById('hist-life-hits').textContent = resumo.acertos;
+    document.getElementById('hist-life-errors').textContent = resumo.erros;
+    document.getElementById('hist-life-rate').textContent = resumo.acertos + resumo.erros ? `${Math.round(resumo.acertos / (resumo.acertos + resumo.erros) * 100)}%` : '—';
+    const semResultado = Math.max(0, resumo.questoes - resumo.acertos - resumo.erros - resumo.brancos);
+    document.getElementById('historyLifetimeNote').textContent = `Sessões e simulados avulsos, sem duplicidade.${resumo.brancos ? ` ${resumo.brancos} em branco.` : ''}${semResultado ? ` ${semResultado} sem resultado informado.` : ''} A taxa usa apenas acertos e erros informados.`;
+}
+
 function renderizarHistorico() {
     toggleBotaoStopHistorico();
     renderizarRaioX();
+    renderizarQuestoesVitaliciasHistorico();
 
     const cont = document.getElementById('historyListContainer');
     if(!cont) return;
@@ -3329,9 +3403,9 @@ function renderizarAgenda() {
                 <span class="month">${['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'][d.getMonth()]}</span>
             </div>
             <div class="agenda-info">
-                <div class="agenda-title">${item.title}</div>
-                <div class="agenda-subject"><span class="agenda-badge">${item.type}</span> ${item.subject}</div>
-                ${item.description ? `<div class="agenda-desc-text" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; font-style: italic;">${item.description}</div>` : ''}
+                <div class="agenda-title">${escaparRevisaoHtml(item.title)}</div>
+                <div class="agenda-subject"><span class="agenda-badge">${escaparRevisaoHtml(item.type)}</span> ${escaparRevisaoHtml(item.subject)}</div>
+                ${item.description ? `<div class="agenda-desc-text" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; line-height: 1.3; font-style: italic;">${escaparRevisaoHtml(item.description)}</div>` : ''}
             </div>
             ${!item.completed ? `<div class="agenda-countdown">${txtDias}</div>` : ''}
             <div class="agenda-actions">
@@ -3345,7 +3419,7 @@ function renderizarAgenda() {
     if(highlight) {
         if(proximaPendente) {
             highlight.style.borderLeftColor = proximaPendente.corUrgencia;
-            highlight.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><div><h3 style="margin:0; font-size:0.8rem; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Próximo Desafio</h3><div style="font-size:1.5rem; font-weight:800; color:var(--text-main); margin:5px 0;">${proximaPendente.title}</div><div style="font-size:0.9rem; color:${proximaPendente.corUrgencia}; font-weight:700;">🚨 ${proximaPendente.txtDias} (${proximaPendente.subject})</div></div><div class="agenda-date-box" style="--urgency-color: ${proximaPendente.corUrgencia}; transform: scale(1.2); margin-right:10px;"><span class="day">${proximaPendente.diaStr}</span><span class="month">${proximaPendente.mesStr}</span></div></div>`;
+            highlight.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center;"><div><h3 style="margin:0; font-size:0.8rem; text-transform:uppercase; color:var(--text-muted); font-weight:700;">Próximo Desafio</h3><div style="font-size:1.5rem; font-weight:800; color:var(--text-main); margin:5px 0;">${escaparRevisaoHtml(proximaPendente.title)}</div><div style="font-size:0.9rem; color:${proximaPendente.corUrgencia}; font-weight:700;">🚨 ${proximaPendente.txtDias} (${escaparRevisaoHtml(proximaPendente.subject)})</div></div><div class="agenda-date-box" style="--urgency-color: ${proximaPendente.corUrgencia}; transform: scale(1.2); margin-right:10px;"><span class="day">${proximaPendente.diaStr}</span><span class="month">${proximaPendente.mesStr}</span></div></div>`;
         } else {
             highlight.style.borderLeftColor = 'var(--border-color)';
             highlight.innerHTML = '<h3 style="margin:0; font-size:1.2rem; color:var(--text-main);">Tudo em dia!</h3><p style="color:var(--text-muted); margin-top:5px;">Nenhuma avaliação pendente registada.</p>';
@@ -3377,9 +3451,9 @@ function verificarAlertasProximos() {
             <div class="urgency-banner">
                 <div class="urgency-text">
                     <span class="pulse-dot"></span>
-                    <span><strong>Urgente • </strong> A avaliação de <b>${prox.subject}</b> (${prox.title}) é ${textoDia}.</span>
+                    <span><strong>Urgente • </strong> A avaliação de <b>${escaparRevisaoHtml(prox.subject)}</b> (${escaparRevisaoHtml(prox.title)}) é ${textoDia}.</span>
                 </div>
-                <button class="cycle-btn" style="padding: 6px 14px; font-size: 0.8rem; border-color: rgba(255, 59, 48, 0.3); color: #ff3b30; background: transparent;" onclick="showSection('escola-provas')">Aceder ao Radar</button>
+                <button class="cycle-btn" style="padding: 6px 14px; font-size: 0.8rem; border-color: rgba(255, 59, 48, 0.3); color: #ff3b30; background: transparent;" onclick="showSection('agendamento')">Abrir agenda</button>
             </div>
         `;
         banner.style.display = 'block';
@@ -3592,6 +3666,7 @@ function normalizarItemRevisao(item = {}) {
         id,
         materia: String(materiaCadastrada?.subject || materiaRecebida || 'Sem matéria').trim().slice(0, 60),
         assunto: String(item.assunto || '').trim().slice(0, 120),
+        prioridade: ['baixa', 'media', 'alta'].includes(item.prioridade) ? item.prioridade : 'media',
         motivos,
         observacao: String(item.observacao || '').trim().slice(0, 500),
         questao: String(item.questao || '').trim().slice(0, 1000),
@@ -3780,6 +3855,8 @@ function abrirModalRevisao(id = null) {
     atualizarAssuntosRevisao();
     assunto.value = item?.assunto || contexto.assunto || '';
     document.getElementById('revisaoDataAlvo').value = item?.dataAlvo || dataRevisaoComDias(1);
+    const prioridade = document.querySelector(`#revisaoModal input[name="revisaoPrioridade"][value="${item?.prioridade || 'media'}"]`);
+    if (prioridade) prioridade.checked = true;
     document.getElementById('revisaoObservacao').value = item?.observacao || '';
     document.getElementById('revisaoQuestao').value = item?.questao || '';
     document.getElementById('revisaoFonte').value = item?.fonte || '';
@@ -3850,6 +3927,7 @@ async function salvarRevisao(e) {
         dataEstudo: document.getElementById('revisaoDataEstudo').value,
         horaEstudo: document.getElementById('revisaoHoraEstudo').value,
         dataAlvo: document.getElementById('revisaoDataAlvo').value,
+        prioridade: document.querySelector('#revisaoModal input[name="revisaoPrioridade"]:checked')?.value || 'media',
         origem: document.getElementById('revisaoOrigem').value || 'manual',
         scheduleBlockId: document.getElementById('revisaoBlocoId').value,
         scheduleWeekKey: document.getElementById('revisaoSemanaChave').value,
@@ -4070,7 +4148,8 @@ function renderDashboardRevisoes() {
         .filter(item => ['pendente', 'fraco'].includes(item.status))
         .sort((a, b) => {
             const prioridade = item => item.status === 'fraco' ? 0 : (item.dataAlvo && new Date(`${item.dataAlvo}T12:00:00`) < hoje ? 1 : 2);
-            return prioridade(a) - prioridade(b) || (a.dataAlvo || '9999-12-31').localeCompare(b.dataAlvo || '9999-12-31') || (b.atualizadoEm || b.id) - (a.atualizadoEm || a.id);
+            const rank = { alta: 0, media: 1, baixa: 2 };
+            return prioridade(a) - prioridade(b) || (a.dataAlvo || '9999-12-31').localeCompare(b.dataAlvo || '9999-12-31') || (rank[a.prioridade] ?? 1) - (rank[b.prioridade] ?? 1) || (b.atualizadoEm || b.id) - (a.atualizadoEm || a.id);
         })
         .slice(0, 6);
     if (!pendentes.length) {
@@ -4230,10 +4309,10 @@ function renderizarRevisoes() {
         const prioridade = item => item.status === 'fraco' ? 0 : (revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo < hoje ? 1 : (revisaoEstaAtiva(item) ? 2 : 3));
         const diferenca = prioridade(a) - prioridade(b);
         if (diferenca) return diferenca;
-        if (a.status === 'fraco' && b.status === 'fraco') return (b.atualizadoEm || 0) - (a.atualizadoEm || 0);
         const dataA = a.dataAlvo || '9999-12-31';
         const dataB = b.dataAlvo || '9999-12-31';
-        return dataA.localeCompare(dataB) || (b.criadoEm || b.id) - (a.criadoEm || a.id);
+        const rank = { alta: 0, media: 1, baixa: 2 };
+        return dataA.localeCompare(dataB) || rank[a.prioridade] - rank[b.prioridade] || (b.criadoEm || b.id) - (a.criadoEm || a.id);
     });
 
     const visiveis = ordenados.filter(item => {
@@ -4265,6 +4344,7 @@ function renderizarRevisoes() {
         const aindaFraco = item.status === 'fraco';
         const statusTexto = revisado ? 'Concluída' : (aindaFraco ? 'Ainda fraca' : (estaAtrasada ? 'Atrasada' : (paraHoje ? 'Para hoje' : (item.dataAlvo ? 'Próxima' : 'Pendente'))));
         const statusClasse = revisado ? 'done' : (aindaFraco ? 'weak' : (estaAtrasada ? 'overdue' : (paraHoje ? 'today' : '')));
+        const prioridadeTexto = { alta: 'Alta', media: 'Média', baixa: 'Baixa' }[item.prioridade] || 'Média';
         const origemTexto = item.scheduleBlockId ? 'Bloco do cronograma' : (item.origem?.includes('simulado') ? 'Simulado' : (item.origem?.includes('sessao') ? 'Sessão de estudo' : 'Captura rápida'));
         const materia = appData.cycleItems.find(registro => normalizarRevisaoTexto(registro.subject) === normalizarRevisaoTexto(item.materia));
         const cor = revisado ? '#34c759' : (aindaFraco || paraHoje ? '#ff9500' : (estaAtrasada ? '#ff3b30' : corSegura(materia?.color)));
@@ -4277,7 +4357,7 @@ function renderizarRevisoes() {
         const acaoPrincipal = revisado
             ? `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
             : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button>`;
-        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></div></details></div></article>`;
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></div></details></div></article>`;
     }).join('');
     carregarMiniaturasRevisao();
     renderDashboardRevisoes();
@@ -4739,7 +4819,7 @@ function renderizarCadernoErros() {
                 <div class="error-card-top"><div><span class="error-card-subject">${escaparRevisaoHtml(item.materia)}</span><i>•</i><span>${escaparRevisaoHtml(item.assunto)}</span></div><span class="error-card-date ${dataClasse}">${dataTexto}</span></div>
                 <h3>${escaparRevisaoHtml(item.questao)}</h3>${imagensQuestao}
                 <div class="error-card-diagnosis"><span><small>PADRÃO DO ERRO</small>${escaparRevisaoHtml(tipo.nome)}</span><span><small>REGRA ANTI-ERRO</small>${escaparRevisaoHtml(item.regra)}${imagensRegra}</span></div>
-                <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
+                <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button><button type="button" class="cycle-btn" onclick="KingFlashcards.fromError(${item.id})">✦ Criar flashcard</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
             </div>
         </article>`;
     }).join('');
@@ -5189,28 +5269,58 @@ function renderizarRedacoes() {
 // ==========================================
 // SISTEMA DE UPLOAD DE ARQUIVOS (BASE64)
 // ==========================================
-function handleFileSelect(e, labelId, hiddenDataId) {
+async function tipoRealAnexo(file) {
+    const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    const prefixo = String.fromCharCode(...bytes);
+    if (prefixo.startsWith('%PDF-')) return 'application/pdf';
+    if (bytes[0] === 0x89 && prefixo.slice(1, 4) === 'PNG' && bytes[4] === 13 && bytes[5] === 10) return 'image/png';
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+    if (prefixo.startsWith('RIFF') && prefixo.slice(8, 12) === 'WEBP') return 'image/webp';
+    return '';
+}
+
+async function handleFileSelect(e, labelId, hiddenDataId) {
     const file = e.target.files[0];
     if(!file) return;
-    
-    if(file.size > 2 * 1024 * 1024) {
-        showToast('⚠️ Arquivo muito grande! Por favor, escolha um arquivo menor que 2MB.', true);
+    const label = document.getElementById(labelId);
+    const hidden = document.getElementById(hiddenDataId);
+    if (!label || !hidden) return;
+    hidden.value = '';
+    if(file.size > 2 * 1024 * 1024 || file.size === 0) {
+        showToast('O anexo precisa ter entre 1 byte e 2 MB.', true);
         e.target.value = '';
         return;
     }
-
-    document.getElementById(labelId).textContent = file.name;
+    const tipos = { 'application/pdf': /\.pdf$/i, 'image/png': /\.png$/i, 'image/jpeg': /\.(jpg|jpeg)$/i, 'image/webp': /\.webp$/i };
+    let tipoReal = '';
+    try { tipoReal = await tipoRealAnexo(file); }
+    catch { showToast('Não foi possível verificar o anexo.', true); }
+    if (!tipoReal || file.type !== tipoReal || !tipos[tipoReal].test(file.name)) {
+        showToast('Use um PDF, PNG, JPG ou WebP válido. O formato do arquivo não corresponde ao nome ou conteúdo.', true);
+        e.target.value = '';
+        return;
+    }
+    label.textContent = 'Lendo anexo…';
     const reader = new FileReader();
     reader.onload = function(event) {
-        document.getElementById(hiddenDataId).value = event.target.result;
+        if (!e.target.files?.[0] || e.target.files[0] !== file) return;
+        const data = String(event.target?.result || '');
+        if (!data.startsWith(`data:${tipoReal};base64,`)) {
+            label.textContent = 'Anexar arquivo';
+            showToast('Não foi possível preparar o anexo.', true);
+            return;
+        }
+        hidden.value = data;
+        label.textContent = file.name.slice(0, 100);
     };
+    reader.onerror = () => { label.textContent = 'Anexar arquivo'; e.target.value = ''; showToast('Não foi possível ler o anexo.', true); };
     reader.readAsDataURL(file);
 }
 
 function alternarAbasHub(aba) {
-    if (!['ciclo', 'dominio', 'modulos'].includes(aba)) return;
+    if (!['ciclo', 'dominio'].includes(aba)) return;
     if (aba !== 'dominio') salvarCadernoPendente();
-    for (const nome of ['ciclo', 'dominio', 'modulos']) {
+    for (const nome of ['ciclo', 'dominio']) {
         const painel = document.getElementById(`aba-${nome}-content`);
         const tab = document.getElementById(`tab-${nome}`);
         if (!painel || !tab) continue;
@@ -5220,7 +5330,6 @@ function alternarAbasHub(aba) {
         tab.tabIndex = ativa ? 0 : -1;
     }
     if (aba === 'dominio') renderizarMapaDominio();
-    if (aba === 'modulos') window.KingModules?.render?.();
 }
 
 function navegarAbasHub(event) {
@@ -5469,8 +5578,12 @@ function renderizarListaPaginasCaderno() {
     const paginas = topico?.caderno?.paginas || [];
     const contador = document.getElementById('chapterPageCount');
     if (contador) contador.textContent = `${paginas.length} ${paginas.length === 1 ? 'página' : 'páginas'}`;
-    lista.innerHTML = paginas.length ? paginas.map(pagina => `<button type="button" class="chapter-page-button ${pagina.id === cadernoCapituloAtual.paginaId ? 'active' : ''}" onclick="selecionarPaginaCaderno('${pagina.id}')" aria-current="${pagina.id === cadernoCapituloAtual.paginaId ? 'page' : 'false'}"><span>${escaparRevisaoHtml(pagina.titulo || 'Sem título')}</span><small>↗</small></button>`).join('') : '<p class="chapter-page-empty">Nenhuma página ainda. Crie a primeira para começar.</p>';
+    lista.innerHTML = paginas.length ? paginas.map(pagina => `<button type="button" class="chapter-page-button ${pagina.id === cadernoCapituloAtual.paginaId ? 'active' : ''}" data-chapter-page="${escaparRevisaoHtml(pagina.id)}" aria-current="${pagina.id === cadernoCapituloAtual.paginaId ? 'page' : 'false'}"><span>${escaparRevisaoHtml(pagina.titulo || 'Sem título')}</span><small>↗</small></button>`).join('') : '<p class="chapter-page-empty">Nenhuma página ainda. Crie a primeira para começar.</p>';
 }
+document.getElementById('chapterPageList')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-chapter-page]');
+    if (button) selecionarPaginaCaderno(button.dataset.chapterPage);
+});
 
 function renderizarCadernoCapitulo() {
     const { topico } = localizarCadernoCapitulo();
@@ -5672,15 +5785,13 @@ document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     document.querySelectorAll('.modal-overlay.active').forEach(modal => {
         if (modal.dataset.keepOpen === 'true') adiarRegistroSessao();
-        else if (modal.id === 'moduleFileViewer') window.KingModules?.closeFile?.();
         else modal.classList.remove('active');
     });
     if (document.getElementById('settingsPanel')?.classList.contains('active')) toggleSettings();
 });
 document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('mousedown', event => {
     if (event.target === overlay && overlay.dataset.keepOpen !== 'true') {
-        if (overlay.id === 'moduleFileViewer') window.KingModules?.closeFile?.();
-        else overlay.classList.remove('active');
+        overlay.classList.remove('active');
     }
 }));
 

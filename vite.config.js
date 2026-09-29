@@ -19,7 +19,7 @@ function staticSiteWorker() {
       await writeFile('dist/recuperar.html', passwordResetPage, 'utf8');
       files['/recuperar.html'] = { body: passwordResetPage, type: 'text/html; charset=utf-8' };
 
-      for (const name of ['script.js', 'schedule-core.js', 'schedule.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
+      for (const name of ['script.js', 'schedule-core.js', 'schedule.js', 'flashcards-core.js', 'flashcards.js', 'sidebar-icons.js', 'personal-development.js', 'subject-lab.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };
@@ -63,8 +63,11 @@ export default {
 
     const headers = {
       'Content-Type': file.type,
-      'Cache-Control': path === '/index.html' ? 'private, no-cache' : 'public, max-age=31536000, immutable',
+      'Cache-Control': file.type.startsWith('text/html') ? 'private, no-cache' : 'public, max-age=31536000, immutable',
       'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'X-Frame-Options': 'DENY',
+      'Content-Security-Policy': "frame-ancestors 'none'; base-uri 'self'; object-src 'none'",
     };
     const body = file.binary ? Uint8Array.from(atob(file.body), c => c.charCodeAt(0)) : file.body;
     return new Response(request.method === 'HEAD' ? null : body, { status: 200, headers });

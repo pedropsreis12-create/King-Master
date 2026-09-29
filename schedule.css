@@ -188,6 +188,25 @@
 .schedule-day-options small { color: var(--text-muted); font-size: .47rem; }
 .schedule-day-options input:checked + span { border-color: rgba(var(--accent-rgb), .48); color: var(--accent-color); background: var(--schedule-soft); box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), .12); }
 .schedule-day-options input:checked + span b { color: var(--accent-color); }
+.schedule-availability-editor { margin-top: 16px; padding: 15px; border: 1px solid var(--border-color); border-radius: 15px; background: var(--card-bg); }
+.schedule-availability-heading,.schedule-availability-day-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.schedule-availability-heading { margin-bottom: 12px; }
+.schedule-availability-heading strong,.schedule-availability-heading small { display: block; }
+.schedule-availability-heading strong { color: var(--text-main); font-size: .72rem; }
+.schedule-availability-heading small,.schedule-availability-note { color: var(--text-muted); font-size: .55rem; line-height: 1.45; }
+.schedule-availability-heading .cycle-btn,.schedule-availability-day-title .cycle-btn { flex: 0 0 auto; }
+.schedule-availability-days { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+.schedule-availability-day { min-width: 0; padding: 11px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--hover-bg); }
+.schedule-availability-day-title { margin-bottom: 7px; }
+.schedule-availability-day-title strong { color: var(--text-main); font-size: .6rem; }
+.schedule-availability-day-title .cycle-btn { min-height: 28px; padding: 5px 8px; font-size: .52rem; }
+.schedule-availability-slots { display: grid; gap: 6px; }
+.schedule-availability-slot { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) 30px; align-items: end; gap: 6px; }
+.schedule-availability-slot label { min-width: 0; color: var(--text-muted); font-size: .48rem; font-weight: 800; }
+.schedule-availability-slot label span { display: block; margin-bottom: 3px; }
+.schedule-availability-slot input { width: 100%; min-width: 0; min-height: 35px; padding: 5px; font-size: .6rem; }
+.schedule-availability-slot > button { width: 30px; height: 35px; padding: 0; color: var(--text-main); }
+.schedule-availability-note { margin: 10px 0 0; }
 .schedule-subject-plans { display: grid; gap: 7px; }
 .schedule-subject-plan { padding: 10px; display: grid; grid-template-columns: 34px minmax(120px,1fr) 110px 110px 128px; align-items: center; gap: 9px; border: 1px solid var(--border-color); border-left: 3px solid var(--subject-color); border-radius: 14px; background: var(--card-bg); }
 .schedule-plan-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; color: var(--subject-color); background: color-mix(in srgb, var(--subject-color) 11%, transparent); font-weight: 900; }
@@ -271,6 +290,8 @@
     .schedule-week-board { padding: 17px; }
 }
 @media (max-width: 620px) {
+    .schedule-availability-days { grid-template-columns: 1fr; }
+    .schedule-availability-heading { align-items: stretch; flex-direction: column; }
     .schedule-overview-grid { grid-template-columns: 1fr; }
     .schedule-progress-card { grid-column: auto; grid-template-columns: 86px 1fr; gap: 14px; }
     .schedule-progress-ring { width: 84px; height: 84px; }

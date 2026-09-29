@@ -13,7 +13,8 @@ const ROTAS_IA = {
     painel: 'dashboard', inicio: 'dashboard', cronometro: 'dashboard',
     materias: 'planejamento', materia: 'planejamento', hub: 'planejamento',
     agenda: 'agendamento', agendamento: 'agendamento', calendario: 'agendamento',
-    revisoes: 'revisoes', revisao: 'revisoes', simulados: 'simulados', simulado: 'simulados',
+    revisoes: 'revisoes', revisao: 'revisoes', flashcards: 'flashcards', cartoes: 'flashcards',
+    simulados: 'simulados', simulado: 'simulados',
     redacoes: 'redacao', redacao: 'redacao', historico: 'historico', perfil: 'perfil',
     desenvolvimento: 'desenvolvimento', disciplina: 'desenvolvimento', habitos: 'desenvolvimento'
 };

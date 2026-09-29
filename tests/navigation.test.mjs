@@ -47,7 +47,7 @@ test('discard confirmation stays above the session form that opened it', () => {
 
 test('sidebar keeps the approved coherent vector icon family', () => {
   assert.match(html, /sidebar-icons\.css\?v=20260922-personal-v1/);
-  assert.match(html, /sidebar-icons\.js\?v=20260922-notes-icon-v1/);
+  assert.match(html, /sidebar-icons\.js\?v=20260929-flash-security-v2/);
   for (const section of ['dashboard', 'agendamento', 'cronograma', 'planejamento', 'revisoes', 'caderno-erros', 'simulados', 'redacao', 'historico', 'desenvolvimento', 'perfil', 'notes']) {
     assert.match(sidebarIcons, new RegExp(`(?:'${section}'|${section}):`));
   }
@@ -81,72 +81,8 @@ test('free color controls share a visible, accessible picker treatment', async (
   assert.match(script, /document\.querySelectorAll\('\.theme-circle'\)[\s\S]*?setAttribute\('aria-pressed'/);
 });
 
-test('modules offer an upload screen with subject selection and in-site reading', async () => {
-  const modules = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
-  const moduleStyles = await readFile(new URL('../subject-modules.css', import.meta.url), 'utf8');
-  assert.match(html, /id="tab-modulos" role="tab"[^>]+aria-controls="aba-modulos-content"/);
-  assert.match(html, /id="aba-modulos-content"[^>]+role="tabpanel"/);
+test('modules are removed from the interface without erasing saved attachment metadata', () => {
+  assert.doesNotMatch(html, /id="tab-modulos"|id="aba-modulos-content"|id="moduleUploadModal"|subject-modules\.js/);
+  assert.doesNotMatch(script, /KingModules|alternarAbasHub\('modulos'\)/);
   assert.match(script, /subjectContentModules: \{\}/);
-  assert.match(script, /if \(aba === 'modulos'\) window\.KingModules\?\.render/);
-  assert.match(html, /id="moduleUploadModal"/);
-  assert.match(html, /id="moduleUploadSubject"/);
-  assert.match(html, /id="moduleFileInput"/);
-  assert.match(modules, /function openUpload\(subjectId = ''\)/);
-  assert.match(modules, /function saveUpload\(event\)/);
-  assert.match(modules, /libraries\(\)\[String\(subject\.id\)\] = \[\.\.\.previous/);
-  assert.match(modules, /abrirModalDeletar\('subjectContentModule'/);
-  assert.match(modules, /window\.kingCloud\.getModuleFile/);
-  assert.doesNotMatch(modules, /subject\.moduleId =/);
-  assert.match(moduleStyles, /@media \(max-width: 780px\)/);
-});
-
-test('module screen groups uploaded files under their respective subjects', async () => {
-  const source = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
-  const elements = new Map(['modulesGrid', 'modulesSummary', 'moduleLegacy', 'moduleUploadForm', 'moduleUploadSubject', 'moduleUploadTitle', 'moduleUploadModal', 'moduleUploadModalStatus', 'moduleFileInput', 'moduleUploadSubmit', 'moduleUploadStatus'].map(id => [id, { innerHTML: '', hidden: false, value: '', addEventListener() {}, reset() {}, focus() {}, classList: { add() {}, toggle() {} } }]));
-  const context = {
-    appData: {
-      cycleItems: [{ id: 1, subject: 'Física', color: '#3399ff' }, { id: 2, subject: 'História', color: '#ee9900' }],
-      subjectContentModules: {
-        1: [{ id: 'fisica-1', name: 'Cinemática.pdf', title: 'Cinemática', type: 'application/pdf', size: 1000 }],
-        2: [{ id: 'historia-1', name: 'Brasil.pdf', title: 'Brasil Colônia', type: 'application/pdf', size: 1000 }]
-      }, subjectModules: []
-    },
-    document: { getElementById: id => elements.get(id) },
-    window: { kingCloud: { uploadModuleFile: async (subjectId, fileId, file, type) => ({ id: fileId, name: file.name, size: file.size, type, uploadedAt: Date.now(), subjectId }) } },
-    saveAppData() {}, fecharModal() {},
-    crypto: { randomUUID: () => 'test-id' },
-    Date, String, Number, Array
-  };
-  runInNewContext(source, context);
-  context.window.KingModules.render();
-  assert.match(elements.get('modulesGrid').innerHTML, /Cinemática/);
-  assert.match(elements.get('modulesGrid').innerHTML, /Brasil Colônia/);
-  assert.match(elements.get('modulesGrid').innerHTML, /Física/);
-  assert.match(elements.get('modulesGrid').innerHTML, /História/);
-  context.window.KingModules.openUpload();
-  assert.match(elements.get('moduleUploadSubject').innerHTML, /<option value="1">Física<\/option>/);
-  assert.match(elements.get('moduleUploadSubject').innerHTML, /<option value="2">História<\/option>/);
-  elements.get('moduleUploadSubject').value = '2';
-  elements.get('moduleUploadTitle').value = 'História geral';
-  elements.get('moduleFileInput').files = [{ name: 'apostila.pdf', type: 'application/pdf', size: 1200 }];
-  await context.window.KingModules.saveUpload({ preventDefault() {} });
-  assert.equal(context.appData.subjectContentModules[2].at(-1).title, 'História geral');
-  assert.equal(context.appData.subjectContentModules[1].length, 1);
-  assert.match(elements.get('modulesGrid').innerHTML, /História geral/);
-});
-
-test('module attachments stay in private Firestore chunks without a paid Storage dependency', async () => {
-  const modules = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
-  const cloud = await readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8');
-  const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
-  assert.match(html, /id="moduleFileInput"/);
-  assert.match(html, /id="moduleFileViewer"/);
-  assert.match(modules, /uploadModuleFile\(String\(subject\.id\), fileId, file, type\)/);
-  assert.match(modules, /libraries\(\)\[String\(subject\.id\)\] = \[\.\.\.previous/);
-  assert.match(cloud, /'moduleFiles', fileId, 'chunks'/);
-  assert.match(cloud, /MODULE_FILE_MAX_BYTES = 6 \* 1024 \* 1024/);
-  assert.match(cloud, /firestoreSdk\.writeBatch\(db\)/);
-  assert.doesNotMatch(cloud, /firebase-storage\.js/);
-  assert.match(rules, /match \/moduleFiles\/\{fileId\}\/chunks\/\{chunkId\}/);
-  assert.match(rules, /request\.resource\.data\.base64\.size\(\) <= 350000/);
 });

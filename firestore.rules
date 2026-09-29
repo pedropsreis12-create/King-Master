@@ -29,22 +29,8 @@ service cloud.firestore {
 
       match /moduleFiles/{fileId}/chunks/{chunkId} {
         allow read, delete: if request.auth != null && request.auth.uid == userId;
-        allow create, update: if request.auth != null
-          && request.auth.uid == userId
-          && request.resource.data.ownerUid == userId
-          && request.resource.data.fileId == fileId
-          && request.resource.data.index is int
-          && request.resource.data.index >= 0
-          && request.resource.data.index < 30
-          && request.resource.data.count is int
-          && request.resource.data.count > 0
-          && request.resource.data.count <= 30
-          && request.resource.data.size is int
-          && request.resource.data.size > 0
-          && request.resource.data.size <= 6 * 1024 * 1024
-          && request.resource.data.contentType.matches('^(application/pdf|image/(png|jpeg|webp)|text/plain)$')
-          && request.resource.data.base64 is string
-          && request.resource.data.base64.size() <= 350000;
+        // Módulos foram removidos. Preservamos leitura/exclusão de arquivos antigos.
+        allow create, update: if false;
       }
     }
   }

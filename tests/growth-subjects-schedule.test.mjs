@@ -35,7 +35,8 @@ test('schedule compares planned workload with real weekly capacity', () => {
   assert.match(html, /id="scheduleLoadGuide"/);
   assert.match(html, /id="scheduleTargetHours"/);
   assert.match(core, /dailyCapacityMinutes/);
-  assert.match(schedule, /targetMinutes = settings\(\)\.studyDays\.length \* settings\(\)\.dailyCapacityMinutes/);
+  assert.match(schedule, /targetMinutes = Core\.availableMinutes\(settings\(\), agendaBusyByDay\(\)\)/);
+  assert.match(core, /availability/);
   assert.match(schedule, /Sua semana excede a disponibilidade/);
 });
 

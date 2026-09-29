@@ -64,6 +64,49 @@ test('um horário escolhido manualmente permanece fixo sem quebrar a sequência'
     assert.deepEqual(blocks.map(block => block.start), ['14:00', '17:30', '18:20']);
 });
 
+test('organizador usa múltiplos horários livres e não ultrapassa suas janelas', () => {
+    const plan = { ...settings, studyDays: [1, 2], closingMinutes: 0, availability: {
+        1: [{ start: '09:00', end: '10:00' }, { start: '15:00', end: '19:00' }],
+        2: [{ start: '14:00', end: '19:00' }]
+    } };
+    const result = Core.organize(subjects, plan, '2026-09-14');
+    assert.equal(result.blocks.length, 9);
+    for (const block of result.blocks) {
+        const start = Core.toMinutes(block.start);
+        assert.ok(plan.availability[block.day].some(range => start >= Core.toMinutes(range.start) && start + block.duration <= Core.toMinutes(range.end)));
+    }
+    for (const day of plan.studyDays) {
+        const blocks = result.blocks.filter(block => block.day === day).sort((a, b) => Core.toMinutes(a.start) - Core.toMinutes(b.start));
+        for (let index = 1; index < blocks.length; index++) assert.ok(Core.toMinutes(blocks[index].start) >= Core.toMinutes(blocks[index - 1].start) + blocks[index - 1].duration);
+    }
+});
+
+test('compromissos da agenda e blocos concluídos ocupam horários sem serem apagados', () => {
+    const plan = { ...settings, studyDays: [1], closingMinutes: 0, availability: { 1: [{ start: '14:00', end: '18:00' }] } };
+    const done = { id: 99, subjectId: 1, day: 1, start: '14:00', duration: 50, status: 'completed' };
+    const result = Core.organize(subjects, plan, '2026-09-14', { reservedBlocks: [done], busyByDay: { 1: [{ start: '15:00', end: '16:00' }] } });
+    assert.equal(result.blocks.filter(block => block.subjectId === 1).length + 1 + result.unscheduled.filter(item => item.subjectId === 1).reduce((sum, item) => sum + item.blocks, 0), 4);
+    assert.ok(result.blocks.every(block => Core.toMinutes(block.start) >= 16 * 60 && Core.toMinutes(block.start) + block.duration <= 18 * 60));
+    assert.ok(result.unscheduled.length > 0);
+    assert.equal(Core.availableMinutes(plan, { 1: [{ start: '15:00', end: '16:00' }] }), 180);
+});
+
+test('carga inviável fica explicitamente não agendada', () => {
+    const plan = { ...settings, studyDays: [1], availability: { 1: [{ start: '14:00', end: '15:00' }] } };
+    const result = Core.organize(subjects, plan, '2026-09-14');
+    assert.ok(result.blocks.every(block => Core.toMinutes(block.start) + block.duration <= 14 * 60 + 55));
+    assert.equal(result.blocks.length + result.unscheduled.reduce((sum, item) => sum + item.blocks, 0), 9);
+});
+
+test('reorganização no meio da semana não ocupa horários já passados', () => {
+    const plan = { ...settings, studyDays: [1, 2], availability: {
+        1: [{ start: '14:00', end: '18:00' }], 2: [{ start: '14:00', end: '18:00' }]
+    } };
+    const result = Core.organize(subjects, plan, '2026-09-14', { earliestByDay: { 1: '23:59', 2: '16:00' } });
+    assert.ok(result.blocks.every(block => block.day === 2 && Core.toMinutes(block.start) >= 16 * 60));
+    assert.equal(result.blocks.length + result.unscheduled.reduce((sum, item) => sum + item.blocks, 0), 9);
+});
+
 test('interface liga cronograma, configuração, arrastar e integração ao registro existente', () => {
     const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const ui = fs.readFileSync(new URL('../schedule.js', import.meta.url), 'utf8');

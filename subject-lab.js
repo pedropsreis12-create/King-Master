@@ -1,7 +1,7 @@
 /* Laboratório de matérias: leitura de edital com conferência humana antes de salvar. */
 (() => {
     const byId = id => document.getElementById(id);
-    const safe = value => typeof escaparRevisaoHtml === 'function' ? escaparRevisaoHtml(String(value ?? '')) : String(value ?? '');
+    const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const normalized = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9]+/g, ' ').trim();
     const state = { file: null, results: [] };
 
@@ -17,12 +17,16 @@
         byId('syllabusFileSummary').hidden = true; byId('syllabusResults').hidden = true; byId('syllabusActions').hidden = true;
         byId('syllabusAnalyzeButton').disabled = true; byId('syllabusStatus').textContent = '';
     }
-    function selectFile(event) {
+    async function selectFile(event) {
         const file = event.target.files?.[0];
         if (!file) return reset();
-        if (file.size > 7 * 1024 * 1024) { event.target.value = ''; return showToast('O arquivo precisa ter no máximo 7 MB.', true); }
-        const accepted = /^(application\/pdf|text\/plain|text\/markdown|image\/(png|jpeg|webp))$/.test(file.type) || /\.(md|txt)$/i.test(file.name);
-        if (!accepted) { event.target.value = ''; return showToast('Use PDF, TXT, Markdown, PNG, JPG ou WebP.', true); }
+        if (file.size < 1 || file.size > 7 * 1024 * 1024) { event.target.value = ''; return showToast('O arquivo precisa ter entre 1 byte e 7 MB.', true); }
+        const ext = file.name.toLocaleLowerCase('pt-BR').match(/\.(pdf|txt|md|png|jpe?g|webp)$/)?.[1];
+        const tipo = { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' }[ext];
+        const texto = ['txt', 'md'].includes(ext) && ['text/plain', 'text/markdown', ''].includes(file.type);
+        const binarioValido = tipo && file.type === tipo && await tipoRealAnexo(file).catch(() => '') === tipo;
+        if (!texto && !binarioValido) { event.target.value = ''; return showToast('Use PDF, TXT, Markdown, PNG, JPG ou WebP válido. O conteúdo e o formato precisam corresponder.', true); }
+        if (event.target.files?.[0] !== file) return;
         state.file = file;
         byId('syllabusFileSummary').hidden = false;
         byId('syllabusFileSummary').innerHTML = `<span>✓</span><div><strong>${safe(file.name)}</strong><small>${(file.size / 1024 / 1024).toFixed(2)} MB · pronto para analisar</small></div>`;
@@ -86,7 +90,9 @@
         } catch (error) {
             byId('syllabusStatus').textContent = /timeout|timed out|deadline/i.test(error?.message || '')
                 ? 'A análise demorou mais que o esperado. O arquivo continua selecionado; tente novamente.'
-                : error.message || 'Não foi possível analisar este edital.';
+                : error?.code || /https?:|AIza|Bearer|FirebaseError|API key|models\//i.test(String(error?.message || ''))
+                    ? 'A leitura inteligente falhou. Confira a conexão e tente novamente; nenhum tópico foi adicionado.'
+                    : String(error?.message || 'Não foi possível analisar este edital.').slice(0, 230);
             showToast(byId('syllabusStatus').textContent, true);
         } finally { button.disabled = false; button.textContent = 'Analisar e separar assuntos'; byId('syllabusFileInput').disabled = false; }
     }

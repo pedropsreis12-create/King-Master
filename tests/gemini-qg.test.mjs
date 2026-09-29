@@ -51,7 +51,7 @@ async function cloudHarness(replies, executeTool = () => ({ ok: true, message: '
     const sdk = {
         'firebase-app': { initializeApp() { return {}; } },
         'firebase-auth': { getAuth() { return {}; }, GoogleAuthProvider: class { setCustomParameters() {} }, OAuthProvider: class { addScope() {} setCustomParameters() {} }, setPersistence: async () => {}, getRedirectResult: async () => {}, onAuthStateChanged() {} },
-        'firebase-firestore': { getFirestore() { return {}; } },
+        'firebase-firestore': { getFirestore() { return {}; }, setLogLevel() {} },
         'firebase-app-check': { initializeAppCheck() { return {}; }, ReCaptchaEnterpriseProvider: class {}, getToken: async () => ({ token: 'fixture-token' }) },
         'firebase-ai': { Schema: schema, ThinkingLevel: { LOW: 'LOW', MEDIUM: 'MEDIUM' }, getAI() { return {}; }, GoogleAIBackend: class {},
             getGenerativeModel(_ai, config) {

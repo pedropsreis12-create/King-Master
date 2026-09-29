@@ -9,7 +9,6 @@
     const subjectById = id => subjects().find(item => String(item.id) === String(id));
     const color = value => /^#[0-9a-f]{6}$/i.test(String(value)) ? value : '#3288ed';
     const fileSize = bytes => Number(bytes) >= 1048576 ? `${(Number(bytes) / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(Number(bytes) / 1024))} KB`;
-    let selectedSubjectId = '';
     let uploading = false;
     let viewerUrl = '';
     let viewerRequest = 0;
@@ -20,20 +19,14 @@
         return `<article class="module-file-card"><span class="module-file-icon" aria-hidden="true">${kind}</span><div class="module-file-details"><strong>${safe(file.title || file.name)}</strong><small>${safe(file.name)} · ${fileSize(file.size)}${date}</small></div><div class="module-file-actions"><button type="button" class="cycle-btn primary" data-module-action="view" data-source-id="${safe(sourceId)}" data-file-id="${safe(file.id)}" data-legacy="${legacy}">Ler módulo</button>${legacy ? '' : `<button type="button" class="cycle-btn" data-module-action="rename" data-source-id="${safe(sourceId)}" data-file-id="${safe(file.id)}">Renomear</button><button type="button" class="cycle-btn module-delete" data-module-action="delete" data-source-id="${safe(sourceId)}" data-file-id="${safe(file.id)}">Excluir</button>`}</div></article>`;
     }
     function render() {
-        const list = $('moduleSubjectsList');
         const grid = $('modulesGrid');
-        if (!list || !grid) return;
+        if (!grid) return;
         const all = subjects();
-        if (!subjectById(selectedSubjectId)) selectedSubjectId = all.length ? String(all[0].id) : '';
         const total = all.reduce((sum, subject) => sum + filesFor(subject.id).length, 0);
         $('modulesSummary').innerHTML = `<span><strong>${all.length}</strong> ${all.length === 1 ? 'matéria' : 'matérias'}</span><span><strong>${total}</strong> ${total === 1 ? 'módulo anexado' : 'módulos anexados'}</span><span>PDF, imagem ou texto · até 6 MB por arquivo</span>`;
-        list.innerHTML = all.length ? all.map(subject => `<button type="button" class="module-subject-choice ${String(subject.id) === selectedSubjectId ? 'selected' : ''}" data-subject-id="${safe(subject.id)}" aria-pressed="${String(subject.id) === selectedSubjectId}"><i style="background:${color(subject.color)}" aria-hidden="true"></i><span>${safe(subject.subject || 'Matéria')}<small>${filesFor(subject.id).length} ${filesFor(subject.id).length === 1 ? 'módulo' : 'módulos'}</small></span></button>`).join('') : '<p class="module-empty">Cadastre uma matéria primeiro. Os módulos ficarão ligados a ela.</p>';
-        const subject = subjectById(selectedSubjectId);
-        if (!subject) grid.innerHTML = '<div class="module-start"><span aria-hidden="true">▣</span><h3>Comece pelas matérias</h3><p>Depois de cadastrar uma matéria, você poderá anexar apostilas e ler cada módulo aqui.</p><button type="button" class="cycle-btn primary" data-module-action="subjects">Ir para Minhas matérias</button></div>';
-        else {
-            const files = filesFor(subject.id);
-            grid.innerHTML = `<div class="module-library-heading"><div><span class="workspace-kicker">BIBLIOTECA DA MATÉRIA</span><h3>${safe(subject.subject || 'Matéria')}</h3><p>${files.length ? `${files.length} ${files.length === 1 ? 'módulo para ler' : 'módulos para ler'} dentro do King Master.` : 'Anexe o primeiro módulo desta matéria para começar.'}</p></div><button type="button" class="cycle-btn primary" data-module-action="upload" data-source-id="${safe(subject.id)}">+ Anexar módulo</button></div><div class="module-file-grid">${files.length ? files.map(file => fileCard(subject.id, file)).join('') : `<div class="module-empty-state"><span aria-hidden="true">▤</span><h4>Nenhum módulo de ${safe(subject.subject || 'esta matéria')}</h4><p>Escolha um PDF, uma imagem ou um texto. O arquivo ficará associado somente a esta matéria.</p><button type="button" class="cycle-btn primary" data-module-action="upload" data-source-id="${safe(subject.id)}">Escolher arquivo</button></div>`}</div>`;
-        }
+        if (!all.length) grid.innerHTML = '<div class="module-start widget"><span aria-hidden="true">▣</span><h3>Cadastre sua primeira matéria</h3><p>Depois você poderá anexar, por exemplo, um módulo de História e lê-lo nesta tela.</p><button type="button" class="cycle-btn primary" data-module-action="subjects">Ir para Minhas matérias</button></div>';
+        else if (!total) grid.innerHTML = '<div class="module-start widget"><span aria-hidden="true">▤</span><h3>Sua biblioteca começa com um arquivo</h3><p>Clique em “Anexar módulo”, escolha a matéria e envie o PDF ou apostila. Nada será criado automaticamente.</p><button type="button" class="cycle-btn primary" data-module-action="upload">Anexar meu primeiro módulo</button></div>';
+        else grid.innerHTML = all.filter(subject => filesFor(subject.id).length).map(subject => `<section class="module-subject-section widget" style="--module-subject-color:${color(subject.color)}"><div class="module-library-heading"><div><span class="workspace-kicker">MATÉRIA</span><h3>${safe(subject.subject || 'Matéria')}</h3><p>${filesFor(subject.id).length} ${filesFor(subject.id).length === 1 ? 'módulo anexado' : 'módulos anexados'}</p></div><button type="button" class="cycle-btn" data-module-action="upload" data-source-id="${safe(subject.id)}">+ Anexar outro</button></div><div class="module-file-grid">${filesFor(subject.id).map(file => fileCard(subject.id, file)).join('')}</div></section>`).join('');
         const older = oldGroups();
         const legacy = $('moduleLegacy');
         legacy.hidden = !older.length;
@@ -46,37 +39,54 @@
         if (error?.code === 'permission-denied' || /Missing or insufficient permissions/i.test(error?.message || '')) return 'O envio de módulos ainda não está liberado na nuvem desta conta. As regras de acesso precisam ser publicadas.';
         return error?.message || 'Não foi possível acessar o arquivo. Confira a conexão e tente novamente.';
     }
-    function chooseFile(id = selectedSubjectId) {
-        if (uploading || !subjectById(id)) return;
-        selectedSubjectId = String(id);
-        $('moduleFileInput').value = '';
-        $('moduleFileInput').click();
+    function openUpload(subjectId = '') {
+        if (uploading) return;
+        if (!subjects().length) { alternarAbasHub('ciclo'); return showToast('Cadastre uma matéria antes de anexar um módulo.', true); }
+        $('moduleUploadForm').reset();
+        $('moduleUploadSubject').innerHTML = '<option value="">Escolha a matéria</option>' + subjects().map(subject => `<option value="${safe(subject.id)}">${safe(subject.subject || 'Matéria')}</option>`).join('');
+        $('moduleUploadSubject').value = subjectById(subjectId) ? String(subjectId) : '';
+        modalStatus();
+        $('moduleUploadModal').classList.add('active');
+        (subjectId ? $('moduleUploadTitle') : $('moduleUploadSubject')).focus();
     }
-    async function selectFile(event) {
-        const file = event.target.files?.[0];
-        if (!file || uploading) return;
-        const subject = subjectById(selectedSubjectId);
+    function modalStatus(message = '', error = false) {
+        const node = $('moduleUploadModalStatus');
+        node.hidden = !message; node.textContent = message; node.classList.toggle('error', error);
+    }
+    function selectFile() {
+        const file = $('moduleFileInput').files?.[0];
+        if (file && !$('moduleUploadTitle').value.trim()) $('moduleUploadTitle').value = file.name.replace(/\.[^.]+$/, '').slice(0, 100);
+        modalStatus();
+    }
+    async function saveUpload(event) {
+        event.preventDefault();
+        if (uploading) return;
+        const subject = subjectById($('moduleUploadSubject').value);
+        const file = $('moduleFileInput').files?.[0];
+        if (!file) return modalStatus('Escolha o arquivo do módulo.', true);
         const extensionType = /\.pdf$/i.test(file.name) ? 'application/pdf' : /\.(txt|md)$/i.test(file.name) ? 'text/plain' : /\.png$/i.test(file.name) ? 'image/png' : /\.jpe?g$/i.test(file.name) ? 'image/jpeg' : /\.webp$/i.test(file.name) ? 'image/webp' : '';
         const type = extensionType || file.type;
-        if (!subject) return status('Selecione uma matéria antes de anexar.', true);
-        if (!/^(application\/pdf|image\/(png|jpeg|webp)|text\/plain)$/.test(type)) return status('Use PDF, imagem PNG/JPG/WebP, TXT ou Markdown.', true);
-        if (!file.size || file.size > 6 * 1024 * 1024) return status('Escolha um arquivo de até 6 MB.', true);
-        if (filesFor(subject.id).some(item => item.name === file.name && item.size === file.size)) return status('Este arquivo já está anexado a essa matéria.', true);
-        if (!window.kingCloud?.uploadModuleFile) return status('A conexão com os arquivos ainda não está pronta. Aguarde e tente novamente.', true);
+        if (!subject) return modalStatus('Escolha a matéria deste módulo.', true);
+        if (!/^(application\/pdf|image\/(png|jpeg|webp)|text\/plain)$/.test(type)) return modalStatus('Use PDF, imagem PNG/JPG/WebP, TXT ou Markdown.', true);
+        if (!file.size || file.size > 6 * 1024 * 1024) return modalStatus('Escolha um arquivo de até 6 MB.', true);
+        if (filesFor(subject.id).some(item => item.name === file.name && item.size === file.size)) return modalStatus('Este arquivo já está anexado a essa matéria.', true);
+        if (!window.kingCloud?.uploadModuleFile) return modalStatus('A conexão com os arquivos ainda não está pronta. Aguarde e tente novamente.', true);
         uploading = true;
         const fileId = `arquivo-${crypto.randomUUID()}`;
-        status(`Enviando ${file.name} para ${subject.subject}… Não feche a página.`);
+        $('moduleUploadSubmit').disabled = true;
+        modalStatus(`Enviando ${file.name} para ${subject.subject}… Não feche a página.`);
         try {
             const saved = await window.kingCloud.uploadModuleFile(String(subject.id), fileId, file, type);
             if (!subjectById(subject.id)) throw new Error('A matéria foi removida durante o envio.');
             const previous = filesFor(subject.id);
-            libraries()[String(subject.id)] = [...previous, { ...saved, title: file.name.replace(/\.[^.]+$/, '').slice(0, 100) }];
+            libraries()[String(subject.id)] = [...previous, { ...saved, title: $('moduleUploadTitle').value.trim().slice(0, 100) || file.name.replace(/\.[^.]+$/, '').slice(0, 100) }];
             try { saveAppData(); } catch (error) { libraries()[String(subject.id)] = previous; throw error; }
+            fecharModal('moduleUploadModal');
             render(); status(`Módulo anexado a ${subject.subject}.`);
         } catch (error) {
             window.kingCloud?.deleteModuleFile?.(String(subject.id), fileId).catch(() => {});
-            status(errorMessage(error), true);
-        } finally { uploading = false; event.target.value = ''; }
+            modalStatus(errorMessage(error), true);
+        } finally { uploading = false; $('moduleUploadSubmit').disabled = false; }
     }
     function findFile(sourceId, fileId, old = false) {
         return old ? oldGroups().find(group => String(group.id) === String(sourceId))?.files.find(file => String(file.id) === String(fileId)) : filesFor(sourceId).find(file => String(file.id) === String(fileId));
@@ -87,6 +97,7 @@
         closeFile();
         const request = viewerRequest;
         $('moduleFileViewer').classList.add('active');
+        $('moduleFileViewerSubject').textContent = old ? 'MÓDULO ANTERIOR' : String(subjectById(sourceId)?.subject || 'MÓDULO').toLocaleUpperCase('pt-BR');
         $('moduleFileViewerTitle').textContent = file.title || file.name;
         $('moduleFileViewerStatus').textContent = 'Abrindo arquivo privado…';
         try {
@@ -154,7 +165,7 @@
         const button = event.target.closest('[data-module-action]');
         if (!button) return;
         const { moduleAction: action, sourceId, fileId } = button.dataset;
-        if (action === 'upload') chooseFile(sourceId);
+        if (action === 'upload') openUpload(sourceId);
         if (action === 'view') viewFile(sourceId, fileId, button.dataset.legacy === 'true');
         if (action === 'rename') renameFile(sourceId, fileId);
         if (action === 'delete') requestDelete(sourceId, fileId);
@@ -162,11 +173,5 @@
     }
     $('modulesGrid')?.addEventListener('click', handleAction);
     $('moduleLegacy')?.addEventListener('click', handleAction);
-    $('moduleSubjectsList')?.addEventListener('click', event => {
-        const button = event.target.closest('[data-subject-id]');
-        if (!button) return;
-        selectedSubjectId = button.dataset.subjectId;
-        status(); render();
-    });
-    window.KingModules = { render, chooseFile, selectFile, closeFile, saveRename, confirmDelete, removeSubject };
+    window.KingModules = { render, openUpload, selectFile, saveUpload, closeFile, saveRename, confirmDelete, removeSubject };
 })();

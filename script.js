@@ -18,6 +18,7 @@ const defaultAppData = {
     weeklyChart: [0, 0, 0, 0, 0, 0, 0], 
     cycleItems: [], 
     subjectModules: [],
+    subjectContentModules: {},
     historyItems: [], 
     agendaItems: [], 
     agendamentoItems: [],
@@ -89,6 +90,7 @@ if (appData.lastWeekStart !== getMonday(new Date())) {
 if (!appData.weeklyChart || appData.weeklyChart.length !== 7) appData.weeklyChart = [0, 0, 0, 0, 0, 0, 0];
 if (!appData.cycleItems) appData.cycleItems = [];
 if (!Array.isArray(appData.subjectModules)) appData.subjectModules = [];
+if (!appData.subjectContentModules || typeof appData.subjectContentModules !== 'object' || Array.isArray(appData.subjectContentModules)) appData.subjectContentModules = {};
 if (!appData.historyItems) appData.historyItems = [];
 if (!appData.agendaItems) appData.agendaItems = [];
 if (!appData.agendamentoItems) appData.agendamentoItems = [];
@@ -705,6 +707,7 @@ function renomearMateriaNosRegistros(nomeAnterior, nomeNovo) {
 function removerMateriaComRegistros(id) {
     const materia = appData.cycleItems.find(item => item.id === id);
     if (!materia) return false;
+    window.KingModules?.removeSubject?.(id);
     if (String(cadernoCapituloAtual.materiaId) === String(id)) fecharCadernosDominio();
     const chave = normalizarRevisaoTexto(materia.subject);
     const sessoesRemovidas = appData.historyItems.filter(item => normalizarRevisaoTexto(item.materia) === chave);
@@ -728,7 +731,7 @@ function confirmarDelecao() {
     if (tipo === 'chapterPage') {
         excluirPaginaCaderno(id);
     }
-    else if (tipo === 'subjectModule') {
+    else if (tipo === 'subjectContentModule') {
         window.KingModules?.confirmDelete?.(id);
     }
     else if (tipo === 'personalSpace' || tipo === 'personalItem' || tipo === 'personalNote') {
@@ -2647,7 +2650,7 @@ function renderizarCiclo() {
         const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
         const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
         const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
-        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div><button type="button" class="subject-chapters-link" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${i.id})" ${totalTopicos ? '' : 'disabled'}>${totalTopicos ? 'Abrir assuntos e cadernos ↗' : 'Adicione um assunto para começar'}</button></div></article>`;
+        return `<article class="disc-card" style="--subject-color:${i.color};border-left-color:${i.color};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${i.id})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${i.id}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões, módulos anexados e sessões do histórico serão apagados. Esta ação não pode ser desfeita.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${i.color};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${(i.acertos||0)+(i.erros||0)}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div><button type="button" class="subject-chapters-link" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${i.id})" ${totalTopicos ? '' : 'disabled'}>${totalTopicos ? 'Abrir assuntos e cadernos ↗' : 'Adicione um assunto para começar'}</button></div></article>`;
     }).join('');
 }
 
@@ -5669,12 +5672,16 @@ document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     document.querySelectorAll('.modal-overlay.active').forEach(modal => {
         if (modal.dataset.keepOpen === 'true') adiarRegistroSessao();
+        else if (modal.id === 'moduleFileViewer') window.KingModules?.closeFile?.();
         else modal.classList.remove('active');
     });
     if (document.getElementById('settingsPanel')?.classList.contains('active')) toggleSettings();
 });
 document.querySelectorAll('.modal-overlay').forEach(overlay => overlay.addEventListener('mousedown', event => {
-    if (event.target === overlay && overlay.dataset.keepOpen !== 'true') overlay.classList.remove('active');
+    if (event.target === overlay && overlay.dataset.keepOpen !== 'true') {
+        if (overlay.id === 'moduleFileViewer') window.KingModules?.closeFile?.();
+        else overlay.classList.remove('active');
+    }
 }));
 
 // INICIALIZAÇÃO DO APP

@@ -1,154 +1,96 @@
-/* Módulos são grupos de matérias existentes; nenhum assunto é copiado ou movido. */
+/* Biblioteca de arquivos por matéria. Grupos antigos são mantidos apenas para recuperar anexos. */
 (() => {
     const $ = id => document.getElementById(id);
     const safe = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
-    const modules = () => Array.isArray(appData.subjectModules) ? appData.subjectModules : (appData.subjectModules = []);
     const subjects = () => Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
-    const validColor = value => /^#[0-9a-f]{6}$/i.test(String(value)) ? value : '#3288ed';
-    const moduleFiles = group => Array.isArray(group?.files) ? group.files : [];
+    const libraries = () => appData.subjectContentModules && typeof appData.subjectContentModules === 'object' && !Array.isArray(appData.subjectContentModules) ? appData.subjectContentModules : (appData.subjectContentModules = {});
+    const filesFor = id => Array.isArray(libraries()[String(id)]) ? libraries()[String(id)] : [];
+    const oldGroups = () => (Array.isArray(appData.subjectModules) ? appData.subjectModules : []).filter(group => Array.isArray(group.files) && group.files.length);
+    const subjectById = id => subjects().find(item => String(item.id) === String(id));
+    const color = value => /^#[0-9a-f]{6}$/i.test(String(value)) ? value : '#3288ed';
     const fileSize = bytes => Number(bytes) >= 1048576 ? `${(Number(bytes) / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(Number(bytes) / 1024))} KB`;
-    let selectedModuleId = '';
+    let selectedSubjectId = '';
     let uploading = false;
     let viewerUrl = '';
     let viewerRequest = 0;
 
+    function fileCard(sourceId, file, legacy = false) {
+        const kind = file.type === 'application/pdf' ? 'PDF' : file.type?.startsWith('image/') ? 'IMG' : 'TXT';
+        const date = file.uploadedAt ? ` · ${new Date(file.uploadedAt).toLocaleDateString('pt-BR')}` : '';
+        return `<article class="module-file-card"><span class="module-file-icon" aria-hidden="true">${kind}</span><div class="module-file-details"><strong>${safe(file.title || file.name)}</strong><small>${safe(file.name)} · ${fileSize(file.size)}${date}</small></div><div class="module-file-actions"><button type="button" class="cycle-btn primary" data-module-action="view" data-source-id="${safe(sourceId)}" data-file-id="${safe(file.id)}" data-legacy="${legacy}">Ler módulo</button>${legacy ? '' : `<button type="button" class="cycle-btn" data-module-action="rename" data-source-id="${safe(sourceId)}" data-file-id="${safe(file.id)}">Renomear</button><button type="button" class="cycle-btn module-delete" data-module-action="delete" data-source-id="${safe(sourceId)}" data-file-id="${safe(file.id)}">Excluir</button>`}</div></article>`;
+    }
     function render() {
+        const list = $('moduleSubjectsList');
         const grid = $('modulesGrid');
-        if (!grid) return;
-        const groups = modules();
-        const existing = new Set(groups.map(group => String(group.id)));
-        const ungrouped = subjects().filter(subject => !existing.has(String(subject.moduleId || '')));
-        $('modulesSummary').innerHTML = `<div><strong>${groups.length}</strong><span>${groups.length === 1 ? 'módulo' : 'módulos'}</span></div><div><strong>${subjects().length - ungrouped.length}</strong><span>matérias organizadas</span></div><div><strong>${ungrouped.length}</strong><span>sem módulo</span></div>`;
-        const cards = groups.map(group => {
-            const members = subjects().filter(subject => String(subject.moduleId) === String(group.id));
-            return `<article class="module-card widget"><header><div><span class="workspace-kicker">MÓDULO</span><h3>${safe(group.name || 'Sem nome')}</h3><small>${members.length} ${members.length === 1 ? 'matéria' : 'matérias'} · ${moduleFiles(group).length} ${moduleFiles(group).length === 1 ? 'arquivo' : 'arquivos'}</small></div><div class="module-card-actions"><button type="button" data-module-action="edit" data-module-id="${safe(group.id)}" aria-label="Editar módulo ${safe(group.name)}">Editar</button><button type="button" data-module-action="delete" data-module-id="${safe(group.id)}" aria-label="Excluir módulo ${safe(group.name)}">Excluir</button></div></header><div class="module-subject-list">${members.length ? members.map(subject => subjectRow(subject)).join('') : '<p class="module-empty">Nenhuma matéria neste módulo. Use Editar para adicioná-las.</p>'}</div><section class="module-files"><div class="module-files-heading"><strong>Conteúdos anexados</strong><button type="button" data-module-action="upload" data-module-id="${safe(group.id)}">＋ Anexar arquivo</button></div>${moduleFiles(group).length ? moduleFiles(group).map(file => `<div class="module-file-row"><span aria-hidden="true">${file.type === 'application/pdf' ? '▤' : file.type?.startsWith('image/') ? '▧' : '≡'}</span><div><strong>${safe(file.name)}</strong><small>${fileSize(file.size)}</small></div><button type="button" data-module-action="view-file" data-module-id="${safe(group.id)}" data-file-id="${safe(file.id)}" aria-label="Abrir ${safe(file.name)}">Abrir</button><button type="button" data-module-action="remove-file" data-module-id="${safe(group.id)}" data-file-id="${safe(file.id)}" aria-label="Remover ${safe(file.name)}">×</button></div>`).join('') : '<p class="module-empty">Anexe PDF, imagem ou texto deste módulo para consultar quando quiser.</p>'}</section></article>`;
-        });
-        if (!groups.length) cards.push('<div class="module-start widget"><span aria-hidden="true">▣</span><h3>Seus módulos começam aqui</h3><p>Crie um grupo para reunir matérias que você quer ver juntas.</p><button type="button" class="cycle-btn primary" data-module-action="create">Criar primeiro módulo</button></div>');
-        if (ungrouped.length) cards.push(`<article class="module-card module-ungrouped widget"><header><div><span class="workspace-kicker">AINDA SEM GRUPO</span><h3>Matérias não organizadas</h3><small>Elas continuam disponíveis normalmente.</small></div></header><div class="module-subject-list">${ungrouped.map(subject => subjectRow(subject)).join('')}</div></article>`);
-        if (!subjects().length && groups.length) cards.push('<p class="module-hint">Cadastre matérias para adicioná-las aos módulos.</p>');
-        grid.innerHTML = cards.join('');
-    }
-
-    function subjectRow(subject) {
-        const total = Array.isArray(subject.topicos) ? subject.topicos.length : 0;
-        const mastered = (subject.topicos || []).filter(topic => obterNivelDominioTopico(topic) === 3).length;
-        return `<button type="button" class="module-subject" data-module-action="subject" data-subject-id="${safe(subject.id)}"><i style="background:${validColor(subject.color)}" aria-hidden="true"></i><span><strong>${safe(subject.subject || 'Matéria')}</strong><small>${mastered}/${total} assuntos dominados</small></span><span class="module-subject-arrow" aria-hidden="true">↗</span></button>`;
-    }
-
-    function open(id = '', preselectSubjectId = '') {
-        const group = modules().find(item => String(item.id) === String(id));
-        $('subjectModuleForm').reset();
-        $('subjectModuleId').value = group?.id || '';
-        $('subjectModuleName').value = group?.name || '';
-        $('subjectModuleModalTitle').textContent = group ? 'Editar módulo' : 'Criar módulo';
-        $('moduleSubjects').innerHTML = subjects().length ? subjects().map(subject => {
-            const selected = (Boolean(group) && String(subject.moduleId) === String(group.id)) || (Boolean(preselectSubjectId) && String(subject.id) === String(preselectSubjectId));
-            const other = modules().find(item => String(item.id) === String(subject.moduleId) && String(item.id) !== String(group?.id || ''));
-            return `<label class="module-subject-option"><input type="checkbox" name="moduleSubject" value="${safe(subject.id)}" ${selected ? 'checked' : ''}><i style="background:${validColor(subject.color)}" aria-hidden="true"></i><span><strong>${safe(subject.subject || 'Matéria')}</strong>${other ? `<small>Atualmente em ${safe(other.name)}</small>` : ''}</span></label>`;
-        }).join('') : '<p class="module-empty">Nenhuma matéria cadastrada ainda. Você pode criar o módulo e adicionar matérias depois.</p>';
-        $('subjectModuleModal').classList.add('active');
-        $('subjectModuleName').focus();
-    }
-
-    function save(event) {
-        event.preventDefault();
-        const name = $('subjectModuleName').value.trim().slice(0, 70);
-        if (!name) return;
-        const id = $('subjectModuleId').value;
-        const group = modules().find(item => String(item.id) === id);
-        if (modules().some(item => String(item.id) !== id && String(item.name).toLocaleLowerCase('pt-BR') === name.toLocaleLowerCase('pt-BR'))) return showToast('Já existe um módulo com esse nome.', true);
-        const previousGroups = structuredClone(modules());
-        const previousAssignments = subjects().map(subject => subject.moduleId);
-        const targetId = group?.id || `modulo-${crypto.randomUUID()}`;
-        if (group) group.name = name;
-        else modules().push({ id: targetId, name, createdAt: Date.now() });
-        const selected = new Set([...$('moduleSubjects').querySelectorAll('input:checked')].map(input => input.value));
-        subjects().forEach(subject => {
-            if (selected.has(String(subject.id))) subject.moduleId = targetId;
-            else if (String(subject.moduleId) === String(targetId)) delete subject.moduleId;
-        });
-        try {
-            saveAppData();
-            fecharModal('subjectModuleModal');
-            render();
-            showToast(group ? 'Módulo atualizado.' : 'Módulo criado.');
-        } catch {
-            appData.subjectModules = previousGroups;
-            subjects().forEach((subject, index) => { if (previousAssignments[index] == null) delete subject.moduleId; else subject.moduleId = previousAssignments[index]; });
-            showToast('Não foi possível salvar o módulo. Tente novamente.', true);
+        if (!list || !grid) return;
+        const all = subjects();
+        if (!subjectById(selectedSubjectId)) selectedSubjectId = all.length ? String(all[0].id) : '';
+        const total = all.reduce((sum, subject) => sum + filesFor(subject.id).length, 0);
+        $('modulesSummary').innerHTML = `<span><strong>${all.length}</strong> ${all.length === 1 ? 'matéria' : 'matérias'}</span><span><strong>${total}</strong> ${total === 1 ? 'módulo anexado' : 'módulos anexados'}</span><span>PDF, imagem ou texto · até 6 MB por arquivo</span>`;
+        list.innerHTML = all.length ? all.map(subject => `<button type="button" class="module-subject-choice ${String(subject.id) === selectedSubjectId ? 'selected' : ''}" data-subject-id="${safe(subject.id)}" aria-pressed="${String(subject.id) === selectedSubjectId}"><i style="background:${color(subject.color)}" aria-hidden="true"></i><span>${safe(subject.subject || 'Matéria')}<small>${filesFor(subject.id).length} ${filesFor(subject.id).length === 1 ? 'módulo' : 'módulos'}</small></span></button>`).join('') : '<p class="module-empty">Cadastre uma matéria primeiro. Os módulos ficarão ligados a ela.</p>';
+        const subject = subjectById(selectedSubjectId);
+        if (!subject) grid.innerHTML = '<div class="module-start"><span aria-hidden="true">▣</span><h3>Comece pelas matérias</h3><p>Depois de cadastrar uma matéria, você poderá anexar apostilas e ler cada módulo aqui.</p><button type="button" class="cycle-btn primary" data-module-action="subjects">Ir para Minhas matérias</button></div>';
+        else {
+            const files = filesFor(subject.id);
+            grid.innerHTML = `<div class="module-library-heading"><div><span class="workspace-kicker">BIBLIOTECA DA MATÉRIA</span><h3>${safe(subject.subject || 'Matéria')}</h3><p>${files.length ? `${files.length} ${files.length === 1 ? 'módulo para ler' : 'módulos para ler'} dentro do King Master.` : 'Anexe o primeiro módulo desta matéria para começar.'}</p></div><button type="button" class="cycle-btn primary" data-module-action="upload" data-source-id="${safe(subject.id)}">+ Anexar módulo</button></div><div class="module-file-grid">${files.length ? files.map(file => fileCard(subject.id, file)).join('') : `<div class="module-empty-state"><span aria-hidden="true">▤</span><h4>Nenhum módulo de ${safe(subject.subject || 'esta matéria')}</h4><p>Escolha um PDF, uma imagem ou um texto. O arquivo ficará associado somente a esta matéria.</p><button type="button" class="cycle-btn primary" data-module-action="upload" data-source-id="${safe(subject.id)}">Escolher arquivo</button></div>`}</div>`;
         }
+        const older = oldGroups();
+        const legacy = $('moduleLegacy');
+        legacy.hidden = !older.length;
+        if (older.length) legacy.innerHTML = `<h3>Anexos anteriores</h3><p>Estes arquivos foram preservados para consulta. Novos módulos ficam diretamente na matéria escolhida.</p><div class="module-file-grid">${older.flatMap(group => group.files.map(file => fileCard(group.id, file, true))).join('')}</div>`;
     }
-
-    function requestDelete(id) {
-        const group = modules().find(item => String(item.id) === String(id));
-        if (!group) return;
-        abrirModalDeletar('subjectModule', group.id, 'Excluir este módulo?', `“${group.name}” será removido${moduleFiles(group).length ? ` junto com ${moduleFiles(group).length} arquivo(s) anexado(s)` : ''}. As matérias, os assuntos e o progresso permanecerão salvos.`, 'Excluir módulo');
+    function status(message = '', error = false) {
+        const node = $('moduleUploadStatus'); node.hidden = !message; node.textContent = message; node.classList.toggle('error', error);
     }
-
-    function confirmDelete(id) {
-        const removed = modules().find(item => String(item.id) === String(id));
-        if (!removed) return;
-        const previousGroups = structuredClone(modules());
-        const previousAssignments = subjects().map(subject => subject.moduleId);
-        appData.subjectModules = modules().filter(item => String(item.id) !== String(id));
-        subjects().forEach(subject => { if (String(subject.moduleId) === String(id)) delete subject.moduleId; });
-        try { saveAppData(); render(); showToast('Módulo excluído. As matérias foram mantidas.'); moduleFiles(removed).forEach(file => window.kingCloud?.deleteModuleFile?.(removed.id, file.id).catch(() => showToast('Um arquivo antigo não pôde ser removido da nuvem.', true))); }
-        catch {
-            appData.subjectModules = previousGroups;
-            subjects().forEach((subject, index) => { if (previousAssignments[index] == null) delete subject.moduleId; else subject.moduleId = previousAssignments[index]; });
-            showToast('Não foi possível excluir o módulo.', true);
-        }
+    function errorMessage(error) {
+        if (error?.code === 'permission-denied' || /Missing or insufficient permissions/i.test(error?.message || '')) return 'O envio de módulos ainda não está liberado na nuvem desta conta. As regras de acesso precisam ser publicadas.';
+        return error?.message || 'Não foi possível acessar o arquivo. Confira a conexão e tente novamente.';
     }
-
-    function setUploadStatus(message = '', error = false) {
-        const status = $('moduleUploadStatus');
-        status.hidden = !message;
-        status.textContent = message;
-        status.classList.toggle('error', error);
-    }
-    function chooseFile(id) {
-        if (uploading) return;
-        const group = modules().find(item => String(item.id) === String(id));
-        if (!group) return;
-        selectedModuleId = String(group.id);
+    function chooseFile(id = selectedSubjectId) {
+        if (uploading || !subjectById(id)) return;
+        selectedSubjectId = String(id);
         $('moduleFileInput').value = '';
         $('moduleFileInput').click();
     }
     async function selectFile(event) {
         const file = event.target.files?.[0];
         if (!file || uploading) return;
-        const group = modules().find(item => String(item.id) === selectedModuleId);
-        const type = /\.md$/i.test(file.name) ? 'text/plain' : file.type;
-        if (!group) return setUploadStatus('Módulo não encontrado. Tente novamente.', true);
-        if (!/^(application\/pdf|image\/(png|jpeg|webp)|text\/plain)$/.test(type)) return setUploadStatus('Use PDF, imagem PNG/JPG/WebP, TXT ou Markdown.', true);
-        if (!file.size || file.size > 6 * 1024 * 1024) return setUploadStatus('Escolha um arquivo de até 6 MB.', true);
-        if (moduleFiles(group).some(item => item.name === file.name && item.size === file.size)) return setUploadStatus('Este arquivo já foi anexado a esse módulo.', true);
-        if (!window.kingCloud?.uploadModuleFile) return setUploadStatus('A conexão com os arquivos ainda não está pronta. Aguarde e tente novamente.', true);
+        const subject = subjectById(selectedSubjectId);
+        const extensionType = /\.pdf$/i.test(file.name) ? 'application/pdf' : /\.(txt|md)$/i.test(file.name) ? 'text/plain' : /\.png$/i.test(file.name) ? 'image/png' : /\.jpe?g$/i.test(file.name) ? 'image/jpeg' : /\.webp$/i.test(file.name) ? 'image/webp' : '';
+        const type = extensionType || file.type;
+        if (!subject) return status('Selecione uma matéria antes de anexar.', true);
+        if (!/^(application\/pdf|image\/(png|jpeg|webp)|text\/plain)$/.test(type)) return status('Use PDF, imagem PNG/JPG/WebP, TXT ou Markdown.', true);
+        if (!file.size || file.size > 6 * 1024 * 1024) return status('Escolha um arquivo de até 6 MB.', true);
+        if (filesFor(subject.id).some(item => item.name === file.name && item.size === file.size)) return status('Este arquivo já está anexado a essa matéria.', true);
+        if (!window.kingCloud?.uploadModuleFile) return status('A conexão com os arquivos ainda não está pronta. Aguarde e tente novamente.', true);
         uploading = true;
         const fileId = `arquivo-${crypto.randomUUID()}`;
-        setUploadStatus(`Enviando ${file.name}… Não feche a página.`);
+        status(`Enviando ${file.name} para ${subject.subject}… Não feche a página.`);
         try {
-            const saved = await window.kingCloud.uploadModuleFile(group.id, fileId, file, type);
-            if (!modules().some(item => String(item.id) === String(group.id))) throw new Error('O módulo foi removido durante o envio.');
-            group.files = [...moduleFiles(group), saved];
-            try { saveAppData(); } catch (error) { group.files = moduleFiles(group).filter(item => item.id !== saved.id); throw error; }
-            render(); setUploadStatus(`${file.name} anexado ao módulo.`);
+            const saved = await window.kingCloud.uploadModuleFile(String(subject.id), fileId, file, type);
+            if (!subjectById(subject.id)) throw new Error('A matéria foi removida durante o envio.');
+            const previous = filesFor(subject.id);
+            libraries()[String(subject.id)] = [...previous, { ...saved, title: file.name.replace(/\.[^.]+$/, '').slice(0, 100) }];
+            try { saveAppData(); } catch (error) { libraries()[String(subject.id)] = previous; throw error; }
+            render(); status(`Módulo anexado a ${subject.subject}.`);
         } catch (error) {
-            window.kingCloud?.deleteModuleFile?.(group.id, fileId).catch(() => {});
-            setUploadStatus(error?.message || 'Não foi possível enviar o arquivo. Confira a conexão e tente novamente.', true);
+            window.kingCloud?.deleteModuleFile?.(String(subject.id), fileId).catch(() => {});
+            status(errorMessage(error), true);
         } finally { uploading = false; event.target.value = ''; }
     }
-    async function viewFile(moduleId, fileId) {
-        const group = modules().find(item => String(item.id) === String(moduleId));
-        const file = moduleFiles(group).find(item => String(item.id) === String(fileId));
+    function findFile(sourceId, fileId, old = false) {
+        return old ? oldGroups().find(group => String(group.id) === String(sourceId))?.files.find(file => String(file.id) === String(fileId)) : filesFor(sourceId).find(file => String(file.id) === String(fileId));
+    }
+    async function viewFile(sourceId, fileId, old = false) {
+        const file = findFile(sourceId, fileId, old);
         if (!file || !window.kingCloud?.getModuleFile) return showToast('O arquivo não está disponível nesta conta.', true);
         closeFile();
         const request = viewerRequest;
         $('moduleFileViewer').classList.add('active');
-        $('moduleFileViewerTitle').textContent = file.name;
+        $('moduleFileViewerTitle').textContent = file.title || file.name;
         $('moduleFileViewerStatus').textContent = 'Abrindo arquivo privado…';
         try {
-            const blob = await window.kingCloud.getModuleFile(group.id, file.id);
+            const blob = await window.kingCloud.getModuleFile(String(sourceId), file.id);
             if (request !== viewerRequest || !$('moduleFileViewer').classList.contains('active')) return;
             viewerUrl = URL.createObjectURL(blob);
             $('moduleFileFrame').src = viewerUrl;
@@ -157,7 +99,7 @@
             $('moduleFileDownload').download = file.name;
             $('moduleFileDownload').hidden = false;
             $('moduleFileViewerStatus').textContent = '';
-        } catch (error) { $('moduleFileViewerStatus').textContent = error?.message || 'Não foi possível abrir o arquivo.'; }
+        } catch (error) { $('moduleFileViewerStatus').textContent = errorMessage(error); }
     }
     function closeFile() {
         viewerRequest += 1;
@@ -169,30 +111,62 @@
         if (viewerUrl) URL.revokeObjectURL(viewerUrl);
         viewerUrl = '';
     }
-    async function removeFile(moduleId, fileId) {
-        const group = modules().find(item => String(item.id) === String(moduleId));
-        const file = moduleFiles(group).find(item => String(item.id) === String(fileId));
-        if (!file || !confirm(`Remover “${file.name}” deste módulo? O arquivo será apagado da nuvem.`)) return;
-        const previous = moduleFiles(group);
-        group.files = previous.filter(item => item.id !== file.id);
-        try { saveAppData(); } catch { group.files = previous; return showToast('Não foi possível salvar a remoção. O arquivo foi mantido.', true); }
-        render();
-        try { await window.kingCloud?.deleteModuleFile?.(group.id, file.id); showToast('Arquivo removido do módulo.'); }
-        catch { showToast('O arquivo saiu do módulo, mas não foi possível limpar a cópia antiga da nuvem.', true); }
+    function renameFile(sourceId, fileId) {
+        const file = findFile(sourceId, fileId);
+        if (!file) return;
+        $('moduleRenameSubjectId').value = sourceId;
+        $('moduleRenameFileId').value = fileId;
+        $('moduleRenameTitle').value = file.title || file.name;
+        $('moduleRenameModal').classList.add('active');
+        $('moduleRenameTitle').focus();
     }
-
-    $('modulesGrid')?.addEventListener('click', event => {
+    function saveRename(event) {
+        event.preventDefault();
+        const file = findFile($('moduleRenameSubjectId').value, $('moduleRenameFileId').value);
+        const title = $('moduleRenameTitle').value.trim().slice(0, 100);
+        if (!file || !title) return;
+        const previous = file.title; file.title = title;
+        try { saveAppData(); fecharModal('moduleRenameModal'); render(); showToast('Nome do módulo atualizado.'); }
+        catch { file.title = previous; showToast('Não foi possível salvar o nome.', true); }
+    }
+    function requestDelete(sourceId, fileId) {
+        const file = findFile(sourceId, fileId);
+        if (file) abrirModalDeletar('subjectContentModule', `${sourceId}|${fileId}`, 'Excluir este módulo?', `“${file.title || file.name}” será removido da matéria e apagado da nuvem.`, 'Excluir módulo');
+    }
+    async function confirmDelete(key) {
+        const [sourceId, fileId] = String(key).split('|');
+        const previous = filesFor(sourceId);
+        const file = previous.find(item => String(item.id) === fileId);
+        if (!file) return;
+        libraries()[sourceId] = previous.filter(item => item.id !== file.id);
+        try { saveAppData(); } catch { libraries()[sourceId] = previous; return showToast('Não foi possível salvar a remoção. O arquivo foi mantido.', true); }
+        render();
+        try { await window.kingCloud?.deleteModuleFile?.(sourceId, fileId); showToast('Módulo excluído.'); }
+        catch { showToast('O módulo saiu da biblioteca, mas a cópia antiga não pôde ser removida da nuvem.', true); }
+    }
+    function removeSubject(id) {
+        const files = filesFor(id);
+        if (!files.length) return;
+        delete libraries()[String(id)];
+        files.forEach(file => window.kingCloud?.deleteModuleFile?.(String(id), file.id).catch(() => {}));
+    }
+    function handleAction(event) {
         const button = event.target.closest('[data-module-action]');
         if (!button) return;
-        const action = button.dataset.moduleAction;
-        if (action === 'create') open();
-        if (action === 'edit') open(button.dataset.moduleId);
-        if (action === 'delete') requestDelete(button.dataset.moduleId);
-        if (action === 'subject') { alternarAbasHub('dominio'); abrirCadernosMateria(button.dataset.subjectId); }
-        if (action === 'upload') chooseFile(button.dataset.moduleId);
-        if (action === 'view-file') viewFile(button.dataset.moduleId, button.dataset.fileId);
-        if (action === 'remove-file') removeFile(button.dataset.moduleId, button.dataset.fileId);
+        const { moduleAction: action, sourceId, fileId } = button.dataset;
+        if (action === 'upload') chooseFile(sourceId);
+        if (action === 'view') viewFile(sourceId, fileId, button.dataset.legacy === 'true');
+        if (action === 'rename') renameFile(sourceId, fileId);
+        if (action === 'delete') requestDelete(sourceId, fileId);
+        if (action === 'subjects') alternarAbasHub('ciclo');
+    }
+    $('modulesGrid')?.addEventListener('click', handleAction);
+    $('moduleLegacy')?.addEventListener('click', handleAction);
+    $('moduleSubjectsList')?.addEventListener('click', event => {
+        const button = event.target.closest('[data-subject-id]');
+        if (!button) return;
+        selectedSubjectId = button.dataset.subjectId;
+        status(); render();
     });
-
-    window.KingModules = { render, open, save, requestDelete, confirmDelete, selectFile, closeFile };
+    window.KingModules = { render, chooseFile, selectFile, closeFile, saveRename, confirmDelete, removeSubject };
 })();

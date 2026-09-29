@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
 
 const [html, script, usability, style, sidebarIcons, sidebarIconStyles] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
@@ -74,18 +75,42 @@ test('free color controls share a visible, accessible picker treatment', async (
   assert.match(script, /document\.querySelectorAll\('\.theme-circle'\)[\s\S]*?setAttribute\('aria-pressed'/);
 });
 
-test('modules group entire existing subjects without copying their topics or progress', async () => {
+test('modules are a readable content library organized by existing subject', async () => {
   const modules = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
   const moduleStyles = await readFile(new URL('../subject-modules.css', import.meta.url), 'utf8');
   assert.match(html, /id="tab-modulos" role="tab"[^>]+aria-controls="aba-modulos-content"/);
   assert.match(html, /id="aba-modulos-content"[^>]+role="tabpanel"/);
-  assert.match(script, /subjectModules: \[\]/);
+  assert.match(script, /subjectContentModules: \{\}/);
   assert.match(script, /if \(aba === 'modulos'\) window\.KingModules\?\.render/);
-  assert.match(modules, /subject\.moduleId = targetId/);
-  assert.match(modules, /delete subject\.moduleId/);
-  assert.match(modules, /abrirModalDeletar\('subjectModule'/);
-  assert.match(modules, /appData\.subjectModules = modules\(\)\.filter/);
+  assert.match(html, /id="moduleSubjectsList"/);
+  assert.match(modules, /libraries\(\)\[String\(subject\.id\)\] = \[\.\.\.previous/);
+  assert.match(modules, /abrirModalDeletar\('subjectContentModule'/);
+  assert.match(modules, /window\.kingCloud\.getModuleFile/);
+  assert.doesNotMatch(modules, /subject\.moduleId =/);
   assert.match(moduleStyles, /@media \(max-width: 780px\)/);
+});
+
+test('module library shows only files belonging to the selected subject', async () => {
+  const source = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
+  const elements = new Map(['moduleSubjectsList', 'modulesGrid', 'modulesSummary', 'moduleLegacy'].map(id => [id, { innerHTML: '', hidden: false, addEventListener() {} }]));
+  const context = {
+    appData: {
+      cycleItems: [{ id: 1, subject: 'Física', color: '#3399ff' }, { id: 2, subject: 'História', color: '#ee9900' }],
+      subjectContentModules: {
+        1: [{ id: 'fisica-1', name: 'Cinemática.pdf', title: 'Cinemática', type: 'application/pdf', size: 1000 }],
+        2: [{ id: 'historia-1', name: 'Brasil.pdf', title: 'Brasil Colônia', type: 'application/pdf', size: 1000 }]
+      }, subjectModules: []
+    },
+    document: { getElementById: id => elements.get(id) },
+    window: {},
+    Date, String, Number, Array
+  };
+  runInNewContext(source, context);
+  context.window.KingModules.render();
+  assert.match(elements.get('modulesGrid').innerHTML, /Cinemática/);
+  assert.doesNotMatch(elements.get('modulesGrid').innerHTML, /Brasil Colônia/);
+  assert.match(elements.get('moduleSubjectsList').innerHTML, /Física/);
+  assert.match(elements.get('moduleSubjectsList').innerHTML, /História/);
 });
 
 test('module attachments stay in private Firestore chunks without a paid Storage dependency', async () => {
@@ -94,8 +119,8 @@ test('module attachments stay in private Firestore chunks without a paid Storage
   const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
   assert.match(html, /id="moduleFileInput"/);
   assert.match(html, /id="moduleFileViewer"/);
-  assert.match(modules, /uploadModuleFile\(group\.id, fileId, file, type\)/);
-  assert.match(modules, /group\.files = \[\.\.\.moduleFiles\(group\), saved\]/);
+  assert.match(modules, /uploadModuleFile\(String\(subject\.id\), fileId, file, type\)/);
+  assert.match(modules, /libraries\(\)\[String\(subject\.id\)\] = \[\.\.\.previous/);
   assert.match(cloud, /'moduleFiles', fileId, 'chunks'/);
   assert.match(cloud, /MODULE_FILE_MAX_BYTES = 6 \* 1024 \* 1024/);
   assert.match(cloud, /firestoreSdk\.writeBatch\(db\)/);

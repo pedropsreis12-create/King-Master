@@ -782,6 +782,69 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         await imageRequest(() => firestoreSdk.deleteDoc(reviewImageDocument(imageId)));
     }
 
+    const MODULE_FILE_MAX_BYTES = 6 * 1024 * 1024;
+    const MODULE_FILE_CHUNK_SIZE = 350000;
+    function moduleFileDocument(ownerUid, moduleId, fileId, index) {
+        if (!ownerUid || currentUser?.uid !== ownerUid) throw new Error('A conta mudou durante a operação. Tente novamente.');
+        const validId = value => /^[a-zA-Z0-9_-]{1,90}$/.test(String(value || ''));
+        if (!validId(moduleId) || !validId(fileId) || !Number.isInteger(index) || index < 0 || index > 29) throw new Error('O arquivo não tem um identificador válido.');
+        return firestoreSdk.doc(db, 'users', ownerUid, 'moduleFiles', fileId, 'chunks', String(index));
+    }
+    const readModuleFile = file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || '').split(',')[1] || '');
+        reader.onerror = () => reject(new Error('Não foi possível ler o arquivo neste dispositivo.'));
+        reader.readAsDataURL(file);
+    });
+    async function uploadModuleFile(moduleId, fileId, file, contentType) {
+        const ownerUid = currentUser?.uid;
+        if (!ownerUid) throw new Error('Entre na sua conta antes de anexar arquivos.');
+        if (!(file instanceof Blob) || file.size < 1 || file.size > MODULE_FILE_MAX_BYTES) throw new Error('Escolha um arquivo de até 6 MB.');
+        if (!/^(application\/pdf|image\/(png|jpeg|webp)|text\/plain)$/.test(contentType)) throw new Error('Formato de arquivo não permitido.');
+        const encoded = await readModuleFile(file);
+        const chunks = encoded.match(new RegExp(`.{1,${MODULE_FILE_CHUNK_SIZE}}`, 'g')) || [];
+        if (!chunks.length || chunks.length > 30) throw new Error('O arquivo excedeu o limite de armazenamento.');
+        await imageRequest(() => appCheckSdk.getToken(appCheck, false));
+        if (currentUser?.uid !== ownerUid) throw new Error('A conta mudou durante o envio.');
+        const batch = firestoreSdk.writeBatch(db);
+        chunks.forEach((chunk, index) => batch.set(moduleFileDocument(ownerUid, moduleId, fileId, index), {
+            ownerUid, moduleId, fileId, index, count: chunks.length, contentType, size: file.size, base64: chunk, updatedAt: firestoreSdk.serverTimestamp()
+        }));
+        await batch.commit();
+        if (currentUser?.uid !== ownerUid) throw new Error('A conta mudou durante o envio. Atualize a página antes de continuar.');
+        return { id: fileId, name: String(file.name || 'Conteúdo').slice(0, 120), type: contentType, size: file.size, uploadedAt: Date.now() };
+    }
+    async function firstModuleChunk(ownerUid, moduleId, fileId) {
+        const first = await imageRequest(() => firestoreSdk.getDoc(moduleFileDocument(ownerUid, moduleId, fileId, 0)));
+        if (!first.exists() || first.data().moduleId !== moduleId) throw new Error('Arquivo não encontrado nesta conta.');
+        return first.data();
+    }
+    async function getModuleFile(moduleId, fileId) {
+        const ownerUid = currentUser?.uid;
+        const first = await firstModuleChunk(ownerUid, moduleId, fileId);
+        const count = Number(first.count);
+        if (!Number.isInteger(count) || count < 1 || count > 30 || Number(first.size) > MODULE_FILE_MAX_BYTES) throw new Error('O arquivo salvo está incompleto.');
+        const rest = await Promise.all(Array.from({ length: count - 1 }, (_, offset) => imageRequest(() => firestoreSdk.getDoc(moduleFileDocument(ownerUid, moduleId, fileId, offset + 1)))));
+        const all = [first, ...rest.map((snapshot, offset) => {
+            if (!snapshot.exists() || snapshot.data().index !== offset + 1 || snapshot.data().fileId !== fileId) throw new Error('Falta uma parte do arquivo na nuvem.');
+            return snapshot.data();
+        })];
+        const base64 = all.map(part => part.base64).join('');
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64) || base64.length > 8 * 1024 * 1024 + 16) throw new Error('O arquivo salvo está inválido.');
+        const binary = atob(base64);
+        if (binary.length !== Number(first.size)) throw new Error('O arquivo salvo não corresponde ao original.');
+        return new Blob([Uint8Array.from(binary, char => char.charCodeAt(0))], { type: first.contentType });
+    }
+    async function deleteModuleFile(moduleId, fileId) {
+        const ownerUid = currentUser?.uid;
+        const first = await firstModuleChunk(ownerUid, moduleId, fileId);
+        const count = Number(first.count);
+        if (!Number.isInteger(count) || count < 1 || count > 30) throw new Error('Não foi possível identificar todas as partes do arquivo.');
+        const batch = firestoreSdk.writeBatch(db);
+        for (let index = 0; index < count; index++) batch.delete(moduleFileDocument(ownerUid, moduleId, fileId, index));
+        await batch.commit();
+    }
+
     window.addEventListener('king-master-data-changed', () => {
         if (!currentUser || applyingRemote) return;
         clearTimeout(uploadTimer);
@@ -1055,7 +1118,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         deleteErrorImage,
         saveReviewImage,
         getReviewImage,
-        deleteReviewImage
+        deleteReviewImage,
+        uploadModuleFile,
+        getModuleFile,
+        deleteModuleFile
     };
     } catch (error) {
         finishGeminiInitialization();

@@ -33,6 +33,13 @@ test('review flow hides feedback until recall and schedules repeated retrieval',
     assert.match(script, /item\.status = item\.etapaRevisao >= CADERNO_ERROS_INTERVALOS\.length \? 'dominado' : 'aprendendo'/);
 });
 
+test('an error can be scheduled for a chosen date without changing its review history', () => {
+    assert.match(html, /id="errorReviewDateInput" required/);
+    assert.match(script, /errorReviewDateInput'\)\.value = item\?\.proximaRevisao \|\| dataLocalISO\(\)/);
+    assert.match(script, /proximaRevisao: document\.getElementById\('errorReviewDateInput'\)\.value/);
+    assert.doesNotMatch(script, /etapaRevisao: 0, proximaRevisao: dataLocalISO\(\)/);
+});
+
 test('errors can be searched, filtered by cause and used comfortably on small screens', () => {
     for (const cause of ['conteudo', 'interpretacao', 'calculo', 'atencao', 'estrategia']) {
         assert.match(html, new RegExp(`value="${cause}"`));

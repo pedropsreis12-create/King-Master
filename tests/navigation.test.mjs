@@ -87,3 +87,19 @@ test('modules group entire existing subjects without copying their topics or pro
   assert.match(modules, /appData\.subjectModules = modules\(\)\.filter/);
   assert.match(moduleStyles, /@media \(max-width: 780px\)/);
 });
+
+test('module attachments stay in private Firestore chunks without a paid Storage dependency', async () => {
+  const modules = await readFile(new URL('../subject-modules.js', import.meta.url), 'utf8');
+  const cloud = await readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8');
+  const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
+  assert.match(html, /id="moduleFileInput"/);
+  assert.match(html, /id="moduleFileViewer"/);
+  assert.match(modules, /uploadModuleFile\(group\.id, fileId, file, type\)/);
+  assert.match(modules, /group\.files = \[\.\.\.moduleFiles\(group\), saved\]/);
+  assert.match(cloud, /'moduleFiles', fileId, 'chunks'/);
+  assert.match(cloud, /MODULE_FILE_MAX_BYTES = 6 \* 1024 \* 1024/);
+  assert.match(cloud, /firestoreSdk\.writeBatch\(db\)/);
+  assert.doesNotMatch(cloud, /firebase-storage\.js/);
+  assert.match(rules, /match \/moduleFiles\/\{fileId\}\/chunks\/\{chunkId\}/);
+  assert.match(rules, /request\.resource\.data\.base64\.size\(\) <= 350000/);
+});

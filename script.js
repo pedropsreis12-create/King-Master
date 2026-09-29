@@ -4577,6 +4577,7 @@ function abrirModalCadernoErro(id = null) {
     renderizarPreviaImagensCadernoErro();
     document.getElementById('errorNotebookEditId').value = item?.id || '';
     document.getElementById('errorNotebookModalTitle').textContent = item ? 'Editar registro' : 'Registrar um erro';
+    document.getElementById('errorReviewDateInput').value = item?.proximaRevisao || dataLocalISO();
     const materias = [...new Set([...appData.cycleItems.map(materia => materia.subject), ...(item?.materia ? [item.materia] : [])].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     document.getElementById('errorSubjectInput').innerHTML = '<option value="">Selecione uma matéria cadastrada</option>' + materias.map(materia => `<option value="${escaparRevisaoHtml(materia)}">${escaparRevisaoHtml(materia)}</option>`).join('');
     if (item) {
@@ -4608,9 +4609,11 @@ async function salvarCadernoErro(event) {
         minhaResposta: document.getElementById('errorAttemptInput').value.trim(),
         respostaCorreta: document.getElementById('errorCorrectInput').value.trim(),
         regra: document.getElementById('errorRuleInput').value.trim(),
+        proximaRevisao: document.getElementById('errorReviewDateInput').value,
         atualizadoEm: Date.now()
     };
     if (!dados.materia || !dados.assunto || !dados.questao || !dados.regra) return showToast('Preencha matéria, assunto, questão e regra anti-erro.', true);
+    if (!dataISOParaLocal(dados.proximaRevisao) || dataLocalISO(dataISOParaLocal(dados.proximaRevisao)) !== dados.proximaRevisao) return showToast('Escolha uma data válida para a próxima revisão.', true);
     if (submit) { submit.disabled = true; submit.textContent = cadernoErroImagensRascunho.some(imagem => imagem.nova) ? 'Enviando imagens…' : 'Salvando…'; }
     try {
         const imagensSalvas = [];
@@ -4631,7 +4634,7 @@ async function salvarCadernoErro(event) {
             if (indice < 0) return;
             appData.cadernoErrosItems[indice] = normalizarItemCadernoErro({ ...appData.cadernoErrosItems[indice], ...dados });
         } else {
-            appData.cadernoErrosItems.push(normalizarItemCadernoErro({ id: idRegistro, ...dados, etapaRevisao: 0, proximaRevisao: dataLocalISO(), status: 'aprendendo', criadoEm: Date.now() }));
+            appData.cadernoErrosItems.push(normalizarItemCadernoErro({ id: idRegistro, ...dados, etapaRevisao: 0, status: 'aprendendo', criadoEm: Date.now() }));
         }
         saveAppData();
         const removidas = cadernoErroImagensOriginais.filter(imageId => !imagensSalvas.some(imagem => imagem.id === imageId));

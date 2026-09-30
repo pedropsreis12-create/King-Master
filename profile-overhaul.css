@@ -1190,6 +1190,36 @@
     letter-spacing: -.04em;
 }
 
+#perfil.km-profile-v2 .km-achievements__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+#perfil.km-profile-v2 .km-achievements__toggle {
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color, currentColor);
+    border-radius: 12px;
+    background: var(--bg-card, transparent);
+    color: var(--text-main);
+    font: inherit;
+    font-size: .75rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#perfil.km-profile-v2 .km-achievements__toggle:focus-visible {
+    outline: 3px solid var(--primary, #5046e5);
+    outline-offset: 3px;
+}
+
+#perfil.km-profile-v2 :is(.km-achievements__body, .km-achievements__summary)[hidden] {
+    display: none;
+}
+
 #perfil.km-profile-v2 .km-achievements__copy p {
     max-width: 600px;
     margin: 0;

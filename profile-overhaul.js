@@ -4,6 +4,7 @@
     const VERSION = '2.0.0';
     const PROFILE_ID = 'perfil';
     const DATA_KEY = 'qg_pedro_data';
+    const ACHIEVEMENTS_VISIBILITY_KEY = 'king-master-profile-achievements-hidden';
     const DAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
     const state = {
         root: null,
@@ -496,7 +497,19 @@
         const summaryCopy = element('div');
         summaryCopy.append(element('strong', '', 'Sua coleção está começando'), element('span', '', 'A próxima conquista aparecerá aqui.', { id: 'kmAchievementNext' }));
         summary.append(ring, summaryCopy);
-        top.append(copy, summary);
+        const toggle = element('button', 'km-achievements__toggle', 'Esconder conquistas', {
+            id: 'kmAchievementsToggle', type: 'button',
+            'aria-controls': 'kmAchievementsBody kmAchievementSummary', 'aria-expanded': 'true'
+        });
+        summary.id = 'kmAchievementSummary';
+        const actions = element('div', 'km-achievements__actions');
+        actions.append(summary, toggle);
+        top.append(copy, actions);
+        toggle.addEventListener('click', () => {
+            const hidden = toggle.getAttribute('aria-expanded') === 'true';
+            applyAchievementsVisibility(hidden);
+            try { localStorage.setItem(ACHIEVEMENTS_VISIBILITY_KEY, String(hidden)); } catch { /* A opção continua funcionando nesta visita. */ }
+        });
 
         const toolbar = element('div', 'km-achievements__toolbar');
         const filters = element('div', 'km-achievements__filters', null, { role: 'group', 'aria-label': 'Filtrar conquistas' });
@@ -521,8 +534,22 @@
         const starter = element('div', 'km-achievements__starter', null, { id: 'kmAchievementStarter', hidden: true });
         starter.append(element('span', '', '01', { 'aria-hidden': 'true' }), element('div'));
         starter.lastElementChild.append(element('strong', '', 'Sua primeira missão já está disponível'), element('p', '', 'Conclua uma sessão de foco. O perfil evolui a partir de atividade real registrada no King Master.'));
-        section.append(top, toolbar, starter, element('div', 'km-achievements__grid', null, { id: 'kmAchievementGrid' }), empty);
+        const body = element('div', 'km-achievements__body', null, { id: 'kmAchievementsBody' });
+        body.append(toolbar, starter, element('div', 'km-achievements__grid', null, { id: 'kmAchievementGrid' }), empty);
+        section.append(top, body);
         (xpLab || overview)?.insertAdjacentElement(xpLab ? 'beforebegin' : 'afterend', section);
+        try { applyAchievementsVisibility(localStorage.getItem(ACHIEVEMENTS_VISIBILITY_KEY) === 'true'); } catch { applyAchievementsVisibility(false); }
+    }
+
+    function applyAchievementsVisibility(hidden) {
+        const toggle = document.getElementById('kmAchievementsToggle');
+        if (!toggle) return;
+        toggle.textContent = hidden ? 'Mostrar conquistas' : 'Esconder conquistas';
+        toggle.setAttribute('aria-expanded', String(!hidden));
+        ['kmAchievementsBody', 'kmAchievementSummary'].forEach(id => {
+            const target = document.getElementById(id);
+            if (target) target.hidden = hidden;
+        });
     }
 
     function enhanceFrameVault() {
@@ -925,7 +952,12 @@
         window.addEventListener('king-rank-v2-ready', scheduleRender);
         window.addEventListener('king-rank-v2-updated', scheduleRender);
         window.addEventListener('king-rank-v2-change', scheduleRender);
-        window.addEventListener('storage', event => { if (!event.key || event.key === DATA_KEY) scheduleRender(); });
+        window.addEventListener('storage', event => {
+            if (!event.key || event.key === DATA_KEY) scheduleRender();
+            if (!event.key || event.key === ACHIEVEMENTS_VISIBILITY_KEY) {
+                try { applyAchievementsVisibility(localStorage.getItem(ACHIEVEMENTS_VISIBILITY_KEY) === 'true'); } catch { /* Mantém o estado atual. */ }
+            }
+        });
         document.addEventListener('visibilitychange', () => { if (!document.hidden) scheduleRender(); });
         [600, 1800, 5000].forEach(delay => window.setTimeout(scheduleRender, delay));
     }

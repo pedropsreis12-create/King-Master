@@ -235,6 +235,8 @@
             streak: number(snapshot.streak?.current ?? snapshot.streak) || fallback.streak,
             league,
             division,
+            leagueRemaining: typeof leagueValue === 'object' ? number(leagueValue.remaining) : 0,
+            leagueIsTop: typeof leagueValue === 'object' && Boolean(leagueValue.isTop),
             seasonXp: number(season.xp),
             seasonScore: number(season.score),
             seasonProgress: clamp(hasSeasonProgress ? seasonProgress : fallback.progress),
@@ -320,7 +322,7 @@
         const external = summary.rank.achievements.map(normalizeExternalAchievement).filter(Boolean);
         if (!external.length) return local;
         const externalIds = new Set(external.map(item => item.id.replace(/^v2-/, '')));
-        return [...external, ...local.filter(item => !externalIds.has(item.id))].slice(0, 15);
+        return [...external, ...local.filter(item => !externalIds.has(item.id))];
     }
 
     function createNavigation(root) {
@@ -390,7 +392,7 @@
         );
         const progress = element('div', 'km-rank-brief__progress');
         const progressHead = element('div');
-        progressHead.append(element('span', '', 'Rumo à próxima divisão'), element('strong', '', '0%', { id: 'kmRankBriefPercent' }));
+        progressHead.append(element('span', '', 'Rumo à próxima classificação', { id: 'kmRankBriefProgressLabel' }), element('strong', '', '0%', { id: 'kmRankBriefPercent' }));
         const track = element('div', 'km-rank-brief__track', null, {
             id: 'kmRankBriefTrack', role: 'progressbar', 'aria-label': 'Progresso da classificação',
             'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': '0'
@@ -565,10 +567,17 @@
         const title = rank.division ? `${rank.league} · ${rank.division}` : rank.league;
         const seasonMode = rank.source === 'v2';
         const progress = seasonMode ? rank.seasonProgress : rank.progress;
+        const classificationHint = rank.leagueIsTop
+            ? 'Você alcançou a classificação máxima desta temporada'
+            : rank.leagueRemaining > 0
+                ? `Faltam ${formatNumber(rank.leagueRemaining)} pontos para avançar`
+                : rank.remainingText;
         text('kmRankBriefTitle', title);
         text('kmRankBriefSubtitle', `Nível ${rank.level} · ${rank.title}`);
+        text('kmRankBriefProgressLabel', seasonMode ? (rank.leagueIsTop ? 'Classificação máxima' : 'Rumo à próxima classificação') : 'Rumo ao próximo nível');
         text('kmRankBriefPercent', formatPercent(progress));
-        text('kmRankBriefHint', rank.remainingText);
+        text('kmRankBriefHint', seasonMode ? classificationHint : rank.remainingText);
+        text('profileLeagueName', `Título · ${rank.title}`);
         text('kmRankScore', formatNumber(seasonMode ? rank.seasonScore : rank.xpTotal));
         text('kmRankStreak', plural(rank.streak, 'dia', 'dias'));
         text('kmRankMultiplier', `${String(rank.multiplier.toFixed(2)).replace(/\.00$/, '').replace('.', ',')}x`);
@@ -577,7 +586,7 @@
         if (bar) bar.style.setProperty('--km-progress', `${progress}%`);
         if (track) {
             track.setAttribute('aria-valuenow', String(Math.round(progress)));
-            track.setAttribute('aria-valuetext', `${formatPercent(progress)}; ${rank.remainingText}`);
+            track.setAttribute('aria-valuetext', `${formatPercent(progress)}; ${seasonMode ? classificationHint : rank.remainingText}`);
         }
         state.root?.toggleAttribute('data-rank-v2', seasonMode);
     }

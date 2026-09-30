@@ -157,7 +157,7 @@
 
     document.addEventListener('keydown', event => {
         const typing = event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement || event.target?.isContentEditable;
-        if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase('pt-BR') === 'k') {
+        if ((event.ctrlKey || event.metaKey) && !event.shiftKey && event.key.toLocaleLowerCase('pt-BR') === 'k') {
             event.preventDefault();
             state.open ? close() : open();
         } else if (event.key === '/' && !typing && !state.open) {

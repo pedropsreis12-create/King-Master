@@ -22,6 +22,22 @@
     color-scheme: light; 
 }
 
+.skip-link {
+    position: fixed;
+    z-index: 10000;
+    top: 10px;
+    left: 10px;
+    padding: 11px 16px;
+    border-radius: 10px;
+    background: #0b1220;
+    color: #fff;
+    font-weight: 800;
+    text-decoration: none;
+    transform: translateY(-160%);
+    transition: transform .18s ease;
+}
+.skip-link:focus { transform: translateY(0); }
+
 [data-theme="dark"] { 
     --bg-body: #0f0f11;       
     --card-bg: rgba(28, 28, 30, 0.55);       
@@ -1721,6 +1737,7 @@ html[data-visual="classic"] .league-frame, html[data-visual="classic"] .league-f
 .ai-qg-message-copy strong { font-weight: 850; }
 .ai-qg-message-copy code { padding: .1em .3em; border-radius: 4px; background: var(--card-bg); font: .95em/1.5 ui-monospace,monospace; }
 .ai-qg-message-copy pre { max-width: 100%; margin: 0; padding: .6em; overflow-x: auto; white-space: pre; background: var(--card-bg); border-radius: 8px; }
+.ai-qg-composer > small a { color: var(--accent-color); font-weight: 750; text-underline-offset: 2px; }
 .ai-qg-message-copy pre code { padding: 0; }
 .ai-qg-message-copy > :not(:first-child) { margin-top: .7em; }
 .ai-qg-message.user > p { border-color: rgba(var(--accent-rgb),.34); border-radius: 15px 15px 5px 15px; background: var(--accent-color); color: #fff; }

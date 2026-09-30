@@ -37,11 +37,12 @@ test('quatro blocos de 50 minutos respeitam pausas, registro e fim do dia', () =
     }
 });
 
-test('horário insuficiente é conflito, não bloco extra ou tempo ultrapassado', () => {
+test('horário insuficiente adapta a carga sem bloco extra ou tempo ultrapassado', () => {
     const result = generate(subjects, { endTime: '18:00' });
-    assert.equal(result.valid, false);
-    assert.equal(result.blocks.length, 0);
-    assert.match(result.errors.join(' '), /não cabem|precisam de/i);
+    assert.equal(result.valid, true, result.errors.join(' / '));
+    assert.equal(result.blocks.length, 15);
+    assert.ok(result.blocks.every(block => block.end <= '18:00'));
+    assert.match(result.warnings.join(' '), /cabem 3 blocos/i);
 });
 
 test('pares consecutivos preservam duas matérias por dia quando possível', () => {
@@ -68,26 +69,35 @@ test('domingo e dias desligados não recebem blocos', () => {
     assert.deepEqual([...new Set(result.blocks.map(block => block.day))], [2, 7]);
 });
 
-test('a Agenda pode tornar uma solicitação inviável sem estender o limite', () => {
+test('a Agenda reduz o dia sem estender o limite', () => {
     const result = generate(subjects, { studyDays: [1] }, { busyByDay: { 1: [{ start: '15:00', end: '16:00' }] } });
-    assert.equal(result.valid, false);
-    assert.equal(result.blocks.length, 0);
-    assert.match(result.errors.join(' '), /Agenda|não cabe/i);
+    assert.equal(result.valid, true, result.errors.join(' / '));
+    assert.equal(result.blocks.length, 3);
+    assert.ok(result.blocks.every(block => block.end <= '18:30'));
+    assert.match(result.warnings.join(' '), /Agenda/i);
 });
 
-test('mais matérias obrigatórias que blocos é impossível e não remove matéria', () => {
+test('mais matérias que blocos gera fila explícita sem remover matéria', () => {
     const many = Array.from({ length: 5 }, (_, index) => ({ id: `s${index}`, subject: `Matéria ${index}`, schedule: { weeklyBlocks: 1 } }));
     const result = generate(many, { studyDays: [1] });
-    assert.equal(result.valid, false);
-    assert.match(result.errors.join(' '), /matérias para 4 blocos/i);
+    assert.equal(result.valid, true, result.errors.join(' / '));
+    assert.equal(result.blocks.length, 4);
+    assert.equal(result.unscheduled.reduce((sum, item) => sum + item.blocks, 0), 1);
+    assert.match(result.warnings.join(' '), /matérias para 4 blocos/i);
 });
 
 test('texto contraditório é identificado mesmo se a resposta da IA ocultar o conflito', () => {
     const plans = UserStudyPreferences.normalize(subjects, rules).subjects;
     const result = AIScheduleAssistant.interpret({ requestedBlocksPerDay: 4 }, 'Quero 6 blocos de matemática hoje', rules, plans);
-    assert.match(result.errors.join(' '), /6 blocos/);
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.targetBlocksPerDay, 6);
+    assert.match(result.warnings.join(' '), /meta diária será 6 blocos/i);
     const time = AIScheduleAssistant.interpret({ requestedEndTime: '18:30' }, 'Essa semana só consigo estudar até 18h', rules, plans);
-    assert.match(time.errors.join(' '), /18:00/);
+    assert.equal(time.errors.length, 0);
+    assert.equal(time.targetEndTime, '18:00');
+    assert.match(time.warnings.join(' '), /terminará até 18:00/i);
+    const later = AIScheduleAssistant.interpret({ requestedEndTime: '19:00' }, '', rules, plans);
+    assert.match(later.errors.join(' '), /nunca amplia o horário/i);
 });
 
 test('validador independente recusa bloco extra, duração trocada e matéria fora da seleção', () => {

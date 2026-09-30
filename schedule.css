@@ -92,7 +92,7 @@
 .schedule-suggestion > div:last-child { display: flex; gap: 6px; }
 
 .schedule-day-strip {
-    margin: 0 0 14px; padding: 7px; display: grid; grid-template-columns: repeat(6, minmax(92px, 1fr)); gap: 6px;
+    margin: 0 0 14px; padding: 7px; display: grid; grid-template-columns: repeat(7, minmax(92px, 1fr)); gap: 6px;
     border-radius: 20px; overflow-x: auto; scrollbar-width: thin;
 }
 .schedule-day-strip > button { min-width: 88px; min-height: 67px; padding: 8px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border: 1px solid transparent; border-radius: 14px; color: var(--text-main); background: transparent; cursor: pointer; transition: .18s ease; }
@@ -179,7 +179,7 @@
 .schedule-settings-section-title strong { color: var(--text-main); font-size: .76rem; }
 .schedule-settings-section-title small { color: var(--text-muted); font-size: .56rem; }
 .schedule-settings-grid { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 9px; }
-.schedule-day-options { margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(6,1fr); gap: 7px; border: 0; }
+.schedule-day-options { margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: repeat(7,1fr); gap: 7px; border: 0; }
 .schedule-day-options legend { margin-bottom: 8px; color: var(--text-muted); font-size: .55rem; font-weight: 850; text-transform: uppercase; }
 .schedule-day-options input { position: absolute; opacity: 0; pointer-events: none; }
 .schedule-day-options label > span { padding: 10px 6px; display: block; border: 1px solid var(--border-color); border-radius: 12px; background: var(--card-bg); cursor: pointer; text-align: center; }
@@ -241,8 +241,8 @@
 .schedule-week-board-heading h2 { margin: 3px 0 2px; color: var(--text-main); font-size: 1.05rem; }
 .schedule-week-board-heading p { margin: 0; color: var(--text-muted); font-size: .62rem; }
 .schedule-matrix-scroll { overflow-x: auto; padding-bottom: 5px; scrollbar-width: thin; }
-.schedule-week-matrix { min-width: 920px; }
-.schedule-matrix-grid { display: grid; grid-template-columns: 92px repeat(6,minmax(128px,1fr)); gap: 5px; }
+.schedule-week-matrix { min-width: 1050px; }
+.schedule-matrix-grid { display: grid; grid-template-columns: 92px repeat(7,minmax(128px,1fr)); gap: 5px; }
 .schedule-matrix-corner,.schedule-matrix-day,.schedule-matrix-time,.schedule-matrix-cell { min-height: 58px; border: 1px solid var(--border-color); border-radius: 10px; }
 .schedule-matrix-corner { display: grid; place-items: center; background: color-mix(in srgb,var(--text-main) 8%,var(--card-bg)); color: var(--text-muted); font-size: .5rem; font-weight: 900; letter-spacing: .12em; }
 .schedule-matrix-day { padding: 8px; display: flex; align-items: center; justify-content: center; gap: 7px; background: color-mix(in srgb,var(--accent-color) 12%,var(--card-bg)); color: var(--text-main); cursor: pointer; }
@@ -297,7 +297,7 @@
     .schedule-progress-ring { width: 84px; height: 84px; }
     .schedule-progress-ring strong { font-size: 1.1rem; }
     .schedule-overview-grid > .widget { min-height: 0; padding: 17px; }
-    .schedule-day-strip { grid-template-columns: repeat(6, 82px); }
+    .schedule-day-strip { grid-template-columns: repeat(7, 82px); }
     .schedule-day-strip > button { min-width: 78px; padding-inline: 7px; }
     .schedule-agenda,.schedule-day-panel { padding: 17px; }
     .schedule-agenda-heading { align-items: stretch; flex-direction: column; }
@@ -323,7 +323,7 @@
     .schedule-suggestion { grid-template-columns: 34px 1fr; }
     .schedule-suggestion > div:last-child { grid-column: 1 / -1; }
     .schedule-week-board-heading { align-items: stretch; flex-direction: column; }.schedule-week-board-heading .cycle-btn { width:100%; }
-    .schedule-week-matrix { min-width: 820px; }.schedule-matrix-grid { grid-template-columns: 75px repeat(6,minmax(116px,1fr)); }
+    .schedule-week-matrix { min-width: 900px; }.schedule-matrix-grid { grid-template-columns: 75px repeat(7,minmax(116px,1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {
     .schedule-section * { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }

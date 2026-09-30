@@ -25,11 +25,12 @@
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
     <link rel="stylesheet" href="topic-workspace.css?v=20260922-topic-workspace-v1">
-    <link rel="stylesheet" href="schedule.css?v=20260929-flash-security-v2">
+    <link rel="stylesheet" href="schedule.css?v=20260929-strict-planner-v1">
+    <link rel="stylesheet" href="schedule-planner.css?v=20260929-strict-planner-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <link rel="stylesheet" href="chapter-refresh.css?v=20260922-chapter-profile-v1">
     <link rel="stylesheet" href="notes-workspace.css?v=20260922-notes-color-v1">
-    <link rel="stylesheet" href="flashcards.css?v=20260929-flash-security-v3">
+    <link rel="stylesheet" href="flashcards.css?v=20260929-deck-design-v4">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -376,7 +377,8 @@
                 <div class="schedule-command-actions">
                     <button type="button" class="cycle-btn" id="scheduleReplanButton" onclick="KingSchedule.replanOverdue()" hidden>Replanejar atrasados</button>
                     <button type="button" class="cycle-btn" onclick="KingSchedule.copyToNextWeek()">Copiar semana</button>
-                    <button type="button" class="cycle-btn schedule-organize-button" onclick="KingSchedule.organizeCurrentWeek()">Organizar automaticamente</button>
+                    <button type="button" class="cycle-btn schedule-clear-button" onclick="KingSchedule.clearAllBlocks()">Apagar todos os blocos</button>
+                    <button type="button" class="cycle-btn schedule-organize-button" onclick="KingSchedule.organizeCurrentWeek()">✦ Montar com IA</button>
                 </div>
             </div>
 
@@ -1320,28 +1322,65 @@
     </aside>
 
     <div class="ai-qg-backdrop" id="aiQgBackdrop" onclick="toggleIaQg(false)"></div>
-    <dialog id="flashDeckDialog" class="flash-dialog"><form id="flashDeckForm"><div class="flash-dialog-head"><div><span class="workspace-kicker">ORGANIZAÇÃO</span><h2 id="flashDeckDialogTitle">Novo deck</h2></div><button type="button" class="cycle-btn" data-flash-close="flashDeckDialog" aria-label="Fechar">×</button></div><input type="hidden" id="flashDeckId"><label>Nome do deck<input id="flashDeckName" required maxlength="80" placeholder="Ex.: Organelas"></label><label>Matéria<select id="flashDeckSubject" required></select></label><label>Assunto<input id="flashDeckTopic" maxlength="100" list="flashTopicOptions" placeholder="Ex.: Citologia"></label><datalist id="flashTopicOptions"></datalist><div class="flash-dialog-actions"><button type="button" class="cycle-btn flash-danger" id="flashDeleteDeck" hidden>Excluir deck</button><button type="submit" class="cycle-btn primary">Salvar deck</button></div></form></dialog>
+    <dialog id="flashDeckDialog" class="flash-dialog flash-deck-dialog" aria-labelledby="flashDeckDialogTitle">
+        <form id="flashDeckForm">
+            <div class="flash-dialog-head">
+                <span class="flash-deck-mark" aria-hidden="true">▣</span>
+                <div><span class="workspace-kicker">ORGANIZE SEUS CARTÕES</span><h2 id="flashDeckDialogTitle">Novo deck</h2><p>Escolha uma matéria e reúna seus cartões em um só lugar.</p></div>
+                <button type="button" class="cycle-btn flash-dialog-close" data-flash-close="flashDeckDialog" aria-label="Fechar">×</button>
+            </div>
+            <input type="hidden" id="flashDeckId">
+            <div class="flash-deck-fields">
+                <label for="flashDeckName">Nome do deck<input id="flashDeckName" required maxlength="80" placeholder="Ex.: Organelas"></label>
+                <div class="flash-picker-field">
+                    <span class="flash-field-label" id="flashDeckSubjectTitle">Matéria <small>obrigatória</small></span>
+                    <select id="flashDeckSubject" hidden aria-hidden="true" tabindex="-1"></select>
+                    <button type="button" id="flashDeckSubjectToggle" class="flash-picker-toggle" aria-labelledby="flashDeckSubjectTitle flashDeckSubjectLabel" aria-expanded="false" aria-controls="flashDeckSubjectOptions"><span id="flashDeckSubjectLabel">Escolha uma matéria cadastrada</span><span class="flash-picker-chevron" aria-hidden="true">⌄</span></button>
+                    <div id="flashDeckSubjectOptions" class="flash-picker-options" hidden></div>
+                </div>
+                <div class="flash-topic-field">
+                    <label for="flashDeckTopic"><span>Assunto <small>opcional</small></span><input id="flashDeckTopic" maxlength="100" autocomplete="off" aria-expanded="false" aria-controls="flashTopicOptions" placeholder="Ex.: Citologia"></label>
+                    <div id="flashTopicOptions" class="flash-topic-options" hidden></div>
+                    <p>Escolha um assunto da matéria ou escreva um novo.</p>
+                </div>
+            </div>
+            <div class="flash-dialog-actions"><button type="button" class="cycle-btn flash-danger" id="flashDeleteDeck" hidden>Excluir deck</button><button type="submit" class="cycle-btn primary">Salvar deck</button></div>
+        </form>
+    </dialog>
     <dialog id="flashReviewDialog" class="flash-dialog flash-review-dialog"><div class="flash-dialog-head"><div><span class="workspace-kicker" id="flashReviewSubject">REVISÃO</span><h2 id="flashReviewDeck">Flashcards</h2></div><button type="button" class="cycle-btn" data-flash-close="flashReviewDialog" aria-label="Fechar">×</button></div><div class="flash-review-progress" id="flashReviewProgress"></div><div class="flash-review-card"><span id="flashReviewPrompt">PERGUNTA</span><p id="flashReviewFront"></p><div id="flashReviewBack" class="flash-review-answer" hidden><span>RESPOSTA</span><p></p></div></div><div class="flash-review-actions"><button type="button" class="cycle-btn primary" id="flashReveal">Mostrar resposta</button><div id="flashRatings" hidden><button type="button" data-flash-rating="again">Errei <small>10 min</small></button><button type="button" data-flash-rating="hard">Difícil</button><button type="button" data-flash-rating="good">Acertei</button><button type="button" data-flash-rating="easy">Fácil</button></div></div></dialog>
     <dialog id="flashAiDialog" class="flash-dialog flash-ai-dialog"><div class="flash-dialog-head"><div><span class="workspace-kicker">SUGESTÕES, NÃO RESPOSTAS DEFINITIVAS</span><h2>Gerar flashcards com IA</h2></div><button type="button" class="cycle-btn" data-flash-close="flashAiDialog" aria-label="Fechar">×</button></div><form id="flashAiForm"><label>Deck de destino<select id="flashAiDeck" required></select></label><div class="flash-ai-options"><label>Origem<select id="flashAiSource"><option value="topic">Assunto do deck</option><option value="notes">Anotações do assunto</option><option value="reviews">Caixa de Revisões</option><option value="errors">Caderno de Erros</option><option value="text">Texto colado</option><option value="file">Arquivo de texto ou PDF</option></select></label><label>Quantidade<select id="flashAiCount"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option></select></label><label>Nível<select id="flashAiLevel"><option value="enem" selected>ENEM</option><option value="basico">Básico</option><option value="avancado">Avançado</option></select></label><label>Tipo<select id="flashAiType"><option value="misto" selected>Misto</option><option value="conceitos">Conceitos</option><option value="perguntas">Perguntas e respostas</option><option value="formulas">Fórmulas</option><option value="erros">Erros que cometi</option></select></label></div><label id="flashAiTextField" hidden>Texto para usar como fonte<textarea id="flashAiText" rows="5" maxlength="12000" placeholder="Cole aqui o trecho que deseja transformar em perguntas."></textarea></label><label id="flashAiFileField" hidden>Arquivo para extrair texto<input id="flashAiFile" type="file" accept="application/pdf,text/plain,text/markdown,.txt,.md,.pdf"><small>Até 2 MB. O texto é extraído neste dispositivo; PDFs sem texto selecionável não são aceitos.</small></label><p class="flash-ai-hint" id="flashAiHint">A IA receberá somente a origem escolhida. Revise cada cartão antes de adicionar.</p><button type="submit" class="cycle-btn primary" id="flashAiGenerate">Gerar prévia</button></form><div id="flashAiStatus" role="status"></div><div id="flashAiPreview" class="flash-ai-preview"></div><div class="flash-dialog-actions" id="flashAiApproval" hidden><button type="button" class="cycle-btn" id="flashAiRegenerate">Gerar novamente</button><button type="button" class="cycle-btn primary" id="flashAiAddSelected">Adicionar selecionados</button></div></dialog>
     <div id="toastNotification" class="toast-notification"></div>
+    <div class="modal-overlay" id="schedulePlannerModal">
+        <div class="modal-box schedule-planner-modal" role="dialog" aria-modal="true" aria-labelledby="schedulePlannerTitle">
+            <button type="button" class="modal-close" onclick="KingSchedule.closePlanner()" aria-label="Fechar prévia">×</button>
+            <header class="schedule-planner-header"><span class="workspace-kicker">PLANEJADOR COM REGRAS FIXAS</span><h2 id="schedulePlannerTitle">Monte a semana sem surpresas</h2><p>Horário, quantidade e duração não mudam por sugestão da IA. Nada é aplicado antes da sua confirmação.</p></header>
+            <div class="schedule-planner-layout">
+                <aside class="schedule-planner-rules"><h3>Configurações ativas</h3><div id="schedulePlannerRules"></div><button type="button" class="cycle-btn" onclick="KingSchedule.editPlannerRules()">Editar regras</button></aside>
+                <section class="schedule-planner-center" aria-label="Prévia do cronograma"><div class="schedule-planner-section-head"><div><h3>Prévia da semana</h3><p>Você pode trocar a matéria de cada bloco. Os horários ficam protegidos.</p></div><button type="button" class="cycle-btn" onclick="KingSchedule.refreshPlanner()">Recalcular prévia</button></div><div id="schedulePlannerStatus" role="status"></div><div id="schedulePlannerPreview"></div></section>
+                <aside class="schedule-planner-assistant"><div class="schedule-planner-ai-mark" aria-hidden="true">✦</div><h3>Assistente IA</h3><p>Peça uma preferência para esta semana. Ela não pode alterar suas regras fixas.</p><label for="scheduleAiMessage">O que você precisa?</label><textarea id="scheduleAiMessage" rows="6" maxlength="600" placeholder="Ex.: Priorize Física esta semana. Quero Redação na sexta."></textarea><button type="button" class="cycle-btn primary" id="scheduleAiRequest" onclick="KingSchedule.interpretPlannerRequest()">Interpretar pedido</button><small id="scheduleAiFeedback">As preferências só valem para esta prévia. As regras salvas continuam iguais.</small></aside>
+            </div>
+            <footer class="schedule-planner-footer"><p id="schedulePlannerFooterHint">Confira a prévia antes de aplicar.</p><div><button type="button" class="cycle-btn" onclick="KingSchedule.closePlanner()">Cancelar</button><button type="button" class="cycle-btn primary" id="scheduleApplyPreview" onclick="KingSchedule.applyPlannerPreview()" disabled>Aplicar cronograma</button></div></footer>
+        </div>
+    </div>
     <audio id="alarmAudio"></audio>
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
-    <script src="schedule-core.js?v=20260929-flash-security-v2"></script>
+    <script src="schedule-core.js?v=20260929-strict-planner-v1"></script>
+    <script src="schedule-planner.js?v=20260929-strict-planner-v1"></script>
     <script src="flashcards-core.js?v=20260929-flash-security-v2"></script>
     <script src="script.js?v=20260929-flash-security-v2"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
-    <script src="schedule.js?v=20260929-flash-security-v2"></script>
+    <script src="schedule.js?v=20260929-strict-planner-v1"></script>
     <script src="personal-development.js?v=20260922-flexible-v1"></script>
     <script src="subject-lab.js?v=20260929-flash-security-v2"></script>
     <script type="module" src="syllabus-pdf.js?v=20260922-pdf-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
     <script src="ai-assistant.js?v=20260929-flash-security-v2"></script>
-    <script src="flashcards.js?v=20260929-flash-security-v3"></script>
+    <script src="flashcards.js?v=20260929-deck-design-v4"></script>
     <script src="productivity.js?v=20260922-missions-3-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260929-flash-security-v3"></script>
+    <script type="module" src="cloud-sync.js?v=20260929-strict-planner-v1"></script>
 </body>
 </html>

@@ -25,16 +25,23 @@
     const addMinutes = (clock, minutes) => toClock(toMinutes(clock) + Number(minutes || 0));
     const validClock = value => /^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || ''));
     const normalizeSettings = input => {
-        const days = [...new Set((Array.isArray(input?.studyDays) ? input.studyDays : [1, 2, 3, 4, 5, 6]).map(Number).filter(day => day >= 1 && day <= 6))].sort();
+        const days = [...new Set((Array.isArray(input?.studyDays) ? input.studyDays : [1, 2, 3, 4, 5, 6]).map(Number).filter(day => day >= 1 && day <= 7))].sort();
         const pause = Number(input?.pauseMinutes);
         const closing = Number(input?.closingMinutes);
         const capacity = Number(input?.dailyCapacityMinutes);
         const startTime = validClock(input?.startTime) ? input.startTime : '14:00';
-        const dailyCapacityMinutes = Math.min(720, Math.max(60, Number.isFinite(capacity) ? capacity : 240));
+        const specifiedEnd = validClock(input?.endTime) && toMinutes(input.endTime) > toMinutes(startTime) ? input.endTime : '';
+        const dailyCapacityMinutes = specifiedEnd ? toMinutes(specifiedEnd) - toMinutes(startTime)
+            : Math.min(720, Math.max(60, Number.isFinite(capacity) ? capacity : 240));
+        const endTime = specifiedEnd || toClock(Math.min(1439, toMinutes(startTime) + dailyCapacityMinutes));
+        const blockMinutes = Math.min(240, Math.max(10, Number(input?.blockMinutes) || 50));
+        const pauseMinutes = Math.min(90, Math.max(0, Number.isFinite(pause) ? pause : 15));
+        const registrationMinutes = Math.min(30, Math.max(0, Number(input?.registrationMinutes ?? input?.closingMinutes ?? 5) || 0));
+        const inferredBlocks = Math.max(1, Math.floor((dailyCapacityMinutes + pauseMinutes) / (blockMinutes + registrationMinutes + pauseMinutes)));
         const source = input?.availability && typeof input.availability === 'object' && !Array.isArray(input.availability) ? input.availability : null;
         const availability = {};
         days.forEach(day => {
-            const fallback = [{ start: startTime, end: toClock(Math.min(1439, toMinutes(startTime) + dailyCapacityMinutes)) }];
+            const fallback = [{ start: startTime, end: endTime }];
             const ranges = source && Object.hasOwn(source, day) ? source[day] : fallback;
             const ordered = (Array.isArray(ranges) ? ranges : []).filter(range => validClock(range?.start) && validClock(range?.end) && toMinutes(range.end) > toMinutes(range.start))
                 .map(range => ({ start: toMinutes(range.start), end: toMinutes(range.end) })).sort((a, b) => a.start - b.start);
@@ -47,11 +54,14 @@
         });
         return {
             startTime,
+            endTime,
             studyDays: days.length ? days : [1, 2, 3, 4, 5, 6],
             dailyCapacityMinutes,
             availability,
-            blockMinutes: Math.min(240, Math.max(10, Number(input?.blockMinutes) || 50)),
-            pauseMinutes: Math.min(90, Math.max(0, Number.isFinite(pause) ? pause : 15)),
+            blockMinutes,
+            blocksPerDay: Math.min(8, Math.max(1, Number(input?.blocksPerDay) || inferredBlocks)),
+            pauseMinutes,
+            registrationMinutes,
             closingMinutes: Math.min(60, Math.max(0, Number.isFinite(closing) ? closing : 5)),
             maxSubjectsPerDay: Math.min(6, Math.max(1, Number(input?.maxSubjectsPerDay) || 2))
         };
@@ -187,8 +197,20 @@
         return {
             key: monday(nextKey),
             blocks: (week?.blocks || []).map((block, index) => ({ ...block, id: Date.now() + index, status: 'pending', registered: false, result: null })),
-            dailyClosures: {}, warnings: [...(week?.warnings || [])], copiedAt: Date.now()
+            dailyClosures: {}, warnings: [...(week?.warnings || [])], strict: Boolean(week?.strict), copiedAt: Date.now()
         };
     }
-    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, organize, copyWeek };
+    function clearAllBlocks(weeks) {
+        let removed = 0;
+        for (const entry of Object.values(weeks || {})) {
+            if (!entry || typeof entry !== 'object') continue;
+            removed += Array.isArray(entry.blocks) ? entry.blocks.length : 0;
+            entry.blocks = [];
+            entry.unscheduled = [];
+            entry.warnings = [];
+            entry.strict = false;
+        }
+        return removed;
+    }
+    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, organize, copyWeek, clearAllBlocks };
 })();

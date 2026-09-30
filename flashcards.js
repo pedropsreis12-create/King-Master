@@ -108,13 +108,46 @@
         renderMetrics(); renderDeckList(); renderCards(); updateDashboard();
     }
 
+    function closeDeckPickers() {
+        el('flashDeckSubjectOptions').hidden = true;
+        el('flashDeckSubjectToggle').setAttribute('aria-expanded', 'false');
+        el('flashTopicOptions').hidden = true;
+        el('flashDeckTopic').setAttribute('aria-expanded', 'false');
+    }
     function fillSubjects(value = '') {
-        el('flashDeckSubject').innerHTML = '<option value="">Escolha uma matéria cadastrada</option>' + appData.cycleItems.map(item => `<option value="${escape(item.id)}" ${String(item.id) === String(value) ? 'selected' : ''}>${escape(item.subject)}</option>`).join('');
+        const subjectSelect = el('flashDeckSubject');
+        subjectSelect.innerHTML = '<option value="">Escolha uma matéria cadastrada</option>' + appData.cycleItems.map(item => `<option value="${escape(item.id)}">${escape(item.subject)}</option>`).join('');
+        subjectSelect.value = String(value);
+        if (!subjectSelect.value) subjectSelect.value = '';
+        updateSubjectPicker();
+    }
+    function updateSubjectPicker() {
+        const selected = appData.cycleItems.find(item => String(item.id) === el('flashDeckSubject').value);
+        el('flashDeckSubjectLabel').textContent = selected?.subject || 'Escolha uma matéria cadastrada';
+        el('flashDeckSubjectToggle').classList.toggle('is-selected', !!selected);
+        el('flashDeckSubjectOptions').innerHTML = appData.cycleItems.map(item => `<button type="button" class="flash-picker-option${String(item.id) === String(selected?.id) ? ' is-selected' : ''}" data-flash-subject="${escape(item.id)}" aria-pressed="${String(item.id) === String(selected?.id)}"><span class="flash-picker-dot" aria-hidden="true"></span><span>${escape(item.subject)}</span><span class="flash-picker-check" aria-hidden="true">✓</span></button>`).join('');
         fillTopics();
+    }
+    function selectDeckSubject(value) {
+        const previous = el('flashDeckSubject').value;
+        el('flashDeckSubject').value = String(value);
+        if (previous !== el('flashDeckSubject').value) el('flashDeckTopic').value = '';
+        updateSubjectPicker();
+        closeDeckPickers();
+        el('flashDeckSubjectToggle').focus();
     }
     function fillTopics() {
         const current = appData.cycleItems.find(item => String(item.id) === el('flashDeckSubject').value);
-        el('flashTopicOptions').innerHTML = (current?.topicos || []).map(item => `<option value="${escape(item.nome)}"></option>`).join('');
+        const query = core.key(el('flashDeckTopic').value);
+        const topics = (current?.topicos || []).map(item => item.nome).filter(Boolean)
+            .filter(name => !query || core.key(name).includes(query)).slice(0, 6);
+        el('flashTopicOptions').innerHTML = topics.map(name => `<button type="button" data-flash-topic="${escape(name)}"><span aria-hidden="true">▣</span>${escape(name)}</button>`).join('');
+        return topics.length;
+    }
+    function showTopicOptions() {
+        const hasTopics = fillTopics();
+        el('flashTopicOptions').hidden = !hasTopics;
+        el('flashDeckTopic').setAttribute('aria-expanded', String(!!hasTopics));
     }
     function openDeckDialog(edit = false) {
         if (!edit && !appData.cycleItems.length) { showToast('Cadastre uma matéria antes de criar um deck.', true); showSection('planejamento'); return; }
@@ -125,6 +158,7 @@
         fillSubjects(current?.subjectId || '');
         el('flashDeckTopic').value = current?.topic || '';
         el('flashDeleteDeck').hidden = !current;
+        closeDeckPickers();
         el('flashDeckDialog').showModal();
         el('flashDeckName').focus();
     }
@@ -133,7 +167,14 @@
         const name = core.text(el('flashDeckName').value, 80);
         const subjectId = el('flashDeckSubject').value;
         const topic = core.text(el('flashDeckTopic').value, 100);
-        if (!name || !appData.cycleItems.some(item => String(item.id) === subjectId)) { showToast('Informe nome e matéria cadastrada.', true); return; }
+        if (!name) { el('flashDeckName').focus(); return; }
+        if (!appData.cycleItems.some(item => String(item.id) === subjectId)) {
+            showToast('Escolha uma matéria cadastrada.', true);
+            el('flashDeckSubjectToggle').focus();
+            el('flashDeckSubjectOptions').hidden = false;
+            el('flashDeckSubjectToggle').setAttribute('aria-expanded', 'true');
+            return;
+        }
         const data = box();
         const currentId = el('flashDeckId').value;
         if (data.decks.some(item => item.id !== currentId && String(item.subjectId) === subjectId && core.key(item.name) === core.key(name) && core.key(item.topic) === core.key(topic))) { showToast('Já existe um deck igual nesta matéria e assunto.', true); return; }
@@ -383,7 +424,59 @@
     el('flashStatusFilter')?.add(new Option('Errei recentemente', 'wrong'));
     el('flashDeckOpen')?.addEventListener('click', () => openDeckDialog());
     el('flashEditDeck')?.addEventListener('click', () => openDeckDialog(true));
-    el('flashDeckSubject')?.addEventListener('change', fillTopics);
+    el('flashDeckSubjectToggle')?.addEventListener('click', () => {
+        const options = el('flashDeckSubjectOptions');
+        const opening = options.hidden;
+        closeDeckPickers();
+        options.hidden = !opening;
+        el('flashDeckSubjectToggle').setAttribute('aria-expanded', String(opening));
+    });
+    el('flashDeckSubjectToggle')?.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            el('flashDeckSubjectOptions').hidden = false;
+            el('flashDeckSubjectToggle').setAttribute('aria-expanded', 'true');
+            el('flashDeckSubjectOptions').querySelector('button')?.focus();
+        }
+    });
+    el('flashDeckSubjectOptions')?.addEventListener('click', event => {
+        const option = event.target.closest('[data-flash-subject]');
+        if (option) selectDeckSubject(option.dataset.flashSubject);
+    });
+    el('flashDeckSubjectOptions')?.addEventListener('keydown', event => {
+        const options = [...el('flashDeckSubjectOptions').querySelectorAll('button')];
+        const index = options.indexOf(document.activeElement);
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDeckPickers(); el('flashDeckSubjectToggle').focus(); }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            options[(index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length]?.focus();
+        }
+    });
+    el('flashDeckTopic')?.addEventListener('focus', showTopicOptions);
+    el('flashDeckTopic')?.addEventListener('input', showTopicOptions);
+    el('flashDeckTopic')?.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !el('flashTopicOptions').hidden) { event.preventDefault(); event.stopPropagation(); closeDeckPickers(); }
+        if (event.key === 'ArrowDown' && !el('flashTopicOptions').hidden) { event.preventDefault(); el('flashTopicOptions').querySelector('button')?.focus(); }
+    });
+    el('flashTopicOptions')?.addEventListener('click', event => {
+        const option = event.target.closest('[data-flash-topic]');
+        if (!option) return;
+        el('flashDeckTopic').value = option.dataset.flashTopic;
+        el('flashDeckTopic').focus();
+        closeDeckPickers();
+    });
+    el('flashTopicOptions')?.addEventListener('keydown', event => {
+        const options = [...el('flashTopicOptions').querySelectorAll('button')];
+        const index = options.indexOf(document.activeElement);
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeDeckPickers(); el('flashDeckTopic').focus(); }
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            options[(index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length]?.focus();
+        }
+    });
+    el('flashDeckDialog')?.addEventListener('pointerdown', event => {
+        if (!event.target.closest('.flash-picker-field, .flash-topic-field')) closeDeckPickers();
+    });
     el('flashDeckForm')?.addEventListener('submit', saveDeck);
     el('flashDeleteDeck')?.addEventListener('click', deleteDeck);
     el('flashDeckList')?.addEventListener('click', event => { const button = event.target.closest('[data-flash-deck]'); if (button) { selectedDeckId = button.dataset.flashDeck; clearCardForm(); render(); } });
@@ -402,7 +495,7 @@
     el('flashAiAddSelected')?.addEventListener('click', addCandidates);
     document.querySelectorAll('[data-flash-close]').forEach(button => button.addEventListener('click', () => el(button.dataset.flashClose)?.close()));
     for (const dialog of [el('flashDeckDialog'), el('flashReviewDialog'), el('flashAiDialog')]) dialog?.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-    el('flashDeckDialog')?.addEventListener('close', () => { pendingErrorId = null; });
+    el('flashDeckDialog')?.addEventListener('close', () => { pendingErrorId = null; closeDeckPickers(); });
     el('flashAiDialog')?.addEventListener('close', () => { specificErrorId = null; });
     window.KingFlashcards = { render, updateDashboard, openDeck: openDeckDialog, openReview, fromError };
     render();

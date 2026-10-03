@@ -892,7 +892,7 @@ function syncVisualModeControl() {
     const control = document.getElementById('visualModeSwitch');
     const label = document.getElementById('visualModeLabel');
     if (control) control.setAttribute('aria-checked', String(isFuturistic));
-    if (label) label.textContent = isFuturistic ? 'Visual futurista' : 'Visual clássico';
+    if (label) label.textContent = isFuturistic ? 'Detalhes dinâmicos' : 'Visual essencial';
 }
 
 function toggleVisualMode() {
@@ -900,7 +900,7 @@ function toggleVisualMode() {
     document.documentElement.setAttribute('data-visual', appData.visualMode);
     saveAppData();
     syncVisualModeControl();
-    showToast(appData.visualMode === 'classic' ? 'Visual clássico ativado.' : 'Visual futurista ativado.');
+    showToast(appData.visualMode === 'classic' ? 'Visual essencial ativado.' : 'Detalhes dinâmicos ativados.');
 }
 
 // ==========================================
@@ -1086,10 +1086,13 @@ function confirmarDelecao() {
 function showToast(msg, isError = false) {
     const toast = document.getElementById('toastNotification'); 
     if(!toast) return;
+    clearTimeout(showToast.hideTimer);
     toast.textContent = String(msg ?? '');
+    toast.setAttribute('role', isError ? 'alert' : 'status');
+    toast.setAttribute('aria-live', isError ? 'assertive' : 'polite');
     if(isError) toast.classList.add('toast-error'); else toast.classList.remove('toast-error');
     toast.classList.add('show'); 
-    setTimeout(() => toast.classList.remove('show'), 3500);
+    showToast.hideTimer = setTimeout(() => toast.classList.remove('show'), 3500);
 }
 
 const formatShortTime = sec => sec === 0 ? '0m' : (sec >= 3600 ? `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m` : `${Math.floor((sec % 3600) / 60)}m`);
@@ -1956,6 +1959,7 @@ let lastTickTime = 0;
 let alarmTriggered = false;
 let lastTimerCloudSave = 0;
 const alarmAudio = document.getElementById('alarmAudio'), stopAlarmBtn = document.getElementById('stopAlarmBtn'), timerGoalActions = document.getElementById('timerGoalActions'), timeDisplay = document.getElementById('timeDisplay'), playPauseBtn = document.getElementById('playPauseBtn'), progressRing = document.getElementById('progressRing'), circ = 2 * Math.PI * 135;
+let alarmAudioContext = null, alarmLoopTimer = null;
 if(progressRing) progressRing.style.strokeDasharray = circ;
 
 const getTargetSeconds = () => currentMode === 'descanso' ? descansoTempoAtual * 60 : ((parseInt(document.getElementById('inputHours').value) || 0) * 3600) + ((parseInt(document.getElementById('inputMinutes').value) || 0) * 60) + (parseInt(document.getElementById('inputSeconds').value) || 0);
@@ -2518,6 +2522,7 @@ function toggleTimer() {
         saveAppData(); 
         updateProgress(); 
     } else {
+        prepararAudioAlarme();
         const sessaoQueSeguraCronometro = sincronizarFilaSessoesPendentes().find(sessao => sessao.holdsTimer);
         if (sessaoQueSeguraCronometro) {
             sessaoQueSeguraCronometro.holdsTimer = false;
@@ -2611,20 +2616,46 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
 });
 
+function prepararAudioAlarme() {
+    if (!alarmAudioContext) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) alarmAudioContext = new AudioContextClass();
+    }
+    if (alarmAudioContext?.state === 'suspended') alarmAudioContext.resume().catch(() => undefined);
+}
+
+function tocarPulsoAlarme() {
+    if (!alarmAudioContext || alarmAudioContext.state === 'closed') return;
+    const inicio = alarmAudioContext.currentTime;
+    [0, .28].forEach((atraso, indice) => {
+        const oscillator = alarmAudioContext.createOscillator();
+        const gain = alarmAudioContext.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(indice ? 880 : 660, inicio + atraso);
+        gain.gain.setValueAtTime(.0001, inicio + atraso);
+        gain.gain.exponentialRampToValueAtTime(.16, inicio + atraso + .025);
+        gain.gain.exponentialRampToValueAtTime(.0001, inicio + atraso + .22);
+        oscillator.connect(gain).connect(alarmAudioContext.destination);
+        oscillator.start(inicio + atraso);
+        oscillator.stop(inicio + atraso + .24);
+    });
+}
+
 function triggerAlarm() { 
     saveAppData(); 
     timerGoalActions?.classList.add('active');
-    if(alarmAudio) {
-        alarmAudio.src = "https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3";
-        alarmAudio.loop = true;
-        alarmAudio.currentTime = 0;
-        alarmAudio.play().catch(e => console.log("Áudio bloqueado pelo navegador. Interação manual necessária."));
-    }
+    prepararAudioAlarme();
+    tocarPulsoAlarme();
+    clearInterval(alarmLoopTimer);
+    alarmLoopTimer = setInterval(tocarPulsoAlarme, 1800);
 }
 
 function stopAlarm() { 
+    clearInterval(alarmLoopTimer);
+    alarmLoopTimer = null;
     if(alarmAudio) {
-        alarmAudio.pause();
+        if (typeof alarmAudio.pause === 'function') alarmAudio.pause();
+        if (typeof alarmAudio.removeAttribute === 'function') alarmAudio.removeAttribute('src');
         alarmAudio.currentTime = 0;
         alarmAudio.loop = false;
     }

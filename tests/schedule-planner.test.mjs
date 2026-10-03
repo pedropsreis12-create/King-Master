@@ -111,9 +111,15 @@ test('mais matérias que o limite diário prioriza duas sem ultrapassar a cota s
 test('texto contraditório é identificado mesmo se a resposta da IA ocultar o conflito', () => {
     const plans = UserStudyPreferences.normalize(subjects, rules).subjects;
     const result = AIScheduleAssistant.interpret({ requestedBlocksPerDay: 4 }, 'Quero 6 blocos de matemática hoje', rules, plans);
-    assert.match(result.errors.join(' '), /6 blocos/);
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.targetBlocksPerDay, 6);
+    assert.match(result.warnings.join(' '), /meta diária será 6 blocos/i);
     const time = AIScheduleAssistant.interpret({ requestedEndTime: '18:30' }, 'Essa semana só consigo estudar até 18h', rules, plans);
-    assert.match(time.errors.join(' '), /18:00/);
+    assert.equal(time.errors.length, 0);
+    assert.equal(time.targetEndTime, '18:00');
+    assert.match(time.warnings.join(' '), /terminará até 18:00/i);
+    const later = AIScheduleAssistant.interpret({ requestedEndTime: '19:00' }, '', rules, plans);
+    assert.match(later.errors.join(' '), /nunca amplia o horário/i);
 });
 
 test('validador independente recusa bloco extra, duração trocada e matéria fora da seleção', () => {

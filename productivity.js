@@ -154,7 +154,7 @@
 
     async function registerPwa() {
         if (!('serviceWorker' in navigator)) return null;
-        try { return await navigator.serviceWorker.register('./sw.js?v=20260916-session-safe-v1'); }
+        try { return await navigator.serviceWorker.register('./sw.js?v=20260929-offline-v5'); }
         catch { return null; }
     }
 

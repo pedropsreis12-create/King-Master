@@ -19,7 +19,11 @@ function staticSiteWorker() {
       await writeFile('dist/recuperar.html', passwordResetPage, 'utf8');
       files['/recuperar.html'] = { body: passwordResetPage, type: 'text/html; charset=utf-8' };
 
-      for (const name of ['script.js', 'schedule-core.js', 'schedule-planner.js', 'schedule.js', 'flashcards-core.js', 'flashcards.js', 'mock-exam-core.js', 'mock-exams.js', 'subject-picker.js', 'habit-core.js', 'academic-context.js', 'sidebar-icons.js', 'personal-development.js', 'subject-lab.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
+      const privacyPage = await readFile('privacidade.html', 'utf8');
+      await writeFile('dist/privacidade.html', privacyPage, 'utf8');
+      files['/privacidade.html'] = { body: privacyPage, type: 'text/html; charset=utf-8' };
+
+      for (const name of ['script.js', 'schedule-core.js', 'schedule-planner.js', 'schedule.js', 'flashcards-core.js', 'flashcards.js', 'mock-exam-core.js', 'mock-exams.js', 'subject-picker.js', 'habit-core.js', 'academic-context.js', 'sidebar-icons.js', 'personal-development.js', 'subject-lab.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'rank-system-v2.js', 'rank-integration-v2.js', 'accessibility-v2.js', 'data-portability.js', 'command-palette.js', 'modal-accessibility.js', 'profile-overhaul.js', 'firebase-config.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };

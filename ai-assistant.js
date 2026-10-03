@@ -939,7 +939,7 @@ window.limparConversaIa = limparConversaIa;
 
 document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && document.getElementById('aiQgPanel')?.classList.contains('open')) toggleIaQg(false);
-    if ((event.ctrlKey || event.metaKey) && event.key.toLocaleLowerCase('pt-BR') === 'k') {
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLocaleLowerCase('pt-BR') === 'k') {
         event.preventDefault(); toggleIaQg(true);
     }
 });

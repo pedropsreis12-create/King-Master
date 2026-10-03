@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="auth-pending">
 <head>
-    <script>document.documentElement.classList.add('auth-pending');</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta http-equiv="Content-Security-Policy" content="base-uri 'self'; object-src 'none'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://apis.google.com; script-src-elem 'self' https://www.gstatic.com https://www.google.com https://www.recaptcha.net https://apis.google.com; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src https:; worker-src 'self' blob:; manifest-src 'self'; base-uri 'self'; object-src 'none'; form-action 'self'; upgrade-insecure-requests">
     <title>King Master - Sistema de Alta Performance</title>
     <meta name="theme-color" content="#0f1720">
     <meta name="description" content="King Master — seu painel pessoal de estudos para o ENEM.">
@@ -15,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20260929-flash-security-v2">
+    <link rel="stylesheet" href="style.css?v=20261002-evolution-v1">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260929-flash-security-v2">
@@ -25,14 +24,17 @@
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
     <link rel="stylesheet" href="topic-workspace.css?v=20260922-topic-workspace-v1">
-    <link rel="stylesheet" href="schedule.css?v=20260929-adaptive-planner-v1">
-    <link rel="stylesheet" href="schedule-planner.css?v=20260929-adaptive-planner-v1">
+    <link rel="stylesheet" href="schedule.css?v=20261002-evolution-v1">
+    <link rel="stylesheet" href="schedule-planner.css?v=20261002-evolution-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <link rel="stylesheet" href="chapter-refresh.css?v=20260922-chapter-profile-v1">
-    <link rel="stylesheet" href="notes-workspace.css?v=20260922-notes-color-v1">
-    <link rel="stylesheet" href="flashcards.css?v=20260929-deck-design-v4">
+    <link rel="stylesheet" href="notes-workspace.css?v=20261002-evolution-v1">
+    <link rel="stylesheet" href="flashcards.css?v=20261002-evolution-v1">
     <link rel="stylesheet" href="subject-picker.css?v=20261002-v1">
     <link rel="stylesheet" href="mock-exams.css?v=20261002-v1">
+    <link rel="stylesheet" href="command-palette.css?v=20260929-overhaul-v4">
+    <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
+    <link rel="stylesheet" href="profile-overhaul.css?v=20260930-achievements-toggle">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -45,6 +47,7 @@
     </style>
 </head>
 <body>
+    <a class="skip-link" href="#mainContent">Pular para o conteúdo principal</a>
 
     <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle" aria-live="polite">
         <div class="auth-gate-card" id="authGateCard">
@@ -78,7 +81,7 @@
             </form>
             <p class="auth-feedback" id="authFeedback" role="status">Verificando sua conta…</p>
             <button type="button" class="auth-cloud-retry" id="authCloudRetryBtn" hidden>Carregar meus dados novamente</button>
-            <small class="auth-privacy">Seus dados ficam vinculados à sua conta e protegidos pelas regras do Firebase.</small>
+            <small class="auth-privacy">Seus dados ficam vinculados à sua conta e protegidos pelas regras do Firebase. <a href="privacidade.html" target="_blank" rel="noopener">Como seus dados e a IA são usados</a>.</small>
             </div>
             <section class="auth-recovery" id="authRecoveryPanel" aria-labelledby="authRecoveryTitle" hidden>
                 <button type="button" class="auth-recovery-back" id="authRecoveryBackBtn" aria-label="Voltar para a entrada">‹ <span>Voltar</span></button>
@@ -143,8 +146,8 @@
             </button>
             <div class="bottom-actions">
                 <div class="visual-mode-control">
-                    <span class="visual-mode-copy"><strong id="visualModeLabel">Visual futurista</strong><small>Alternar aparência</small></span>
-                    <button class="visual-switch" id="visualModeSwitch" type="button" role="switch" aria-checked="true" aria-label="Alternar entre o visual futurista e o visual clássico" onclick="toggleVisualMode()">
+                    <span class="visual-mode-copy"><strong id="visualModeLabel">Detalhes dinâmicos</strong><small>Nível de ornamentação</small></span>
+                    <button class="visual-switch" id="visualModeSwitch" type="button" role="switch" aria-checked="true" aria-label="Alternar entre detalhes dinâmicos e visual essencial" onclick="toggleVisualMode()">
                         <span class="visual-switch-text visual-switch-on">ON</span>
                         <span class="visual-switch-text visual-switch-off">OFF</span>
                         <span class="visual-switch-knob"></span>
@@ -224,7 +227,7 @@
             </div>
         </div>
 
-    <main>
+    <main id="mainContent" tabindex="-1">
         <section id="dashboard" class="content-section active">
             <h1>Foco e Execução</h1>
             
@@ -276,7 +279,7 @@
             <div class="dashboard-focus-grid">
                 <div class="widget timer-hero timer-hero-dashboard">
                     <div class="mode-selector">
-                        <button class="mode-btn active" id="btn-estudo" onclick="setMode('estudo')">Estudo (Cronómetro)</button>
+                        <button class="mode-btn active" id="btn-estudo" onclick="setMode('estudo')">Estudo (Cronômetro)</button>
                         <button class="mode-btn" id="btn-descanso" onclick="setMode('descanso')">Descanso (Timer)</button>
                     </div>
                     <div class="progress-container-large">
@@ -308,9 +311,9 @@
                         <button type="button" class="quick-review-trigger" onclick="abrirModalRevisao()"><span aria-hidden="true">＋</span><span><strong>Revisar depois</strong><small>Registre sem interromper o foco</small></span><kbd>Alt R</kbd></button>
                         <label id="labelConfig" class="config-label" style="margin-top: 10px;">Tocar alarme após</label>
                         <div class="time-input-group" id="manualTimeGroup">
-                            <div class="time-col"><input type="number" id="inputHours" class="config-input tiny" value="0" min="0" oninput="sincronizarTempo()"><span>h</span></div>
-                            <div class="time-col"><input type="number" id="inputMinutes" class="config-input tiny" value="25" min="0" max="59" oninput="sincronizarTempo()"><span>m</span></div>
-                            <div class="time-col"><input type="number" id="inputSeconds" class="config-input tiny" value="0" min="0" max="59" oninput="sincronizarTempo()"><span>s</span></div>
+                            <div class="time-col"><input type="number" id="inputHours" class="config-input tiny" value="0" min="0" aria-label="Horas do cronômetro" oninput="sincronizarTempo()"><span aria-hidden="true">h</span></div>
+                            <div class="time-col"><input type="number" id="inputMinutes" class="config-input tiny" value="25" min="0" max="59" aria-label="Minutos do cronômetro" oninput="sincronizarTempo()"><span aria-hidden="true">m</span></div>
+                            <div class="time-col"><input type="number" id="inputSeconds" class="config-input tiny" value="0" min="0" max="59" aria-label="Segundos do cronômetro" oninput="sincronizarTempo()"><span aria-hidden="true">s</span></div>
                         </div>
                         <div class="descanso-preset-group" id="descansoPresetGroup" style="display: none;">
                             <button class="cycle-btn primary" id="btn-descanso-5" onclick="setDescansoTime(5)">5 Min</button>
@@ -1038,13 +1041,13 @@
                 <div class="cycle-modal-title" id="agendamentoModalTitle">Novo Compromisso</div>
                 <form id="formAddAgendamento" onsubmit="salvarAgendamentoNovo(event)">
                     <input type="hidden" id="agendamentoEditId" value="">
-                    <div class="cycle-form-group"><label class="cycle-label">Descrição do Compromisso</label><input type="text" id="agendamentoTitleInput" class="cycle-input" placeholder="Ex: Treino / Estudar" required></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoTitleInput">Descrição do Compromisso</label><input type="text" id="agendamentoTitleInput" class="cycle-input" placeholder="Ex: Treino / Estudar" required></div>
                     <div style="display: flex; gap: 15px;">
-                        <div class="cycle-form-group" style="flex: 1.5;"><label class="cycle-label">Data</label><input type="date" id="agendamentoDateInput" class="cycle-input" required></div>
-                        <div class="cycle-form-group" style="flex: 1;"><label class="cycle-label">Hora</label><input type="time" id="agendamentoTimeInput" class="cycle-input" required></div>
+                        <div class="cycle-form-group" style="flex: 1.5;"><label class="cycle-label" for="agendamentoDateInput">Data</label><input type="date" id="agendamentoDateInput" class="cycle-input" required></div>
+                        <div class="cycle-form-group" style="flex: 1;"><label class="cycle-label" for="agendamentoTimeInput">Hora</label><input type="time" id="agendamentoTimeInput" class="cycle-input" required></div>
                     </div>
                     <div class="cycle-form-group">
-                        <label class="cycle-label">Categoria</label>
+                        <label class="cycle-label" for="agendamentoTypeInput">Categoria</label>
                         <select id="agendamentoTypeInput" class="cycle-input" required>
                             <option value="Estudo">📚 Estudo</option>
                             <option value="Prova">📝 Prova / Simulado</option>
@@ -1053,7 +1056,7 @@
                         </select>
                     </div>
                     <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDurationInput">Duração</label><select id="agendamentoDurationInput" class="cycle-input"><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="90">1 hora e meia</option><option value="120">2 horas</option></select></div>
-                    <div class="cycle-form-group"><label class="cycle-label">Notas</label><textarea id="agendamentoDescInput" class="cycle-input" rows="2"></textarea></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDescInput">Notas</label><textarea id="agendamentoDescInput" class="cycle-input" rows="2"></textarea></div>
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Agendar</button></div>
                 </form>
             </div>
@@ -1202,7 +1205,7 @@
                 <form onsubmit="salvarReagendamentoRevisao(event)">
                     <input type="hidden" id="reagendarRevisaoId">
                     <p class="modal-message" id="reagendarRevisaoResumo" style="margin-bottom:18px;"></p>
-                    <div class="cycle-form-group"><label class="cycle-label">Nova data de revisão</label><input type="date" class="cycle-input" id="reagendarRevisaoData" required></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="reagendarRevisaoData">Nova data de revisão</label><input type="date" class="cycle-input" id="reagendarRevisaoData" required></div>
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Reagendar</button></div>
                 </form>
             </div>
@@ -1213,7 +1216,7 @@
                 <button type="button" class="modal-close" onclick="fecharModal('tagsRevisaoModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title">Tags de Revisão</div>
                 <form class="revision-tag-create" onsubmit="salvarTagRevisao(event)">
-                    <input type="text" class="cycle-input" id="novaTagRevisao" placeholder="Ex.: Fórmulas, Difícil, Prioridade" maxlength="28" required autocomplete="off">
+                    <label class="sr-only" for="novaTagRevisao">Nome da tag</label><input type="text" class="cycle-input" id="novaTagRevisao" placeholder="Ex.: Fórmulas, Difícil, Prioridade" maxlength="28" required autocomplete="off">
                     <button type="button" class="cycle-btn" id="cancelarEdicaoTagRevisao" onclick="cancelarEdicaoTagRevisao()" hidden>Cancelar</button>
                     <button type="submit" class="cycle-btn primary" id="salvarTagRevisaoButton">Criar</button>
                 </form>
@@ -1260,10 +1263,10 @@
                     <section class="session-kind-details" id="sessionRedacaoFields" hidden>
                         <div class="form-grid two"><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayTheme">Tema da redação</label><input class="cycle-input" id="sessionEssayTheme" maxlength="140" placeholder="Tema trabalhado nesta sessão"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayStatus">Situação</label><select class="cycle-input" id="sessionEssayStatus" onchange="atualizarTipoRegistroSessao()"><option value="awaiting">Aguardando correção</option><option value="corrected">Corrigida</option><option value="draft">Em produção</option></select></div></div>
                         <p class="session-detail-help">Se já tiver a correção, preencha as competências. Caso contrário, deixe em branco.</p>
-                        <div class="form-grid five"><div class="cycle-form-group"><label class="cycle-label">C1</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C2</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C3</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C4</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label">C5</label><input type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div></div>
+                        <div class="form-grid five"><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayC1">C1</label><input id="sessionEssayC1" type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayC2">C2</label><input id="sessionEssayC2" type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayC3">C3</label><input id="sessionEssayC3" type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayC4">C4</label><input id="sessionEssayC4" type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div><div class="cycle-form-group"><label class="cycle-label" for="sessionEssayC5">C5</label><input id="sessionEssayC5" type="number" class="cycle-input session-essay-score" min="0" max="200" step="40"></div></div>
                         <div class="cycle-form-group"><label class="cycle-label" for="sessionEssayNextFocus">Próximo foco <span class="schedule-optional">opcional</span></label><input class="cycle-input" id="sessionEssayNextFocus" maxlength="240" placeholder="Qual ajuste levar para a próxima redação?"></div>
                     </section>
-                    <div class="session-review-card"><label><input type="checkbox" id="sessionAutoReview" checked onchange="atualizarRevisaoRegistroSessao()"><span><strong>Agendar revisão automática</strong><small>Você pode desligar só para esta sessão.</small></span></label><select class="cycle-input" id="sessionReviewDelay"><option value="1">Amanhã</option><option value="3">Em 3 dias</option><option value="7">Em 7 dias</option><option value="14">Em 14 dias</option><option value="30">Em 30 dias</option></select></div>
+                    <div class="session-review-card"><label><input type="checkbox" id="sessionAutoReview" checked onchange="atualizarRevisaoRegistroSessao()"><span><strong>Agendar revisão automática</strong><small>Você pode desligar só para esta sessão.</small></span></label><label class="sr-only" for="sessionReviewDelay">Quando revisar</label><select class="cycle-input" id="sessionReviewDelay"><option value="1">Amanhã</option><option value="3">Em 3 dias</option><option value="7">Em 7 dias</option><option value="14">Em 14 dias</option><option value="30">Em 30 dias</option></select></div>
                     <div class="cycle-modal-actions session-complete-actions"><button type="button" class="cycle-btn subtle-danger" onclick="descartarRegistroSessao()">Descartar</button><button type="button" class="cycle-btn" onclick="adiarRegistroSessao()">Salvar depois</button><button type="submit" class="cycle-btn primary">Salvar registro</button></div>
                 </form>
             </div>
@@ -1326,9 +1329,9 @@
 
         <div class="modal-overlay" id="scheduleDayCloseModal"><div class="modal-box schedule-day-close-modal"><button type="button" class="modal-close" onclick="KingSchedule.closeDayLater()" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO FINAL</span><div class="cycle-modal-title">Registrar estudo de hoje</div><p class="modal-message">Confira o que avançou. Este resumo organiza o dia sem duplicar o progresso já salvo em cada bloco.</p><div class="schedule-day-close-summary" id="scheduleDayCloseSummary"></div><section class="day-close-reviews" id="scheduleDayCloseReviews"><header><div><span>REVISÕES ADICIONADAS HOJE</span><strong id="scheduleDayCloseReviewsCount">0 revisões registradas</strong></div><button type="button" onclick="showSection('revisoes');KingSchedule.closeDayLater()">Abrir caixa</button></header><div id="scheduleDayCloseReviewsList"></div></section><form onsubmit="KingSchedule.saveDayClose(event)"><input type="hidden" id="scheduleDayCloseWeek"><input type="hidden" id="scheduleDayCloseDay"><div class="cycle-form-group"><label class="cycle-label" for="scheduleDayCloseNotes">Observações do dia</label><textarea class="cycle-input" id="scheduleDayCloseNotes" rows="4" maxlength="700" placeholder="O que funcionou bem? O que precisa mudar amanhã?"></textarea></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingSchedule.closeDayLater()">Fazer depois</button><button type="submit" class="cycle-btn primary">Salvar progresso</button></div></form></div></div>
 
-        <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Salvar sessão</button></div></form></div></div>
+        <div class="modal-overlay" id="editHistoryModal"><div class="modal-box"><button type="button" class="modal-close" onclick="fecharModal('editHistoryModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Editar sessão</div><form onsubmit="salvarEdicaoHistorico(event)"><input type="hidden" id="histEditId"><div class="cycle-form-group"><label class="cycle-label" for="histSubject">Matéria</label><input class="cycle-input" id="histSubject" required></div><div class="cycle-form-group"><label class="cycle-label" for="histComment">Comentário</label><textarea class="cycle-input" id="histComment" rows="3"></textarea></div><div class="cycle-modal-actions"><button class="cycle-btn primary" type="submit">Salvar sessão</button></div></form></div></div>
 
-        <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronómetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
+        <div class="modal-overlay" id="confirmResetModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModal('confirmResetModal')" aria-label="Fechar">×</button><div class="cycle-modal-title">Zerar cronômetro?</div><p class="modal-message">O tempo atual será descartado.</p><div class="cycle-modal-actions"><button class="cycle-btn btn-danger" type="button" onclick="executarResetTimer()">Zerar agora</button></div></div></div>
 
         <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registro?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="fecharModalDeletar()">Cancelar</button><button class="cycle-btn btn-danger" id="deleteConfirmAction" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
         <div class="modal-overlay onboarding-modal" id="onboardingModal"><div class="modal-box onboarding-box"><div class="onboarding-mark">KM</div><div class="cycle-modal-title">Seu QG está pronto</div><p class="modal-message">Três passos para começar sem se perder entre as ferramentas.</p><div class="onboarding-steps"><span><b>1</b><strong>Adicione suas matérias</strong><small>Monte o conteúdo que realmente estuda.</small></span><span><b>2</b><strong>Inicie um bloco</strong><small>O cronômetro salva o tempo e o XP.</small></span><span><b>3</b><strong>Revise seu avanço</strong><small>Use gráficos, missões e revisões.</small></span></div><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="concluirOnboarding(false)">Explorar primeiro</button><button class="cycle-btn primary" type="button" onclick="concluirOnboarding(true)">Adicionar primeira matéria</button></div></div></div>
@@ -1361,7 +1364,7 @@
                 <button class="ai-qg-voice" id="aiQgVoice" type="button" aria-label="Falar comando" onclick="ouvirComandoIa()">◉</button>
                 <button class="ai-qg-send" type="submit" aria-label="Enviar comando">➜</button>
             </div>
-            <small>O Gemini mostra cada alteração antes de aplicar. Você também pode desfazer a última ação.</small>
+            <small>O Gemini pode receber o contexto necessário dos seus estudos e mostra cada alteração antes de aplicar. <a href="privacidade.html" target="_blank" rel="noopener">Entenda o uso dos dados</a>.</small>
         </form>
     </aside>
 
@@ -1397,9 +1400,9 @@
     <dialog id="flashReviewDialog" class="flash-dialog flash-review-dialog"><div class="flash-dialog-head"><div><span class="workspace-kicker" id="flashReviewSubject">REVISÃO</span><h2 id="flashReviewDeck">Flashcards</h2></div><button type="button" class="cycle-btn" data-flash-close="flashReviewDialog" aria-label="Fechar">×</button></div><div class="flash-review-progress" id="flashReviewProgress"></div><div class="flash-review-card"><span id="flashReviewPrompt">PERGUNTA</span><p id="flashReviewFront"></p><div id="flashReviewBack" class="flash-review-answer" hidden><span>RESPOSTA</span><p></p></div></div><div class="flash-review-actions"><button type="button" class="cycle-btn primary" id="flashReveal">Mostrar resposta</button><div id="flashRatings" hidden><button type="button" data-flash-rating="again">Errei <small>10 min</small></button><button type="button" data-flash-rating="hard">Difícil</button><button type="button" data-flash-rating="good">Acertei</button><button type="button" data-flash-rating="easy">Fácil</button></div></div></dialog>
     <dialog id="flashAiDialog" class="flash-dialog flash-ai-dialog"><div class="flash-dialog-head"><div><span class="workspace-kicker">SUGESTÕES, NÃO RESPOSTAS DEFINITIVAS</span><h2>Gerar flashcards com IA</h2></div><button type="button" class="cycle-btn" data-flash-close="flashAiDialog" aria-label="Fechar">×</button></div><form id="flashAiForm"><label>Deck de destino<select id="flashAiDeck" required></select></label><div class="flash-ai-options"><label>Origem<select id="flashAiSource"><option value="topic">Assunto do deck</option><option value="notes">Anotações do assunto</option><option value="reviews">Caixa de Revisões</option><option value="errors">Caderno de Erros</option><option value="text">Texto colado</option><option value="file">Arquivo de texto ou PDF</option></select></label><label>Quantidade<select id="flashAiCount"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="30">30</option></select></label><label>Nível<select id="flashAiLevel"><option value="basico">Básico</option><option value="medio">Médio</option><option value="enem" selected>ENEM</option><option value="vestibular">Vestibular</option><option value="avancado">Avançado</option></select></label><label>Tipo<select id="flashAiType"><option value="misto" selected>Misto</option><option value="conceitos">Conceitos</option><option value="perguntas">Perguntas e respostas</option><option value="formulas">Fórmulas</option><option value="erros">Erros que cometi</option></select></label></div><label id="flashAiTextField" hidden>Texto para usar como fonte<textarea id="flashAiText" rows="5" maxlength="12000" placeholder="Cole aqui o trecho que deseja transformar em perguntas."></textarea></label><label id="flashAiFileField" hidden>Arquivo para extrair texto<input id="flashAiFile" type="file" accept="application/pdf,text/plain,text/markdown,.txt,.md,.pdf"><small>Até 2 MB. O texto é extraído neste dispositivo; PDFs sem texto selecionável não são aceitos.</small></label><p class="flash-ai-hint" id="flashAiHint">A IA receberá somente a origem escolhida. Revise cada cartão antes de adicionar.</p><button type="submit" class="cycle-btn primary" id="flashAiGenerate">Gerar prévia</button></form><div id="flashAiStatus" role="status"></div><div id="flashAiPreview" class="flash-ai-preview"></div><div class="flash-dialog-actions" id="flashAiApproval" hidden><button type="button" class="cycle-btn" id="flashAiRegenerate">Gerar novamente</button><button type="button" class="cycle-btn primary" id="flashAiAddSelected">Adicionar selecionados</button></div></dialog>
     <dialog id="mockExamDialog" class="flash-dialog mock-exam-dialog" aria-labelledby="mockExamTitle"><div class="flash-dialog-head"><div><span class="workspace-kicker">TREINO ORIGINAL · SEM COBRANÇA NOVA</span><h2 id="mockExamTitle">Simulado com IA</h2><p id="mockExamSubtitle">Você confere o plano antes de começar. A IA pode errar; confira explicações importantes.</p></div><button type="button" class="cycle-btn" id="mockExamClose" aria-label="Fechar simulado">×</button></div><div id="mockExamSetup"><form id="mockExamForm" class="mock-exam-form"><label id="mockExamSubjectsLabel">Matérias</label><div id="mockExamSubjects" aria-labelledby="mockExamSubjectsLabel"></div><label for="mockExamTopics">Assuntos <small>opcional; separe por vírgula</small></label><input id="mockExamTopics" class="cycle-input" maxlength="500" placeholder="Ex.: Cinemática, Leis de Newton"><div class="mock-exam-form-grid"><label for="mockExamCount">Questões<select id="mockExamCount" class="cycle-input"><option value="10">10</option><option value="20">20</option><option value="30">30</option></select></label><label for="mockExamLevel">Nível<select id="mockExamLevel" class="cycle-input"><option value="basico">Básico</option><option value="medio">Médio</option><option value="dificil">Difícil</option><option value="enem" selected>ENEM</option><option value="vestibular">Vestibular</option></select></label></div><p class="mock-exam-disclaimer">Usa a cota gratuita já configurada no King Master. Máximo de 30 questões e 3 gerações por dia para evitar chamadas excessivas. Nenhuma questão é salva sem sua confirmação.</p><button type="submit" class="cycle-btn primary" id="mockExamGenerate">Gerar prévia</button></form></div><div id="mockExamContent" aria-live="polite"></div><p id="mockExamStatus" role="status"></p></dialog>
-    <div id="toastNotification" class="toast-notification"></div>
+    <div id="toastNotification" class="toast-notification" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="modal-overlay" id="schedulePlannerModal">
-        <div class="modal-box schedule-planner-modal" role="dialog" aria-modal="true" aria-labelledby="schedulePlannerTitle">
+        <div class="modal-box schedule-planner-modal">
             <button type="button" class="modal-close" onclick="KingSchedule.closePlanner()" aria-label="Fechar prévia">×</button>
             <header class="schedule-planner-header"><span class="workspace-kicker">PLANEJADOR ADAPTATIVO</span><h2 id="schedulePlannerTitle">Uma semana possível, sem inventar tempo</h2><p>A meta orienta o plano; os horários realmente livres de cada dia definem o limite. Confira a prévia antes de aplicar.</p></header>
             <div class="schedule-planner-layout">
@@ -1414,26 +1417,33 @@
     <script src="military-insignia.js?v=20260906-worlds-2"></script>
     <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
-    <script src="schedule-core.js?v=20260929-adaptive-planner-v1"></script>
-    <script src="schedule-planner.js?v=20260929-adaptive-planner-v1"></script>
+    <script src="schedule-core.js?v=20261002-evolution-v1"></script>
+    <script src="schedule-planner.js?v=20261002-evolution-v1"></script>
     <script src="flashcards-core.js?v=20260929-flash-security-v2"></script>
     <script src="mock-exam-core.js?v=20261002-v1"></script>
     <script src="subject-picker.js?v=20261002-v1"></script>
     <script src="habit-core.js?v=20261002-v1"></script>
-    <script src="script.js?v=20260929-adaptive-planner-v1"></script>
+    <script src="rank-system-v2.js?v=20260929-rank-v2-1"></script>
+    <script src="script.js?v=20261002-evolution-v1"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
-    <script src="schedule.js?v=20260929-adaptive-planner-v1"></script>
-    <script src="personal-development.js?v=20260922-flexible-v1"></script>
+    <script src="schedule.js?v=20261002-evolution-v1"></script>
+    <script src="personal-development.js?v=20261002-evolution-v1"></script>
     <script src="subject-lab.js?v=20260929-flash-security-v2"></script>
     <script type="module" src="syllabus-pdf.js?v=20260922-pdf-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
     <script src="academic-context.js?v=20261002-v1"></script>
-    <script src="ai-assistant.js?v=20260929-flash-security-v2"></script>
-    <script src="flashcards.js?v=20260929-deck-design-v4"></script>
+    <script src="ai-assistant.js?v=20261002-evolution-v1"></script>
+    <script src="flashcards.js?v=20261002-evolution-v1"></script>
     <script src="mock-exams.js?v=20261002-v1"></script>
-    <script src="productivity.js?v=20260922-missions-3-v1"></script>
+    <script src="productivity.js?v=20260929-overhaul-v4"></script>
+    <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
+    <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>
+    <script src="data-portability.js?v=20260929-overhaul-v4"></script>
+    <script src="command-palette.js?v=20260929-overhaul-v4"></script>
+    <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
+    <script src="profile-overhaul.js?v=20260930-achievements-toggle"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20260929-adaptive-planner-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20261002-evolution-v1"></script>
 </body>
 </html>

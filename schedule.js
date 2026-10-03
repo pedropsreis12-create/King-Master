@@ -531,7 +531,7 @@
     }
     function applyPlannerPreview() {
         if (!plannerDraft?.blocks?.length) return;
-        const check = Planner.ScheduleValidator.validate(plannerDraft, settings(), appData.cycleItems, plannerOptions());
+        const check = Planner.ScheduleValidator.validate(plannerDraft, plannerDraft.constraints || settings(), appData.cycleItems, plannerOptions());
         if (plannerDraft.errors?.length || !check.valid) { renderPlanner(); return toast('Resolva os conflitos antes de aplicar.', true); }
         const current = week(false);
         const replacing = (current?.blocks || []).filter(block => block.status !== 'completed').length;

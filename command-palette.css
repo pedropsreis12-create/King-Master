@@ -1,0 +1,32 @@
+.km-command-trigger { width: 100%; min-height: 43px; margin-bottom: 9px; padding: 9px 11px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 9px; border: 1px solid var(--border-color); border-radius: 13px; background: var(--hover-bg); color: var(--text-muted); font: inherit; cursor: pointer; text-align: left; }
+.km-command-trigger:hover { border-color: rgba(var(--accent-rgb),.45); color: var(--text-main); }
+.km-command-trigger > span { color: var(--accent-color); font-size: 1rem; }
+.km-command-trigger strong { overflow: hidden; font-size: .63rem; text-overflow: ellipsis; white-space: nowrap; }
+.km-command-trigger kbd,.km-command-dialog kbd { padding: 3px 6px; border: 1px solid var(--border-color); border-bottom-width: 2px; border-radius: 6px; background: var(--card-bg); color: var(--text-muted); font: 700 .48rem/1 Poppins,sans-serif; }
+.km-command-palette { position: fixed; z-index: 12000; inset: 0; display: grid; place-items: start center; padding: min(12vh,110px) 16px 24px; }
+.km-command-palette[hidden] { display: none !important; }
+.km-command-backdrop { position: absolute; inset: 0; width: 100%; border: 0; background: rgba(4,8,16,.68); backdrop-filter: blur(10px); cursor: default; }
+.km-command-dialog { position: relative; width: min(620px,100%); max-height: min(720px,76dvh); display: grid; grid-template-rows: auto auto minmax(0,1fr) auto; overflow: hidden; border: 1px solid color-mix(in srgb,var(--accent-color) 30%,var(--border-color)); border-radius: 24px; background: color-mix(in srgb,var(--card-bg) 96%,var(--bg-body)); box-shadow: 0 36px 110px rgba(0,0,0,.4); }
+.km-command-dialog > header { padding: 20px 22px 13px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 13px; }
+.km-command-dialog > header > span { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; background: rgba(var(--accent-rgb),.12); color: var(--accent-color); font-size: 1.2rem; }
+.km-command-dialog h2 { margin: 0; color: var(--text-main); font-size: 1rem; }
+.km-command-dialog header p { margin: 2px 0 0; color: var(--text-muted); font-size: .62rem; }
+.km-command-close { width: 36px; height: 36px; border: 0; border-radius: 11px; background: var(--hover-bg); color: var(--text-muted); font: 400 1.35rem/1 sans-serif; cursor: pointer; }
+.km-command-search { margin: 0 18px 12px; min-height: 55px; padding: 0 15px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--border-color); border-radius: 15px; background: var(--hover-bg); color: var(--accent-color); }
+.km-command-search:focus-within { border-color: var(--accent-color); box-shadow: 0 0 0 4px rgba(var(--accent-rgb),.11); }
+.km-command-search input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text-main); font: 650 .86rem/1.4 Poppins,sans-serif; }
+.km-command-results { min-height: 120px; padding: 4px 10px 12px; overflow-y: auto; }
+.km-command-option { width: 100%; min-height: 61px; padding: 10px 12px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 11px; border: 1px solid transparent; border-radius: 14px; background: transparent; color: var(--text-main); font: inherit; text-align: left; cursor: pointer; }
+.km-command-option:hover,.km-command-option.is-active { border-color: rgba(var(--accent-rgb),.26); background: rgba(var(--accent-rgb),.09); }
+.km-command-option-mark { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: var(--hover-bg); color: var(--accent-color); font-size: .55rem; font-weight: 900; }
+.km-command-option-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.km-command-option-copy strong { overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+.km-command-option-copy small { overflow: hidden; color: var(--text-muted); font-size: .57rem; text-overflow: ellipsis; white-space: nowrap; }
+.km-command-option-arrow { color: var(--accent-color); }
+.km-command-empty { margin: 22px; color: var(--text-muted); font-size: .7rem; text-align: center; }
+.km-command-dialog > footer { padding: 11px 18px; display: flex; align-items: center; gap: 16px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: .52rem; }
+.km-command-dialog > footer span { display: flex; align-items: center; gap: 4px; }
+body.km-command-open { overflow: hidden !important; }
+@media (max-width:1100px) { .km-command-trigger { margin: 8px 0 5px; } }
+@media (max-width:600px) { .km-command-palette { align-items: end; padding: 10px; }.km-command-dialog { max-height: min(82dvh,680px); border-radius: 22px; }.km-command-dialog > header { padding: 17px 16px 11px; }.km-command-search { margin-inline: 12px; }.km-command-dialog > footer { justify-content: center; }.km-command-dialog > footer span:first-child { display: none; } }
+@media (prefers-reduced-motion:reduce) { .km-command-backdrop { backdrop-filter: none; } }

@@ -97,10 +97,11 @@
                 minBlockMinutes: base.minBlockMinutes, maxBlockMinutes: base.maxBlockMinutes,
                 allowExtraBlocks: input.allowExtraBlocks === true, studyDays: base.studyDays.filter(validDay) };
         },
-        requiredMinutes(input) {
+        requiredMinutes(input, count) {
             const value = this.normalize(input);
-            return value.targetBlocksPerDay * (value.blockMinutes + value.registrationMinutes)
-                + (value.targetBlocksPerDay - 1) * value.pauseMinutes;
+            const blocks = integer(count, value.targetBlocksPerDay, 1, 8);
+            return blocks * (value.blockMinutes + value.registrationMinutes)
+                + (blocks - 1) * value.pauseMinutes;
         },
         freeRanges(day, constraints, busyByDay = {}, intent = {}) {
             const saved = mergeRanges((constraints.availability[day] || []).filter(range => clock(range.start) && clock(range.end))
@@ -117,6 +118,11 @@
                 const start = clock(override.startTime) ? Core.toMinutes(override.startTime) : 0;
                 const end = clock(override.endTime) ? Core.toMinutes(override.endTime) : 1440;
                 ranges = ranges.map(range => ({ start: Math.max(range.start, start), end: Math.min(range.end, end) }))
+                    .filter(range => range.end > range.start);
+            }
+            if (clock(intent.targetEndTime)) {
+                const end = Core.toMinutes(intent.targetEndTime);
+                ranges = ranges.map(range => ({ start: range.start, end: Math.min(range.end, end) }))
                     .filter(range => range.end > range.start);
             }
             const busy = mergeRanges((Array.isArray(busyByDay[day]) ? busyByDay[day] : [])
@@ -137,9 +143,11 @@
         slots(input, busyByDay = {}, options = {}) {
             const constraints = this.normalize(input);
             const intent = options.intent || {};
-            const slots = [], errors = [], dayPlans = {};
+            const slots = [], errors = [], warnings = [], dayPlans = {}, dayCapacity = {};
             for (let day = 1; day <= 7; day++) {
-                const targetBlocks = constraints.targetBlocksPerDay;
+                const requestedTarget = Number(intent.targetBlocksPerDay);
+                const targetBlocks = Number.isInteger(requestedTarget) && requestedTarget > 0
+                    ? Math.min(8, requestedTarget) : constraints.targetBlocksPerDay;
                 const enabled = constraints.studyDays.includes(day);
                 const ranges = enabled ? this.freeRanges(day, constraints, busyByDay, intent) : [];
                 const availableMinutes = total(ranges);
@@ -164,6 +172,7 @@
                 }
                 slots.push(...selected.map(slot => ({ day, ...slot })));
                 const availableStudyMinutes = capacity.reduce((sum, slot) => sum + slot.duration, 0);
+                dayCapacity[day] = capacity.length;
                 const scheduledStudyMinutes = selected.reduce((sum, slot) => sum + slot.duration, 0);
                 const status = !enabled ? 'off' : selected.length >= targetBlocks ? 'target_met' : 'adapted';
                 const reason = !enabled ? 'Dia sem estudo' : status === 'target_met' ? 'Meta completa'
@@ -174,8 +183,11 @@
                     scheduledStudyMinutes, status, reason };
                 if (enabled && constraints.mode === 'rigid' && selected.length < effectiveTargetBlocks)
                     errors.push(`${DAY_NAMES[day]} comporta ${selected.length} de ${effectiveTargetBlocks} blocos. O modo rígido exige a meta completa; ajuste horários ou regras.`);
+                else if (enabled && selected.length < effectiveTargetBlocks)
+                    warnings.push(`Em ${DAY_NAMES[day]} cabem ${selected.length} blocos de ${effectiveTargetBlocks} planejados; a carga foi adaptada.`);
             }
-            return { constraints, slots, errors, dayPlans, requiredMinutes: this.requiredMinutes(constraints) };
+            return { constraints, slots, errors, warnings, dayPlans, dayCapacity,
+                requiredMinutes: this.requiredMinutes(constraints) };
         }
     };
 
@@ -190,6 +202,45 @@
                         overdueDays: integer(item.schedule.overdueDays, 0, 0, 365) })) };
         }
     };
+
+    function selectedSlotsForWorkload(plan, preferences, options = {}) {
+        const available = Array.isArray(plan?.slots) ? plan.slots : [];
+        const wanted = Math.min(available.length, preferences.subjects.reduce((sum, item) => sum + item.weeklyBlocks, 0));
+        if (!wanted) return [];
+        const intent = options.intent || {};
+        const keyOf = slot => `${slot.day}-${slot.order}`;
+        const selected = new Set();
+        const byDay = new Map(plan.constraints.studyDays.map(day => [day, available.filter(slot => slot.day === day)]));
+
+        // Blocos já concluídos têm precedência absoluta, mesmo que estejam no fim da semana.
+        for (const reserved of (options.reservedBlocks || [])) {
+            const match = available.find(slot => slot.day === Number(reserved.day) && slot.start === reserved.start && slot.duration === Number(reserved.duration));
+            if (match) selected.add(keyOf(match));
+        }
+
+        // Garante espaço para matérias que o usuário fixou em um dia específico.
+        const fixedDemand = new Map();
+        for (const subject of preferences.subjects) {
+            const day = intent.preferredDays?.[subject.id] || subject.preferredDay;
+            if (day) fixedDemand.set(day, (fixedDemand.get(day) || 0) + subject.weeklyBlocks);
+        }
+        for (const [day, count] of fixedDemand) {
+            for (const slot of (byDay.get(day) || []).slice(0, count)) {
+                if (selected.size >= Math.max(wanted, (options.reservedBlocks || []).length)) break;
+                selected.add(keyOf(slot));
+            }
+        }
+
+        // Preenche por rodadas (primeiro bloco de cada dia, depois o segundo...) para não
+        // concentrar uma carga pequena inteira no começo da semana.
+        const balanced = [...available].sort((a, b) => a.order - b.order || a.day - b.day);
+        const target = Math.max(wanted, selected.size);
+        for (const slot of balanced) {
+            if (selected.size >= target) break;
+            selected.add(keyOf(slot));
+        }
+        return available.filter(slot => selected.has(keyOf(slot)));
+    }
 
     const AIScheduleAssistant = {
         interpret(raw = {}, message = '', constraintsInput = {}, subjectPlans = []) {
@@ -206,21 +257,31 @@
             const requestedBlocks = Number(raw.requestedBlocksPerDay || 0);
             const writtenBlocks = Number(text.match(/\b(\d{1,2})\s+blocos?\s+(?:por|a\s+cada)\s+dia\b/i)?.[1] || 0);
             let transientBlocks = null;
+            let targetBlocksPerDay = null;
             for (const count of unique([requestedBlocks, writtenBlocks])) if (count && count !== constraints.targetBlocksPerDay) {
                 if (transientDay && count < constraints.targetBlocksPerDay) transientBlocks = count;
-                else errors.push(`Você pediu ${count} blocos por dia, mas a meta salva é ${constraints.targetBlocksPerDay}. Altere-a nas configurações; pedidos pontuais podem reduzir um dia sem mudar a meta.`);
+                else if (!transientDay && count <= 8) targetBlocksPerDay = count;
+                else errors.push(`Você pediu ${count} blocos por dia, acima do máximo seguro de 8. Ajuste a meta nas configurações.`);
             }
             const requestedSubjectBlocks = Number(text.match(/\b(\d{1,2})\s+blocos?\s+de\s+[^.,]+\bhoje\b/i)?.[1] || 0);
-            if (requestedSubjectBlocks > constraints.targetBlocksPerDay)
-                errors.push(`Você pediu ${requestedSubjectBlocks} blocos de uma matéria hoje, acima da meta de ${constraints.targetBlocksPerDay}. Confirme se deseja mudar a meta.`);
+            if (requestedSubjectBlocks > constraints.targetBlocksPerDay) {
+                if (requestedSubjectBlocks <= 8) targetBlocksPerDay = requestedSubjectBlocks;
+                else errors.push('O pedido ultrapassa o máximo seguro de 8 blocos por dia.');
+            }
+            if (targetBlocksPerDay && targetBlocksPerDay !== constraints.targetBlocksPerDay)
+                warnings.push(`Nesta prévia, a meta diária será ${targetBlocksPerDay} blocos. Os horários livres continuam sendo o limite.`);
             const requestedEnd = String(raw.requestedEndTime || '').trim();
             const writtenEnd = !dayInText ? text.match(/(?:at[eé]|terminar|encerrar|finalizar)\s*(?:as|às)?\s*(\d{1,2}:[0-5]\d|\d{1,2}h(?:[0-5]\d)?)/i)?.[1]
                 ?.toLowerCase().replace('h', ':').replace(/:$/, ':00').padStart(5, '0') : '';
             let transientEnd = '';
+            let targetEndTime = '';
             for (const end of unique([requestedEnd, writtenEnd])) if (end && end !== constraints.endTime) {
                 if (transientDay && clock(end)) transientEnd = end;
-                else errors.push(`Você pediu término às ${end}, mas o horário padrão termina às ${constraints.endTime}. Use a disponibilidade de cada dia para reduzi-lo sem alterar a regra salva.`);
+                else if (!transientDay && clock(end) && Core.toMinutes(end) < Core.toMinutes(constraints.endTime)) targetEndTime = end;
+                else if (!transientDay && clock(end) && Core.toMinutes(end) > Core.toMinutes(constraints.endTime) && !writtenEnd)
+                    errors.push(`O pedido nunca amplia o horário salvo: o limite permanece ${constraints.endTime}.`);
             }
+            if (targetEndTime) warnings.push(`Nesta prévia, o estudo terminará até ${targetEndTime}; o horário salvo não muda.`);
             const priorityIds = unique((Array.isArray(raw.prioritySubjects) ? raw.prioritySubjects : []).map(resolve).filter(Boolean).map(item => item.id));
             if (/\bmais\b/i.test(text)) for (const item of subjectPlans) if (key(text).includes(key(item.name)) && !priorityIds.includes(item.id)) priorityIds.push(item.id);
             const preferredDays = {};
@@ -302,6 +363,7 @@
                 warnings.push('A mensagem não trouxe uma preferência aplicável; o plano seguirá as regras salvas.');
             return { priorityIds, preferredDays, avoidSameDay, pairSubjectIds, dayOverrides,
                 temporaryAvailability, reducedLoadByDay, maxAvailableMinutesByDay,
+                targetBlocksPerDay, targetEndTime,
                 errors, warnings, explanation: String(raw.explanation || '').slice(0, 350) };
         }
     };
@@ -325,7 +387,7 @@
         validate(schedule, constraintsInput, subjectsInput, options = {}) {
             const plan = ScheduleConstraints.slots(constraintsInput, options.busyByDay || {}, options);
             const preferences = UserStudyPreferences.normalize(subjectsInput, plan.constraints);
-            const errors = [...plan.errors], warnings = [];
+            const errors = [...plan.errors], warnings = [...plan.warnings];
             const blocks = Array.isArray(schedule?.blocks) ? schedule.blocks : [];
             const subjectIds = new Set(preferences.subjects.map(item => item.id));
             const seen = new Set();
@@ -404,9 +466,10 @@
             const preferences = UserStudyPreferences.normalize(subjectsInput, plan.constraints);
             const intent = options.intent || {};
             const errors = [...plan.errors, ...(intent.errors || [])];
+            const initialWarnings = [...plan.warnings, ...(intent.warnings || [])];
             if (!preferences.subjects.length) errors.push('Defina pelo menos uma matéria com blocos por semana.');
             if (errors.length) return { valid: false, errors: unique(errors), warnings: [], blocks: [], constraints: plan.constraints, dayPlans: plan.dayPlans };
-            const blocks = plan.slots.map(slot => ({ ...slot, id: `plano-${weekKey}-${slot.day}-${slot.order}`,
+            const blocks = selectedSlotsForWorkload(plan, preferences, options).map(slot => ({ ...slot, id: `plano-${weekKey}-${slot.day}-${slot.order}`,
                 subjectId: '', kind: 'teoria', topic: '', status: 'pending', registered: false }));
             const archivedCompletedBlocks = [];
             for (const reserved of (Array.isArray(options.reservedBlocks) ? options.reservedBlocks : [])) {
@@ -468,10 +531,13 @@
             const assignedBlocks = blocks.filter(block => block.subjectId);
             for (const day of plan.constraints.studyDays) assignedBlocks.filter(block => block.day === day)
                 .forEach((block, order) => { block.order = order; });
-            const generated = { key: Core.monday(weekKey), blocks: assignedBlocks, archivedCompletedBlocks, dailyClosures: {}, warnings: [], generatedAt: Date.now() };
+            const unscheduled = preferences.subjects.map(item => ({ subjectId: item.id, subject: item.name,
+                blocks: Math.max(0, item.weeklyBlocks - (counts.get(item.id) || 0)) })).filter(item => item.blocks > 0);
+            const generated = { key: Core.monday(weekKey), blocks: assignedBlocks, archivedCompletedBlocks,
+                unscheduled, dailyClosures: {}, warnings: [], generatedAt: Date.now() };
             const check = ScheduleValidator.validate(generated, plan.constraints, subjectsInput, options);
             return { ...generated, valid: !errors.length && check.valid, errors: unique([...errors, ...check.errors]),
-                warnings: unique([...(intent.warnings || []), ...check.warnings,
+                warnings: unique([...initialWarnings, ...check.warnings,
                     ...(archivedCompletedBlocks.length ? [`${archivedCompletedBlocks.length} bloco(s) já concluído(s) fora das janelas atuais serão preservados como registros anteriores, sem ocupar espaço no novo plano.`] : [])]),
                 constraints: plan.constraints, dayPlans: check.dayPlans };
         }

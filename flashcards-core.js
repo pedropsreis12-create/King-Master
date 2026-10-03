@@ -15,9 +15,40 @@
     function ensure(data) {
         if (!data.flashcards || typeof data.flashcards !== 'object' || Array.isArray(data.flashcards)) data.flashcards = {};
         const box = data.flashcards;
-        for (const field of ['decks', 'cards', 'reviews']) if (!Array.isArray(box[field])) box[field] = [];
+        for (const field of ['decks', 'cards', 'reviews', 'trash']) if (!Array.isArray(box[field])) box[field] = [];
         if (!box.states || typeof box.states !== 'object' || Array.isArray(box.states)) box.states = {};
+        for (const deck of box.decks) {
+            if (!Array.isArray(deck.subjectIds)) deck.subjectIds = deck.subjectId == null || deck.subjectId === '' ? [] : [String(deck.subjectId)];
+            deck.subjectIds = [...new Set(deck.subjectIds.map(String))];
+            deck.subjectId = deck.subjectIds[0] || '';
+        }
         return box;
+    }
+
+    function duplicateDeck(data, deckId, newId, cardId) {
+        const box = ensure(data), source = box.decks.find(item => item.id === deckId);
+        if (!source) throw new Error('Deck não encontrado.');
+        const now = Date.now();
+        const copy = { ...structuredClone(source), id: newId, name: `${source.name} — Cópia`, createdAt: now, updatedAt: now };
+        const copiedCards = box.cards.filter(item => item.deckId === deckId).map(item => ({ ...structuredClone(item), id: cardId(), deckId: newId, createdAt: now, updatedAt: now }));
+        box.decks.push(copy); box.cards.push(...copiedCards);
+        return copy;
+    }
+
+    function archiveDeck(data, deckId, now = Date.now()) {
+        const box = ensure(data), index = box.decks.findIndex(item => item.id === deckId);
+        if (index < 0) return null;
+        const [deck] = box.decks.splice(index, 1);
+        box.trash.push({ deck, deletedAt: now });
+        return deck;
+    }
+
+    function restoreDeck(data, deckId) {
+        const box = ensure(data), index = box.trash.findIndex(item => item.deck?.id === deckId);
+        if (index < 0 || box.decks.some(item => item.id === deckId)) return null;
+        const [entry] = box.trash.splice(index, 1);
+        box.decks.push(entry.deck);
+        return entry.deck;
     }
 
     function nextState(previous = {}, rating, now = Date.now()) {
@@ -84,5 +115,5 @@
             .sort((a, b) => (Number(box.states[a.id]?.dueAt) || 0) - (Number(box.states[b.id]?.dueAt) || 0));
     }
 
-    return { DAY, QUALITY, ensure, nextState, normalizeCandidate, validateCandidates, deckStats, dueCards, key, text };
+    return { DAY, QUALITY, ensure, duplicateDeck, archiveDeck, restoreDeck, nextState, normalizeCandidate, validateCandidates, deckStats, dueCards, key, text };
 });

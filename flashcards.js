@@ -4,7 +4,10 @@
     const el = id => document.getElementById(id);
     const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
     const box = () => core.ensure(appData);
-    const subject = deck => appData.cycleItems.find(item => String(item.id) === String(deck?.subjectId));
+    const subject = deck => appData.cycleItems.find(item => String(item.id) === String(deck?.subjectIds?.[0] || deck?.subjectId));
+    const subjectNames = deck => (deck?.subjectIds?.length ? deck.subjectIds : [deck?.subjectId])
+        .map(subjectId => appData.cycleItems.find(item => String(item.id) === String(subjectId))?.subject)
+        .filter(Boolean).join(' · ') || 'Matéria removida';
     const deck = () => box().decks.find(item => item.id === selectedDeckId);
     const card = id => box().cards.find(item => item.id === id);
     const id = prefix => `${prefix}-${crypto.randomUUID()}`;
@@ -17,6 +20,9 @@
     let generating = false;
     let specificErrorId = null;
     let pendingErrorId = null;
+    let pendingReviewId = null;
+    let menuDeckId = '';
+    let subjectPicker;
     const friendlyError = error => error?.code || /https?:|AIza|Bearer|FirebaseError|API key|models\//i.test(String(error?.message || ''))
         ? 'A IA não conseguiu responder agora. Confira a conexão e tente novamente; nenhum cartão foi salvo.'
         : String(error?.message || 'Não foi possível concluir esta ação.').slice(0, 230);
@@ -65,17 +71,20 @@
     function renderDeckList() {
         const data = box();
         const deckQuery = core.key(el('flashDeckSearch')?.value || '');
-        const visible = data.decks.filter(item => !deckQuery || core.key(`${item.name} ${item.topic} ${subject(item)?.subject || ''}`).includes(deckQuery));
+        const visible = data.decks.filter(item => !deckQuery || core.key(`${item.name} ${item.topic} ${subjectNames(item)}`).includes(deckQuery));
         el('flashDeckCount').textContent = String(data.decks.length);
         el('flashDeckList').innerHTML = visible.length ? visible.map(item => {
             const stats = core.deckStats(appData, item.id);
-            return `<button type="button" class="flash-deck-button${item.id === selectedDeckId ? ' active' : ''}" data-flash-deck="${escape(item.id)}" aria-current="${item.id === selectedDeckId ? 'true' : 'false'}"><span><strong>${escape(item.name)}</strong><small>${escape(subject(item)?.subject || 'Matéria removida')} · ${escape(item.topic || 'Assunto livre')} · ${stats.total} cartões · ${stats.learned} aprendidos</small></span><b aria-label="${stats.due} pendentes">${stats.due}</b></button>`;
+            return `<div class="flash-deck-row" data-flash-deck-row="${escape(item.id)}"><button type="button" class="flash-deck-button${item.id === selectedDeckId ? ' active' : ''}" data-flash-deck="${escape(item.id)}" aria-current="${item.id === selectedDeckId ? 'true' : 'false'}"><span><strong>${escape(item.name)}</strong><small>${escape(subjectNames(item))} · ${escape(item.topic || 'Assunto livre')} · ${stats.total} cartões · ${stats.learned} aprendidos</small></span><b aria-label="${stats.due} pendentes">${stats.due}</b></button><button type="button" class="flash-deck-more" data-flash-menu="${escape(item.id)}" aria-label="Opções de ${escape(item.name)}">⋮</button></div>`;
         }).join('') : `<div class="flash-empty">${data.decks.length ? 'Nenhum deck corresponde à busca.' : 'Nenhum deck ainda. Crie um para guardar cartões de um assunto.'}</div>`;
+        let trash = el('flashDeckTrash');
+        if (!trash) { trash = document.createElement('div'); trash.id = 'flashDeckTrash'; trash.className = 'flash-deck-trash'; el('flashDeckList').after(trash); }
+        trash.innerHTML = data.trash.length ? `<details><summary>Lixeira · ${data.trash.length}</summary>${data.trash.map(entry => `<div><span>${escape(entry.deck.name)}</span><button type="button" data-flash-restore="${escape(entry.deck.id)}">Recuperar</button></div>`).join('')}</details>` : '';
     }
 
     function renderCards() {
         const current = deck();
-        el('flashCurrentSubject').textContent = current ? subject(current)?.subject || 'MATÉRIA REMOVIDA' : 'ESCOLHA UM DECK';
+        el('flashCurrentSubject').textContent = current ? subjectNames(current) : 'ESCOLHA UM DECK';
         el('flashCurrentDeck').textContent = current?.name || 'Seu espaço de cartões';
         el('flashCurrentMeta').textContent = current ? `${current.topic || 'Sem assunto específico'} · ${core.deckStats(appData, current.id).due} para revisar` : 'Selecione ou crie um deck para começar.';
         for (const key of ['flashEditDeck', 'flashStart', 'flashFilters', 'flashCardForm']) el(key).hidden = !current;
@@ -99,7 +108,7 @@
             return `<article class="flash-list-card"><div><strong>${escape(item.front)}</strong><p>${escape(item.back)}</p><small>${label}${item.sourceLabel ? ` · ${escape(item.sourceLabel)}` : ''}</small></div><div class="flash-list-actions"><button type="button" data-flash-edit="${escape(item.id)}">Editar</button><button type="button" data-flash-delete="${escape(item.id)}">Excluir</button></div></article>`;
         }).join('') : '<div class="flash-empty">Nenhum cartão neste filtro. Você pode adicionar outro logo abaixo.</div>';
         el('flashStart').disabled = core.deckStats(appData, current.id).due === 0;
-        el('flashCardDeck').innerHTML = box().decks.map(item => `<option value="${escape(item.id)}" ${item.id === current.id ? 'selected' : ''}>${escape(item.name)} · ${escape(subject(item)?.subject || 'Matéria removida')}</option>`).join('');
+        el('flashCardDeck').innerHTML = box().decks.map(item => `<option value="${escape(item.id)}" ${item.id === current.id ? 'selected' : ''}>${escape(item.name)} · ${escape(subjectNames(item))}</option>`).join('');
     }
 
     function render() {
@@ -120,6 +129,7 @@
         subjectSelect.value = String(value);
         if (!subjectSelect.value) subjectSelect.value = '';
         updateSubjectPicker();
+        subjectPicker?.refresh();
     }
     function updateSubjectPicker() {
         const selected = appData.cycleItems.find(item => String(item.id) === el('flashDeckSubject').value);
@@ -156,6 +166,7 @@
         el('flashDeckId').value = current?.id || '';
         el('flashDeckName').value = current?.name || '';
         fillSubjects(current?.subjectId || '');
+        subjectPicker?.set(current?.subjectIds?.length ? current.subjectIds : current?.subjectId ? [current.subjectId] : []);
         el('flashDeckTopic').value = current?.topic || '';
         el('flashDeleteDeck').hidden = !current;
         closeDeckPickers();
@@ -165,42 +176,62 @@
     function saveDeck(event) {
         event.preventDefault();
         const name = core.text(el('flashDeckName').value, 80);
-        const subjectId = el('flashDeckSubject').value;
+        const subjectIds = subjectPicker?.get() || [el('flashDeckSubject').value].filter(Boolean);
+        const subjectId = subjectIds[0] || '';
         const topic = core.text(el('flashDeckTopic').value, 100);
         if (!name) { el('flashDeckName').focus(); return; }
-        if (!appData.cycleItems.some(item => String(item.id) === subjectId)) {
-            showToast('Escolha uma matéria cadastrada.', true);
-            el('flashDeckSubjectToggle').focus();
-            el('flashDeckSubjectOptions').hidden = false;
-            el('flashDeckSubjectToggle').setAttribute('aria-expanded', 'true');
+        if (!subjectIds.length || subjectIds.some(id => !appData.cycleItems.some(item => String(item.id) === id))) {
+            showToast('Escolha pelo menos uma matéria cadastrada.', true);
+            el('flashDeckSubjectsPicker').querySelector('button')?.focus();
             return;
         }
         const data = box();
         const currentId = el('flashDeckId').value;
-        if (data.decks.some(item => item.id !== currentId && String(item.subjectId) === subjectId && core.key(item.name) === core.key(name) && core.key(item.topic) === core.key(topic))) { showToast('Já existe um deck igual nesta matéria e assunto.', true); return; }
+        if (data.decks.some(item => item.id !== currentId && core.key(item.name) === core.key(name) && core.key(item.topic) === core.key(topic) && subjectIds.some(id => (item.subjectIds || [item.subjectId]).map(String).includes(id)))) { showToast('Já existe um deck igual nesta matéria e assunto.', true); return; }
         const before = structuredClone(data);
         if (currentId) {
             const existing = data.decks.find(item => item.id === currentId);
             if (!existing) return showToast('Este deck não está mais disponível.', true);
-            Object.assign(existing, { name, subjectId, topic, updatedAt: Date.now() });
+            Object.assign(existing, { name, subjectId, subjectIds, topic, updatedAt: Date.now() });
         }
-        else { const next = { id: id('deck'), name, subjectId, topic, createdAt: Date.now(), updatedAt: Date.now() }; data.decks.push(next); selectedDeckId = next.id; }
+        else { const next = { id: id('deck'), name, subjectId, subjectIds, topic, createdAt: Date.now(), updatedAt: Date.now() }; data.decks.push(next); selectedDeckId = next.id; }
         if (!persist('Deck salvo.')) { appData.flashcards = before; return; }
+        const errorId = pendingErrorId;
+        const reviewId = pendingReviewId;
+        pendingErrorId = null;
+        pendingReviewId = null;
         el('flashDeckDialog').close(); render();
-        if (pendingErrorId !== null) { specificErrorId = pendingErrorId; pendingErrorId = null; openAiFromError(); }
+        if (errorId !== null) { specificErrorId = errorId; openAiFromError(); }
+        if (reviewId !== null) prefillFromReview(reviewId);
     }
     function deleteDeck() {
         const current = deck(); if (!current) return;
         const count = box().cards.filter(item => item.deckId === current.id).length;
-        if (!confirm(`Excluir “${current.name}” e seus ${count} cartões? As revisões desses cartões também serão removidas.`)) return;
+        if (!confirm(`Tem certeza que deseja excluir este deck? “${current.name}” contém ${count} ${count === 1 ? 'flashcard' : 'flashcards'}. Você poderá recuperá-lo na lixeira.`)) return;
         const before = structuredClone(box());
-        const removed = new Set(box().cards.filter(item => item.deckId === current.id).map(item => item.id));
-        box().decks = box().decks.filter(item => item.id !== current.id);
-        box().cards = box().cards.filter(item => !removed.has(item.id));
-        box().reviews = box().reviews.filter(item => !removed.has(item.cardId));
-        for (const cardId of removed) delete box().states[cardId];
-        if (!persist('Deck excluído.')) { appData.flashcards = before; return; }
-        selectedDeckId = ''; el('flashDeckDialog').close(); render();
+        core.archiveDeck(appData, current.id);
+        if (!persist('Deck movido para a lixeira.')) { appData.flashcards = before; return; }
+        selectedDeckId = ''; if (el('flashDeckDialog').open) el('flashDeckDialog').close(); render();
+    }
+
+    function openDeckMenu(deckId) {
+        const current = box().decks.find(item => item.id === deckId); if (!current) return;
+        menuDeckId = deckId;
+        el('flashDeckMenuTitle').textContent = current.name;
+        el('flashDeckMenu').showModal();
+    }
+    function duplicateSelectedDeck() {
+        const before = structuredClone(box());
+        const copy = core.duplicateDeck(appData, selectedDeckId, id('deck'), () => id('card'));
+        if (!persist('Deck duplicado.')) { appData.flashcards = before; return; }
+        selectedDeckId = copy.id; render(); openDeckDialog(true);
+    }
+    function restoreDeck(deckId) {
+        const before = structuredClone(box());
+        const restored = core.restoreDeck(appData, deckId);
+        if (!restored) return showToast('O deck não está mais na lixeira.', true);
+        if (!persist('Deck recuperado.')) { appData.flashcards = before; return; }
+        selectedDeckId = deckId; render();
     }
 
     function clearCardForm() {
@@ -258,7 +289,7 @@
         const item = card(reviewQueue[reviewIndex]);
         if (!item) { el('flashReviewDialog').close(); render(); return showToast('Revisão concluída por agora.'); }
         const current = box().decks.find(deck => deck.id === item.deckId);
-        el('flashReviewSubject').textContent = subject(current)?.subject || 'MATÉRIA';
+        el('flashReviewSubject').textContent = subjectNames(current);
         el('flashReviewDeck').textContent = current?.name || 'Flashcards';
         el('flashReviewProgress').textContent = `${reviewIndex + 1} de ${reviewQueue.length}`;
         el('flashReviewFront').textContent = item.front;
@@ -282,15 +313,14 @@
 
     function aiSource() {
         const current = deck(); if (!current) throw new Error('Escolha um deck.');
-        const matter = subject(current)?.subject || '';
-        const same = name => core.key(name) === core.key(matter);
+        const matters = (current.subjectIds || [current.subjectId]).map(subjectId => appData.cycleItems.find(item => String(item.id) === String(subjectId))).filter(Boolean);
+        const same = name => matters.some(item => core.key(name) === core.key(item.subject));
         const topicMatches = name => core.key(name) === core.key(current.topic);
         const sourceType = el('flashAiSource').value;
         if (sourceType === 'topic') return { sourceType, sourceLabel: 'Tema informado; sem arquivo do aluno', source: current.topic || current.name };
         if (sourceType === 'text') return { sourceType, sourceLabel: 'Texto colado nesta geração', source: el('flashAiText').value.trim().slice(0, 12000) };
         if (sourceType === 'notes') {
-            const topico = subject(current)?.topicos?.find(item => topicMatches(item.nome));
-            const pages = (topico?.caderno?.paginas || []).map(item => `${item.titulo || ''}: ${item.texto || ''}`).filter(Boolean).slice(0, 12);
+            const pages = matters.flatMap(matter => (matter.topicos?.find(item => topicMatches(item.nome))?.caderno?.paginas || []).map(item => `${matter.subject} — ${item.titulo || ''}: ${item.texto || ''}`)).filter(Boolean).slice(0, 12);
             if (!pages.length) throw new Error('Este assunto ainda não tem páginas no caderno. Escolha outra origem ou escreva uma nota primeiro.');
             return { sourceType, sourceLabel: `Caderno de ${current.topic}`, source: pages.join('\n\n').slice(0, 12000) };
         }
@@ -327,7 +357,7 @@
     }
     function openAi() {
         if (!box().decks.length) return showToast('Crie um deck antes de gerar cartões.', true);
-        el('flashAiDeck').innerHTML = box().decks.map(item => `<option value="${escape(item.id)}" ${item.id === selectedDeckId ? 'selected' : ''}>${escape(item.name)} · ${escape(subject(item)?.subject || 'Matéria removida')}</option>`).join('');
+        el('flashAiDeck').innerHTML = box().decks.map(item => `<option value="${escape(item.id)}" ${item.id === selectedDeckId ? 'selected' : ''}>${escape(item.name)} · ${escape(subjectNames(item))}</option>`).join('');
         el('flashAiSource').value = 'topic'; syncAiSource();
         el('flashAiHint').textContent = 'A IA receberá somente a origem escolhida. Revise cada cartão antes de adicionar.';
         candidates = []; el('flashAiPreview').replaceChildren(); el('flashAiApproval').hidden = true; el('flashAiStatus').textContent = '';
@@ -349,19 +379,46 @@
         const matter = appData.cycleItems.find(item => core.key(item.subject) === core.key(error.materia));
         if (!matter) return showToast('Cadastre esta matéria novamente antes de criar o flashcard.', true);
         showSection('flashcards');
-        const existing = box().decks.find(item => String(item.subjectId) === String(matter.id) && core.key(item.topic) === core.key(error.assunto));
+        const existing = box().decks.find(item => (item.subjectIds || [item.subjectId]).map(String).includes(String(matter.id)) && core.key(item.topic) === core.key(error.assunto));
         if (existing) { specificErrorId = Number(error.id); selectedDeckId = existing.id; render(); openAiFromError(); return; }
         pendingErrorId = Number(error.id);
         openDeckDialog();
         el('flashDeckName').value = `Erros de ${error.assunto}`.slice(0, 80);
         fillSubjects(String(matter.id));
+        subjectPicker?.set([String(matter.id)]);
         el('flashDeckTopic').value = error.assunto;
         showToast('Confirme o deck para transformar este erro em flashcard.');
+    }
+    function prefillFromReview(reviewId) {
+        const review = (appData.revisoesItems || []).find(item => Number(item.id) === Number(reviewId));
+        if (!review) return;
+        clearCardForm();
+        el('flashFront').value = `O que preciso lembrar sobre ${review.assunto || 'este assunto'}?`.slice(0, 400);
+        el('flashBack').value = String(review.observacao || review.questao || '').slice(0, 800);
+        el('flashFront').focus();
+        el('flashCardForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Confira a pergunta e resposta antes de salvar o cartão.');
+    }
+    function fromReview(reviewId) {
+        const review = (appData.revisoesItems || []).find(item => Number(item.id) === Number(reviewId));
+        if (!review) return showToast('Esta revisão não está mais disponível.', true);
+        const related = (review.materiaIds || []).map(subjectId => appData.cycleItems.find(item => String(item.id) === String(subjectId))).filter(Boolean);
+        const matter = related[0] || appData.cycleItems.find(item => core.key(item.subject) === core.key(review.materia));
+        if (!matter) return showToast('Cadastre a matéria desta revisão antes de criar o flashcard.', true);
+        showSection('flashcards');
+        const existing = box().decks.find(item => (item.subjectIds || [item.subjectId]).map(String).includes(String(matter.id)) && core.key(item.topic) === core.key(review.assunto));
+        if (existing) { selectedDeckId = existing.id; render(); prefillFromReview(reviewId); return; }
+        pendingReviewId = Number(review.id);
+        openDeckDialog();
+        el('flashDeckName').value = `Revisões de ${review.assunto}`.slice(0, 80);
+        fillSubjects(String(matter.id)); subjectPicker?.set((related.length ? related : [matter]).map(item => String(item.id)));
+        el('flashDeckTopic').value = review.assunto;
+        showToast('Confirme o deck para preparar o cartão.');
     }
     async function generate(event) {
         event.preventDefault(); if (generating) return;
         const count = el('flashAiCount').value === 'custom' ? Number(el('flashAiCustomCount').value) : Number(el('flashAiCount').value);
-        if (!Number.isInteger(count) || count < 1 || count > 20) return showToast('Escolha de 1 a 20 cartões.', true);
+        if (!Number.isInteger(count) || count < 1 || count > 30) return showToast('Escolha de 1 a 30 cartões.', true);
         selectedDeckId = el('flashAiDeck').value;
         const current = deck(); if (!current) return showToast('Escolha um deck válido.', true);
         generating = true; el('flashAiGenerate').disabled = true; el('flashAiStatus').textContent = 'Preparando apenas a fonte escolhida…';
@@ -372,7 +429,7 @@
             await window.kingGeminiReady;
             if (!window.kingGemini?.generateFlashcards) throw new Error('O Gemini não está disponível agora. Você ainda pode criar cartões manualmente.');
             el('flashAiStatus').textContent = 'Gerando prévia. Nada será salvo sem sua aprovação…';
-            const result = await window.kingGemini.generateFlashcards({ subject: subject(current)?.subject || '', topic: current.topic || current.name, ...source, count, level: el('flashAiLevel').value, type: el('flashAiType').value });
+            const result = await window.kingGemini.generateFlashcards({ subject: subjectNames(current), topic: current.topic || current.name, ...source, count, level: el('flashAiLevel').value, type: el('flashAiType').value });
             candidates = core.validateCandidates(result, box().cards.filter(item => item.deckId === current.id), count);
             if (!candidates.length) throw new Error('Todos os cartões gerados já existem ou não passaram na validação.');
             candidateSource = source.sourceLabel;
@@ -392,7 +449,7 @@
             const index = Number(input.dataset.flashAccept);
             return core.normalizeCandidate({ front: el('flashAiPreview').querySelector(`[data-flash-front="${index}"]`)?.value, back: el('flashAiPreview').querySelector(`[data-flash-back="${index}"]`)?.value });
         }).filter(Boolean);
-        const unique = core.validateCandidates(accepted, box().cards.filter(item => item.deckId === current.id), 20);
+        const unique = core.validateCandidates(accepted, box().cards.filter(item => item.deckId === current.id), 30);
         if (!unique.length) return showToast('Selecione e confira pelo menos um cartão novo.', true);
         const before = structuredClone(box());
         const now = Date.now();
@@ -409,16 +466,21 @@
     deckSearch.setAttribute('aria-label', 'Buscar matéria, assunto ou deck');
     el('flashDeckList')?.before(deckSearch);
     deckSearch.addEventListener('input', renderDeckList);
+    subjectPicker = window.KingSubjectPicker.create(el('flashDeckSubjectsPicker'), {
+        subjects: () => appData.cycleItems,
+        placeholder: 'Escolha uma ou mais matérias',
+        onChange: ids => { el('flashDeckSubject').value = ids[0] || ''; fillTopics(); }
+    });
     const countSelect = el('flashAiCount');
     countSelect?.add(new Option('Personalizado', 'custom'));
     const customCount = document.createElement('input');
     customCount.id = 'flashAiCustomCount';
     customCount.type = 'number';
     customCount.min = '1';
-    customCount.max = '20';
+    customCount.max = '30';
     customCount.value = '10';
     customCount.hidden = true;
-    customCount.setAttribute('aria-label', 'Quantidade personalizada de 1 a 20 cartões');
+    customCount.setAttribute('aria-label', 'Quantidade personalizada de 1 a 30 cartões');
     countSelect?.after(customCount);
     countSelect?.addEventListener('change', () => { customCount.hidden = countSelect.value !== 'custom'; customCount.required = !customCount.hidden; });
     el('flashStatusFilter')?.add(new Option('Errei recentemente', 'wrong'));
@@ -479,7 +541,31 @@
     });
     el('flashDeckForm')?.addEventListener('submit', saveDeck);
     el('flashDeleteDeck')?.addEventListener('click', deleteDeck);
-    el('flashDeckList')?.addEventListener('click', event => { const button = event.target.closest('[data-flash-deck]'); if (button) { selectedDeckId = button.dataset.flashDeck; clearCardForm(); render(); } });
+    el('flashDeckList')?.addEventListener('click', event => {
+        const menu = event.target.closest('[data-flash-menu]');
+        if (menu) return openDeckMenu(menu.dataset.flashMenu);
+        const button = event.target.closest('[data-flash-deck]');
+        if (button) { selectedDeckId = button.dataset.flashDeck; clearCardForm(); render(); }
+    });
+    el('flashDeckList')?.addEventListener('contextmenu', event => {
+        const row = event.target.closest('[data-flash-deck-row]');
+        if (!row) return;
+        event.preventDefault(); openDeckMenu(row.dataset.flashDeckRow);
+    });
+    el('flashDeckList')?.parentElement?.addEventListener('click', event => {
+        const button = event.target.closest('[data-flash-restore]'); if (button) restoreDeck(button.dataset.flashRestore);
+    });
+    el('flashDeckMenu')?.addEventListener('click', event => {
+        const action = event.target.closest('[data-deck-action]')?.dataset.deckAction;
+        if (!action) return;
+        el('flashDeckMenu').close();
+        if (action === 'cancel') return;
+        selectedDeckId = menuDeckId; render();
+        if (action === 'open') return;
+        if (action === 'rename' || action === 'edit') { openDeckDialog(true); if (action === 'rename') el('flashDeckName').select(); }
+        if (action === 'duplicate') duplicateSelectedDeck();
+        if (action === 'delete') deleteDeck();
+    });
     el('flashCardForm')?.addEventListener('submit', saveCard);
     el('flashCancelEdit')?.addEventListener('click', clearCardForm);
     el('flashCardList')?.addEventListener('click', event => { const edit = event.target.closest('[data-flash-edit]'); const remove = event.target.closest('[data-flash-delete]'); if (edit) editCard(edit.dataset.flashEdit); if (remove) deleteCard(remove.dataset.flashDelete); });
@@ -495,8 +581,8 @@
     el('flashAiAddSelected')?.addEventListener('click', addCandidates);
     document.querySelectorAll('[data-flash-close]').forEach(button => button.addEventListener('click', () => el(button.dataset.flashClose)?.close()));
     for (const dialog of [el('flashDeckDialog'), el('flashReviewDialog'), el('flashAiDialog')]) dialog?.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-    el('flashDeckDialog')?.addEventListener('close', () => { pendingErrorId = null; closeDeckPickers(); });
+    el('flashDeckDialog')?.addEventListener('close', () => { pendingErrorId = null; pendingReviewId = null; closeDeckPickers(); });
     el('flashAiDialog')?.addEventListener('close', () => { specificErrorId = null; });
-    window.KingFlashcards = { render, updateDashboard, openDeck: openDeckDialog, openReview, fromError };
+    window.KingFlashcards = { render, updateDashboard, openDeck: openDeckDialog, openReview, fromError, fromReview };
     render();
 })();

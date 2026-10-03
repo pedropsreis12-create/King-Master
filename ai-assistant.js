@@ -324,7 +324,7 @@ function contextoGeminiIa(pedido = '') {
         agora: new Date().toISOString(),
         dataLocal: hoje,
         fusoHorario: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        usuario: { nome: appData.profileName || 'Estudante', bio: appData.profileBio || '' },
+        usuario: { nome: appData.profileName || 'Estudante' },
         progresso: {
             nivel: gamificacao.nivel,
             xp: gamificacao.xpTotal,
@@ -335,12 +335,11 @@ function contextoGeminiIa(pedido = '') {
             metaDiariaMinutos: appData.dailyGoalMinutes || 60
         },
         desenvolvimentoPessoal: {
-            areas: (appData.personalDevelopment?.spaces || []).slice(0, 12).map(area => ({
+            areas: /habito|disciplina|rotina|procrastin/.test(pedidoNormal) ? (appData.personalDevelopment?.spaces || []).slice(0, 8).map(area => ({
                 nome: String(area.name || '').slice(0, 70),
-                proposito: String(area.description || '').slice(0, 160),
-                habitos: (area.items || []).filter(item => item.type === 'habit').slice(0, 12).map(item => ({ nome: item.name, feitoHoje: Boolean(item.checkins?.[hoje]) })),
-                metas: (area.items || []).filter(item => item.type === 'goal').slice(0, 12).map(item => ({ nome: item.name, atual: item.current || 0, alvo: item.target || 0, unidade: item.unit || '' }))
-            }))
+                habitos: (area.items || []).filter(item => item.type === 'habit' && /estud|revis|quest|redac|simulad|leitura/i.test(item.name)).slice(0, 12).map(item => ({ nome: item.name, feitoHoje: item.checkins?.[hoje] === true || item.checkins?.[hoje]?.status === 'done' })),
+                metas: (area.items || []).filter(item => item.type === 'goal' && /estud|revis|quest|redac|simulad|leitura/i.test(item.name)).slice(0, 8).map(item => ({ nome: item.name, atual: item.current || 0, alvo: item.target || 0, unidade: item.unit || '' }))
+            })) : []
         },
         materias: materiasDoContexto.map(item => ({
             nome: item.subject,
@@ -352,9 +351,10 @@ function contextoGeminiIa(pedido = '') {
         })),
         totalMaterias: materias.length,
         sessoesRecentes: [...historico].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 6).map(item => ({ materia: item.materia, assunto: item.assunto || '', data: dataHistoricoISO(item), minutos: Math.round((item.tempoSegundos || 0) / 60) })),
-        revisoesPendentes: appData.revisoesItems.filter(item => item.status !== 'revisado').sort((a, b) => String(a.dataAlvo).localeCompare(String(b.dataAlvo))).slice(0, 10).map(item => ({ materia: materias.find(materia => String(materia.id) === String(item.materia))?.subject || item.materia, assunto: item.assunto, data: item.dataAlvo })),
-        agendamentos: appData.agendamentoItems.filter(item => !item.completed && item.date >= hoje).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 10).map(item => ({ titulo: item.title, data: item.date, hora: item.time })),
-        simuladosRecentes: [...(appData.simuladosItems || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3).map(item => ({ titulo: item.title, data: item.date, acertos: item.acertos, total: item.total })),
+        revisoesPendentes: /revis|erro|estud|plano|hoje|flashcard/.test(pedidoNormal) ? appData.revisoesItems.filter(item => item.status !== 'revisado').sort((a, b) => String(a.dataAlvo).localeCompare(String(b.dataAlvo))).slice(0, 8).map(item => ({ materia: materias.find(materia => String(materia.id) === String(item.materia))?.subject || item.materia, assunto: item.assunto, data: item.dataAlvo })) : [],
+        agendamentos: /agenda|hoje|plano|cronograma|estud/.test(pedidoNormal) ? appData.agendamentoItems.filter(item => !item.completed && item.date >= hoje).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)).slice(0, 8).map(item => ({ titulo: item.title, data: item.date, hora: item.time })) : [],
+        simuladosRecentes: /simulad|quest|desempenho|pior/.test(pedidoNormal) ? [...(appData.simuladosItems || [])].sort((a, b) => String(b.date).localeCompare(String(a.date))).slice(0, 3).map(item => ({ titulo: item.title, data: item.date, acertos: item.acertos, total: item.total })) : [],
+        evidenciasAcademicas: window.KingAcademicContext?.build(appData, pedido, hoje) || {},
         recorte: 'Contexto compacto para responder rápido: até 20 matérias (priorizando as citadas), 12 tópicos por matéria, 6 sessões, 10 revisões e 10 compromissos. Zero questões significa ausência de avaliação, não dificuldade comprovada.',
         visual: { modo: appData.visualMode || 'classic', carreira: appData.rankVisualMode || 'aura' }
     };

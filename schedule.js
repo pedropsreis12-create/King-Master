@@ -79,6 +79,21 @@
     }
     const subject = id => appData.cycleItems.find(item => String(item.id) === String(id));
     const findBlock = (id, key = visibleWeek) => week(false, key)?.blocks.find(block => String(block.id) === String(id));
+    function detachLinksForRemovedBlocks(removedWeeks) {
+        const removed = Object.entries(removedWeeks || {}).filter(([, entry]) => entry?.blocks?.length);
+        if (!removed.length) return 0;
+        const isRemoved = link => {
+            if (!link?.blockId && !link?.scheduleBlockId) return false;
+            const weekKey = String(link.weekKey || link.scheduleWeekKey || '');
+            return removed.some(([key, entry]) => (!weekKey || key === weekKey)
+                && entry.blocks.some(block => String(block.id) === String(link.blockId || link.scheduleBlockId)));
+        };
+        const pending = [...(appData.pendingStudySessions || []), appData.pendingStudySession]
+            .filter(session => isRemoved(session));
+        const count = Core.detachPendingSessions(removedWeeks, pending);
+        if (isRemoved(appData.activeScheduleBlock)) appData.activeScheduleBlock = null;
+        return count;
+    }
     const getDayBlocks = (day, key = visibleWeek) => [...(week(false, key)?.blocks || [])]
         .filter(block => Number(block.day) === Number(day))
         .sort((a, b) => (a.order ?? 999) - (b.order ?? 999) || Core.toMinutes(a.start) - Core.toMinutes(b.start));
@@ -124,7 +139,10 @@
 
     function renderSummary() {
         const data = allMetrics();
-        const targetMinutes = Core.availableMinutes(settings(), agendaBusyByDay());
+        const capacity = Planner?.ScheduleConstraints.slots(settings(), agendaBusyByDay());
+        const targetMinutes = capacity?.dayPlans
+            ? Object.values(capacity.dayPlans).reduce((sum, day) => sum + (Number(day.availableStudyMinutes) || 0), 0)
+            : Core.availableMinutes(settings(), agendaBusyByDay());
         const loadPercent = targetMinutes ? Math.round(data.plannedMinutes / targetMinutes * 100) : data.plannedMinutes ? 999 : 0;
         byId('scheduleProgressText').textContent = `${data.percent}%`;
         byId('scheduleProgressRing').style.setProperty('--schedule-progress', `${data.percent * 3.6}deg`);
@@ -142,14 +160,14 @@
         byId('scheduleLoadPlanned').textContent = `${minutesText(data.plannedMinutes)} planejadas`;
         byId('scheduleLoadTarget').textContent = `${minutesText(targetMinutes)} disponíveis`;
         const gap = targetMinutes - data.plannedMinutes;
-        byId('scheduleLoadHeadline').textContent = !data.blocks.length ? `Você dispõe de ${minutesText(targetMinutes)} nesta semana`
-            : gap > settings().blockMinutes ? `Ainda cabem ${minutesText(gap)} no seu plano`
+        byId('scheduleLoadHeadline').textContent = !data.blocks.length ? `Até ${minutesText(targetMinutes)} líquidos cabem nesta semana`
+            : gap > settings().blockMinutes ? `${minutesText(gap)} permanecem livres no seu horário`
                 : gap < -settings().blockMinutes ? `Sua semana excede a disponibilidade em ${minutesText(Math.abs(gap))}`
                     : 'Carga planejada compatível com seu tempo';
         byId('scheduleLoadHint').textContent = !data.blocks.length ? `${settings().studyDays.length} dias configurados com horários livres próprios. Pausas e compromissos reduzem o espaço real para blocos.`
-            : loadPercent > 110 ? 'Reduza ou mova blocos para evitar uma semana impossível.'
-                : loadPercent < 70 ? 'Há espaço disponível. Acrescente apenas conteúdos prioritários.'
-                    : 'A carga está em uma faixa sustentável para a disponibilidade informada.';
+            : loadPercent > 110 ? 'Revise os blocos que passaram das janelas livres.'
+                : loadPercent < 70 ? 'Tempo livre não é obrigação. A meta diária continua flexível.'
+                    : 'A carga planejada está dentro da disponibilidade informada.';
         byId('scheduleLoadGuide').classList.toggle('overloaded', loadPercent > 110);
     }
 
@@ -209,8 +227,11 @@
         const activeDays = new Set(settings().studyDays);
         byId('scheduleDayStrip').innerHTML = DAYS.map(day => {
             const date = dayDate(visibleWeek, day), data = dayProgress(day), active = selectedDay === day;
-            const classes = [active ? 'active' : '', isToday(visibleWeek, day) ? 'today' : '', activeDays.has(day) ? '' : 'rest-day'].filter(Boolean).join(' ');
-            return `<button type="button" role="tab" aria-selected="${active}" class="${classes}" data-drop-day="${day}" style="--day-progress:${data.percent * 3.6}deg" onclick="KingSchedule.selectDay(${day})" ondragover="KingSchedule.dragOverDay(event)" ondragleave="KingSchedule.dragLeaveDay(event)" ondrop="KingSchedule.dropToDay(event,${day})"><span><b>${DAY_SHORT[day]}</b><small>${date.getDate()}</small></span><i><em>${data.done}/${data.blocks.length}</em></i></button>`;
+            const plan = week(false)?.dayPlans?.[day];
+            const adapted = plan?.status === 'adapted';
+            const classes = [active ? 'active' : '', isToday(visibleWeek, day) ? 'today' : '', activeDays.has(day) ? '' : 'rest-day', adapted ? 'schedule-day-adapted' : ''].filter(Boolean).join(' ');
+            const load = plan ? `<small class="schedule-day-load">${data.blocks.length}/${plan.targetBlocks} · ${minutesText(data.blocks.reduce((sum, block) => sum + Number(block.duration || 0), 0))}</small>` : '';
+            return `<button type="button" role="tab" aria-selected="${active}" class="${classes}" data-drop-day="${day}" style="--day-progress:${data.percent * 3.6}deg" onclick="KingSchedule.selectDay(${day})" ondragover="KingSchedule.dragOverDay(event)" ondragleave="KingSchedule.dragLeaveDay(event)" ondrop="KingSchedule.dropToDay(event,${day})"><span><b>${DAY_SHORT[day]}</b><small>${date.getDate()}</small></span><i><em>${data.done}/${data.blocks.length}</em></i>${load}</button>`;
         }).join('');
     }
 
@@ -253,15 +274,19 @@
         return `<div class="schedule-timeline-row"><div class="schedule-time-rail"><strong>${escape(block.start)}</strong><span></span><small>${escape(end)}</small></div><article class="schedule-focus-block status-${block.status}" draggable="true" data-block-id="${id}" data-drop-block-id="${id}" style="--block-color:${color}" onpointerdown="KingSchedule.pointerDown(event,'${id}')" ondragstart="KingSchedule.dragStart(event,'${id}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${id}')"><header><span class="schedule-focus-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><div><span>${escape(kind.label)}</span><strong>${escape(mat?.subject || 'Matéria removida')}</strong></div><em class="schedule-status-chip">${state.icon} ${state.label}</em></header><h3>${escape(block.topic || `Bloco de ${kind.label.toLocaleLowerCase('pt-BR')}`)}</h3>${block.result?.notes ? `<p class="schedule-result-note">${escape(block.result.notes)}</p>` : ''}<footer><span>${block.duration} min${block.result?.questions ? ` · ${block.result.questions} questões` : ''}</span><div>${action}<button type="button" class="schedule-more-button" onclick="KingSchedule.openBlock('${id}')" aria-label="Editar bloco">•••</button></div></footer></article></div>`;
     }
     function pauseHtml(minutes) {
-        return `<div class="schedule-timeline-pause"><span></span><div><b>☕</b><strong>Pausa</strong><small>${minutes} minutos para recuperar o foco</small></div></div>`;
+        const plannedInterval = settings().pauseMinutes + settings().registrationMinutes;
+        const longGap = minutes > plannedInterval + 10;
+        return `<div class="schedule-timeline-pause"><span></span><div><b>☕</b><strong>${longGap ? 'Janela livre' : 'Pausa e registro'}</strong><small>${minutes} minutos até o próximo bloco</small></div></div>`;
     }
     function renderTimeline() {
         const blocks = getDayBlocks(selectedDay), container = byId('scheduleTimeline');
         byId('scheduleSelectedDayEyebrow').textContent = isToday(visibleWeek, selectedDay) ? 'HOJE' : visibleWeek === currentWeekKey() ? 'NESTA SEMANA' : 'DIA PLANEJADO';
         byId('scheduleSelectedDayTitle').textContent = formatDayTitle(selectedDay);
         const completed = blocks.filter(block => block.status === 'completed').length;
+        const dayPlan = week(false)?.dayPlans?.[selectedDay];
+        const netMinutes = blocks.reduce((sum, block) => sum + Number(block.duration || 0), 0);
         byId('scheduleSelectedDaySummary').textContent = blocks.length
-            ? `${blocks.length} ${blocks.length === 1 ? 'bloco planejado' : 'blocos planejados'} · ${completed} concluído${completed === 1 ? '' : 's'}`
+            ? `${blocks.length}${dayPlan ? `/${dayPlan.targetBlocks} da meta` : ''} ${blocks.length === 1 ? 'bloco planejado' : 'blocos planejados'} · ${minutesText(netMinutes)} líquidos · ${completed} concluído${completed === 1 ? '' : 's'}${dayPlan?.status === 'adapted' ? ' · carga adaptada ao horário' : ''}`
             : 'Dia livre para respirar ou reorganizar.';
         if (!appData.cycleItems.length) {
             container.innerHTML = `<div class="schedule-timeline-empty"><span>＋</span><h3>Cadastre sua primeira matéria</h3><p>O cronograma usa somente o que você criar no Hub de Matérias.</p><button type="button" class="cycle-btn primary" onclick="showSection('planejamento');abrirModalCiclo()">Adicionar matéria</button></div>`;
@@ -307,10 +332,17 @@
         const notice = byId('scheduleNotice');
         const overloaded = settings().studyDays.filter(day => new Set(getDayBlocks(day).map(block => String(block.subjectId))).size > settings().maxSubjectsPerDay);
         const unscheduled = week(false)?.unscheduled || [];
-        if (!overloaded.length && !unscheduled.length) { notice.hidden = true; return; }
+        const adaptedDays = Object.values(week(false)?.dayPlans || {}).filter(day => day.status === 'adapted');
+        const archivedCount = week(false)?.archivedCompletedBlocks?.length || 0;
+        if (!overloaded.length && !unscheduled.length && !adaptedDays.length && !archivedCount) { notice.hidden = true; return; }
         notice.hidden = false;
+        notice.classList.toggle('schedule-notice-adapted', !overloaded.length && settings().mode !== 'rigid');
         const missing = unscheduled.reduce((sum, item) => sum + Number(item.blocks || 0), 0);
-        notice.innerHTML = `<span aria-hidden="true">!</span><p>${missing ? `<strong>${missing} ${missing === 1 ? 'bloco não coube' : 'blocos não couberam'} nos horários livres.</strong> ${unscheduled.map(item => `${escape(item.subject)} (${item.blocks})`).join(', ')}. Amplie os horários ou reduza a carga semanal.` : ''}${overloaded.length ? ` <strong>A semana ficou concentrada.</strong> ${overloaded.map(day => DAY_NAMES[day]).join(', ')} ${overloaded.length === 1 ? 'tem' : 'têm'} mais matérias que o limite desejado.` : ''}</p>`;
+        const adapted = adaptedDays.length ? `<strong>Plano ajustado por dia.</strong> ${adaptedDays.map(day => `${DAY_NAMES[day.day]} ${day.scheduledBlocks}/${day.targetBlocks}`).join(' · ')}. Nenhum bloco extra foi criado para compensar.` : '';
+        const remaining = missing ? `<strong>${missing} ${missing === 1 ? 'bloco desejado ficou' : 'blocos desejados ficaram'} fora desta semana.</strong> ${unscheduled.map(item => `${escape(item.subject)} (${item.blocks})`).join(', ')}. A disponibilidade real foi respeitada.` : '';
+        const limit = overloaded.length ? `<strong>Há matérias demais em um dia.</strong> Revise ${overloaded.map(day => DAY_NAMES[day]).join(', ')}.` : '';
+        const archived = archivedCount ? `<strong>${archivedCount} ${archivedCount === 1 ? 'bloco concluído anterior foi preservado' : 'blocos concluídos anteriores foram preservados'}.</strong> Ele não ocupa uma nova janela do cronograma.` : '';
+        notice.innerHTML = `<span aria-hidden="true">${overloaded.length ? '!' : 'i'}</span><p>${[adapted, remaining, limit, archived].filter(Boolean).join(' ')}</p>`;
     }
     function renderReplanButton() {
         const today = new Date().getDay();
@@ -402,22 +434,36 @@
     function renderPlanner() {
         if (!plannerDraft) return;
         const value = plannerDraft.constraints;
-        const required = Planner.ScheduleConstraints.requiredMinutes(value);
-        byId('schedulePlannerRules').innerHTML = `<div><span>Horário</span><strong>${escape(value.startTime)}–${escape(value.endTime)}</strong></div><div><span>Blocos por dia</span><strong>${value.blocksPerDay} exatos</strong></div><div><span>Cada bloco</span><strong>${value.blockMinutes} min</strong></div><div><span>Entre blocos</span><strong>${value.pauseMinutes} min</strong></div><div><span>Registro após cada bloco</span><strong>${value.registrationMinutes} min</strong></div><div><span>Tempo necessário</span><strong>${minutesText(required)} por dia</strong></div><div><span>Dias ativos</span><strong>${value.studyDays.map(day => DAY_SHORT[day]).join(' · ')}</strong></div>`;
+        const target = value.targetBlocksPerDay ?? value.blocksPerDay;
+        const modeLabel = { adaptive: 'Adaptativo', rigid: 'Rígido', free: 'Livre' }[value.mode] || 'Adaptativo';
+        const modeKicker = byId('schedulePlannerModal')?.querySelector('.schedule-planner-header .workspace-kicker');
+        if (modeKicker) modeKicker.textContent = `PLANEJADOR DA SEMANA · ${modeLabel.toLocaleUpperCase('pt-BR')}`;
+        const durationLabel = value.durationMode === 'flexible' ? `${value.minBlockMinutes}–${value.maxBlockMinutes} min` : `${value.blockMinutes} min`;
+        const pauseLabel = value.pauseMode === 'flexible' ? `${value.minPauseMinutes}–${value.pauseMinutes} min` : `${value.pauseMinutes} min`;
+        byId('schedulePlannerRules').innerHTML = `<div><span>Modo</span><strong>${modeLabel}</strong></div><div><span>Horário-base</span><strong>${escape(value.startTime)}–${escape(value.endTime)}</strong></div><div><span>Meta ideal</span><strong>${target} blocos/dia</strong></div><div><span>Cada bloco</span><strong>${durationLabel}</strong></div><div><span>Pausa</span><strong>${pauseLabel}</strong></div><div><span>Registro</span><strong>${value.registrationMinutes} min após bloco</strong></div><div><span>Dias ativos</span><strong>${value.studyDays.map(day => DAY_SHORT[day]).join(' · ')}</strong></div>`;
         const check = plannerDraft.blocks.length ? Planner.ScheduleValidator.validate(plannerDraft, value, appData.cycleItems, plannerOptions()) : { valid: false, errors: plannerDraft.errors || [], warnings: plannerDraft.warnings || [] };
         const errors = [...new Set([...(plannerDraft.errors || []), ...check.errors])];
         const warnings = [...new Set([...(plannerDraft.warnings || []), ...check.warnings])];
         const valid = !errors.length && check.valid;
+        const dayPlans = plannerDraft.dayPlans || {};
+        const adaptedDays = Object.values(dayPlans).filter(day => day.status === 'adapted').length;
+        const scheduled = plannerDraft.blocks.length;
+        const ideal = target * value.studyDays.length;
         byId('schedulePlannerStatus').innerHTML = errors.length
             ? `<div class="schedule-plan-errors"><strong>Há conflitos antes de aplicar.</strong>${errors.map(item => `<p>${escape(item)}</p>`).join('')}</div>`
-            : `<div class="schedule-plan-valid"><strong>✓ ${value.blocksPerDay} blocos por dia, sem ultrapassar ${escape(value.endTime)}</strong><span>${warnings.length ? `${warnings.length} preferência(s) para conferir antes de aplicar.` : 'Todas as regras fixas foram respeitadas.'}</span></div>${warnings.length ? `<div class="schedule-plan-warnings">${warnings.map(item => `<p>${escape(item)}</p>`).join('')}</div>` : ''}`;
+            : `<div class="schedule-plan-valid"><strong>✓ ${scheduled}/${ideal} blocos ideais nesta semana · sem ultrapassar os horários livres</strong><span>${adaptedDays ? `${adaptedDays} ${adaptedDays === 1 ? 'dia foi adaptado' : 'dias foram adaptados'} ao tempo disponível. ` : ''}${warnings.length ? `${warnings.length} preferência(s) para conferir.` : 'Menos blocos não são falha quando falta tempo.'}</span></div>${warnings.length ? `<div class="schedule-plan-warnings">${warnings.map(item => `<p>${escape(item)}</p>`).join('')}</div>` : ''}`;
         byId('scheduleApplyPreview').disabled = !valid;
         byId('schedulePlannerFooterHint').textContent = valid ? 'Os horários estão validados. Somente “Aplicar cronograma” altera a semana.' : 'Ajuste as regras ou o pedido; o cronograma atual permanece intacto.';
         const subjects = Planner.UserStudyPreferences.normalize(appData.cycleItems, value).subjects;
-        byId('schedulePlannerPreview').innerHTML = !plannerDraft.blocks.length ? '<div class="schedule-plan-empty">A prévia aparece aqui quando os blocos cabem nos horários configurados.</div>'
+        byId('schedulePlannerPreview').innerHTML = !plannerDraft.blocks.length ? '<div class="schedule-plan-empty">Nenhum bloco pôde ser planejado nas janelas informadas. Seu cronograma atual continua intacto.</div>'
             : `<div class="schedule-plan-days">${value.studyDays.map(day => {
                 const blocks = plannerDraft.blocks.filter(block => Number(block.day) === day).sort((a, b) => a.order - b.order);
-                return `<article class="schedule-plan-day"><header><strong>${DAY_NAMES[day]}</strong><small>${blocks.length}/${value.blocksPerDay} blocos</small></header>${blocks.map(block => `<div class="schedule-plan-slot"><time>${escape(block.start)}<span>–</span>${escape(block.end)}</time><label><span>Bloco ${block.order + 1}${block.status === 'completed' ? ' · concluído' : ''}</span><select data-plan-block="${escape(block.id)}" aria-label="Matéria do bloco ${block.order + 1} de ${DAY_NAMES[day]}" ${block.status === 'completed' ? 'disabled' : ''}><option value="">Escolha a matéria</option>${subjects.map(item => `<option value="${escape(item.id)}" ${String(block.subjectId) === item.id ? 'selected' : ''}>${escape(item.name)}</option>`).join('')}</select></label></div>`).join('')}</article>`;
+                const daily = dayPlans[day] || {};
+                const dailyTarget = Number(daily.targetBlocks ?? target);
+                const netPlanned = blocks.reduce((sum, block) => sum + Number(block.duration || 0), 0);
+                const adapted = daily.status === 'adapted' || blocks.length < dailyTarget;
+                const statusText = adapted ? (daily.reason || 'Carga adaptada ao horário') : 'Meta diária completa';
+                return `<article class="schedule-plan-day ${adapted ? 'schedule-plan-adapted' : ''}"><header><strong>${DAY_NAMES[day]}</strong><small>${blocks.length}/${dailyTarget} blocos · ${statusText}</small></header><div class="schedule-plan-load"><span>Meta <strong>${minutesText(Number(daily.targetStudyMinutes) || dailyTarget * value.blockMinutes)}</strong></span><span>Disponível <strong>${minutesText(Number(daily.availableStudyMinutes) || 0)}</strong></span><span>Planejado <strong>${minutesText(netPlanned)}</strong></span></div>${blocks.map(block => `<div class="schedule-plan-slot"><time>${escape(block.start)}<span>–</span>${escape(block.end)}</time><label><span>Bloco ${block.order + 1}${block.status === 'completed' ? ' · concluído' : ''}</span><select data-plan-block="${escape(block.id)}" aria-label="Matéria do bloco ${block.order + 1} de ${DAY_NAMES[day]}" ${block.status === 'completed' ? 'disabled' : ''}><option value="">Escolha a matéria</option>${subjects.map(item => `<option value="${escape(item.id)}" ${String(block.subjectId) === item.id ? 'selected' : ''}>${escape(item.name)}</option>`).join('')}</select></label></div>`).join('')}</article>`;
             }).join('')}</div>`;
     }
     function refreshPlanner() {
@@ -441,7 +487,9 @@
         const message = byId('scheduleAiMessage').value.trim();
         if (!message) { plannerIntent = {}; refreshPlanner(); return; }
         const preferences = Planner.UserStudyPreferences.normalize(appData.cycleItems, settings());
-        const direct = Planner.AIScheduleAssistant.interpret({}, message, settings(), preferences.subjects);
+        const currentDay = new Date().getDay() || 7;
+        const interpretationContext = { ...settings(), currentDay };
+        const direct = Planner.AIScheduleAssistant.interpret({}, message, interpretationContext, preferences.subjects);
         if (direct.errors.length) {
             plannerDraft.errors = direct.errors;
             renderPlanner();
@@ -455,8 +503,8 @@
         try {
             await window.kingGeminiReady;
             if (!window.kingGemini?.interpretScheduleRequest) throw new Error('A IA não está disponível no momento. A prévia sem texto continua funcionando.');
-            const raw = await window.kingGemini.interpretScheduleRequest({ message, subjects: preferences.subjects.map(item => item.name), constraints: settings() });
-            const interpreted = Planner.AIScheduleAssistant.interpret(raw, message, settings(), preferences.subjects);
+            const raw = await window.kingGemini.interpretScheduleRequest({ message, subjects: preferences.subjects.map(item => item.name), constraints: settings(), currentDay });
+            const interpreted = Planner.AIScheduleAssistant.interpret(raw, message, interpretationContext, preferences.subjects);
             if (interpreted.errors.length) {
                 plannerDraft.errors = interpreted.errors;
                 renderPlanner();
@@ -467,9 +515,17 @@
             refreshPlanner();
             byId('scheduleAiFeedback').textContent = interpreted.explanation || 'Pedido interpretado. Confira a prévia antes de aplicar.';
         } catch {
-            plannerDraft.errors = ['Não foi possível interpretar o pedido. Nenhuma sugestão da IA foi aplicada.'];
-            renderPlanner();
-            byId('scheduleAiFeedback').textContent = 'A IA não respondeu. Tente de novo ou apague o pedido para usar apenas suas regras salvas.';
+            const recognized = direct.dayOverrides?.length || direct.priorityIds?.length || direct.pairSubjectIds?.length
+                || Object.keys(direct.preferredDays || {}).length || direct.avoidSameDay?.length;
+            if (recognized) {
+                plannerIntent = direct;
+                refreshPlanner();
+                byId('scheduleAiFeedback').textContent = 'A IA não respondeu. Usei apenas os ajustes simples reconhecidos no seu texto; confira a prévia antes de aplicar.';
+            } else {
+                plannerDraft.errors = ['Não foi possível interpretar o pedido. Nenhuma sugestão da IA foi aplicada.'];
+                renderPlanner();
+                byId('scheduleAiFeedback').textContent = 'A IA não respondeu. Tente de novo ou apague o pedido para usar apenas suas regras salvas.';
+            }
         }
         finally { button.disabled = false; }
     }
@@ -480,19 +536,42 @@
         const current = week(false);
         const replacing = (current?.blocks || []).filter(block => block.status !== 'completed').length;
         if (replacing && !confirm(`Substituir os ${replacing} blocos não concluídos desta semana pela prévia validada? Os registros de estudo serão mantidos.`)) return;
+        detachLinksForRemovedBlocks({ [visibleWeek]: { blocks: (current?.blocks || []).filter(block => block.status !== 'completed') } });
         appData.studySchedule.weeks[visibleWeek] = { key: visibleWeek, blocks: plannerDraft.blocks.map(block => ({ ...block })),
-            dailyClosures: { ...(current?.dailyClosures || {}) }, warnings: [...check.warnings], unscheduled: [], generatedAt: Date.now(), strict: true };
-        saveAppData(); closePlanner(); render(); toast('Cronograma aplicado após validação dos horários e blocos.');
+            dailyClosures: { ...(current?.dailyClosures || {}) }, warnings: [...check.warnings], unscheduled: [],
+            archivedCompletedBlocks: [...(current?.archivedCompletedBlocks || []), ...(plannerDraft.archivedCompletedBlocks || [])]
+                .filter((block, index, list) => list.findIndex(other => String(other.id) === String(block.id)) === index),
+            dayPlans: structuredClone(plannerDraft.dayPlans || {}), mode: settings().mode, generatedAt: Date.now(), strict: true };
+        saveAppData(); closePlanner(); render(); toast('Cronograma adaptado e aplicado sem ultrapassar seus horários.');
     }
     function clearAllBlocks() {
         ensureData();
         const entries = Object.values(appData.studySchedule.weeks);
-        const count = entries.reduce((sum, item) => sum + (item?.blocks?.length || 0), 0);
+        const count = entries.reduce((sum, item) => sum + (item?.blocks?.length || 0) + (item?.archivedCompletedBlocks?.length || 0), 0);
         if (!count) return toast('Não há blocos para apagar.');
-        if (appData.activeScheduleBlock || appData.pendingStudySession?.scheduleBlockId) return toast('Conclua ou descarte a sessão vinculada ao cronograma antes de apagar os blocos.', true);
-        if (!confirm(`Apagar todos os ${count} blocos do cronograma, em todas as semanas? Essa ação não apaga o histórico de estudos nem suas preferências de planejamento.`)) return;
-        Core.clearAllBlocks(appData.studySchedule.weeks);
-        saveAppData(); render(); toast(`${count} blocos apagados. O histórico de estudos foi preservado.`);
+        if (!confirm(`Apagar todos os ${count} blocos do cronograma, inclusive os incompletos, em todas as semanas? Seu cronômetro, as sessões aguardando registro e o histórico serão preservados, mas deixarão de estar vinculados aos blocos apagados.`)) return;
+        const snapshot = {
+            weeks: structuredClone(appData.studySchedule.weeks),
+            pendingStudySessions: structuredClone(appData.pendingStudySessions || []),
+            pendingStudySession: appData.pendingStudySession ? structuredClone(appData.pendingStudySession) : null,
+            activeScheduleBlock: appData.activeScheduleBlock ? { ...appData.activeScheduleBlock } : null
+        };
+        let protectedCount = 0;
+        try {
+            protectedCount = detachLinksForRemovedBlocks(appData.studySchedule.weeks);
+            appData.activeScheduleBlock = null;
+            Core.clearAllBlocks(appData.studySchedule.weeks);
+            saveAppData();
+        } catch (error) {
+            appData.studySchedule.weeks = snapshot.weeks;
+            appData.pendingStudySessions = snapshot.pendingStudySessions;
+            appData.pendingStudySession = snapshot.pendingStudySession;
+            appData.activeScheduleBlock = snapshot.activeScheduleBlock;
+            console.error('Não foi possível apagar os blocos com segurança:', error);
+            return toast('Não foi possível salvar a exclusão. Nenhum bloco foi apagado.', true);
+        }
+        render();
+        toast(`${count} blocos apagados. ${protectedCount ? `${protectedCount} sessão(ões) protegida(s) para registrar depois.` : 'Seu histórico foi preservado.'}`);
     }
     function changeWeek(direction) { visibleWeek = Core.addDays(visibleWeek, Number(direction) * 7); selectedDay = settings().studyDays[0] || 1; render(); }
     function goCurrentWeek() { visibleWeek = currentWeekKey(); selectedDay = new Date().getDay() || 7; render(); }
@@ -502,11 +581,12 @@
         if (!source?.blocks?.length) return toast('Monte esta semana antes de copiá-la.', true);
         const next = Core.addDays(visibleWeek, 7);
         if (week(false, next)?.blocks?.length && !confirm('A semana seguinte já possui blocos. Deseja substituí-los?')) return;
+        detachLinksForRemovedBlocks({ [next]: { blocks: week(false, next)?.blocks || [] } });
         appData.studySchedule.weeks[next] = Core.copyWeek(source, next);
         saveAppData(); visibleWeek = next; selectedDay = settings().studyDays[0] || 1; render(); toast('✓ Estrutura copiada; o progresso começou zerado.');
     }
     function replanOverdue() {
-        if (week(false)?.strict) { toast('Use “Montar com IA” para conferir a prévia antes de replanejar blocos exatos.'); return organizeCurrentWeek(); }
+        if (week(false)?.strict) { toast('Use “Montar com IA” para conferir a prévia antes de reorganizar os horários.'); return organizeCurrentWeek(); }
         const today = new Date().getDay();
         if (visibleWeek !== currentWeekKey() || !DAYS.includes(today)) return;
         const targetDay = settings().studyDays.find(day => day >= today) || today;
@@ -532,7 +612,7 @@
             editor.className = 'schedule-availability-editor';
             document.querySelector('#scheduleSettingsModal .schedule-day-options').after(editor);
         }
-        editor.innerHTML = `<div class="schedule-availability-heading"><div><strong>Horários realmente livres</strong><small>Inclua manhã, tarde ou noite separadamente. Compromissos com horário na Agenda também serão respeitados.</small></div><button type="button" class="cycle-btn" onclick="KingSchedule.applyAvailabilityTemplate()">Aplicar horário-base aos dias</button></div><div class="schedule-availability-days">${DAYS.map(day => `<div class="schedule-availability-day" data-availability-day="${day}"><div class="schedule-availability-day-title"><strong>${DAY_NAMES[day]}</strong><button type="button" class="cycle-btn" onclick="KingSchedule.addAvailabilityRange(${day})">+ Horário livre</button></div><div class="schedule-availability-slots">${(value.availability[day] || []).map(range => availabilityRow(day, range)).join('')}</div></div>`).join('')}</div><p class="schedule-availability-note">O organizador preserva pausas e o fechamento do dia. Se a carga não couber, ele avisa em vez de criar horários impossíveis.</p>`;
+        editor.innerHTML = `<div class="schedule-availability-heading"><div><strong>Horários realmente livres</strong><small>Inclua manhã, tarde ou noite separadamente. Compromissos com horário na Agenda também serão respeitados.</small></div><button type="button" class="cycle-btn" onclick="KingSchedule.applyAvailabilityTemplate()">Aplicar horário-base aos dias</button></div><div class="schedule-availability-days">${DAYS.map(day => `<div class="schedule-availability-day" data-availability-day="${day}"><div class="schedule-availability-day-title"><strong>${DAY_NAMES[day]}</strong><button type="button" class="cycle-btn" onclick="KingSchedule.addAvailabilityRange(${day})">+ Horário livre</button></div><div class="schedule-availability-slots">${(value.availability[day] || []).map(range => availabilityRow(day, range)).join('')}</div></div>`).join('')}</div><p class="schedule-availability-note">No modo adaptativo, um dia com menos tempo recebe menos blocos sem virar uma falha nem ocupar outro dia.</p>`;
     }
     function addAvailabilityRange(day) {
         const container = document.querySelector(`[data-availability-day="${day}"] .schedule-availability-slots`);
@@ -570,11 +650,23 @@
         if (byId('scheduleEndTime')) return;
         byId('scheduleStartTime').closest('.cycle-form-group').insertAdjacentHTML('afterend', '<div class="cycle-form-group"><label class="cycle-label" for="scheduleEndTime">Terminar até</label><input type="time" class="cycle-input" id="scheduleEndTime" required></div>');
         byId('scheduleDailyCapacity').closest('.cycle-form-group').hidden = true;
-        byId('scheduleBlockMinutes').closest('.cycle-form-group').insertAdjacentHTML('beforebegin', '<div class="cycle-form-group"><label class="cycle-label" for="scheduleBlocksPerDay">Blocos exatos por dia</label><input type="number" class="cycle-input" id="scheduleBlocksPerDay" min="1" max="8" required></div>');
+        byId('scheduleBlockMinutes').closest('.cycle-form-group').insertAdjacentHTML('beforebegin', '<div class="cycle-form-group"><label class="cycle-label" for="scheduleBlocksPerDay">Meta ideal de blocos por dia</label><input type="number" class="cycle-input" id="scheduleBlocksPerDay" min="1" max="8" required></div>');
         byId('schedulePauseMinutes').closest('.cycle-form-group').insertAdjacentHTML('afterend', '<div class="cycle-form-group"><label class="cycle-label" for="scheduleRegistrationMinutes">Registro após cada bloco</label><select class="cycle-input" id="scheduleRegistrationMinutes"><option value="0">Sem tempo extra</option><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="15">15 minutos</option></select></div>');
         byId('scheduleClosingMinutes').closest('.cycle-form-group').hidden = true;
         document.querySelector('#scheduleSettingsModal .schedule-day-options').insertAdjacentHTML('beforeend', '<label><input type="checkbox" value="7"><span><b>DOM</b><small>Domingo</small></span></label>');
-        document.querySelector('#scheduleSettingsModal .schedule-settings-section-title small').textContent = 'Horário e número de blocos são limites obrigatórios. O sistema avisa se não couberem.';
+    }
+    function updateFlexControls() {
+        const freeMode = byId('scheduleMode')?.value === 'free';
+        const extras = byId('scheduleExtraRow');
+        if (extras) extras.hidden = !freeMode;
+        const pauseFlexible = byId('schedulePauseMode')?.value === 'flexible';
+        const durationFlexible = byId('scheduleDurationMode')?.value === 'flexible';
+        const pauseGroup = byId('scheduleMinPauseMinutes')?.closest('.cycle-form-group');
+        const minDurationGroup = byId('scheduleMinBlockMinutes')?.closest('.cycle-form-group');
+        const maxDurationGroup = byId('scheduleMaxBlockMinutes')?.closest('.cycle-form-group');
+        if (pauseGroup) pauseGroup.hidden = !pauseFlexible;
+        if (minDurationGroup) minDurationGroup.hidden = !durationFlexible;
+        if (maxDurationGroup) maxDurationGroup.hidden = !durationFlexible;
     }
     function openSettings() {
         ensureData();
@@ -584,13 +676,21 @@
         if (submit) submit.textContent = 'Salvar planejamento';
         byId('scheduleStartTime').value = value.startTime;
         byId('scheduleEndTime').value = value.endTime;
-        byId('scheduleBlocksPerDay').value = String(value.blocksPerDay);
+        byId('scheduleBlocksPerDay').value = String(value.targetBlocksPerDay);
+        byId('scheduleMode').value = value.mode;
+        byId('scheduleAllowExtraBlocks').checked = Boolean(value.allowExtraBlocks);
+        byId('schedulePauseMode').value = value.pauseMode;
+        byId('scheduleMinPauseMinutes').value = String(value.minPauseMinutes);
+        byId('scheduleDurationMode').value = value.durationMode;
+        byId('scheduleMinBlockMinutes').value = String(value.minBlockMinutes);
+        byId('scheduleMaxBlockMinutes').value = String(value.maxBlockMinutes);
         byId('scheduleRegistrationMinutes').value = String(value.registrationMinutes);
         setSelectValue(byId('scheduleDailyCapacity'), value.dailyCapacityMinutes);
         byId('scheduleBlockMinutes').value = String(value.blockMinutes);
         byId('schedulePauseMinutes').value = String(value.pauseMinutes);
         byId('scheduleClosingMinutes').value = String(value.closingMinutes);
         byId('scheduleMaxSubjects').value = String(value.maxSubjectsPerDay);
+        updateFlexControls();
         document.querySelectorAll('#scheduleSettingsModal .schedule-day-options input').forEach(input => input.checked = value.studyDays.includes(Number(input.value)));
         document.querySelector('label[for="scheduleStartTime"]')?.replaceChildren(document.createTextNode('Começar às'));
         document.querySelector('label[for="scheduleDailyCapacity"]')?.replaceChildren(document.createTextNode('Duração-base'));
@@ -601,23 +701,37 @@
     function saveSettings(event) {
         event.preventDefault();
         const startTime = byId('scheduleStartTime').value, endTime = byId('scheduleEndTime').value;
-        const exactBlocks = Number(byId('scheduleBlocksPerDay').value);
+        const targetBlocks = Number(byId('scheduleBlocksPerDay').value);
+        const blockMinutes = Number(byId('scheduleBlockMinutes').value);
+        const pauseMinutes = Number(byId('schedulePauseMinutes').value);
+        const minPauseMinutes = Number(byId('scheduleMinPauseMinutes').value);
+        const minBlockMinutes = Number(byId('scheduleMinBlockMinutes').value);
+        const maxBlockMinutes = Number(byId('scheduleMaxBlockMinutes').value);
+        const pauseMode = byId('schedulePauseMode').value;
+        const durationMode = byId('scheduleDurationMode').value;
+        const mode = byId('scheduleMode').value;
+        const allowExtraBlocks = mode === 'free' && byId('scheduleAllowExtraBlocks').checked;
         if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) || Core.toMinutes(endTime) <= Core.toMinutes(startTime))
             return toast('O horário de término precisa ser posterior ao início. Nada foi alterado.', true);
-        if (!Number.isInteger(exactBlocks) || exactBlocks < 1 || exactBlocks > 8)
-            return toast('Escolha entre 1 e 8 blocos exatos por dia.', true);
+        if (!Number.isInteger(targetBlocks) || targetBlocks < 1 || targetBlocks > 8)
+            return toast('Escolha uma meta entre 1 e 8 blocos por dia.', true);
+        if (pauseMode === 'flexible' && (!Number.isInteger(minPauseMinutes) || minPauseMinutes < 1 || minPauseMinutes > pauseMinutes))
+            return toast('A pausa mínima precisa ser positiva e não pode superar a pausa padrão.', true);
+        if (durationMode === 'flexible' && (!Number.isInteger(minBlockMinutes) || !Number.isInteger(maxBlockMinutes)
+            || minBlockMinutes < 10 || minBlockMinutes > blockMinutes || maxBlockMinutes < blockMinutes || maxBlockMinutes > 240))
+            return toast('A duração flexível deve ter mínimo até o bloco padrão e máximo igual ou maior que ele.', true);
         const days = [...document.querySelectorAll('#scheduleSettingsModal .schedule-day-options input:checked')].map(input => Number(input.value));
         if (!days.length) return toast('Escolha pelo menos um dia disponível.', true);
         const availability = readAvailability(days);
         if (!availability) return;
         const proposed = Core.normalizeSettings({
             startTime, endTime, studyDays: days,
-            blocksPerDay: exactBlocks, blockMinutes: byId('scheduleBlockMinutes').value,
-            pauseMinutes: byId('schedulePauseMinutes').value, registrationMinutes: byId('scheduleRegistrationMinutes').value,
+            mode, allowExtraBlocks, targetBlocksPerDay: targetBlocks, blockMinutes,
+            durationMode, minBlockMinutes, maxBlockMinutes,
+            pauseMinutes, pauseMode, minPauseMinutes, registrationMinutes: byId('scheduleRegistrationMinutes').value,
             closingMinutes: byId('scheduleRegistrationMinutes').value, maxSubjectsPerDay: byId('scheduleMaxSubjects').value, availability
         });
         const feasibility = Planner?.ScheduleConstraints.slots(proposed);
-        if (feasibility?.errors.length) return toast(feasibility.errors[0], true);
         appData.studySchedule.settings = proposed;
         document.querySelectorAll('#scheduleSubjectPlans .schedule-subject-plan').forEach(card => {
             const item = subject(card.dataset.subjectId); if (!item) return;
@@ -628,7 +742,10 @@
             item.schedule.contentLoad = Number(card.querySelector('[data-plan="contentLoad"]').value) || 2;
             item.schedule.preferredDay = Number(card.querySelector('[data-plan="preferredDay"]').value) || 0;
         });
-        saveAppData(); fecharModal('scheduleSettingsModal'); render(); renderizarCiclo(); toast('Regras salvas. Use “Montar com IA” para conferir a prévia antes de aplicar.');
+        saveAppData(); fecharModal('scheduleSettingsModal'); render(); renderizarCiclo();
+        toast(feasibility?.errors?.length && mode === 'rigid'
+            ? 'Meta rígida salva. Alguns dias não comportam todos os blocos; veja a prévia antes de aplicar.'
+            : 'Meta e horários salvos. A prévia mostrará a carga possível em cada dia.');
     }
 
     function fillBlockSelects(selectedSubject, day) {
@@ -650,7 +767,7 @@
     function openBlock(id = null, requestedDay = null, requestedStart = null) {
         ensureData();
         if (week(false)?.strict) {
-            toast('Esta semana tem blocos exatos. Altere a matéria na prévia do planejador.');
+            toast('Esta semana foi validada. Altere a matéria na prévia do planejador.');
             return organizeCurrentWeek();
         }
         if (!appData.cycleItems.length) { toast('Adicione uma matéria antes de criar o bloco.', true); showSection('planejamento'); return abrirModalCiclo(); }
@@ -672,7 +789,7 @@
     function saveBlock(event) {
         event.preventDefault();
         const key = byId('scheduleBlockWeek').value || visibleWeek, target = week(true, key), rawId = byId('scheduleBlockId').value;
-        if (target.strict) return toast('Esta semana usa blocos exatos. Faça alterações na prévia de “Montar com IA”.', true);
+        if (target.strict) return toast('Esta semana foi validada. Faça alterações na prévia de “Montar com IA”.', true);
         const day = Number(byId('scheduleBlockDay').value), existing = rawId ? target.blocks.find(item => String(item.id) === String(rawId)) : null;
         const statusValue = byId('scheduleBlockStatus').value;
         const values = {
@@ -693,9 +810,10 @@
     }
     function deleteEditingBlock() {
         const id = byId('scheduleBlockId').value, key = byId('scheduleBlockWeek').value || visibleWeek, target = week(false, key);
-        if (target?.strict) return toast('Esta semana usa blocos exatos. Use “Apagar todos os blocos” para esvaziar o cronograma ou gere uma nova prévia.', true);
+        if (target?.strict) return toast('Esta semana foi validada. Use “Apagar todos os blocos” para esvaziar o cronograma ou gere uma nova prévia.', true);
         const block = target?.blocks.find(item => String(item.id) === String(id)); if (!block) return;
         if (block.registered && !confirm('O histórico do estudo será mantido. Retirar somente o bloco do cronograma?')) return;
+        detachLinksForRemovedBlocks({ [key]: { blocks: [block] } });
         target.blocks = target.blocks.filter(item => String(item.id) !== String(id));
         recomputeDay(block.day, key); saveAppData(); fecharModal('scheduleBlockModal'); render(); toast('Bloco retirado do cronograma.');
     }
@@ -731,16 +849,17 @@
         if (!linked && typeof currentSeconds !== 'undefined' && currentSeconds >= 5) return toast('Registre ou zere a sessão atual antes de concluir outro bloco.', true);
         if (appData.pendingStudySession) return toast('Existe outro registro pendente no painel Hoje.', true);
         const createdAt = Date.now();
-        appData.pendingStudySession = { id: `sessao-${createdAt}-${Math.random().toString(36).slice(2, 8)}`, seconds: block.duration * 60, subjectId: String(mat.id), origem: 'cronograma-manual', createdAt, scheduleWeekKey: visibleWeek, scheduleBlockId: block.id, scheduleCreditNeeded: true };
+        appData.pendingStudySession = { id: `sessao-${createdAt}-${Math.random().toString(36).slice(2, 8)}`, seconds: block.duration * 60, subjectId: String(mat.id), origem: 'cronograma-manual', createdAt, scheduleWeekKey: visibleWeek, scheduleDay: Number(block.day), scheduleBlockId: block.id, scheduleCreditNeeded: true };
+        appData.pendingStudySessions = [appData.pendingStudySession, ...(appData.pendingStudySessions || [])];
         saveAppData(); renderizarAvisoSessaoPendente(); abrirRegistroSessaoPendente();
         if (block.topic) byId('sessionTopic').value = block.topic;
         const desiredKind = block.kind === 'simulado' ? 'simulado' : block.kind === 'redacao' ? 'redacao' : 'estudo';
         const radio = document.querySelector(`input[name="sessionKind"][value="${desiredKind}"]`); if (radio) { radio.checked = true; atualizarTipoRegistroSessao(); }
     }
     function completeFromSession(pending, details) {
-        if (!pending?.scheduleBlockId) return;
-        const block = findBlock(pending.scheduleBlockId, pending.scheduleWeekKey); if (!block) return;
-        if (String(details?.subjectId || '') !== String(block.subjectId)) return;
+        if (!pending?.scheduleBlockId) return false;
+        const block = findBlock(pending.scheduleBlockId, pending.scheduleWeekKey); if (!block) return false;
+        if (String(details?.subjectId || '') !== String(block.subjectId)) return false;
         const generic = details?.atividade === 'estudo' ? details.study || {} : details?.simulado || {};
         const seconds = Number(pending.seconds) || block.duration * 60;
         const completed = seconds >= block.duration * 60;
@@ -752,6 +871,7 @@
         }
         if (String(appData.activeScheduleBlock?.blockId) === String(block.id)) appData.activeScheduleBlock = null;
         setTimeout(() => { render(); toast(block.status === 'completed' ? 'Bloco concluído; o restante do tempo fica para o próximo bloco da mesma matéria.' : `Sessão registrada. Este bloco precisa de ${block.duration} minutos nesta matéria.`); }, 80);
+        return true;
     }
 
     function openDayClose(day, key = visibleWeek) {
@@ -812,7 +932,7 @@
         document.addEventListener('pointercancel', finish);
     }
     function moveBlock(id, day, targetId = null, start = null) {
-        if (week(false)?.strict) return toast('Para manter os horários e blocos exatos, altere a matéria na prévia de “Montar com IA”.', true);
+        if (week(false)?.strict) return toast('Para manter seus limites de horário, altere a matéria na prévia de “Montar com IA”.', true);
         const block = findBlock(id), target = targetId ? findBlock(targetId) : null;
         if (!block || (targetId && !target) || String(block.id) === String(targetId) || !DAYS.includes(Number(day))) return;
         const oldDay = Number(block.day), destination = Number(day);
@@ -838,8 +958,24 @@
 
     function applySuggestion(id) { const item = subject(id); if (!item) return; item.schedule.priority = 3; appData.studySchedule.suggestions.push({ subjectId: item.id, status: 'applied', at: Date.now() }); saveAppData(); render(); toast(`${item.subject} ganhou prioridade alta para a próxima organização.`); }
     function ignoreSuggestion(id) { appData.studySchedule.suggestions.push({ subjectId: id, status: 'ignored', at: Date.now() }); saveAppData(); render(); }
-    function removeSubject(id) { ensureData(); Object.values(appData.studySchedule.weeks).forEach(item => { item.blocks = (item.blocks || []).filter(block => String(block.subjectId) !== String(id)); item.unscheduled = (item.unscheduled || []).filter(entry => String(entry.subjectId) !== String(id)); }); }
-    function clearSubjects() { ensureData(); Object.values(appData.studySchedule.weeks).forEach(item => { item.blocks = []; item.unscheduled = []; }); }
+    function removeSubject(id) {
+        ensureData();
+        const removed = Object.fromEntries(Object.entries(appData.studySchedule.weeks).map(([key, item]) =>
+            [key, { blocks: (item.blocks || []).filter(block => String(block.subjectId) === String(id)) }]));
+        detachLinksForRemovedBlocks(removed);
+        Object.values(appData.studySchedule.weeks).forEach(item => {
+            item.blocks = (item.blocks || []).filter(block => String(block.subjectId) !== String(id));
+            item.unscheduled = (item.unscheduled || []).filter(entry => String(entry.subjectId) !== String(id));
+            item.dayPlans = {}; item.strict = false;
+        });
+    }
+    function clearSubjects() {
+        ensureData();
+        detachLinksForRemovedBlocks(appData.studySchedule.weeks);
+        Object.values(appData.studySchedule.weeks).forEach(item => {
+            item.blocks = []; item.unscheduled = []; item.dayPlans = {}; item.strict = false;
+        });
+    }
 
     window.KingSchedule = {
         render, organizeCurrentWeek, changeWeek, goCurrentWeek, selectDay, copyToNextWeek, replanOverdue,
@@ -851,6 +987,9 @@
         getVisibleWeek: () => visibleWeek, getSelectedDay: () => selectedDay
     };
     byId('scheduleBlockSubject')?.addEventListener('change', updateTopicSuggestions);
+    byId('schedulePauseMode')?.addEventListener('change', updateFlexControls);
+    byId('scheduleDurationMode')?.addEventListener('change', updateFlexControls);
+    byId('scheduleMode')?.addEventListener('change', updateFlexControls);
     byId('schedulePlannerPreview')?.addEventListener('change', event => {
         const input = event.target.closest('[data-plan-block]');
         if (!input || !plannerDraft) return;

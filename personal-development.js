@@ -5,6 +5,7 @@
     const today = () => typeof dataLocalISO === 'function' ? dataLocalISO(new Date()) : new Date().toISOString().slice(0, 10);
     const uniqueId = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const spaces = () => appData.personalDevelopment.spaces;
+    const habit = window.KingHabitCore;
     let selectedId = null;
 
     function ensure() {
@@ -27,6 +28,10 @@
         try { saveAppData(); if (success) showToast(success); return true; }
         catch { showToast('Não foi possível salvar. Verifique o espaço disponível e tente novamente.', true); render(); return false; }
     }
+    function restore(snapshot) {
+        appData.personalDevelopment = snapshot;
+        render();
+    }
 
     function render() {
         if (!byId('desenvolvimento')) return;
@@ -35,7 +40,7 @@
         const habits = spaces().flatMap(space => space.items.filter(item => item.type === 'habit'));
         const goals = spaces().flatMap(space => space.items.filter(item => item.type === 'goal'));
         const notes = spaces().reduce((sum, space) => sum + space.notes.length, 0);
-        const doneToday = habits.filter(item => item.checkins?.[today()]).length;
+        const doneToday = habits.filter(item => habit.status(item, today()) === 'done').length;
         byId('personalMetrics').innerHTML = [
             [spaces().length, 'áreas criadas'],
             [`${doneToday}/${habits.length}`, 'hábitos hoje'],
@@ -55,13 +60,18 @@
         const habits = space.items.map((item, index) => ({ item, index })).filter(({ item }) => item.type === 'habit');
         const goals = space.items.map((item, index) => ({ item, index })).filter(({ item }) => item.type === 'goal');
         const habitHtml = habits.length ? habits.map(({ item, index }) => {
-            const checked = Boolean(item.checkins?.[today()]);
-            const weekCount = Array.from({ length: 7 }, (_, offset) => {
-                const date = new Date(); date.setHours(12, 0, 0, 0); date.setDate(date.getDate() - offset);
-                const key = typeof dataLocalISO === 'function' ? dataLocalISO(date) : date.toISOString().slice(0, 10);
-                return Boolean(item.checkins?.[key]);
-            }).filter(Boolean).length;
-            return `<article class="personal-track-card"><button type="button" class="personal-habit-toggle ${checked ? 'checked' : ''}" aria-pressed="${checked}" onclick="KingPersonalDevelopment.toggleHabit(${spaceIndex},${index})"><span aria-hidden="true">${checked ? '✓' : '○'}</span><span>${escape(item.name || 'Hábito')}</span></button><small>${weekCount} de 7 dias recentes</small><div class="personal-track-actions"><button type="button" onclick="KingPersonalDevelopment.openItem(${index})">Editar</button><button type="button" onclick="KingPersonalDevelopment.deleteItem(${index})">Excluir</button></div></article>`;
+            const rule = habit.frequency(item);
+            const status = habit.status(item, today());
+            const weekly = habit.weekProgress(item, today());
+            const currentStreak = habit.streak(item, today());
+            const best = Math.max(currentStreak, habit.bestStreak(item));
+            const frequencyText = rule.mode === 'daily' ? 'Todos os dias' : rule.mode === 'weekly' ? `${rule.timesPerWeek} ${rule.timesPerWeek === 1 ? 'vez' : 'vezes'} por semana` : ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].filter((_, dayIndex) => rule.weekdays.includes(dayIndex)).join(' · ');
+            const heatmap = Array.from({ length: 28 }, (_, offset) => {
+                const date = habit.day(today()); date.setDate(date.getDate() - 27 + offset);
+                const dateKey = habit.key(date), state = habit.status(item, dateKey);
+                return `<span class="personal-heat-day is-${state || 'empty'}${habit.due(item, dateKey) ? '' : ' is-off'}" title="${dateKey}: ${state === 'done' ? 'cumprido' : state === 'missed' ? 'não cumprido' : state === 'skip' ? 'pulado' : 'sem registro'}"></span>`;
+            }).join('');
+            return `<article class="personal-track-card personal-habit-card"><div class="personal-habit-head"><strong>${escape(item.name || 'Hábito')}</strong><small>${frequencyText}</small></div><div class="personal-habit-score"><span><b>${currentStreak}</b> sequência atual</span><span><b>${best}</b> melhor sequência</span><span><b>${weekly.done}/${weekly.target}</b> nesta semana</span></div><div class="personal-habit-heatmap" aria-label="Últimos 28 dias">${heatmap}</div><div class="personal-track-actions"><button type="button" onclick="KingPersonalDevelopment.openHabitEntry(${spaceIndex},${index})">${status === 'done' ? '✓ Cumpri hoje' : status === 'missed' ? '✕ Não cumpri hoje' : 'Registrar hoje'}</button><button type="button" onclick="KingPersonalDevelopment.openItem(${index})">Editar</button><button type="button" onclick="KingPersonalDevelopment.deleteItem(${index})">Excluir</button></div></article>`;
         }).join('') : '<p class="personal-inline-empty">Sem hábitos. Adicione um se quiser marcar seus dias.</p>';
         const goalHtml = goals.length ? goals.map(({ item, index }) => {
             const current = Math.max(0, Number(item.current) || 0), target = Math.max(1, Number(item.target) || 1);
@@ -96,6 +106,7 @@
         const index = rawIndex === '' ? -1 : Number(rawIndex);
         const current = spaces()[index];
         if (!current && spaces().length >= 24) { showToast('Limite de 24 áreas atingido.', true); return; }
+        const before = structuredClone(appData.personalDevelopment);
         const space = current || { id: uniqueId('area'), items: [], notes: [] };
         space.name = name;
         space.description = byId('personalSpaceDescription').value.trim().slice(0, 280);
@@ -103,9 +114,16 @@
         if (!current) spaces().push(space);
         selectedId = space.id;
         if (persist(current ? 'Área atualizada.' : 'Área criada.')) fecharModal('personalSpaceModal');
+        else { selectedId = before.spaces.some(item => item.id === selectedId) ? selectedId : before.spaces[0]?.id || null; restore(before); }
     }
 
-    function updateItemFields() { byId('personalGoalFields').hidden = byId('personalItemType').value !== 'goal'; }
+    function updateItemFields() {
+        const isHabit = byId('personalItemType').value === 'habit';
+        byId('personalGoalFields').hidden = isHabit;
+        byId('personalHabitFields').hidden = !isHabit;
+        byId('personalHabitWeekdays').hidden = !isHabit || byId('personalHabitFrequency').value !== 'weekdays';
+        byId('personalHabitWeeklyTarget').hidden = !isHabit || byId('personalHabitFrequency').value !== 'weekly';
+    }
     function openItem(index = null, type = 'habit') {
         const { space } = selected(); if (!space) return;
         const item = Number.isInteger(index) ? space.items[index] : null;
@@ -115,6 +133,10 @@
         byId('personalItemName').value = item?.name || '';
         byId('personalItemTarget').value = item?.target || 10;
         byId('personalItemUnit').value = item?.unit || '';
+        const rule = habit.frequency(item);
+        byId('personalHabitFrequency').value = rule.mode;
+        byId('personalHabitTimes').value = String(rule.timesPerWeek);
+        byId('personalHabitWeekdays').querySelectorAll('input').forEach(input => { input.checked = rule.weekdays.includes(Number(input.value)); });
         updateItemFields();
         byId('personalItemModal').classList.add('active');
         byId('personalItemName').focus();
@@ -129,6 +151,10 @@
         const current = space.items[index];
         if (!current && space.items.length >= 40) { showToast('Limite de 40 acompanhamentos por área.', true); return; }
         const type = byId('personalItemType').value === 'goal' ? 'goal' : 'habit';
+        const mode = byId('personalHabitFrequency').value;
+        const weekdays = [...byId('personalHabitWeekdays').querySelectorAll('input:checked')].map(input => Number(input.value));
+        if (type === 'habit' && mode === 'weekdays' && !weekdays.length) return showToast('Escolha pelo menos um dia para o hábito.', true);
+        const before = current ? structuredClone(current) : null;
         const item = current || { id: uniqueId('item') };
         if (item.type !== type) { delete item.checkins; delete item.current; }
         item.type = type; item.name = name;
@@ -136,22 +162,50 @@
             item.target = Math.min(1000000, Math.max(1, Math.round(Number(byId('personalItemTarget').value) || 1)));
             item.unit = byId('personalItemUnit').value.trim().slice(0, 24);
             item.current = Math.max(0, Number(item.current) || 0);
-        } else item.checkins = item.checkins && typeof item.checkins === 'object' ? item.checkins : {};
+        } else {
+            item.checkins = item.checkins && typeof item.checkins === 'object' ? item.checkins : {};
+            item.frequency = { mode, weekdays, timesPerWeek: Math.min(7, Math.max(1, Number(byId('personalHabitTimes').value) || 1)) };
+        }
         if (!current) space.items.push(item);
         if (persist('Acompanhamento salvo.')) fecharModal('personalItemModal');
+        else { if (before) space.items[index] = before; else space.items.pop(); render(); }
     }
 
-    function toggleHabit(spaceIndex, itemIndex) {
+    function openHabitEntry(spaceIndex, itemIndex, dateKey = today()) {
         const item = spaces()[spaceIndex]?.items?.[itemIndex]; if (item?.type !== 'habit') return;
-        if (!item.checkins || typeof item.checkins !== 'object') item.checkins = {};
-        if (item.checkins[today()]) delete item.checkins[today()]; else item.checkins[today()] = true;
-        persist();
+        byId('personalHabitEntryTitle').textContent = item.name || 'Registrar hábito';
+        byId('personalHabitEntrySpace').value = String(spaceIndex);
+        byId('personalHabitEntryItem').value = String(itemIndex);
+        byId('personalHabitEntryDate').value = dateKey;
+        byId('personalHabitEntryDate').max = today();
+        byId('personalHabitEntryStatus').value = habit.status(item, dateKey) || 'done';
+        byId('personalHabitEntryReason').value = item.checkins?.[dateKey]?.reason || '';
+        byId('personalHabitEntryModal').classList.add('active');
+        byId('personalHabitEntryStatus').focus();
     }
+    function saveHabitEntry(event) {
+        event.preventDefault();
+        const item = spaces()[Number(byId('personalHabitEntrySpace').value)]?.items?.[Number(byId('personalHabitEntryItem').value)];
+        const dateKey = byId('personalHabitEntryDate').value;
+        const status = byId('personalHabitEntryStatus').value;
+        const reason = byId('personalHabitEntryReason').value.trim().slice(0, 160);
+        if (item?.type !== 'habit' || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || habit.key(habit.day(dateKey)) !== dateKey || dateKey > today()) return showToast('Escolha uma data válida.', true);
+        if (!habit.due(item, dateKey) && habit.frequency(item).mode === 'weekdays') return showToast('Este dia não faz parte da meta do hábito.', true);
+        if (status === 'skip' && reason.length < 3) return showToast('Informe um motivo para pular.', true);
+        const before = structuredClone(item.checkins || {});
+        if (!item.checkins || typeof item.checkins !== 'object') item.checkins = {};
+        if (status === 'clear') delete item.checkins[dateKey];
+        else item.checkins[dateKey] = { status, ...(status === 'skip' ? { reason } : {}), updatedAt: Date.now() };
+        if (persist('Dia registrado.')) fecharModal('personalHabitEntryModal');
+        else { item.checkins = before; render(); }
+    }
+    function toggleHabit(spaceIndex, itemIndex) { openHabitEntry(spaceIndex, itemIndex); }
     function setGoal(spaceIndex, itemIndex, value) {
         const item = spaces()[spaceIndex]?.items?.[itemIndex]; if (item?.type !== 'goal') return;
         const number = Number(value); if (!Number.isFinite(number)) return;
+        const before = item.current;
         item.current = Math.min(1000000, Math.max(0, Math.round(number)));
-        persist();
+        if (!persist()) { item.current = before; render(); }
     }
     function changeGoal(spaceIndex, itemIndex, delta) {
         const item = spaces()[spaceIndex]?.items?.[itemIndex]; if (item?.type !== 'goal') return;
@@ -176,9 +230,11 @@
         const index = rawIndex === '' ? -1 : Number(rawIndex);
         const current = space.notes[index];
         if (!current && space.notes.length >= 100) { showToast('Limite de 100 anotações por área.', true); return; }
+        const before = current ? structuredClone(current) : null;
         if (current) { current.text = text; current.updatedAt = Date.now(); }
         else space.notes.push({ id: uniqueId('nota'), text, createdAt: Date.now() });
         if (persist('Anotação salva.')) fecharModal('personalNoteModal');
+        else { if (before) space.notes[index] = before; else space.notes.pop(); render(); }
     }
 
     function deleteSpace(index) {
@@ -194,6 +250,8 @@
         abrirModalDeletar('personalNote', `${spaceIndex}:${index}`, 'Excluir esta anotação?', 'O texto será removido desta área.', 'Excluir');
     }
     function confirmDelete(type, id) {
+        const before = structuredClone(appData.personalDevelopment);
+        const previousSelectedId = selectedId;
         if (type === 'personalSpace') {
             const index = Number(id); if (!spaces()[index]) return;
             const removedId = spaces()[index].id;
@@ -205,9 +263,9 @@
             if (!collection?.[itemIndex]) return;
             collection.splice(itemIndex, 1);
         }
-        persist('Removido do Desenvolvimento Pessoal.');
+        if (!persist('Removido do Desenvolvimento Pessoal.')) { selectedId = previousSelectedId; restore(before); }
     }
 
-    window.KingPersonalDevelopment = { render, selectSpace, openSpace, saveSpace, openItem, saveItem, updateItemFields, toggleHabit, setGoal, changeGoal, openNote, saveNote, deleteSpace, deleteItem, deleteNote, confirmDelete };
+    window.KingPersonalDevelopment = { render, selectSpace, openSpace, saveSpace, openItem, saveItem, updateItemFields, toggleHabit, openHabitEntry, saveHabitEntry, setGoal, changeGoal, openNote, saveNote, deleteSpace, deleteItem, deleteNote, confirmDelete };
     render();
 })();

@@ -36,8 +36,18 @@
         const endTime = specifiedEnd || toClock(Math.min(1439, toMinutes(startTime) + dailyCapacityMinutes));
         const blockMinutes = Math.min(240, Math.max(10, Number(input?.blockMinutes) || 50));
         const pauseMinutes = Math.min(90, Math.max(0, Number.isFinite(pause) ? pause : 15));
+        const mode = ['adaptive', 'rigid', 'free'].includes(input?.mode) ? input.mode : 'adaptive';
+        const pauseMode = input?.pauseMode === 'flexible' ? 'flexible' : 'fixed';
+        const minPauseMinutes = pauseMode === 'flexible'
+            ? Math.min(pauseMinutes, Math.max(1, Number(input?.minPauseMinutes) || Math.min(5, pauseMinutes))) : pauseMinutes;
+        const durationMode = input?.durationMode === 'flexible' ? 'flexible' : 'fixed';
+        const minBlockMinutes = durationMode === 'flexible'
+            ? Math.min(blockMinutes, Math.max(10, Number(input?.minBlockMinutes) || Math.min(35, blockMinutes))) : blockMinutes;
+        const maxBlockMinutes = durationMode === 'flexible'
+            ? Math.max(blockMinutes, Math.min(240, Number(input?.maxBlockMinutes) || blockMinutes)) : blockMinutes;
         const registrationMinutes = Math.min(30, Math.max(0, Number(input?.registrationMinutes ?? input?.closingMinutes ?? 5) || 0));
         const inferredBlocks = Math.max(1, Math.floor((dailyCapacityMinutes + pauseMinutes) / (blockMinutes + registrationMinutes + pauseMinutes)));
+        const targetBlocksPerDay = Math.min(8, Math.max(1, Number(input?.targetBlocksPerDay ?? input?.blocksPerDay) || inferredBlocks));
         const source = input?.availability && typeof input.availability === 'object' && !Array.isArray(input.availability) ? input.availability : null;
         const availability = {};
         days.forEach(day => {
@@ -58,9 +68,17 @@
             studyDays: days.length ? days : [1, 2, 3, 4, 5, 6],
             dailyCapacityMinutes,
             availability,
+            mode,
+            allowExtraBlocks: mode === 'free' && input?.allowExtraBlocks === true,
             blockMinutes,
-            blocksPerDay: Math.min(8, Math.max(1, Number(input?.blocksPerDay) || inferredBlocks)),
+            blocksPerDay: targetBlocksPerDay,
+            targetBlocksPerDay,
+            durationMode,
+            minBlockMinutes,
+            maxBlockMinutes,
             pauseMinutes,
+            pauseMode,
+            minPauseMinutes,
             registrationMinutes,
             closingMinutes: Math.min(60, Math.max(0, Number.isFinite(closing) ? closing : 5)),
             maxSubjectsPerDay: Math.min(6, Math.max(1, Number(input?.maxSubjectsPerDay) || 2))
@@ -197,20 +215,46 @@
         return {
             key: monday(nextKey),
             blocks: (week?.blocks || []).map((block, index) => ({ ...block, id: Date.now() + index, status: 'pending', registered: false, result: null })),
-            dailyClosures: {}, warnings: [...(week?.warnings || [])], strict: Boolean(week?.strict), copiedAt: Date.now()
+            dailyClosures: {}, warnings: [...(week?.warnings || [])],
+            dayPlans: Object.fromEntries(Object.entries(week?.dayPlans || {}).map(([day, plan]) => [day, { ...plan }])),
+            strict: Boolean(week?.strict), copiedAt: Date.now()
         };
     }
     function clearAllBlocks(weeks) {
         let removed = 0;
         for (const entry of Object.values(weeks || {})) {
             if (!entry || typeof entry !== 'object') continue;
-            removed += Array.isArray(entry.blocks) ? entry.blocks.length : 0;
+            removed += (Array.isArray(entry.blocks) ? entry.blocks.length : 0)
+                + (Array.isArray(entry.archivedCompletedBlocks) ? entry.archivedCompletedBlocks.length : 0);
             entry.blocks = [];
+            entry.archivedCompletedBlocks = [];
             entry.unscheduled = [];
             entry.warnings = [];
+            entry.dayPlans = {};
             entry.strict = false;
         }
         return removed;
     }
-    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, organize, copyWeek, clearAllBlocks };
+    function detachPendingSessions(weeks, sessions) {
+        if (!Array.isArray(sessions)) return 0;
+        const entries = Object.entries(weeks || {});
+        const detached = new Set();
+        sessions.forEach(session => {
+            if (!session || typeof session !== 'object') return;
+            const blockId = String(session.scheduleBlockId ?? '').trim();
+            if (!blockId) return;
+            const preferred = entries.find(([key]) => key === session.scheduleWeekKey);
+            const search = preferred ? [preferred, ...entries.filter(([key]) => key !== preferred[0])] : entries;
+            const found = search.map(([key, week]) => ({ key, block: (Array.isArray(week?.blocks) ? week.blocks : []).find(block => String(block?.id) === blockId) }))
+                .find(item => item.block);
+            const day = Number(found?.block?.day);
+            session.detachedScheduleDay = Number.isInteger(day) && day >= 1 && day <= 7 ? day : 0;
+            if (found) session.scheduleWeekKey = found.key;
+            session.scheduleBlockId = '';
+            session.detachedFromSchedule = true;
+            detached.add(session.id == null ? session : String(session.id));
+        });
+        return detached.size;
+    }
+    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, organize, copyWeek, clearAllBlocks, detachPendingSessions };
 })();

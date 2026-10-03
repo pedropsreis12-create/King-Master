@@ -1,4 +1,46 @@
 #scheduleSettingsModal .cycle-form-group[hidden] { display:none !important; }
+#scheduleSettingsModal .schedule-settings-modal { width:min(960px,calc(100vw - 28px)); max-height:calc(100dvh - 28px); background:var(--card-bg); }
+#scheduleSettingsModal .schedule-settings-section { background:color-mix(in srgb,var(--hover-bg) 75%,var(--card-bg)); }
+#scheduleSettingsModal .schedule-settings-section-title small { max-width:670px; line-height:1.45; }
+#scheduleSettingsModal .schedule-settings-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:11px; }
+#scheduleSettingsModal .schedule-settings-grid .cycle-form-group { min-width:0; margin-bottom:0; }
+#scheduleSettingsModal .schedule-settings-grid .cycle-input,
+#scheduleSettingsModal .schedule-flex-grid .cycle-input { min-height:42px; padding:9px 12px; font-size:.7rem; }
+#scheduleSettingsModal select.cycle-input { padding-right:32px; background-position:right 9px center; background-size:15px; }
+#scheduleSettingsModal .schedule-mode-row { margin-bottom:14px; padding:15px; display:grid; grid-template-columns:minmax(0,1fr) minmax(220px,310px); align-items:center; gap:16px; border:1px solid color-mix(in srgb,var(--accent-color) 30%,var(--border-color)); border-radius:14px; background:color-mix(in srgb,var(--accent-color) 8%,var(--card-bg)); }
+#scheduleSettingsModal .schedule-mode-row p { margin:4px 0 0; color:var(--text-muted); font-size:.61rem; line-height:1.45; }
+#scheduleSettingsModal .schedule-mode-row .cycle-label { color:var(--text-main); }
+#scheduleSettingsModal .schedule-mode-row .cycle-input { min-height:45px; background-color:var(--card-bg); font-size:.67rem; }
+#scheduleSettingsModal .schedule-goal-field { padding:10px; border:1px solid color-mix(in srgb,var(--accent-color) 26%,var(--border-color)); border-radius:12px; background:color-mix(in srgb,var(--accent-color) 5%,var(--card-bg)); }
+#scheduleSettingsModal .schedule-goal-field > small { display:block; color:var(--text-muted); font-size:.53rem; line-height:1.35; }
+#scheduleSettingsModal .schedule-flex-grid { margin-top:14px; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+#scheduleSettingsModal .schedule-flex-group { min-width:0; padding:13px; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; border:1px solid var(--border-color); border-radius:13px; background:var(--card-bg); }
+#scheduleSettingsModal .schedule-flex-heading { grid-column:1/-1; }
+#scheduleSettingsModal .schedule-flex-heading strong { color:var(--text-main); font-size:.68rem; }
+#scheduleSettingsModal .schedule-flex-heading small { display:block; margin-top:3px; color:var(--text-muted); font-size:.53rem; line-height:1.45; }
+#scheduleSettingsModal .schedule-flex-group .cycle-form-group { min-width:0; margin:0; }
+#scheduleSettingsModal .schedule-flex-group .cycle-label { font-size:.56rem; line-height:1.35; }
+#scheduleSettingsModal .schedule-base-time-grid { grid-template-columns:repeat(2,minmax(0,220px)); }
+#scheduleSettingsModal .schedule-availability-explainer { margin:11px 0 1px; color:var(--text-muted); font-size:.6rem; line-height:1.5; }
+#scheduleSettingsModal .schedule-availability-editor { background:var(--card-bg); }
+#scheduleSettingsModal .schedule-availability-note { margin-top:12px; }
+#scheduleSettingsModal .schedule-day-options input:focus-visible + span { outline:3px solid var(--accent-color); outline-offset:2px; }
+#scheduleSettingsModal .schedule-settings-footer { position:sticky; bottom:-40px; z-index:2; padding:12px 0 1px; background:var(--card-bg); }
+.schedule-plan-day.schedule-plan-adapted { border-color:color-mix(in srgb,var(--accent-color) 28%,var(--border-color)); background:color-mix(in srgb,var(--accent-color) 5%,var(--schedule-planner-solid)); }
+.schedule-plan-day.schedule-plan-adapted header small { color:var(--accent-color); font-weight:800; }
+.schedule-plan-load { margin:6px 0 10px; padding:8px 10px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:5px 10px; border:1px solid var(--border-color); border-radius:9px; color:var(--text-muted); background:var(--schedule-planner-solid); font-size:.59rem; }
+.schedule-plan-load strong { color:var(--text-main); font-size:.64rem; }
+.schedule-extra-row { display:flex; gap:12px; align-items:flex-start; margin:12px 0 0; padding:12px 14px; border:1px solid var(--border-color); border-radius:12px; background:var(--schedule-planner-solid); cursor:pointer; }
+.schedule-extra-row[hidden] { display:none; }
+.schedule-extra-row input { margin-top:3px; accent-color:var(--primary-color,#007aff); }
+.schedule-extra-row span { display:grid; gap:3px; }
+.schedule-extra-row strong { color:var(--text-main); font-size:.72rem; }
+.schedule-extra-row small { color:var(--text-muted); font-size:.63rem; line-height:1.4; }
+.schedule-notice-adapted { margin:0 0 12px; padding:10px 12px; border:1px solid color-mix(in srgb,var(--accent-color) 30%,var(--border-color)); border-radius:11px; background:color-mix(in srgb,var(--accent-color) 7%,var(--schedule-planner-solid)); color:var(--text-main); font-size:.64rem; line-height:1.5; }
+.schedule-notice-adapted strong { color:var(--accent-color); }
+@media(max-width:900px) { #scheduleSettingsModal .schedule-settings-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } #scheduleSettingsModal .schedule-flex-grid { grid-template-columns:1fr; } }
+@media(max-width:620px) { #scheduleSettingsModal .schedule-mode-row { grid-template-columns:1fr; padding:12px; } #scheduleSettingsModal .schedule-flex-group { grid-template-columns:repeat(2,minmax(0,1fr)); } #scheduleSettingsModal .schedule-settings-footer { bottom:-25px; } #scheduleSettingsModal .schedule-base-time-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:430px) { #scheduleSettingsModal .schedule-settings-grid,#scheduleSettingsModal .schedule-base-time-grid { grid-template-columns:1fr; } #scheduleSettingsModal .schedule-flex-group { grid-template-columns:1fr; } }
 .schedule-clear-button { color:#c83b34; }
 .schedule-clear-button:hover { border-color:#c83b34; background:rgba(200,59,52,.07); }
 .schedule-subject-advanced { grid-column:1/-1; border-top:1px solid var(--border-color); }

@@ -60,7 +60,7 @@ test('integração publica os arquivos e usa o ícone do site na IA', async () =
 test('a interface oferece quantidade personalizada, busca e confirmação antes de salvar IA', async () => {
     const ui = await readFile(new URL('../flashcards.js', import.meta.url), 'utf8');
     assert.match(ui, /new Option\('Personalizado', 'custom'\)/);
-    assert.match(ui, /count < 1 \|\| count > 20/);
+    assert.match(ui, /count < 1 \|\| count > 30/);
     assert.match(ui, /flashDeckSearch/);
     assert.match(ui, /flashAiAddSelected/);
     assert.match(ui, /validateCandidates\(accepted/);

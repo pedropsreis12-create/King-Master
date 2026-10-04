@@ -35,6 +35,7 @@
     <link rel="stylesheet" href="command-palette.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="profile-overhaul.css?v=20260930-achievements-toggle">
+    <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -552,9 +553,10 @@
                     <h1>Agenda</h1>
                     <p>Veja o que vence hoje, o que vem depois e o que já foi concluído.</p>
                 </div>
-                <div class="cycle-btn-group"><button type="button" class="cycle-btn" id="googleCalendarButton" onclick="window.kingCalendar?.connect()">Vincular Google Agenda</button><button class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button></div>
+                <div class="cycle-btn-group agenda-heading-actions"><button type="button" class="cycle-btn" onclick="KingAgenda.openImport()">✦ Importar com IA</button><button type="button" class="cycle-btn" onclick="KingAgenda.openCategories()">Categorias</button><button type="button" class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button></div>
             </div>
             <p class="calendar-sync-status" id="googleCalendarStatus" role="status">Opcional: envie seus compromissos ao Google Agenda. Só eventos criados pelo King Master serão alterados ou removidos.</p>
+            <div class="agenda-calendar-row"><button type="button" class="agenda-calendar-link" id="googleCalendarButton" onclick="window.kingCalendar?.connect()">Vincular Google Agenda</button><span>Seus compromissos ficam salvos no King Master mesmo sem conectar uma conta.</span></div>
             <div class="workspace-metric-strip agenda-summary" aria-label="Resumo da agenda">
                 <article><small>Hoje</small><strong id="agendaHojeTotal">0</strong><span>pendentes</span></article>
                 <article><small>Atrasados</small><strong id="agendaAtrasadosTotal">0</strong><span>pedem ajuste</span></article>
@@ -570,6 +572,7 @@
                 </div>
                 <span class="workspace-result-count" id="agendaResultado" aria-live="polite">0 compromissos</span>
             </div>
+            <div class="agenda-find-row"><label class="agenda-search-label" for="agendaSearchInput">Buscar compromisso</label><input id="agendaSearchInput" class="cycle-input" type="search" maxlength="100" placeholder="Buscar por nome, nota ou categoria" oninput="renderizarAgendamento()"><select id="agendaCategoryFilter" class="cycle-input" aria-label="Filtrar por categoria" onchange="renderizarAgendamento()"><option value="">Todas as categorias</option></select></div>
             <div class="agenda-list workspace-list" id="agendamentoList"></div>
         </section>
 
@@ -1034,33 +1037,30 @@
         <div class="modal-overlay" id="personalHabitEntryModal" role="dialog" aria-modal="true" aria-labelledby="personalHabitEntryTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalHabitEntryModal')" aria-label="Fechar">×</button><span class="workspace-kicker">HISTÓRICO DO HÁBITO</span><h2 id="personalHabitEntryTitle">Registrar dia</h2><form onsubmit="KingPersonalDevelopment.saveHabitEntry(event)"><input type="hidden" id="personalHabitEntrySpace"><input type="hidden" id="personalHabitEntryItem"><label>Data<input class="cycle-input" id="personalHabitEntryDate" type="date" required></label><label>Resultado<select class="cycle-input" id="personalHabitEntryStatus"><option value="done">✓ Cumpri</option><option value="missed">✕ Não cumpri</option><option value="skip">Pular com motivo</option><option value="clear">Remover registro</option></select></label><label>Motivo para pular <small>obrigatório se escolher pular</small><input class="cycle-input" id="personalHabitEntryReason" maxlength="160" placeholder="Ex.: doença ou imprevisto real"></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalHabitEntryModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar dia</button></div></form></div></div>
         <div class="modal-overlay" id="personalNoteModal" role="dialog" aria-modal="true" aria-labelledby="personalNoteModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalNoteModal')" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO LIVRE</span><h2 id="personalNoteModalTitle">Nova anotação</h2><p>Anote uma reflexão, conquista, dificuldade ou próximo passo.</p><form onsubmit="KingPersonalDevelopment.saveNote(event)"><input type="hidden" id="personalNoteId"><label>Anotação<textarea class="cycle-input" id="personalNoteText" maxlength="3000" rows="7" required placeholder="Escreva do seu jeito…"></textarea></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalNoteModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar anotação</button></div></form></div></div>
 
-        <div class="modal-overlay" id="agendamentoModal">
-            <!-- Modal de Compromissos com "Treino Físico" corrigido e "Redação" adicionada -->
-            <div class="modal-box" style="width: 500px;">
+        <div class="modal-overlay" id="agendamentoModal" role="dialog" aria-modal="true" aria-labelledby="agendamentoModalTitle">
+            <div class="modal-box agenda-entry-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('agendamentoModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title" id="agendamentoModalTitle">Novo Compromisso</div>
                 <form id="formAddAgendamento" onsubmit="salvarAgendamentoNovo(event)">
                     <input type="hidden" id="agendamentoEditId" value="">
-                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoTitleInput">Descrição do Compromisso</label><input type="text" id="agendamentoTitleInput" class="cycle-input" placeholder="Ex: Treino / Estudar" required></div>
-                    <div style="display: flex; gap: 15px;">
-                        <div class="cycle-form-group" style="flex: 1.5;"><label class="cycle-label" for="agendamentoDateInput">Data</label><input type="date" id="agendamentoDateInput" class="cycle-input" required></div>
-                        <div class="cycle-form-group" style="flex: 1;"><label class="cycle-label" for="agendamentoTimeInput">Hora</label><input type="time" id="agendamentoTimeInput" class="cycle-input" required></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoTitleInput">Compromisso</label><input type="text" id="agendamentoTitleInput" class="cycle-input" maxlength="120" placeholder="Ex.: Prova de História" required></div>
+                    <div class="agenda-entry-datetime">
+                        <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDateInput">Data</label><input type="date" id="agendamentoDateInput" class="cycle-input" required></div>
+                        <div class="cycle-form-group"><label class="cycle-label" for="agendamentoTimeInput">Hora <small>opcional</small></label><input type="time" id="agendamentoTimeInput" class="cycle-input"></div>
                     </div>
                     <div class="cycle-form-group">
                         <label class="cycle-label" for="agendamentoTypeInput">Categoria</label>
-                        <select id="agendamentoTypeInput" class="cycle-input" required>
-                            <option value="Estudo">📚 Estudo</option>
-                            <option value="Prova">📝 Prova / Simulado</option>
-                            <option value="Redação">✍️ Redação</option>
-                            <option value="Pessoal">👤 Pessoal</option>
-                        </select>
+                        <div class="agenda-category-input"><select id="agendamentoTypeInput" class="cycle-input" required></select><button type="button" class="cycle-btn" onclick="KingAgenda.openCategories()" aria-label="Gerenciar categorias" title="Gerenciar categorias">Gerenciar</button></div>
                     </div>
-                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDurationInput">Duração</label><select id="agendamentoDurationInput" class="cycle-input"><option value="30">30 minutos</option><option value="60" selected>1 hora</option><option value="90">1 hora e meia</option><option value="120">2 horas</option></select></div>
-                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDescInput">Notas</label><textarea id="agendamentoDescInput" class="cycle-input" rows="2"></textarea></div>
+                    <div class="cycle-form-group"><label class="cycle-label" for="agendamentoDescInput">Notas <small>opcional</small></label><textarea id="agendamentoDescInput" class="cycle-input" rows="3" maxlength="1000" placeholder="Local, material necessário ou lembrete rápido"></textarea></div>
                     <div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Agendar</button></div>
                 </form>
             </div>
         </div>
+
+        <div class="modal-overlay" id="agendaCategoriesModal" role="dialog" aria-modal="true" aria-labelledby="agendaCategoriesTitle"><div class="modal-box agenda-manage-modal"><button type="button" class="modal-close" onclick="KingAgenda.closeCategories()" aria-label="Fechar">×</button><span class="workspace-kicker">DO SEU JEITO</span><h2 id="agendaCategoriesTitle">Categorias da agenda</h2><p>Organize seus compromissos sem perder os registros já salvos.</p><div id="agendaCategoriesList" class="agenda-categories-list"></div><form id="agendaCategoryForm" onsubmit="KingAgenda.saveCategory(event)"><input type="hidden" id="agendaCategoryEditId"><label class="cycle-label" for="agendaCategoryName">Nome da categoria</label><div class="agenda-category-create"><input id="agendaCategoryName" class="cycle-input" maxlength="32" required placeholder="Ex.: Saúde"><input id="agendaCategoryColor" type="color" value="#3d79e8" aria-label="Cor da categoria"><button type="submit" class="cycle-btn primary" id="agendaCategorySaveButton">Adicionar</button></div></form><p class="field-help">Ao excluir uma categoria, seus compromissos são mantidos em “Sem categoria”.</p></div></div>
+
+        <div class="modal-overlay" id="agendaImportModal" role="dialog" aria-modal="true" aria-labelledby="agendaImportTitle"><div class="modal-box agenda-import-modal"><button type="button" class="modal-close" onclick="KingAgenda.closeImport()" aria-label="Fechar">×</button><span class="workspace-kicker">AGENDA INTELIGENTE</span><h2 id="agendaImportTitle">Importar compromissos</h2><p>Envie uma foto, imagem ou PDF de um calendário, convite ou comunicado. A IA sugere os eventos; você revisa antes de salvar. O arquivo é usado na leitura, mas não fica guardado como anexo.</p><label class="agenda-import-drop" for="agendaImportFile" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('agendaImportFile').click()}"><span aria-hidden="true">▧</span><strong>Escolher arquivo</strong><small>PDF, PNG, JPG ou WebP · até 7 MB</small></label><input id="agendaImportFile" type="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" onchange="KingAgenda.selectFile(event)" hidden><div class="agenda-file-summary" id="agendaImportFileSummary" hidden></div><label class="cycle-label" for="agendaImportInstruction">Orientação para a IA <small>opcional</small></label><textarea id="agendaImportInstruction" class="cycle-input" rows="2" maxlength="300" placeholder="Ex.: Extraia apenas as datas de provas; ignore reuniões de pais."></textarea><div id="agendaImportStatus" class="agenda-import-status" role="status" aria-live="polite"></div><div id="agendaImportPreview" class="agenda-import-preview" hidden></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="KingAgenda.closeImport()">Cancelar</button><button type="button" class="cycle-btn primary" id="agendaImportAnalyze" onclick="KingAgenda.analyze()" disabled>Analisar arquivo</button><button type="button" class="cycle-btn primary" id="agendaImportApply" onclick="KingAgenda.apply()" hidden>Adicionar selecionados</button></div></div></div>
 
         <div class="modal-overlay" id="simuladoModal">
             <div class="modal-box modal-wide result-entry-modal">
@@ -1425,6 +1425,7 @@
     <script src="habit-core.js?v=20261002-v1"></script>
     <script src="rank-system-v2.js?v=20260929-rank-v2-1"></script>
     <script src="script.js?v=20261002-evolution-v1"></script>
+    <script src="agenda-workspace.js?v=20261004-agenda-v1"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
     <script src="schedule.js?v=20261002-evolution-v1"></script>
     <script src="personal-development.js?v=20261002-evolution-v1"></script>

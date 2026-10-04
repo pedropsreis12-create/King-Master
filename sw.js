@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261002-evolution-v1';
+const CACHE_VERSION = 'king-master-20261004-agenda-v2';
 const APP_SHELL = [
     './',
     './index.html',
@@ -10,6 +10,8 @@ const APP_SHELL = [
     './schedule.css',
     './schedule-planner.css',
     './script.js',
+    './agenda-workspace.js',
+    './agenda-workspace.css',
     './schedule-core.js',
     './schedule-planner.js',
     './schedule.js',

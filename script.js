@@ -22,6 +22,7 @@ const defaultAppData = {
     historyItems: [], 
     agendaItems: [], 
     agendamentoItems: [],
+    agendaCategories: null,
     calendarDeletedIds: [],
     simuladosItems: [],
     generatedExams: [],
@@ -96,6 +97,7 @@ if (!appData.subjectContentModules || typeof appData.subjectContentModules !== '
 if (!appData.historyItems) appData.historyItems = [];
 if (!appData.agendaItems) appData.agendaItems = [];
 if (!appData.agendamentoItems) appData.agendamentoItems = [];
+if (appData.agendaCategories != null && !Array.isArray(appData.agendaCategories)) appData.agendaCategories = null;
 if (!Array.isArray(appData.calendarDeletedIds)) appData.calendarDeletedIds = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!Array.isArray(appData.generatedExams)) appData.generatedExams = [];
@@ -3780,25 +3782,26 @@ function abrirModalAgendamento() {
     document.getElementById('formAddAgendamento').reset();
     document.getElementById('agendamentoEditId').value = "";
     document.getElementById('agendamentoModalTitle').textContent = "Novo Compromisso";
-    document.getElementById('agendamentoDateInput').value = new Date().toISOString().split('T')[0];
+    document.getElementById('agendamentoDateInput').value = dataLocalISO();
+    window.KingAgenda?.renderCategorySelect();
     document.getElementById('agendamentoModal').classList.add('active');
 }
 
 function salvarAgendamentoNovo(e) {
     e.preventDefault();
     const idEdit = document.getElementById('agendamentoEditId').value;
-    const title = document.getElementById('agendamentoTitleInput').value;
+    const title = document.getElementById('agendamentoTitleInput').value.trim().slice(0, 120);
     const date = document.getElementById('agendamentoDateInput').value;
     const time = document.getElementById('agendamentoTimeInput').value;
-    const type = document.getElementById('agendamentoTypeInput').value;
-    const description = document.getElementById('agendamentoDescInput').value;
-    const duration = Number(document.getElementById('agendamentoDurationInput').value) || 60;
+    const category = window.KingAgenda?.getCategory(document.getElementById('agendamentoTypeInput').value);
+    const description = document.getElementById('agendamentoDescInput').value.trim().slice(0, 1000);
+    if (!title || !window.KingAgenda?.validDate(date) || !category || (time && !/^([01]\d|2[0-3]):[0-5]\d$/.test(time))) { showToast('Confira título, data, hora e categoria.', true); return; }
 
     if (idEdit) {
         const idx = appData.agendamentoItems.findIndex(i => i.id == idEdit);
-        if (idx > -1) appData.agendamentoItems[idx] = { ...appData.agendamentoItems[idx], title, date, time, type, description, duration };
+        if (idx > -1) appData.agendamentoItems[idx] = { ...appData.agendamentoItems[idx], title, date, time, type: category.name, categoryId: category.id, description };
     } else {
-        appData.agendamentoItems.push({ id: Date.now(), title, date, time, type, description, duration, completed: false });
+        appData.agendamentoItems.push({ id: Date.now(), title, date, time, type: category.name, categoryId: category.id, description, duration: 30, completed: false });
     }
     saveAppData(); renderizarAgendamento(); fecharModal('agendamentoModal'); showToast('📅 Agendado com sucesso!');
     window.kingCalendar?.syncIfConnected();
@@ -3826,8 +3829,8 @@ function editarAgendamentoItem(id) {
         document.getElementById('agendamentoTitleInput').value = item.title;
         document.getElementById('agendamentoDateInput').value = item.date;
         document.getElementById('agendamentoTimeInput').value = item.time;
-        document.getElementById('agendamentoDurationInput').value = String(item.duration || 60);
-        document.getElementById('agendamentoTypeInput').value = item.type === 'Treino Físico' ? 'Pessoal' : (item.type === 'Revisão' ? 'Estudo' : item.type);
+        window.KingAgenda?.renderCategorySelect();
+        document.getElementById('agendamentoTypeInput').value = window.KingAgenda?.categoryForItem(item)?.id || 'sem-categoria';
         document.getElementById('agendamentoDescInput').value = item.description || "";
         document.getElementById('agendamentoModalTitle').textContent = "Editar Compromisso";
         document.getElementById('agendamentoModal').classList.add('active');
@@ -3841,6 +3844,9 @@ function renderizarAgendamento() {
     if (!list) return;
 
     const todos = Array.isArray(appData.agendamentoItems) ? appData.agendamentoItems : [];
+    window.KingAgenda?.renderCategorySelect();
+    const busca = String(document.getElementById('agendaSearchInput')?.value || '').trim().toLocaleLowerCase('pt-BR');
+    const categoriaFiltro = document.getElementById('agendaCategoryFilter')?.value || '';
     const hoje = dataLocalISO();
     const agora = new Date();
     const pendentesHoje = todos.filter(item => !item.completed && item.date === hoje).length;
@@ -3852,14 +3858,16 @@ function renderizarAgendamento() {
     definirTexto('agendaConcluidosTotal', concluidos);
 
     const filtrados = todos.filter(item => {
+        if (categoriaFiltro && window.KingAgenda?.categoryForItem(item)?.id !== categoriaFiltro) return false;
+        if (busca && ![item.title, item.description, item.type].some(valor => String(valor || '').toLocaleLowerCase('pt-BR').includes(busca))) return false;
         if (filtroAgendamentoAtual === 'hoje') return !item.completed && item.date === hoje;
         if (filtroAgendamentoAtual === 'proximos') return !item.completed && item.date > hoje;
         if (filtroAgendamentoAtual === 'concluidos') return item.completed;
         return true;
     });
     let itens = [...filtrados].sort((a, b) => {
-        const dtA = new Date(`${a.date}T${a.time}`);
-        const dtB = new Date(`${b.date}T${b.time}`);
+        const dtA = new Date(`${a.date}T${a.time || '23:59'}`);
+        const dtB = new Date(`${b.date}T${b.time || '23:59'}`);
         return dtA - dtB;
     });
 
@@ -3879,10 +3887,11 @@ function renderizarAgendamento() {
             const dataHora = item.date ? new Date(`${item.date}T${item.time || '23:59'}`) : null;
             const atrasado = !item.completed && dataHora && dataHora < agora;
             const titulo = escaparRevisaoHtml(item.title || 'Compromisso');
-            const tipo = escaparRevisaoHtml(item.type || 'Estudo');
+            const categoria = window.KingAgenda?.categoryForItem(item);
+            const tipo = escaparRevisaoHtml(categoria?.name || item.type || 'Sem categoria');
             const descricao = escaparRevisaoHtml(item.description || '');
-            const corUrgencia = item.completed ? 'var(--border-color)' : (atrasado ? '#ff3b30' : 'var(--accent-color)');
-            return `<article class="agenda-card agenda-card-pro ${item.completed ? 'completed' : ''}" style="--urgency-color:${corUrgencia};"><button type="button" class="agenda-check" onclick="toggleAgendamentoStatus(${item.id})" aria-label="${item.completed ? 'Reabrir' : 'Concluir'} ${titulo}" aria-pressed="${item.completed}">${item.completed ? '✓' : '○'}</button><div class="agenda-card-copy"><h3>${titulo}</h3><div class="agenda-card-meta"><span>${item.time || 'Sem hora'}</span><span>${dataTexto}</span><span>${tipo}</span>${atrasado ? '<span class="overdue">Atrasado</span>' : ''}</div>${descricao ? `<p>${descricao}</p>` : ''}</div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarAgendamentoItem(${item.id})" aria-label="Editar ${titulo}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('agendamentoTab', ${item.id}, 'Remover compromisso?', 'Deseja apagar este compromisso?')" aria-label="Apagar ${titulo}" title="Apagar">×</button></div></article>`;
+            const corUrgencia = item.completed ? 'var(--border-color)' : (atrasado ? '#e2594c' : (categoria?.color || 'var(--accent-color)'));
+            return `<article class="agenda-card agenda-card-pro ${item.completed ? 'completed' : ''}" style="--urgency-color:${corUrgencia};"><button type="button" class="agenda-check" onclick="toggleAgendamentoStatus(${item.id})" aria-label="${item.completed ? 'Reabrir' : 'Concluir'} ${titulo}" aria-pressed="${item.completed}">${item.completed ? '✓' : '○'}</button><div class="agenda-card-copy"><h3>${titulo}</h3><div class="agenda-card-meta"><span>${escaparRevisaoHtml(item.time || 'Sem hora marcada')}</span><span>${dataTexto}</span><span class="agenda-category-chip" style="--category-color:${window.KingAgenda?.validColor(categoria?.color) || '#6b7280'}">${tipo}</span>${atrasado ? '<span class="overdue">Atrasado</span>' : ''}</div>${descricao ? `<p>${descricao}</p>` : ''}${item.importSource ? `<small class="agenda-import-source">Origem: ${escaparRevisaoHtml(item.importSource)}</small>` : ''}</div><div class="workspace-card-actions">${atrasado ? `<button type="button" class="cycle-btn agenda-today-button" onclick="KingAgenda.moveToToday(${item.id})">Para hoje</button>` : ''}<button type="button" class="workspace-icon-button" onclick="editarAgendamentoItem(${item.id})" aria-label="Editar ${titulo}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('agendamentoTab', ${item.id}, 'Remover compromisso?', 'Deseja apagar este compromisso?')" aria-label="Apagar ${titulo}" title="Apagar">×</button></div></article>`;
         }).join('');
     }
 

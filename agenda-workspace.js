@@ -180,11 +180,57 @@
     const readDataUrl = file => new Promise((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '').split(',')[1] || ''); reader.onerror = reject; reader.readAsDataURL(file);
     });
+    async function prepareImage(file) {
+        if (file.size < 750_000) return { mimeType: file.type, base64: await readDataUrl(file) };
+        if (typeof createImageBitmap !== 'function') return { mimeType: file.type, base64: await readDataUrl(file) };
+        let bitmap;
+        try { bitmap = await createImageBitmap(file); }
+        catch { return { mimeType: file.type, base64: await readDataUrl(file) }; }
+        try {
+            const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+            canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+            const context = canvas.getContext('2d', { alpha: false });
+            if (!context) throw new Error('Não foi possível preparar a imagem.');
+            context.fillStyle = '#fff'; context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.82).split(',')[1];
+            canvas.width = 0; canvas.height = 0;
+            return { mimeType: 'image/jpeg', base64: compressed };
+        } finally { bitmap.close(); }
+    }
+    function localCandidates(text) {
+        const rows = String(text || '').split(/\r?\n/).map(row => row.replace(/^Página\s+\d+:\s*/i, '').trim()).filter(Boolean);
+        const candidates = []; const seen = new Set();
+        const datePattern = /\b(20\d{2})[-\/.](\d{1,2})[-\/.](\d{1,2})\b|\b([0-3]?\d)[\/.\-]([01]?\d)(?:[\/.\-](20\d{2}|\d{2}))?\b/g;
+        for (let index = 0; index < rows.length && candidates.length < 25; index++) {
+            const row = rows[index];
+            for (const match of row.matchAll(datePattern)) {
+                const year = match[1] || (match[6] ? (match[6].length === 2 ? `20${match[6]}` : match[6]) : '');
+                const month = Number(match[2] || match[5]); const day = Number(match[3] || match[4]);
+                const date = year ? `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}` : '';
+                if (year && !validDate(date)) continue;
+                const timeMatch = row.match(/\b(?:[01]?\d|2[0-3]):[0-5]\d\b/);
+                const title = row.replace(match[0], '').replace(timeMatch?.[0] || /$^/, '').replace(/^[\s:;,.–—-]+|[\s:;,.–—-]+$/g, '').slice(0, 120)
+                    || String(rows[index + 1] || '').slice(0, 120);
+                if (title.length < 3 || seen.has(`${title}|${date}|${timeMatch?.[0] || ''}`)) continue;
+                seen.add(`${title}|${date}|${timeMatch?.[0] || ''}`);
+                candidates.push({ title, date, time: timeMatch?.[0] || '', category: 'Sem categoria', description: '', needsReview: true });
+                if (candidates.length >= 25) break;
+            }
+        }
+        return candidates;
+    }
+    const isTimeout = error => /timeout|timed?\s*out|deadline|tempo\s*limite/i.test(String(error?.message || ''));
     async function analyze() {
         if (!state.file || state.busy) return;
         state.busy = true; const request = ++state.request; const file = state.file;
+        state.suggestions = [];
+        byId('agendaImportPreview').replaceChildren(); byId('agendaImportPreview').hidden = true; byId('agendaImportApply').hidden = true;
         const analyzeButton = byId('agendaImportAnalyze'); analyzeButton.disabled = true; analyzeButton.textContent = 'Analisando…';
         byId('agendaImportStatus').textContent = 'Lendo arquivo e identificando datas. Pode levar alguns segundos.';
+        let extractedText = '';
         try {
             await window.kingGeminiReady;
             if (!window.kingGemini?.analyzeAgendaDocument) throw new Error('O leitor inteligente ainda não está disponível. Tente novamente em instantes.');
@@ -192,19 +238,29 @@
             if (file.type === 'application/pdf') {
                 if (!window.KingSyllabusPdf?.extractAgenda) throw new Error('O leitor de PDF ainda está carregando. Tente novamente.');
                 const extracted = await window.KingSyllabusPdf.extractAgenda(file);
-                if (extracted.text.length >= 30) payload.text = extracted.text;
+                if (extracted.text.length >= 30 || /\b\d{1,2}[\/.\-]\d{1,2}\b/.test(extracted.text)) { payload.text = extracted.text; extractedText = extracted.text; }
                 else {
                     byId('agendaImportStatus').textContent = 'O PDF é uma imagem. Lendo visualmente as primeiras páginas…';
                     payload.images = await window.KingSyllabusPdf.renderAgendaImages(file);
                 }
-            } else payload.images = [{ mimeType: file.type, base64: await readDataUrl(file) }];
+            } else payload.images = [await prepareImage(file)];
             const result = await window.kingGemini.analyzeAgendaDocument(payload);
             if (request !== state.request) return;
             state.suggestions = (result.items || []).slice(0, 25);
             renderPreview();
             byId('agendaImportStatus').textContent = state.suggestions.length ? 'Confira datas e horários. Desmarque o que não quiser importar.' : 'Não encontrei compromissos legíveis com data. Tente uma imagem mais nítida ou outra orientação.';
         } catch (error) {
-            if (request === state.request) byId('agendaImportStatus').textContent = `Não foi possível analisar: ${error.message || 'tente novamente.'}`;
+            if (request === state.request) {
+                const candidates = extractedText ? localCandidates(extractedText) : [];
+                if (candidates.length) {
+                    state.suggestions = candidates; renderPreview();
+                    byId('agendaImportStatus').textContent = 'A IA não concluiu a leitura. Encontrei estas datas no PDF sem usar a IA; confira cada compromisso antes de adicionar.';
+                } else {
+                    byId('agendaImportStatus').textContent = isTimeout(error)
+                        ? 'A análise demorou demais. Tente enviar apenas a página relevante ou uma imagem mais leve. Nenhum compromisso foi adicionado.'
+                        : `Não foi possível analisar: ${error.message || 'tente novamente.'}`;
+                }
+            }
         } finally {
             if (request === state.request) { state.busy = false; analyzeButton.textContent = 'Analisar novamente'; analyzeButton.disabled = !state.file; }
         }
@@ -266,6 +322,6 @@
         closeImport(); renderizarAgendamento(); showToast(`${staged.length} compromisso${staged.length === 1 ? '' : 's'} adicionado${staged.length === 1 ? '' : 's'} à agenda.`);
         window.kingCalendar?.syncIfConnected();
     }
-    window.KingAgenda = { ensureCategories, getCategory, categoryForItem, renderCategorySelect, openCategories, closeCategories, saveCategory, deleteCategory, moveToToday, openImport, closeImport, selectFile, analyze, apply, validDate, validColor, keyFor };
+    window.KingAgenda = { ensureCategories, getCategory, categoryForItem, renderCategorySelect, openCategories, closeCategories, openImport, closeImport, saveCategory, deleteCategory, moveToToday, selectFile, analyze, apply, validDate, validColor, keyFor, localCandidates };
     ensureCategories(); renderCategorySelect(); renderizarAgendamento();
 })();

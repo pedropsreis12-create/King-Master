@@ -76,3 +76,23 @@ test('interface da Agenda permite importar, revisar, editar categorias e omite d
     assert.match(cloud, /analyzeAgendaDocument/);
     assert.match(cloud, /start: \{ date: item\.date \}/);
 });
+
+test('se a IA expirar, datas legíveis do PDF viram sugestões revisáveis, não registros automáticos', () => {
+    const h = harness();
+    const items = h.agenda.localCandidates('Página 1:\n12/10/2026 14:30 Prova de História\n15/10/2026 Entrega da redação\n31/02/2026 Data inválida');
+    assert.equal(items.length, 2);
+    assert.equal(items[0].date, '2026-10-12');
+    assert.equal(items[0].time, '14:30');
+    assert.equal(items[0].title, 'Prova de História');
+    assert.equal(items[0].needsReview, true);
+    assert.equal(items[1].date, '2026-10-15');
+    assert.equal(h.appData.agendamentoItems.length, 0);
+});
+
+test('datas sem ano ficam vazias para conferência, sem inventar o ano', () => {
+    const h = harness();
+    const items = h.agenda.localCandidates('Página 1:\n12/10 Reunião escolar');
+    assert.equal(items.length, 1);
+    assert.equal(items[0].date, '');
+    assert.equal(items[0].needsReview, true);
+});

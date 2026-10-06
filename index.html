@@ -36,6 +36,8 @@
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="profile-overhaul.css?v=20260930-achievements-toggle">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
+    <link rel="stylesheet" href="autopilot.css?v=20261005-daily-plan-v1">
+    <link rel="stylesheet" href="practice.css?v=20261005-practice-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -231,6 +233,7 @@
     <main id="mainContent" tabindex="-1">
         <section id="dashboard" class="content-section active">
             <h1>Foco e Execução</h1>
+            <section id="autopilotPanel" class="autopilot-panel widget" aria-label="Plano de estudo de hoje" aria-live="polite"></section>
             
             <button type="button" class="widget dashboard-agenda-glance" onclick="showSection('agendamento')" aria-label="Abrir o Agendamento Diário">
                 <span class="dashboard-agenda-copy">
@@ -537,7 +540,7 @@
             <div id="topicWorkspaceOverview" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabOverview">
                 <div class="topic-workspace-top-grid">
                     <article class="widget topic-workspace-context"><span class="workspace-kicker">CONTEXTO DO ASSUNTO</span><h2>O essencial, do seu jeito</h2><p>Resuma o que é, quando usar e o que costuma confundir você. Pode ser só uma frase.</p><label for="topicWorkspaceContext">Minha referência rápida</label><textarea id="topicWorkspaceContext" maxlength="1500" rows="4" placeholder="Ex.: Regra de três relaciona grandezas. Antes de calcular, verifico se são diretamente ou inversamente proporcionais." oninput="atualizarContextoEspacoTopico(this.value)"></textarea><small id="topicWorkspaceContextStatus" role="status">Salvo automaticamente</small></article>
-                    <article class="widget topic-workspace-review"><span class="workspace-kicker">REVISÃO</span><h2>Volte a lembrar, não só a reler</h2><p>Revisar é tentar recuperar a ideia sem olhar a resposta; depois confira o caderno e resolva uma questão curta.</p><div id="topicWorkspaceReviewState"></div><div class="topic-workspace-review-actions"><button type="button" class="cycle-btn primary" onclick="agendarRevisaoEspacoTopico()" id="topicWorkspaceReviewButton">Revisar amanhã</button><button type="button" class="cycle-btn" onclick="showSection('revisoes')">Caixa de Revisões</button></div></article>
+                    <article class="widget topic-workspace-review"><span class="workspace-kicker">REVISÃO</span><h2>Volte a lembrar, não só a reler</h2><p>Revisar é tentar recuperar a ideia sem olhar a resposta; depois confira o caderno e resolva uma questão curta.</p><div id="topicWorkspaceReviewState"></div><div class="topic-workspace-review-actions"><button type="button" class="cycle-btn primary" onclick="iniciarTreinoEspacoTopico()">Treinar 10 questões com IA</button><button type="button" class="cycle-btn" onclick="agendarRevisaoEspacoTopico()" id="topicWorkspaceReviewButton">Revisar amanhã</button><button type="button" class="cycle-btn" onclick="showSection('revisoes')">Caixa de Revisões</button></div></article>
                 </div>
                 <div id="topicWorkspaceAnalytics"></div>
             </div>
@@ -1400,6 +1403,11 @@
     <dialog id="flashReviewDialog" class="flash-dialog flash-review-dialog"><div class="flash-dialog-head"><div><span class="workspace-kicker" id="flashReviewSubject">REVISÃO</span><h2 id="flashReviewDeck">Flashcards</h2></div><button type="button" class="cycle-btn" data-flash-close="flashReviewDialog" aria-label="Fechar">×</button></div><div class="flash-review-progress" id="flashReviewProgress"></div><div class="flash-review-card"><span id="flashReviewPrompt">PERGUNTA</span><p id="flashReviewFront"></p><div id="flashReviewBack" class="flash-review-answer" hidden><span>RESPOSTA</span><p></p></div></div><div class="flash-review-actions"><button type="button" class="cycle-btn primary" id="flashReveal">Mostrar resposta</button><div id="flashRatings" hidden><button type="button" data-flash-rating="again">Errei <small>10 min</small></button><button type="button" data-flash-rating="hard">Difícil</button><button type="button" data-flash-rating="good">Acertei</button><button type="button" data-flash-rating="easy">Fácil</button></div></div></dialog>
     <dialog id="flashAiDialog" class="flash-dialog flash-ai-dialog"><div class="flash-dialog-head"><div><span class="workspace-kicker">SUGESTÕES, NÃO RESPOSTAS DEFINITIVAS</span><h2>Gerar flashcards com IA</h2></div><button type="button" class="cycle-btn" data-flash-close="flashAiDialog" aria-label="Fechar">×</button></div><form id="flashAiForm"><label>Deck de destino<select id="flashAiDeck" required></select></label><div class="flash-ai-options"><label>Origem<select id="flashAiSource"><option value="topic">Assunto do deck</option><option value="notes">Anotações do assunto</option><option value="reviews">Caixa de Revisões</option><option value="errors">Caderno de Erros</option><option value="text">Texto colado</option><option value="file">Arquivo de texto ou PDF</option></select></label><label>Quantidade<select id="flashAiCount"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="30">30</option></select></label><label>Nível<select id="flashAiLevel"><option value="basico">Básico</option><option value="medio">Médio</option><option value="enem" selected>ENEM</option><option value="vestibular">Vestibular</option><option value="avancado">Avançado</option></select></label><label>Tipo<select id="flashAiType"><option value="misto" selected>Misto</option><option value="conceitos">Conceitos</option><option value="perguntas">Perguntas e respostas</option><option value="formulas">Fórmulas</option><option value="erros">Erros que cometi</option></select></label></div><label id="flashAiTextField" hidden>Texto para usar como fonte<textarea id="flashAiText" rows="5" maxlength="12000" placeholder="Cole aqui o trecho que deseja transformar em perguntas."></textarea></label><label id="flashAiFileField" hidden>Arquivo para extrair texto<input id="flashAiFile" type="file" accept="application/pdf,text/plain,text/markdown,.txt,.md,.pdf"><small>Até 2 MB. O texto é extraído neste dispositivo; PDFs sem texto selecionável não são aceitos.</small></label><p class="flash-ai-hint" id="flashAiHint">A IA receberá somente a origem escolhida. Revise cada cartão antes de adicionar.</p><button type="submit" class="cycle-btn primary" id="flashAiGenerate">Gerar prévia</button></form><div id="flashAiStatus" role="status"></div><div id="flashAiPreview" class="flash-ai-preview"></div><div class="flash-dialog-actions" id="flashAiApproval" hidden><button type="button" class="cycle-btn" id="flashAiRegenerate">Gerar novamente</button><button type="button" class="cycle-btn primary" id="flashAiAddSelected">Adicionar selecionados</button></div></dialog>
     <dialog id="mockExamDialog" class="flash-dialog mock-exam-dialog" aria-labelledby="mockExamTitle"><div class="flash-dialog-head"><div><span class="workspace-kicker">TREINO ORIGINAL · SEM COBRANÇA NOVA</span><h2 id="mockExamTitle">Simulado com IA</h2><p id="mockExamSubtitle">Você confere o plano antes de começar. A IA pode errar; confira explicações importantes.</p></div><button type="button" class="cycle-btn" id="mockExamClose" aria-label="Fechar simulado">×</button></div><div id="mockExamSetup"><form id="mockExamForm" class="mock-exam-form"><label id="mockExamSubjectsLabel">Matérias</label><div id="mockExamSubjects" aria-labelledby="mockExamSubjectsLabel"></div><label for="mockExamTopics">Assuntos <small>opcional; separe por vírgula</small></label><input id="mockExamTopics" class="cycle-input" maxlength="500" placeholder="Ex.: Cinemática, Leis de Newton"><div class="mock-exam-form-grid"><label for="mockExamCount">Questões<select id="mockExamCount" class="cycle-input"><option value="10">10</option><option value="20">20</option><option value="30">30</option></select></label><label for="mockExamLevel">Nível<select id="mockExamLevel" class="cycle-input"><option value="basico">Básico</option><option value="medio">Médio</option><option value="dificil">Difícil</option><option value="enem" selected>ENEM</option><option value="vestibular">Vestibular</option></select></label></div><p class="mock-exam-disclaimer">Usa a cota gratuita já configurada no King Master. Máximo de 30 questões e 3 gerações por dia para evitar chamadas excessivas. Nenhuma questão é salva sem sua confirmação.</p><button type="submit" class="cycle-btn primary" id="mockExamGenerate">Gerar prévia</button></form></div><div id="mockExamContent" aria-live="polite"></div><p id="mockExamStatus" role="status"></p></dialog>
+    <dialog id="practiceModal" class="practice-dialog" aria-labelledby="practiceTitle">
+        <header class="practice-head"><div><span class="workspace-kicker">TREINO DO ASSUNTO</span><h2 id="practiceTitle">Treino de questões</h2><p id="practiceSubtitle"></p></div><button type="button" class="cycle-btn" data-practice-action="close" aria-label="Fechar treino">×</button></header>
+        <div id="practiceContent" aria-live="polite"></div><p id="practiceStatus" role="status" aria-live="polite"></p>
+    </dialog>
+    <dialog id="practiceExitDialog" class="practice-exit-dialog" aria-labelledby="practiceExitTitle"><h2 id="practiceExitTitle">Sair do treino?</h2><p>Você pode guardar as questões respondidas até agora ou descartar este treino.</p><div><button type="button" class="cycle-btn primary" data-practice-exit="save">Salvar respondidas</button><button type="button" class="cycle-btn" data-practice-exit="discard">Descartar</button><button type="button" class="cycle-btn" data-practice-exit="cancel">Continuar</button></div></dialog>
     <div id="toastNotification" class="toast-notification" role="status" aria-live="polite" aria-atomic="true"></div>
     <div class="modal-overlay" id="schedulePlannerModal">
         <div class="modal-box schedule-planner-modal">
@@ -1421,10 +1429,12 @@
     <script src="schedule-planner.js?v=20261002-evolution-v1"></script>
     <script src="flashcards-core.js?v=20260929-flash-security-v2"></script>
     <script src="mock-exam-core.js?v=20261002-v1"></script>
+    <script src="practice-core.js?v=20261005-practice-v1"></script>
     <script src="subject-picker.js?v=20261002-v1"></script>
     <script src="habit-core.js?v=20261002-v1"></script>
     <script src="rank-system-v2.js?v=20260929-rank-v2-1"></script>
-    <script src="script.js?v=20261002-evolution-v1"></script>
+    <script src="autopilot-core.js?v=20261005-daily-plan-v1"></script>
+    <script src="script.js?v=20261005-daily-plan-v1"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
     <script src="schedule.js?v=20261002-evolution-v1"></script>
@@ -1435,7 +1445,9 @@
     <script src="academic-context.js?v=20261002-v1"></script>
     <script src="ai-assistant.js?v=20261002-evolution-v1"></script>
     <script src="flashcards.js?v=20261002-evolution-v1"></script>
-    <script src="mock-exams.js?v=20261002-v1"></script>
+    <script src="mock-exams.js?v=20261005-daily-plan-v1"></script>
+    <script src="practice.js?v=20261005-practice-v1"></script>
+    <script src="autopilot.js?v=20261005-daily-plan-v1"></script>
     <script src="productivity.js?v=20260929-overhaul-v4"></script>
     <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
     <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>

@@ -10,12 +10,15 @@ const [html, script, styles] = await Promise.all([
 ]);
 
 test('histórico soma questões por semana sem duplicar simulado de sessão', () => {
+    class TestDate extends Date {
+        constructor(...args) { super(...(args.length ? args : ['2026-09-30T12:00:00'])); }
+    }
     const elements = new Map(['historyQuestionsRange', 'hist-week-questions', 'hist-week-hits', 'hist-week-errors', 'hist-week-rate', 'historyQuestionChart', 'historyQuestionsNote', 'hist-life-questions', 'hist-life-hits', 'hist-life-errors', 'hist-life-rate', 'historyLifetimeNote']
         .map(id => [id, { textContent: '', innerHTML: '', disabled: false, setAttribute(name, value) { this[name] = value; } }]));
     const dateHelpers = script.slice(script.indexOf('function dataLocalISO('), script.indexOf('function reconciliarHistoricoComMateriasAtuais()'));
     const questionHelpers = script.slice(script.indexOf('function inicioSemanaQuestoes('), script.indexOf('function renderizarHistorico()'));
     const context = {
-        Date, Math, Map, Array, Number, String,
+        Date: TestDate, Math, Map, Array, Number, String,
         document: { getElementById: id => elements.get(id) },
         appData: {
             historyItems: [

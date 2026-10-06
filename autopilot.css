@@ -1,0 +1,21 @@
+.autopilot-panel{margin:0 0 22px;padding:24px;border:1px solid var(--border-strong,#d8dce5);border-radius:24px;background:var(--card-bg,#fff);box-shadow:0 12px 32px rgba(17,24,39,.06)}
+.autopilot-head{display:flex;justify-content:space-between;align-items:start;gap:24px}
+.autopilot-head h2{margin:7px 0 6px;font-size:clamp(1.3rem,2vw,1.9rem);line-height:1.15;color:var(--text-main,#1b2430)}
+.autopilot-head p{max-width:720px;margin:0;color:var(--text-muted,#5e6876);line-height:1.5}
+.autopilot-budget{display:grid;gap:7px;min-width:185px;font-size:.77rem;font-weight:800;color:var(--text-main,#1b2430)}
+.autopilot-budget select{min-height:42px;width:100%}
+.autopilot-load{margin:19px 0 12px;font-size:.78rem;font-weight:750;color:var(--text-muted,#5e6876)}
+.autopilot-tasks{display:grid;gap:8px;list-style:none;margin:0;padding:0}
+.autopilot-task{display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;align-items:center;gap:13px;padding:12px 14px;border:1px solid var(--border-strong,#d8dce5);border-radius:16px;background:var(--hover-bg,#f6f8fb)}
+.autopilot-step{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:color-mix(in srgb,var(--accent-color,#007aff) 12%,transparent);color:var(--accent-color,#007aff);font-size:.85rem;font-weight:900}
+.autopilot-task.is-done .autopilot-step{color:#13843a;background:#e5f7eb}
+.autopilot-task-copy{min-width:0;display:grid;gap:3px}
+.autopilot-task-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-main,#1b2430)}
+.autopilot-task-copy small{color:var(--text-muted,#5e6876);line-height:1.4}
+.autopilot-minutes{white-space:nowrap;font-size:.78rem;font-weight:800;color:var(--text-muted,#5e6876)}
+.autopilot-task .cycle-btn{min-height:38px;padding:8px 14px}
+.autopilot-disclaimer{margin:13px 0 0;color:var(--text-muted,#5e6876);font-size:.74rem}
+.autopilot-empty{display:grid;justify-items:start;gap:9px;padding:17px;border-radius:16px;background:var(--hover-bg,#f6f8fb)}
+.autopilot-empty p{margin:0;color:var(--text-muted,#5e6876)}
+[data-theme="dark"] .autopilot-task.is-done .autopilot-step{background:#123826;color:#7cdf9e}
+@media(max-width:700px){.autopilot-panel{padding:17px;border-radius:19px}.autopilot-head{display:grid;gap:15px}.autopilot-budget{min-width:0}.autopilot-task{grid-template-columns:30px minmax(0,1fr) auto;gap:9px}.autopilot-step{width:29px;height:29px}.autopilot-task .cycle-btn{grid-column:2 / 4;justify-self:start}.autopilot-minutes{grid-column:3;grid-row:1}.autopilot-task-copy strong{white-space:normal}}

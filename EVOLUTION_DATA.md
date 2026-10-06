@@ -1,5 +1,12 @@
 # Evolução de dados — 2026-10-02
 
+## Plano diário automático — 2026-10-05
+
+- `autopilot` é opcional e preserva todos os campos antigos. A ausência usa `{ enabled: true, dailyMinutes: 240, subjectWeights: {}, todayBudget: null }`.
+- `autopilot.todayBudget` guarda `{ date: YYYY-MM-DD, minutes }` somente para o dia escolhido; no dia seguinte volta à meta normal. Nenhuma sessão ou bloco existente é modificado ao mudar esse orçamento.
+- O plano diário é calculado a partir de matérias, assuntos, histórico, revisões e blocos existentes. Não é salvo como histórico de estudo e não cria conclusão fictícia.
+- `practiceSessions[]`: até 30 treinos gerados de questões. Cada registro guarda matéria, assunto, respostas e tempo por questão; a sessão resumida entra em `historyItems` e os erros individuais em `cadernoErrosItems` no mesmo salvamento. Dados antigos sem esse campo usam lista vazia.
+
 O King Master continua usando `appData` no armazenamento local e o documento privado `users/{uid}` no Firestore. Nenhuma coleção nova foi criada nesta etapa.
 
 ## Campos aditivos

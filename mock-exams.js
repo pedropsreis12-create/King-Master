@@ -48,11 +48,13 @@
         try { localStorage.setItem('king_mock_free_quota', JSON.stringify({ date: date(), count: saved.date === date() ? (Number(saved.count) || 0) + 1 : 1 })); }
         catch { /* Cota local é apenas um freio de uso, nunca fonte de dados acadêmicos. */ }
     }
-    function openSetup() {
+    function openSetup(preset = {}) {
         if (!appData.cycleItems.length) { showToast('Cadastre uma matéria antes de gerar um simulado.', true); showSection('planejamento'); return; }
         if (!subjectPicker) subjectPicker = window.KingSubjectPicker.create(el('mockExamSubjects'), { subjects: () => appData.cycleItems, allowAll: false, placeholder: 'Escolha até cinco matérias' });
-        subjectPicker.set([]);
+        subjectPicker.set(preset.subjectId ? [String(preset.subjectId)] : []);
         el('mockExamForm').reset();
+        if (preset.topic) el('mockExamTopics').value = String(preset.topic).slice(0, 100);
+        if ([10, 20, 30].includes(Number(preset.count))) el('mockExamCount').value = String(preset.count);
         el('mockExamSetup').hidden = false;
         el('mockExamContent').replaceChildren();
         el('mockExamStatus').textContent = '';

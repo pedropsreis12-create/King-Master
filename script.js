@@ -26,6 +26,7 @@ const defaultAppData = {
     calendarDeletedIds: [],
     simuladosItems: [],
     generatedExams: [],
+    practiceSessions: [],
     redacaoItems: [],
     revisoesItems: [],
     revisaoTags: [],
@@ -54,6 +55,7 @@ const defaultAppData = {
     onboardingCompleted: false,
     accessibility: { fontScale: 'normal', highContrast: false, dyslexiaMode: false, motionMode: 'auto' },
     studyLogging: { autoReview: true, reviewDelayDays: 1 },
+    autopilot: { enabled: true, dailyMinutes: 240, subjectWeights: {}, todayBudget: null },
     studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], dailyCapacityMinutes: 240, blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
     personalDevelopment: {
         commitment: '',
@@ -101,6 +103,7 @@ if (appData.agendaCategories != null && !Array.isArray(appData.agendaCategories)
 if (!Array.isArray(appData.calendarDeletedIds)) appData.calendarDeletedIds = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!Array.isArray(appData.generatedExams)) appData.generatedExams = [];
+if (!Array.isArray(appData.practiceSessions)) appData.practiceSessions = [];
 if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!Array.isArray(appData.revisoesItems)) appData.revisoesItems = [];
 if (!Array.isArray(appData.quickNotes)) appData.quickNotes = [];
@@ -145,6 +148,10 @@ if (!appData.studyLogging || typeof appData.studyLogging !== 'object') appData.s
 appData.studyLogging = { ...defaultAppData.studyLogging, ...appData.studyLogging };
 appData.studyLogging.autoReview = appData.studyLogging.autoReview !== false;
 appData.studyLogging.reviewDelayDays = [1, 3, 7, 14, 30].includes(Number(appData.studyLogging.reviewDelayDays)) ? Number(appData.studyLogging.reviewDelayDays) : 1;
+if (!appData.autopilot || typeof appData.autopilot !== 'object' || Array.isArray(appData.autopilot)) appData.autopilot = { ...defaultAppData.autopilot };
+appData.autopilot = { ...defaultAppData.autopilot, ...appData.autopilot };
+if (!appData.autopilot.subjectWeights || typeof appData.autopilot.subjectWeights !== 'object' || Array.isArray(appData.autopilot.subjectWeights)) appData.autopilot.subjectWeights = {};
+if (appData.autopilot.todayBudget?.date !== dataLocalISO()) appData.autopilot.todayBudget = null;
 if (!appData.studySchedule || typeof appData.studySchedule !== 'object') appData.studySchedule = { ...defaultAppData.studySchedule };
 if (!appData.studySchedule.settings || typeof appData.studySchedule.settings !== 'object') appData.studySchedule.settings = { ...defaultAppData.studySchedule.settings };
 appData.studySchedule.settings = { ...defaultAppData.studySchedule.settings, ...appData.studySchedule.settings };
@@ -2179,6 +2186,16 @@ function registrarSessao(segundos, detalhes = null) {
     if (materia && questoes) { materia.questoes = Number(materia.questoes || 0) + questoes; materia.acertos = Number(materia.acertos || 0) + acertos; materia.erros = Number(materia.erros || 0) + erros; }
     if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
     if (detalhes?.autoReview) criarRevisaoAutomaticaRegistro(nome, assunto, detalhes.reviewDelayDays, `sessao-${atividade}`);
+    if (Array.isArray(detalhes?.errorItems)) {
+        const ultimoId = appData.cadernoErrosItems.reduce((maior, item) => Math.max(maior, Number(item.id) || 0), Date.now());
+        detalhes.errorItems.slice(0, 30).forEach((item, index) => {
+            appData.cadernoErrosItems.push(normalizarItemCadernoErro({ ...item, id: ultimoId + index + 1 }));
+        });
+    }
+    if (detalhes?.practiceSession) {
+        appData.practiceSessions.push(detalhes.practiceSession);
+        appData.practiceSessions = appData.practiceSessions.slice(-30);
+    }
 
     if (atividade === 'simulado' && detalhes?.simulado) {
         const sim = detalhes.simulado;
@@ -2197,6 +2214,14 @@ function registrarSessao(segundos, detalhes = null) {
     if (sourceSessionId) removerSessaoPendente(sourceSessionId);
     if (sourceSessionId) appData.resolvedStudySessionIds = [...appData.resolvedStudySessionIds.filter(id => id !== sourceSessionId), sourceSessionId].slice(-40);
     try {
+        if (detalhes?.externalStudyTime) {
+            appData.totalStudySeconds = Number(appData.totalStudySeconds || 0) + segundos;
+            const hoje = new Date();
+            if (getMonday(hoje) === appData.lastWeekStart) {
+                const indice = hoje.getDay() === 0 ? 6 : hoje.getDay() - 1;
+                appData.weeklyChart[indice] = Number(appData.weeklyChart[indice] || 0) + segundos;
+            }
+        }
         const creditedBySchedule = pendenteCronograma
             ? window.KingSchedule?.completeFromSession(pendenteCronograma, { ...detalhes, assunto, comentario, atividade, subjectId: materia?.id || '' }) === true
             : false;
@@ -5734,6 +5759,12 @@ function localizarEspacoTopico() {
     const topico = materia?.topicos?.[espacoTopicoAtual.topicoIndice];
     if (!topico || topico.nome !== espacoTopicoAtual.nome) return { materia, topico: null };
     return { materia, topico };
+}
+
+function iniciarTreinoEspacoTopico() {
+    const { materia, topico } = localizarEspacoTopico();
+    if (!materia || !topico) return showToast('Abra um assunto válido para iniciar o treino.', true);
+    window.KingPractice?.open({ subjectId: materia.id, topic: topico.nome });
 }
 
 function abrirEspacoTopico(materiaId, topicoIndice, aba = 'visao') {

@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261004-agenda-timeout-v1';
+const CACHE_VERSION = 'king-master-20261005-daily-plan-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -12,6 +12,12 @@ const APP_SHELL = [
     './script.js',
     './agenda-workspace.js',
     './agenda-workspace.css',
+    './autopilot-core.js',
+    './autopilot.js',
+    './autopilot.css',
+    './practice-core.js',
+    './practice.js',
+    './practice.css',
     './schedule-core.js',
     './schedule-planner.js',
     './schedule.js',

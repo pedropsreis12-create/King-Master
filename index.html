@@ -38,6 +38,7 @@
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
     <link rel="stylesheet" href="autopilot.css?v=20261005-daily-plan-v1">
     <link rel="stylesheet" href="practice.css?v=20261005-practice-v1">
+    <link rel="stylesheet" href="error-ai.css?v=20261005-error-ai-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -1135,7 +1136,7 @@
                         </div>
                         <div class="form-grid two">
                             <div class="cycle-form-group"><label class="cycle-label" for="errorSourceInput">Origem <span>(opcional)</span></label><input class="cycle-input" id="errorSourceInput" maxlength="80" placeholder="Ex.: ENEM 2022, questão 137" autocomplete="off"></div>
-                            <div class="cycle-form-group"><label class="cycle-label" for="errorTypeInput">Causa principal</label><select class="cycle-input" id="errorTypeInput" required><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="estrategia">Estratégia ou tempo</option></select></div>
+                            <div class="cycle-form-group"><label class="cycle-label" for="errorTypeInput">Por que você errou?</label><select class="cycle-input" id="errorTypeInput" required><option value="" selected>Escolha a causa principal</option><option value="conteudo">Lacuna de conteúdo</option><option value="interpretacao">Interpretação</option><option value="calculo">Cálculo ou execução</option><option value="atencao">Atenção</option><option value="estrategia">Estratégia ou tempo</option></select></div>
                         </div>
                     </fieldset>
                     <fieldset class="error-form-step">
@@ -1148,6 +1149,8 @@
                         </div>
                         <div class="error-image-preview" id="errorImagePreview"></div>
                         <p class="error-image-status" id="errorImageStatus" role="status"></p>
+                        <div class="error-ai-tools"><button type="button" class="cycle-btn" id="errorAiSuggestButton" onclick="sugerirErroComIa()">✦ Ler questão com IA</button><small>A IA sugere campos para você conferir; nada é salvo automaticamente.</small></div>
+                        <div class="error-ai-preview" id="errorAiPreview" hidden></div>
                         <div class="form-grid two">
                             <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta <span>(opcional)</span></label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
                             <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta <span>(opcional)</span></label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme."></textarea></div>
@@ -1457,6 +1460,6 @@
     <script src="profile-overhaul.js?v=20260930-achievements-toggle"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20261002-evolution-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20261005-error-ai-v1"></script>
 </body>
 </html>

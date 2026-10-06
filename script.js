@@ -4762,6 +4762,7 @@ let cadernoErroImagensRascunho = [];
 let cadernoErroProcessandoImagens = false;
 let cadernoErroImagensOriginais = [];
 const cadernoErroImagemCache = new Map();
+let sugestaoErroIa = null;
 
 function normalizarItemCadernoErro(item) {
     const agora = Date.now();
@@ -5037,6 +5038,9 @@ function abrirModalCadernoErro(id = null) {
     const form = document.getElementById('errorNotebookForm');
     if (!form) return;
     form.reset();
+    sugestaoErroIa = null;
+    const previaIa = document.getElementById('errorAiPreview');
+    if (previaIa) { previaIa.hidden = true; previaIa.replaceChildren(); }
     const item = id ? obterItensCadernoErros().find(registro => registro.id === Number(id)) : null;
     cadernoErroImagensRascunho = (item?.imagens || []).map(imagem => ({ ...imagem, nova: false }));
     cadernoErroImagensOriginais = (item?.imagens || []).map(imagem => imagem.id);
@@ -5062,6 +5066,62 @@ function abrirModalCadernoErro(id = null) {
     setTimeout(() => document.getElementById('errorSubjectInput')?.focus(), 80);
 }
 
+async function sugerirErroComIa() {
+    const button = document.getElementById('errorAiSuggestButton');
+    const preview = document.getElementById('errorAiPreview');
+    const images = cadernoErroImagensRascunho.filter(item => item.context !== 'rule' && item.nova && item.dataUrl).slice(0, 4).map(item => item.dataUrl);
+    const question = document.getElementById('errorQuestionInput').value.trim();
+    if (question.length < 20 && !images.length) return showToast('Cole a questão ou anexe uma foto antes de pedir a leitura.', true);
+    if (button.disabled) return;
+    button.disabled = true; button.textContent = 'Lendo questão…';
+    preview.hidden = false; preview.replaceChildren();
+    const status = document.createElement('p'); status.textContent = 'Analisando a questão. Seus campos atuais não serão alterados.'; preview.append(status);
+    try {
+        await window.kingGeminiReady;
+        if (!window.kingGemini?.diagnoseError) throw new Error('A IA não está disponível agora. Continue o registro manualmente.');
+        sugestaoErroIa = await window.kingGemini.diagnoseError({
+            question, images, topic: document.getElementById('errorTopicInput').value,
+            attempt: document.getElementById('errorAttemptInput').value,
+            correct: document.getElementById('errorCorrectInput').value,
+            subjects: appData.cycleItems.map(item => item.subject)
+        });
+        preview.replaceChildren();
+        const heading = document.createElement('h3'); heading.textContent = 'Sugestão da IA para conferir'; preview.append(heading);
+        for (const [label, value] of [['Matéria', sugestaoErroIa.subject], ['Assunto', sugestaoErroIa.topic], ['Questão', sugestaoErroIa.question], ['Resposta', sugestaoErroIa.answer], ['Regra anti-erro', sugestaoErroIa.rule]]) {
+            if (!value) continue;
+            const row = document.createElement('p');
+            const strong = document.createElement('strong'); strong.textContent = `${label}: `;
+            row.append(strong, document.createTextNode(value)); preview.append(row);
+        }
+        const caution = document.createElement('p'); caution.className = 'error-ai-caution';
+        caution.textContent = sugestaoErroIa.uncertain ? 'Há trechos incertos. Confira a imagem e o gabarito antes de aceitar.' : 'A IA pode errar. Confira o gabarito e escolha você mesmo por que errou.';
+        preview.append(caution);
+        const actions = document.createElement('div'); actions.className = 'error-ai-preview-actions';
+        const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'cycle-btn primary'; apply.textContent = 'Usar nos campos vazios'; apply.onclick = aplicarSugestaoErroIa;
+        const dismiss = document.createElement('button'); dismiss.type = 'button'; dismiss.className = 'cycle-btn'; dismiss.textContent = 'Ignorar'; dismiss.onclick = () => { sugestaoErroIa = null; preview.hidden = true; preview.replaceChildren(); };
+        actions.append(apply, dismiss); preview.append(actions);
+    } catch (error) {
+        sugestaoErroIa = null;
+        status.textContent = String(error?.message || 'Não foi possível analisar agora.').slice(0, 250);
+    } finally {
+        button.disabled = false; button.textContent = '✦ Ler questão com IA';
+    }
+}
+
+function aplicarSugestaoErroIa() {
+    if (!sugestaoErroIa) return;
+    const subject = document.getElementById('errorSubjectInput');
+    const matched = [...subject.options].find(option => option.value && option.value.toLocaleLowerCase('pt-BR') === sugestaoErroIa.subject.toLocaleLowerCase('pt-BR'));
+    if (!subject.value && matched) subject.value = matched.value;
+    for (const [id, value] of [['errorTopicInput', sugestaoErroIa.topic], ['errorQuestionInput', sugestaoErroIa.question],
+        ['errorCorrectInput', sugestaoErroIa.answer], ['errorRuleInput', sugestaoErroIa.rule]]) {
+        const field = document.getElementById(id);
+        if (field && !field.value.trim() && value) field.value = value;
+    }
+    document.getElementById('errorAiPreview').hidden = true;
+    showToast('Sugestões aplicadas aos campos vazios. Confira e escolha a causa do erro antes de salvar.');
+}
+
 async function salvarCadernoErro(event) {
     event.preventDefault();
     if (document.querySelector('#errorNotebookForm button[type="submit"]')?.disabled) return;
@@ -5081,6 +5141,7 @@ async function salvarCadernoErro(event) {
         atualizadoEm: Date.now()
     };
     if (!dados.materia || !dados.assunto || !dados.questao || !dados.regra) return showToast('Preencha matéria, assunto, questão e regra anti-erro.', true);
+    if (!CADERNO_ERROS_TIPOS[dados.tipo]) return showToast('Escolha por que você errou antes de salvar.', true);
     if (!dataISOParaLocal(dados.proximaRevisao) || dataLocalISO(dataISOParaLocal(dados.proximaRevisao)) !== dados.proximaRevisao) return showToast('Escolha uma data válida para a próxima revisão.', true);
     if (submit) { submit.disabled = true; submit.textContent = cadernoErroImagensRascunho.some(imagem => imagem.nova) ? 'Enviando imagens…' : 'Salvando…'; }
     try {

@@ -77,6 +77,7 @@ function syncPasswordRules() {
 function showRecovery(open) {
     if (!authRecoveryPanel || !authPrimary) return;
     authGateCard?.classList.toggle('recovery-mode', open);
+    authGate?.setAttribute('aria-labelledby', open ? 'authRecoveryTitle' : 'authGateTitle');
     authPrimary.hidden = open;
     authRecoveryPanel.hidden = !open;
     if (open) {
@@ -118,6 +119,14 @@ function unlockApplication(user) {
 
 function setAuthMode(mode) {
     authMode = mode === 'signup' ? 'signup' : 'login';
+    const authTitle = document.getElementById('authGateTitle');
+    const authIntro = document.getElementById('authGateIntro');
+    const authEyebrow = document.getElementById('authGateEyebrow');
+    if (authEyebrow) authEyebrow.textContent = authMode === 'signup' ? 'Comece por aqui' : 'Bem-vindo de volta';
+    if (authTitle) authTitle.textContent = authMode === 'signup' ? 'Crie seu espaço' : 'Entre no seu espaço';
+    if (authIntro) authIntro.textContent = authMode === 'signup'
+        ? 'Guarde sua preparação em um só lugar e continue de onde parou em qualquer dispositivo.'
+        : 'Seu plano, seus registros e suas revisões estão esperando por você.';
     document.querySelectorAll('[data-auth-mode]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.authMode === authMode)));
     if (authNameField) authNameField.hidden = authMode !== 'signup';
     if (authName) authName.required = authMode === 'signup';

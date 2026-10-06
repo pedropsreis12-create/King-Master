@@ -39,6 +39,8 @@
     <link rel="stylesheet" href="autopilot.css?v=20261005-pace-v2">
     <link rel="stylesheet" href="practice.css?v=20261005-pace-v2">
     <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
+    <link rel="stylesheet" href="auth-refresh.css?v=20261006-auth-v1">
+    <link rel="stylesheet" href="topic-review-link.css?v=20261006-topic-review-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -53,16 +55,30 @@
 <body>
     <a class="skip-link" href="#mainContent">Pular para o conteúdo principal</a>
 
-    <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle" aria-live="polite">
+    <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
+        <div class="auth-shell">
+            <aside class="auth-showcase" aria-label="Apresentação do King Master">
+                <div class="auth-showcase-brand">
+                    <svg class="auth-showcase-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="14"></rect><path d="M12 17l6 4 6-9 6 9 6-4-2 9H14z"></path><path d="M14 29v5l10 4 10-4v-5l-10 4z"></path></svg>
+                    <span><strong>King Master</strong><small>Seu espaço de preparação</small></span>
+                </div>
+                <div class="auth-showcase-content">
+                    <span class="auth-showcase-kicker">ESTUDE COM DIREÇÃO</span>
+                    <h2>Um lugar para transformar esforço em avanço.</h2>
+                    <p>Organize o que estudar, acompanhe suas questões e volte aos assuntos certos na hora de revisar.</p>
+                    <div class="auth-showcase-points"><span><i aria-hidden="true">01</i>Planeje seu tempo</span><span><i aria-hidden="true">02</i>Registre seu progresso</span><span><i aria-hidden="true">03</i>Revise com propósito</span></div>
+                </div>
+                <small class="auth-showcase-footer">King Master · Preparação para o ENEM e seus objetivos</small>
+            </aside>
         <div class="auth-gate-card" id="authGateCard">
-            <div class="auth-brand"><span>KM</span><div><strong>King Master</strong><small>Seu progresso, em qualquer dispositivo</small></div></div>
+            <div class="auth-card-top"><span class="auth-card-kicker">ÁREA DO ESTUDANTE</span><span class="auth-card-private"><span aria-hidden="true">◈</span> Conta privada</span></div>
             <div class="auth-primary" id="authPrimary">
-            <div class="auth-gate-copy"><p>Conta obrigatória</p><h1 id="authGateTitle">Continue sua preparação</h1><span>Entre para recuperar tempo, matérias, cores, molduras e todo o seu histórico.</span></div>
+            <div class="auth-gate-copy"><p id="authGateEyebrow">Bem-vindo de volta</p><h1 id="authGateTitle">Entre no seu espaço</h1><span id="authGateIntro">Seu plano, seus registros e suas revisões estão esperando por você.</span></div>
             <div class="auth-provider-grid">
                 <button type="button" class="auth-provider google" id="authGoogleBtn"><b>G</b> Continuar com Google</button>
                 <button type="button" class="auth-provider-fallback" id="authGoogleRedirectBtn" hidden>Entrar pelo redirecionamento seguro</button>
             </div>
-            <div class="auth-divider"><span>ou use seu cadastro</span></div>
+            <div class="auth-divider"><span>ou continue com e-mail</span></div>
             <div class="auth-tabs" role="tablist" aria-label="Acesso por e-mail">
                 <button type="button" role="tab" aria-selected="true" data-auth-mode="login">Entrar</button>
                 <button type="button" role="tab" aria-selected="false" data-auth-mode="signup">Criar conta</button>
@@ -98,6 +114,7 @@
                 <p class="auth-feedback" id="authRecoveryFeedback" role="status"></p>
                 <small class="auth-privacy">O link é temporário. Se você não pediu a troca, basta ignorar a mensagem.</small>
             </section>
+        </div>
         </div>
     </section>
 
@@ -546,7 +563,7 @@
                 </div>
                 <div id="topicWorkspaceAnalytics"></div>
             </div>
-            <div id="topicWorkspaceNotebook" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabNotebook" hidden></div>
+            <div id="topicWorkspaceNotebook" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabNotebook" hidden><section class="widget topic-notebook-reviews" aria-labelledby="topicNotebookReviewsTitle"><div class="topic-notebook-reviews-heading"><div><span class="workspace-kicker">NO MESMO ASSUNTO</span><h2 id="topicNotebookReviewsTitle">Revisões do caderno</h2><p>Consulte o que marcou para revisar sem sair do contexto das suas anotações.</p></div><button type="button" class="cycle-btn primary" onclick="abrirModalRevisaoDoTopico()">+ Criar revisão</button></div><div id="topicNotebookReviewsList"></div></section></div>
             <div id="topicWorkspaceHistory" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabHistory" hidden><article class="widget topic-workspace-history-card"><span class="workspace-kicker">HISTÓRICO DO ASSUNTO</span><h2>O que você já estudou</h2><div id="topicWorkspaceHistoryList"></div></article></div>
         </section>
 
@@ -1462,6 +1479,6 @@
     <script src="profile-overhaul.js?v=20260930-achievements-toggle"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20261005-error-flashcards-v2"></script>
+    <script type="module" src="cloud-sync.js?v=20261006-auth-v1"></script>
 </body>
 </html>

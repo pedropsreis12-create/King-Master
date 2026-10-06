@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail, firebase] = await Promise.all([
+const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail, firebase, authRefresh] = await Promise.all([
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8'),
     readFile(new URL('../script.js', import.meta.url), 'utf8'),
@@ -11,8 +11,21 @@ const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail,
     readFile(new URL('../password-reset.js', import.meta.url), 'utf8'),
     readFile(new URL('../vite.config.js', import.meta.url), 'utf8'),
     readFile(new URL('../email-templates/password-reset.html', import.meta.url), 'utf8'),
-    readFile(new URL('../firebase.json', import.meta.url), 'utf8')
+    readFile(new URL('../firebase.json', import.meta.url), 'utf8'),
+    readFile(new URL('../auth-refresh.css', import.meta.url), 'utf8')
 ]);
+
+test('student entry keeps the existing auth flow in a responsive branded shell', () => {
+    assert.match(html, /class="auth-shell"/);
+    assert.match(html, /class="auth-showcase"/);
+    assert.match(html, /href="auth-refresh\.css/);
+    assert.match(html, /id="authGateEyebrow"/);
+    assert.match(cloud, /authMode === 'signup' \? 'Comece por aqui'/);
+    assert.match(cloud, /aria-labelledby', open \? 'authRecoveryTitle' : 'authGateTitle'/);
+    assert.match(authRefresh, /@media \(max-width: 820px\)/);
+    assert.match(authRefresh, /@media \(max-width: 460px\)/);
+    assert.match(authRefresh, /:focus-visible/);
+});
 
 test('email/password access is declared for the Firebase project', () => {
     assert.equal(JSON.parse(firebase).auth.providers.emailPassword, true);

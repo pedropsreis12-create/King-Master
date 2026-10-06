@@ -48,3 +48,14 @@ test('chapter notebook reflows on mobile without a full-screen subject overlay',
   assert.match(styles, /\.chapter-notebook-layout \{ grid-template-columns: 1fr; \}/);
   assert.doesNotMatch(styles, /position:\s*fixed/);
 });
+
+test('a review can open its matching notebook and the notebook shows its own review trail', () => {
+  assert.match(html, /id="topicNotebookReviewsList"/);
+  assert.match(html, /onclick="abrirModalRevisaoDoTopico\(\)"/);
+  assert.match(script, /function localizarCadernoDaRevisao\(revisao\)/);
+  assert.match(script, /function abrirCadernoDaRevisao\(id\)/);
+  assert.match(script, /function renderizarRevisoesDoCaderno\(\)/);
+  assert.match(script, /function abrirModalRevisaoDoTopico\(\)/);
+  assert.match(script, /class="cycle-btn review-open-notebook"/);
+  assert.match(script, /renderizarRevisoesDoCaderno\(\);/);
+});

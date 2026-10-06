@@ -3984,6 +3984,25 @@ function normalizarRevisaoTexto(valor) {
     return (valor || '').trim().toLocaleLowerCase('pt-PT');
 }
 
+function localizarCadernoDaRevisao(revisao) {
+    if (!revisao?.assunto) return null;
+    const ids = new Set((revisao.materiaIds || []).map(String));
+    const materias = appData.cycleItems.filter(materia => ids.has(String(materia.id))
+        || normalizarRevisaoTexto(materia.subject) === normalizarRevisaoTexto(revisao.materia));
+    for (const materia of materias) {
+        const indice = (materia.topicos || []).findIndex(topico => normalizarRevisaoTexto(topico.nome) === normalizarRevisaoTexto(revisao.assunto));
+        if (indice >= 0) return { materia, indice };
+    }
+    return null;
+}
+
+function abrirCadernoDaRevisao(id) {
+    const revisao = appData.revisoesItems.find(item => Number(item.id) === Number(id));
+    const vinculo = localizarCadernoDaRevisao(revisao);
+    if (!vinculo) return showToast('Este assunto ainda não está cadastrado na matéria. Você pode adicioná-lo em Matérias.', true);
+    abrirEspacoTopico(vinculo.materia.id, vinculo.indice, 'caderno');
+}
+
 function escaparRevisaoHtml(valor) {
     return String(valor || '').replace(/[&<>"']/g, caractere => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
@@ -4742,10 +4761,12 @@ function renderizarRevisoes() {
         const detalhes = [item.fonte, item.numeroQuestao ? `Questão ${item.numeroQuestao}` : '', item.blocoTitulo].filter(Boolean).map(valor => `<span>${escaparRevisaoHtml(valor)}</span>`).join('');
         const imagem = item.imagem ? `<button type="button" class="review-card-image" onclick="abrirImagemRevisao('${item.imagem.id}','${encodeURIComponent(item.imagem.name)}')" aria-label="Abrir foto de ${escaparRevisaoHtml(item.assunto)}"><img data-review-image-id="${item.imagem.id}" alt="${escaparRevisaoHtml(item.imagem.name)}" loading="lazy"><span aria-hidden="true">▧</span></button>` : '';
         const link = item.link ? `<a class="review-source-link" href="${escaparRevisaoHtml(item.link)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : '';
+        const cadernoVinculado = localizarCadernoDaRevisao(item);
+        const abrirCaderno = cadernoVinculado ? `<button class="cycle-btn review-open-notebook" onclick="abrirCadernoDaRevisao(${item.id})">Abrir caderno</button>` : '';
         const acaoPrincipal = revisado
             ? `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
             : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button>`;
-        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="KingFlashcards.fromReview(${item.id})">Criar flashcard</button><button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></div></details></div></article>`;
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}${abrirCaderno}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="KingFlashcards.fromReview(${item.id})">Criar flashcard</button><button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></div></details></div></article>`;
     }).join('');
     carregarMiniaturasRevisao();
     renderDashboardRevisoes();
@@ -6077,6 +6098,34 @@ function inicializarCadernoCapitulo(materiaId, topicoIndice) {
     renderizarCadernoCapitulo();
 }
 
+function abrirModalRevisaoDoTopico() {
+    const { materia, topico } = localizarCadernoCapitulo();
+    if (!materia || !topico) return;
+    abrirModalRevisao();
+    const select = document.getElementById('revisaoMateria');
+    select.value = materia.subject;
+    obterSeletorMateriasRevisao().set([materia.id]);
+    atualizarAssuntosRevisao();
+    document.getElementById('revisaoAssunto').value = topico.nome;
+    document.getElementById('revisaoContextoTitulo').textContent = `${materia.subject} · ${topico.nome}`;
+}
+
+function renderizarRevisoesDoCaderno() {
+    const lista = document.getElementById('topicNotebookReviewsList');
+    const { materia, topico } = localizarCadernoCapitulo();
+    if (!lista || !materia || !topico) return;
+    const vinculadas = (appData.revisoesItems || []).filter(revisao => {
+        const vinculo = localizarCadernoDaRevisao(revisao);
+        return vinculo && String(vinculo.materia.id) === String(materia.id) && vinculo.indice === cadernoCapituloAtual.topicoIndice;
+    }).sort((a, b) => Number(b.criadoEm || b.id) - Number(a.criadoEm || a.id));
+    lista.innerHTML = vinculadas.length ? vinculadas.slice(0, 6).map(revisao => {
+        const data = revisao.dataAlvo ? revisao.dataAlvo.split('-').reverse().join('/') : 'Sem data';
+        const estado = revisao.status === 'revisado' ? 'Concluída' : revisao.status === 'fraco' ? 'Precisa reforçar' : 'Pendente';
+        return `<article class="topic-notebook-review-item"><div><strong>${escaparRevisaoHtml(estado)}</strong><span>${escaparRevisaoHtml(data)}${revisao.observacao ? ` · ${escaparRevisaoHtml(revisao.observacao)}` : ''}</span></div><button type="button" class="cycle-btn" onclick="abrirModalRevisao(${Number(revisao.id)})">Abrir revisão</button></article>`;
+    }).join('') + (vinculadas.length > 6 ? `<button type="button" class="cycle-btn" onclick="showSection('revisoes')">Ver todas as ${vinculadas.length} revisões</button>` : '')
+        : '<p class="topic-notebook-review-empty">Ainda não há revisão deste assunto. Se algo merecer retorno, marque em segundos e continue estudando.</p>';
+}
+
 function renderizarListaPaginasCaderno() {
     const { topico } = localizarCadernoCapitulo();
     const lista = document.getElementById('chapterPageList');
@@ -6095,6 +6144,7 @@ function renderizarCadernoCapitulo() {
     const { topico } = localizarCadernoCapitulo();
     const editor = document.getElementById('chapterEditor');
     renderizarListaPaginasCaderno();
+    renderizarRevisoesDoCaderno();
     if (!editor) return;
     const pagina = topico?.caderno?.paginas?.find(item => item.id === cadernoCapituloAtual.paginaId);
     if (!pagina) { editor.innerHTML = '<div class="chapter-editor-empty"><span class="chapter-empty-mark" aria-hidden="true">✎</span><strong>Comece por uma ideia</strong><p>Escreva com suas palavras, guarde um exemplo ou transforme um texto em resumo com o Gemini.</p><div class="chapter-empty-actions"><button type="button" class="cycle-btn primary" onclick="criarPaginaCaderno()">Criar página</button><button type="button" class="cycle-btn" onclick="abrirResumoCaderno()">✦ Resumir texto</button></div></div>'; return; }

@@ -5,6 +5,7 @@
 - O diagnóstico de erro pode sugerir um flashcard conceitual. Ao salvar um erro com a opção marcada, `flashcards.cards[].sourceErrorId` guarda o ID do erro; o cartão e seu deck entram no mesmo salvamento do registro. Dados antigos não precisam desse campo. Perguntas iguais no mesmo deck não são duplicadas.
 - `autopilot.autoErrorFlashcards` é opcional, padrão ligado. Controla apenas o estado inicial da opção no formulário; o aluno ainda confirma o registro e pode desmarcar o cartão individualmente.
 - O painel mostra o ritmo médio por área a partir de `practiceSessions` dos últimos sete dias, sem novo campo persistido; questões puladas e durações inválidas não entram na média. O treino avisa discretamente após quatro minutos numa questão.
+- O laboratório experimental de XP só fica visível em `localhost`/`127.0.0.1`. Nenhum dado de XP ou patente foi apagado.
 
 - `autopilot` é opcional e preserva todos os campos antigos. A ausência usa `{ enabled: true, dailyMinutes: 240, subjectWeights: {}, todayBudget: null }`.
 - `autopilot.todayBudget` guarda `{ date: YYYY-MM-DD, minutes }` somente para o dia escolhido; no dia seguinte volta à meta normal. Nenhuma sessão ou bloco existente é modificado ao mudar esse orçamento.

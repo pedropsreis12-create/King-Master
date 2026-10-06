@@ -583,6 +583,7 @@ html[data-rank-mode="aura"][data-xp-rank="instinto"], html[data-rank-mode="aura"
 @keyframes entityAscension { 50% { translate: -50% calc(-50% - 16px); scale: 1.12; rotate: 3deg; filter: drop-shadow(0 0 42px rgba(255,210,85,.85)); } }
 @keyframes entityWarp { 0% { translate: 0 130px; scale: 1 .2; opacity: 0; } 35% { opacity: .9; } 100% { translate: var(--drift) -160px; scale: 1 1.7; opacity: 0; } }
 .xp-test-panel { margin-top: 22px; padding: 26px; border-color: rgba(var(--accent-rgb), .28); background: linear-gradient(135deg, rgba(var(--accent-rgb), .08), transparent 48%), var(--card-bg); }
+.xp-test-panel[hidden] { display: none !important; }
 .xp-test-panel.is-locked { padding: 14px; background: linear-gradient(135deg, rgba(var(--accent-rgb), .07), transparent 55%), var(--card-bg); }
 .xp-lab-lock-button { width: 100%; min-height: 82px; display: flex; align-items: center; gap: 15px; padding: 16px 18px; border: 1px solid var(--border-color); border-radius: 17px; background: var(--hover-bg); color: var(--text-main); text-align: left; cursor: pointer; transition: border-color .2s ease, transform .2s ease, background .2s ease; }
 .xp-lab-lock-button:hover { transform: translateY(-1px); border-color: rgba(var(--accent-rgb), .45); background: rgba(var(--accent-rgb), .08); }

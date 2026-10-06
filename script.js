@@ -1,5 +1,6 @@
 const XP_LAB_SESSION_KEY = 'kingMasterXpLabUnlocked';
-let XP_LAB_ATIVO = sessionStorage.getItem(XP_LAB_SESSION_KEY) === 'true';
+const XP_LAB_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+let XP_LAB_ATIVO = XP_LAB_LOCAL && sessionStorage.getItem(XP_LAB_SESSION_KEY) === 'true';
 document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
 
 const REVISAO_MOTIVOS = {
@@ -1754,6 +1755,8 @@ function sincronizarCadeadoXp() {
     const cadeado = document.getElementById('xpLabLock');
     const conteudo = document.getElementById('xpTestContent');
     if (!painel || !cadeado || !conteudo) return;
+    painel.hidden = !XP_LAB_LOCAL;
+    if (!XP_LAB_LOCAL) return;
     painel.classList.toggle('is-locked', !XP_LAB_ATIVO);
     painel.classList.toggle('is-unlocked', XP_LAB_ATIVO);
     cadeado.hidden = XP_LAB_ATIVO;

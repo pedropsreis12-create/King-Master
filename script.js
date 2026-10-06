@@ -35,6 +35,10 @@ const defaultAppData = {
     flashcards: { decks: [], cards: [], states: {}, reviews: [] },
     quickNotes: [],
     quickNoteBooks: [],
+    cadernoCentral: { revisados: {}, legendaCores: { amarelo: 'Conceito', verde: 'Exemplo', azul: 'Fórmula', rosa: 'Pegadinha' } },
+    studentPlan: { configured: false, goal: 'enem', course: '', target: '', examDate: '', examDate2: '', weights: {}, rhythm: 'equilibrado', minutesByWeekday: [0, 240, 240, 240, 240, 240, 120] },
+    planosSemanais: {},
+    prazos: [],
     dailyGoalMinutes: 240,
     lastWeekStart: '', 
     themeColor: '', 
@@ -55,7 +59,7 @@ const defaultAppData = {
     frameVaultOpen: false,
     onboardingCompleted: false,
     accessibility: { fontScale: 'normal', highContrast: false, dyslexiaMode: false, motionMode: 'auto' },
-    studyLogging: { autoReview: true, reviewDelayDays: 1 },
+    studyLogging: { autoReview: true, reviewDelayDays: 1, reviewTrail: [1, 7, 15, 30] },
     autopilot: { enabled: true, dailyMinutes: 240, subjectWeights: {}, todayBudget: null },
     studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], dailyCapacityMinutes: 240, blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
     personalDevelopment: {
@@ -123,7 +127,17 @@ appData.quickNotes.forEach(nota => {
 appData.revisoesItems = appData.revisoesItems.map(normalizarItemRevisao);
 if (!appData.revisaoTags) appData.revisaoTags = [];
 if (!Array.isArray(appData.cadernoErrosItems)) appData.cadernoErrosItems = [];
+if (!appData.cadernoCentral || typeof appData.cadernoCentral !== 'object') appData.cadernoCentral = { revisados: {} };
+if (!appData.cadernoCentral.revisados || typeof appData.cadernoCentral.revisados !== 'object') appData.cadernoCentral.revisados = {};
+if (!appData.cadernoCentral.legendaCores || typeof appData.cadernoCentral.legendaCores !== 'object') appData.cadernoCentral.legendaCores = { ...defaultAppData.cadernoCentral.legendaCores };
+if (!appData.studentPlan || typeof appData.studentPlan !== 'object') appData.studentPlan = { ...defaultAppData.studentPlan };
+if (!appData.planosSemanais || typeof appData.planosSemanais !== 'object') appData.planosSemanais = {};
+if (!Array.isArray(appData.prazos)) appData.prazos = [];
 window.KingFlashcardsCore?.ensure(appData);
+if (window.KingTopicCore?.migrate(appData)) {
+    // Persistimos a migração sem alterar a revisão da nuvem antes da conta ser carregada.
+    try { localStorage.setItem('qg_pedro_data', JSON.stringify(appData)); } catch { /* Próximo salvamento tentará de novo. */ }
+}
 if (!appData.xpLoginDates) appData.xpLoginDates = [];
 if (!Number.isFinite(Number(appData.xpResetOffset))) appData.xpResetOffset = 0;
 if (!Array.isArray(appData.frasesMotivacionaisFila)) appData.frasesMotivacionaisFila = [];
@@ -149,6 +163,7 @@ if (!appData.studyLogging || typeof appData.studyLogging !== 'object') appData.s
 appData.studyLogging = { ...defaultAppData.studyLogging, ...appData.studyLogging };
 appData.studyLogging.autoReview = appData.studyLogging.autoReview !== false;
 appData.studyLogging.reviewDelayDays = [1, 3, 7, 14, 30].includes(Number(appData.studyLogging.reviewDelayDays)) ? Number(appData.studyLogging.reviewDelayDays) : 1;
+appData.studyLogging.reviewTrail = window.KingReviewTrailCore?.validIntervals(appData.studyLogging.reviewTrail) || [1, 7, 15, 30];
 if (!appData.autopilot || typeof appData.autopilot !== 'object' || Array.isArray(appData.autopilot)) appData.autopilot = { ...defaultAppData.autopilot };
 appData.autopilot = { ...defaultAppData.autopilot, ...appData.autopilot };
 if (!appData.autopilot.subjectWeights || typeof appData.autopilot.subjectWeights !== 'object' || Array.isArray(appData.autopilot.subjectWeights)) appData.autopilot.subjectWeights = {};
@@ -200,6 +215,7 @@ document.documentElement.setAttribute('data-rank-mode', appData.rankVisualMode);
 aplicarCorDoSistema(appData.themeColor || '#007aff');
 
 function saveAppData() { 
+    window.KingTopicCore?.migrate(appData);
     sincronizarFilaSessoesPendentes();
     if (timerPersistenceReady) appData.timerState = captureTimerState();
     const previousRevision = appData.lastModifiedAt;
@@ -787,6 +803,8 @@ function showSection(sectionId) {
     if(sectionId === 'agendamento') renderizarAgendamento();
     if(sectionId === 'cronograma') window.KingSchedule?.render();
     if(sectionId === 'revisoes') renderizarRevisoes();
+    if(sectionId === 'caderno-central') window.KingNotebook?.render();
+    if(['dashboard', 'agendamento', 'historico', 'planejamento'].includes(sectionId)) window.KingStudyEvolution?.render?.();
     if(sectionId === 'flashcards') window.KingFlashcards?.render?.();
     if(sectionId === 'caderno-erros') renderizarCadernoErros();
     if(sectionId === 'simulados') renderizarSimulados();
@@ -1053,6 +1071,11 @@ function confirmarDelecao() {
     }
     else if (tipo === 'revisao') {
         const removida = appData.revisoesItems.find(i => i.id === id);
+        if (removida?.origem === 'trilha') {
+            const topico = encontrarAssuntoDaTrilha(removida)?.topic;
+            if (topico) topico.trilha = null;
+            appData.revisoesItems = appData.revisoesItems.filter(item => item.origem !== 'trilha' || String(item.topicId) !== String(removida.topicId) || item.status === 'revisado');
+        }
         appData.revisoesItems = appData.revisoesItems.filter(i => i.id !== id);
         if (removida?.imagem?.id) window.kingCloud?.deleteReviewImage?.(removida.imagem.id).catch(() => {});
         saveAppData(); renderizarRevisoes();
@@ -1068,9 +1091,18 @@ function confirmarDelecao() {
         renderizarRevisoes();
         showToast('Tag excluída das revisões.');
     }
+    else if (tipo === 'prazo') {
+        appData.prazos = (appData.prazos || []).filter(item => item.id !== Number(id));
+        saveAppData(); window.KingStudyEvolution?.renderDeadlines?.();
+        showToast('Prazo removido da Agenda.');
+    }
     else if (tipo === 'topico') {
         const [materiaId, topicoIndice] = String(id).split(':').map(Number);
         deletarTopico(materiaId, topicoIndice);
+    }
+    else if (tipo === 'theme') {
+        const [materiaId, themeId] = String(id).split(':');
+        excluirTema(materiaId, themeId);
     }
     else if (tipo === 'repeatTopicStudy') {
         const [materiaId, topicoIndice] = String(id).split(':').map(Number);
@@ -2128,12 +2160,77 @@ function criarRevisaoAutomaticaRegistro(materia, assunto, dias = 1, origem = 'se
     return true;
 }
 
-function atualizarTopicoAposEstudo(materia, assunto) {
+function encontrarAssuntoDaTrilha(revisao) {
+    return revisao?.topicId ? window.KingTopicCore?.findById(appData, revisao.topicId) : null;
+}
+
+function dataProvaParaTrilha() {
+    return [appData.studentPlan?.examDate, appData.studentPlan?.examDate2].filter(data => /^\d{4}-\d{2}-\d{2}$/.test(data || '') && data >= dataLocalISO()).sort()[0] || '';
+}
+
+function sincronizarEspelhoTrilha(materia, topico) {
+    const etapa = window.KingReviewTrailCore?.active(topico);
+    if (!etapa) return null;
+    let espelho = appData.revisoesItems.find(item => item.origem === 'trilha' && String(item.topicId) === String(topico.id) && Number(item.trilhaEtapa) === etapa.numero);
+    if (!espelho && etapa.numero === 1) {
+        espelho = appData.revisoesItems.find(item => item.status !== 'revisado' && item.dataAlvo === etapa.dataPrevista
+            && (String(item.topicId || '') === String(topico.id) || (normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome)))
+            && /sessao|topico-rapido|recuperacao-ativa/.test(item.origem || ''));
+        if (espelho) { espelho.topicId = topico.id; espelho.origem = 'trilha'; espelho.trilhaEtapa = 1; }
+    }
+    if (!espelho) {
+        const agora = Date.now();
+        espelho = normalizarItemRevisao({ id: agora + Math.floor(Math.random() * 1000), materia: materia.subject, materiaIds: [materia.id], assunto: topico.nome,
+            topicId: topico.id, trilhaEtapa: etapa.numero, origem: 'trilha', dataEstudo: dataLocalISO(), dataAlvo: etapa.dataPrevista,
+            motivos: ['reforcar'], status: 'pendente', prioridade: etapa.tentativasFracas ? 'alta' : 'media', criadoEm: agora });
+        appData.revisoesItems.push(espelho);
+    } else {
+        espelho.dataAlvo = etapa.dataPrevista;
+        espelho.status = etapa.tentativasFracas ? 'fraco' : 'pendente';
+        if (etapa.tentativasFracas) espelho.prioridade = 'alta';
+    }
+    return espelho;
+}
+
+function iniciarTrilhaAssunto(materia, topico, intervaloInicial = null) {
+    if (!materia || !topico || !window.KingReviewTrailCore) return false;
+    if (topico.trilha?.etapas?.length) return false;
+    const intervalos = [...(appData.studyLogging.reviewTrail || [1, 7, 15, 30])];
+    if (intervaloInicial && Number(intervaloInicial) > 0) intervalos[0] = Number(intervaloInicial);
+    window.KingReviewTrailCore.start(topico, intervalos, dataLocalISO(), dataProvaParaTrilha());
+    sincronizarEspelhoTrilha(materia, topico);
+    return true;
+}
+
+function darBaixaTrilha(revisao, resultado, notas = '') {
+    const vinculo = encontrarAssuntoDaTrilha(revisao);
+    if (!vinculo) return false;
+    const { subject: materia, topic: topico } = vinculo;
+    const ativa = window.KingReviewTrailCore.active(topico);
+    if (!ativa || ativa.numero !== Number(revisao.trilhaEtapa)) return false;
+    const baixa = window.KingReviewTrailCore.resolve(topico, resultado, dataLocalISO(), dataProvaParaTrilha(), notas);
+    if (!baixa) return false;
+    topico.concluido = Number(topico.nivelDominio) >= 3;
+    revisao.status = baixa.weak ? 'fraco' : 'revisado';
+    revisao.dataAlvo = baixa.weak ? baixa.step.dataPrevista : revisao.dataAlvo;
+    revisao.prioridade = baixa.weak ? 'alta' : revisao.prioridade;
+    revisao.revisadoEm = baixa.weak ? null : Date.now();
+    revisao.atualizadoEm = Date.now();
+    revisao.historicoRevisoes = [...(revisao.historicoRevisoes || []), { acao: baixa.weak ? 'ainda-fraca' : 'concluida', em: Date.now(), dataAlvo: revisao.dataAlvo }].slice(-20);
+    if (!baixa.weak && baixa.next) sincronizarEspelhoTrilha(materia, topico);
+    saveAppData(); renderizarRevisoes();
+    if (document.getElementById('topic-workspace')?.classList.contains('active')) renderizarEspacoTopico();
+    showToast(baixa.finished ? `Trilha concluída: ${topico.nome} está consolidado.` : (baixa.weak ? 'Ainda fraco: tente novamente amanhã.' : `R${baixa.next.numero} agendada.`));
+    return true;
+}
+
+function atualizarTopicoAposEstudo(materia, assunto, topicId = '') {
     if (!materia || !assunto) return null;
     if (!Array.isArray(materia.topicos)) materia.topicos = [];
-    let topico = materia.topicos.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(assunto));
+    let topico = (topicId ? materia.topicos.find(item => String(item.id) === String(topicId)) : null)
+        || materia.topicos.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(assunto));
     if (!topico) {
-        topico = { nome: String(assunto).trim().slice(0, 100), concluido: false, prioridade: 'media', nivelDominio: 1, notas: '' };
+        topico = { id: window.KingTopicCore.makeId('assunto'), nome: String(assunto).trim().slice(0, 100), concluido: false, prioridade: 'media', nivelDominio: 1, notas: '' };
         materia.topicos.push(topico);
     }
     topico.nivelDominio = Math.max(1, obterNivelDominioTopico(topico));
@@ -2172,9 +2269,14 @@ function registrarSessao(segundos, detalhes = null) {
     if (materia) {
         nome = materia.subject; cor = materia.color;
         materia.executedMin = (materia.executedMin || 0) + (segundos / 60);
-    } else cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)];
+    } else if (String(activeSubjId) === 'mixed') { nome = 'Revisão geral / questões mistas'; cor = '#607d8b'; }
+    else cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)];
 
-    const assunto = String(detalhes?.assunto || '').trim();
+    const vinculoPorId = materia && window.KingTopicCore?.findById(appData, detalhes?.topicId);
+    const topicoExistente = vinculoPorId && materia && vinculoPorId.subject.id === materia.id ? vinculoPorId.topic
+        : (materia ? (window.KingTopicCore?.findByName(appData, materia.id, detalhes?.assunto)?.topic
+            || materia.topicos?.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(detalhes?.assunto))) : null);
+    const assunto = String(activeSubjId) === 'mixed' ? '' : String(topicoExistente?.nome || detalhes?.assunto || '').trim();
     const comentario = String(detalhes?.comentario || '').trim();
     const atividade = ['estudo', 'simulado', 'redacao'].includes(detalhes?.atividade) ? detalhes.atividade : 'estudo';
     tipo = { estudo: 'Estudo', simulado: 'Simulado', redacao: 'Redação' }[atividade];
@@ -2187,8 +2289,21 @@ function registrarSessao(segundos, detalhes = null) {
     Object.assign(historico, { questoes, acertos, erros, brancos: Math.max(0, Number(detalhes?.simulado?.brancos) || 0), sourceSessionId, subjectId: materia?.id || '' });
     appData.historyItems.push(historico);
     if (materia && questoes) { materia.questoes = Number(materia.questoes || 0) + questoes; materia.acertos = Number(materia.acertos || 0) + acertos; materia.erros = Number(materia.erros || 0) + erros; }
-    if (materia && assunto) atualizarTopicoAposEstudo(materia, assunto);
-    if (detalhes?.autoReview) criarRevisaoAutomaticaRegistro(nome, assunto, detalhes.reviewDelayDays, `sessao-${atividade}`);
+    let topicoDaSessao = null;
+    if (materia && assunto) {
+        const topico = atualizarTopicoAposEstudo(materia, assunto, topicoExistente?.id);
+        topicoDaSessao = topico;
+        if (topico && detalhes?.temaId && materia.temas?.some(theme => theme.id === detalhes.temaId) && !topico.temaId) topico.temaId = detalhes.temaId;
+        if (topico) {
+            historico.topicId = topico.id;
+            topico.questoes = Math.max(0, Number(topico.questoes) || 0) + questoes;
+            topico.acertos = Math.max(0, Number(topico.acertos) || 0) + acertos;
+            topico.erros = Math.max(0, Number(topico.erros) || 0) + erros;
+            if (questoes) topico.desempenhoRecentes = [...(topico.desempenhoRecentes || []), { questoes, acertos, em: Date.now() }].slice(-40);
+        }
+    }
+    if (detalhes?.autoReview && topicoDaSessao) iniciarTrilhaAssunto(materia, topicoDaSessao, detalhes.reviewDelayDays);
+    else if (detalhes?.autoReview) criarRevisaoAutomaticaRegistro(nome, assunto, detalhes.reviewDelayDays, `sessao-${atividade}`);
     if (Array.isArray(detalhes?.errorItems)) {
         const ultimoId = appData.cadernoErrosItems.reduce((maior, item) => Math.max(maior, Number(item.id) || 0), Date.now());
         detalhes.errorItems.slice(0, 30).forEach((item, index) => {
@@ -2258,12 +2373,60 @@ function registrarSessao(segundos, detalhes = null) {
     return true;
 }
 
+let ultimoSessionSubjectId = '';
 function atualizarTopicosRegistroSessao() {
     const select = document.getElementById('sessionSubject');
     const datalist = document.getElementById('sessionTopicOptions');
     if (!select || !datalist) return;
     const materia = appData.cycleItems.find(item => String(item.id) === String(select.value));
-    datalist.innerHTML = (materia?.topicos || []).map(topico => `<option value="${escaparRevisaoHtml(topico.nome)}"></option>`).join('');
+    const tema = document.getElementById('sessionTheme');
+    const mudouMateria = ultimoSessionSubjectId !== String(select.value);
+    ultimoSessionSubjectId = String(select.value);
+    if (mudouMateria) {
+        tema.innerHTML = '<option value="">Todos os temas</option>' + (materia?.temas || []).sort((a, b) => a.ordem - b.ordem)
+            .map(item => `<option value="${escaparRevisaoHtml(item.id)}">${escaparRevisaoHtml(item.nome)}</option>`).join('');
+    }
+    document.getElementById('sessionThemeField').hidden = !materia;
+    document.getElementById('sessionTopicField').hidden = select.value === 'mixed';
+    document.getElementById('sessionTopic').required = select.value !== 'mixed';
+    const autoReview = document.getElementById('sessionAutoReview');
+    if (select.value === 'mixed') autoReview.checked = false;
+    autoReview.disabled = select.value === 'mixed';
+    atualizarRevisaoRegistroSessao();
+    const topicos = (materia?.topicos || []).filter(topico => !tema.value || topico.temaId === tema.value);
+    datalist.innerHTML = topicos.map(topico => `<option value="${escaparRevisaoHtml(topico.nome)}"></option>`).join('');
+    sugerirAssuntoRegistroSessao();
+}
+
+function selecionarSugestaoAssunto(indice) {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('sessionSubject').value));
+    const topico = materia?.topicos?.[indice];
+    if (!topico) return;
+    document.getElementById('sessionTopic').value = topico.nome;
+    document.getElementById('sessionTopicId').value = topico.id;
+    document.getElementById('sessionTopicHint').textContent = 'Assunto existente selecionado.';
+}
+
+function sugerirAssuntoRegistroSessao() {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(document.getElementById('sessionSubject').value));
+    const texto = document.getElementById('sessionTopic').value.trim();
+    const hint = document.getElementById('sessionTopicHint');
+    const hidden = document.getElementById('sessionTopicId');
+    hidden.value = '';
+    hint.textContent = '';
+    if (!materia || !texto) return;
+    const chave = window.KingTopicCore.key(texto);
+    const exato = (materia.topicos || []).find(topico => window.KingTopicCore.key(topico.nome) === chave);
+    if (exato) {
+        hidden.value = exato.id;
+        hint.textContent = texto === exato.nome ? 'Assunto cadastrado selecionado.' : `Usaremos o assunto cadastrado “${exato.nome}”.`;
+        return;
+    }
+    const palavras = valor => window.KingTopicCore.key(valor).split(/\s+/).sort().join(' ');
+    const similarIndex = (materia.topicos || []).findIndex(topico => palavras(topico.nome) === palavras(texto));
+    if (similarIndex >= 0) {
+        hint.innerHTML = `Você quis dizer <button type="button" onclick="selecionarSugestaoAssunto(${similarIndex})">${escaparRevisaoHtml(materia.topicos[similarIndex].nome)}</button>?`;
+    } else hint.textContent = `+ Novo assunto: ${texto.slice(0, 100)}`;
 }
 
 function atualizarTipoRegistroSessao() {
@@ -2299,11 +2462,13 @@ function abrirRegistroSessaoPendente() {
     form.reset();
     document.getElementById('sessionCompleteTime').textContent = formatHistoryTime(pendente.seconds);
     const select = document.getElementById('sessionSubject');
-    select.innerHTML = '<option value="">Sem matéria</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
+    select.innerHTML = '<option value="">Sem matéria</option><option value="mixed">Revisão geral / questões mistas</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
     select.value = appData.cycleItems.some(item => String(item.id) === String(pendente.subjectId)) ? String(pendente.subjectId) : '';
     const rascunho = pendente.draft || {};
     if (rascunho.subjectId != null && [...select.options].some(option => String(option.value) === String(rascunho.subjectId))) select.value = String(rascunho.subjectId);
-    document.getElementById('sessionTopic').value = rascunho.assunto || '';
+    const bloco = appData.studySchedule?.weeks?.[pendente.scheduleWeekKey]?.blocks?.find(item => String(item.id) === String(pendente.scheduleBlockId));
+    document.getElementById('sessionTopic').value = rascunho.assunto || pendente.topic || bloco?.topic || '';
+    document.getElementById('sessionTopicId').value = rascunho.topicId || '';
     document.getElementById('sessionNotes').value = rascunho.comentario || '';
     const tipo = ['estudo', 'simulado', 'redacao'].includes(rascunho.atividade) ? rascunho.atividade : 'estudo';
     const radio = document.querySelector(`input[name="sessionKind"][value="${tipo}"]`);
@@ -2330,6 +2495,9 @@ function abrirRegistroSessaoPendente() {
         document.querySelectorAll('.session-essay-score').forEach((input, indice) => input.value = rascunho.redacao.scores?.[indice] || '');
         document.getElementById('sessionEssayNextFocus').value = rascunho.redacao.nextFocus || '';
     }
+    ultimoSessionSubjectId = '';
+    atualizarTopicosRegistroSessao();
+    document.getElementById('sessionTheme').value = rascunho.temaId || '';
     atualizarTopicosRegistroSessao(); atualizarTipoRegistroSessao(); atualizarRevisaoRegistroSessao();
     document.getElementById('sessionCompleteModal').classList.add('active');
     setTimeout(() => document.getElementById('sessionTopic')?.focus(), 120);
@@ -2438,6 +2606,8 @@ function coletarRascunhoRegistroSessao() {
     const atividade = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
     return {
         subjectId: document.getElementById('sessionSubject')?.value || '',
+        temaId: document.getElementById('sessionTheme')?.value || '',
+        topicId: document.getElementById('sessionTopicId')?.value || '',
         assunto: document.getElementById('sessionTopic')?.value.trim() || '',
         comentario: document.getElementById('sessionNotes')?.value.trim() || '',
         atividade,
@@ -2469,9 +2639,12 @@ function salvarRegistroSessao(event) {
     const atividade = document.querySelector('input[name="sessionKind"]:checked')?.value || 'estudo';
     const assunto = document.getElementById('sessionTopic').value.trim();
     const comentario = document.getElementById('sessionNotes').value.trim();
-    if (!assunto) return showToast('Informe o tópico ou assunto estudado. O resumo é opcional.', true);
-    const detalhes = { subjectId: document.getElementById('sessionSubject').value, assunto, comentario, atividade,
-        autoReview: document.getElementById('sessionAutoReview').checked, reviewDelayDays: Number(document.getElementById('sessionReviewDelay').value) || 1 };
+    const subjectId = document.getElementById('sessionSubject').value;
+    if (!assunto && subjectId !== 'mixed') return showToast('Informe o assunto estudado. O resumo é opcional.', true);
+    const detalhes = { subjectId, assunto, temaId: document.getElementById('sessionTheme').value,
+        topicId: document.getElementById('sessionTopicId').value, comentario, atividade,
+        autoReview: subjectId !== 'mixed' && document.getElementById('sessionAutoReview').checked,
+        reviewDelayDays: Number(document.getElementById('sessionReviewDelay').value) || 1 };
     if (atividade === 'estudo') {
         const questoes = Math.max(0, Number(document.getElementById('sessionStudyQuestions').value) || 0);
         const acertos = Math.max(0, Number(document.getElementById('sessionStudyHits').value) || 0);
@@ -2918,15 +3091,20 @@ function salvarMateriaCiclo(e) {
         const idx = appData.cycleItems.findIndex(i => i.id == idEdit); 
         if (idx > -1) { 
             const atuais = Array.isArray(appData.cycleItems[idx].topicos) ? appData.cycleItems[idx].topicos : [];
-            const chavesAtuais = new Set(atuais.map(item => String(item.nome || '').trim().toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ')));
-            const adicionados = novosTopicos.filter(nome => !chavesAtuais.has(nome.toLocaleLowerCase('pt-BR').replace(/\s+/g, ' '))).map(nome => ({ nome, concluido: false }));
+            const materiaAtual = appData.cycleItems[idx];
+            const chavesAtuais = new Set(atuais.map(item => `${item.temaId || ''}:${window.KingTopicCore.key(item.nome)}`));
+            const adicionados = novosTopicos.map(valor => window.KingTopicCore.parseTopicInput(materiaAtual, valor))
+                .filter(({ nome, temaId }) => { const chave = `${temaId}:${window.KingTopicCore.key(nome)}`; if (!nome || chavesAtuais.has(chave)) return false; chavesAtuais.add(chave); return true; })
+                .map(item => ({ id: window.KingTopicCore.makeId('assunto'), ...item, concluido: false }));
             quantidadeTopicosAdicionados = adicionados.length;
             const nomeAnterior = appData.cycleItems[idx].subject;
             appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, schedule, topicos: [...atuais, ...adicionados] };
             if (normalizarRevisaoTexto(nomeAnterior) !== normalizarRevisaoTexto(subject)) renomearMateriaNosRegistros(nomeAnterior, subject);
         } 
     } else { 
-        appData.cycleItems.push({ id: Date.now(), color, subject, schedule, targetMin: 0, executedMin: 0, topicos: novosTopicos.map(nome => ({ nome, concluido: false })), questoes: 0, acertos: 0, erros: 0 });
+        const novaMateria = { id: Date.now(), color, subject, schedule, targetMin: 0, executedMin: 0, temas: [], topicos: [], questoes: 0, acertos: 0, erros: 0 };
+        novaMateria.topicos = novosTopicos.map(valor => ({ id: window.KingTopicCore.makeId('assunto'), ...window.KingTopicCore.parseTopicInput(novaMateria, valor), concluido: false }));
+        appData.cycleItems.push(novaMateria);
     }
     saveAppData(); renderizarCiclo(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
     showToast(quantidadeTopicosAdicionados ? `📚 Matéria salva com ${quantidadeTopicosAdicionados} ${quantidadeTopicosAdicionados === 1 ? 'tópico' : 'tópicos'}!` : '📚 Matéria salva!');
@@ -2940,6 +3118,7 @@ let assuntoSelecionadoIndice = null;
 let abaDetalheTopicoAtual = 'visao';
 let filtroAgendamentoAtual = 'todos';
 let filtroRevisoesAtual = 'pendentes';
+let filtroOrigemRevisoesAtual = 'todas';
 let filtroSimuladosAtual = 'todas';
 let filtroHistoricoAtual = { busca: '', periodo: 'tudo' };
 
@@ -3024,8 +3203,9 @@ function ordenarAssuntos(ordenacao = 'acao') {
 function obterRevisaoAtivaTopico(materia, topico) {
     return appData.revisoesItems
         .filter(item => item.status !== 'revisado'
-            && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject)
-            && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome))
+            && (item.topicId ? String(item.topicId) === String(topico.id)
+                : normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject)
+                    && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome)))
         .sort((a, b) => (a.dataAlvo || '9999-12-31').localeCompare(b.dataAlvo || '9999-12-31'))[0] || null;
 }
 
@@ -3263,7 +3443,7 @@ function adicionarTopico(e) {
     if (appData.cycleItems[idx].topicos.some(topico => normalizarRevisaoTexto(topico.nome) === normalizarRevisaoTexto(nm))) {
         showToast('Este tópico já está cadastrado.', true); return;
     }
-    appData.cycleItems[idx].topicos.push({ nome: nm, concluido: false, prioridade: 'media', nivelDominio: 0, notas: '' });
+    appData.cycleItems[idx].topicos.push({ id: window.KingTopicCore.makeId('assunto'), nome: nm, concluido: false, prioridade: 'media', nivelDominio: 0, notas: '' });
     assuntoSelecionadoIndice = appData.cycleItems[idx].topicos.length - 1;
     saveAppData(); document.getElementById('novoTopicoInput').value = ''; renderizarListaAssuntos(id); renderizarCiclo();
     showToast('Tópico adicionado à sua rota.');
@@ -3297,11 +3477,7 @@ function salvarDetalhesTopico(event, id, tIdx) {
     topico.prioridade = document.getElementById('topicControlPriority').value;
     topico.notas = document.getElementById('topicControlNotes').value.trim().slice(0, 500);
     if (normalizarRevisaoTexto(nomeAnterior) !== normalizarRevisaoTexto(novoNome)) {
-        const pertenceAoTopico = item => normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject)
-            && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(nomeAnterior);
-        for (const colecao of [appData.revisoesItems, appData.historyItems, appData.cadernoErrosItems]) {
-            colecao.filter(pertenceAoTopico).forEach(item => { item.assunto = novoNome; });
-        }
+        window.KingTopicCore.renameLinked(appData, materia, topico, nomeAnterior, novoNome);
         if (String(espacoTopicoAtual.materiaId) === String(id) && espacoTopicoAtual.topicoIndice === tIdx) {
             espacoTopicoAtual.nome = novoNome;
             document.getElementById('topicNavTitle').textContent = novoNome;
@@ -3363,17 +3539,28 @@ function removerRevisaoTopico(id, tIdx) {
 }
 
 function solicitarExclusaoTopico(id, tIdx) {
-    const topico = appData.cycleItems.find(item => item.id === id)?.topicos?.[tIdx];
+    const materia = appData.cycleItems.find(item => item.id === id);
+    const topico = materia?.topicos?.[tIdx];
     if (!topico) return;
-    abrirModalDeletar('topico', `${id}:${tIdx}`, 'Excluir este tópico?', `“${topico.nome}” sairá da matéria. Seu histórico de estudos será preservado.`);
+    const pendentes = appData.revisoesItems.filter(item => item.status !== 'revisado' && (item.topicId
+        ? String(item.topicId) === String(topico.id)
+        : normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome))).length;
+    abrirModalDeletar('topico', `${id}:${tIdx}`, 'Excluir este tópico?', `“${topico.nome}” sairá da matéria. Seu histórico será preservado. ${pendentes} ${pendentes === 1 ? 'revisão pendente será removida' : 'revisões pendentes serão removidas'}.`);
 }
 
 function deletarTopico(id, tIdx) {
     const idx = appData.cycleItems.findIndex(m => m.id === id);
     if (idx < 0 || !appData.cycleItems[idx].topicos?.[tIdx]) return;
+    const materia = appData.cycleItems[idx], topico = materia.topicos[tIdx];
+    const removidas = appData.revisoesItems.filter(item => item.status !== 'revisado' && (item.topicId
+        ? String(item.topicId) === String(topico.id)
+        : normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome)));
+    appData.revisoesItems = appData.revisoesItems.filter(item => !removidas.includes(item));
     appData.cycleItems[idx].topicos.splice(tIdx, 1);
     assuntoSelecionadoIndice = null;
-    saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarMapaDominio(); showToast('Tópico removido.');
+    saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarMapaDominio(); renderizarRevisoes();
+    removidas.forEach(item => { if (item.imagem?.id) window.kingCloud?.deleteReviewImage?.(item.imagem.id).catch(() => {}); });
+    showToast('Tópico e revisões pendentes removidos. Histórico preservado.');
 }
 
 function concluirRevisaoAtivaTopico(materia, topico) {
@@ -3995,12 +4182,14 @@ function normalizarRevisaoTexto(valor) {
 
 function localizarCadernoDaRevisao(revisao) {
     if (!revisao?.assunto) return null;
+    const porId = window.KingTopicCore?.findById(appData, revisao.topicId);
+    if (porId) return { materia: porId.subject, indice: porId.index, topico: porId.topic };
     const ids = new Set((revisao.materiaIds || []).map(String));
     const materias = appData.cycleItems.filter(materia => ids.has(String(materia.id))
         || normalizarRevisaoTexto(materia.subject) === normalizarRevisaoTexto(revisao.materia));
     for (const materia of materias) {
         const indice = (materia.topicos || []).findIndex(topico => normalizarRevisaoTexto(topico.nome) === normalizarRevisaoTexto(revisao.assunto));
-        if (indice >= 0) return { materia, indice };
+        if (indice >= 0) return { materia, indice, topico: materia.topicos[indice] };
     }
     return null;
 }
@@ -4225,6 +4414,7 @@ function sincronizarPrazoRevisaoRapida() {
 }
 
 function abrirModalRevisao(id = null) {
+    if (id && appData.revisoesItems.find(revisao => revisao.id === Number(id))?.origem === 'trilha') return abrirDetalheRevisao(id);
     if (isRunning && currentMode === 'estudo') toggleTimer();
     const form = document.getElementById('formAddRevisao');
     const select = document.getElementById('revisaoMateria');
@@ -4377,6 +4567,7 @@ async function salvarRevisao(e) {
 function marcarRevisao(id, novoStatus) {
     const item = appData.revisoesItems.find(revisao => revisao.id === id);
     if (!item) return;
+    if (item.origem === 'trilha' && darBaixaTrilha(item, novoStatus === 'revisado' ? 'bom' : 'fraco')) return;
     item.status = novoStatus;
     item.atualizadoEm = Date.now();
     item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: novoStatus === 'revisado' ? 'concluida' : 'ainda-fraca', em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
@@ -4393,6 +4584,7 @@ function adiarRevisao(id, dias = 1) {
     const atual = dataISOParaLocal(item.dataAlvo);
     const base = atual && atual > hoje ? atual : hoje;
     item.dataAlvo = dataRevisaoComDias(Math.max(1, Number(dias) || 1), base);
+    if (item.origem === 'trilha') window.KingReviewTrailCore?.reschedule(encontrarAssuntoDaTrilha(item)?.topic, item.dataAlvo);
     item.status = 'pendente';
     item.atualizadoEm = Date.now();
     item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: 'adiada', dias: Number(dias) || 1, em: Date.now(), dataAlvo: item.dataAlvo }].slice(-20);
@@ -4403,6 +4595,7 @@ function adiarRevisao(id, dias = 1) {
 function revisarNovamenteRevisao(id) {
     const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
     if (!item) return;
+    if (item.origem === 'trilha') return abrirDetalheRevisao(id);
     item.status = 'pendente';
     item.dataAlvo = dataRevisaoComDias(1);
     item.ultimaRevisaoEm = dataLocalISO();
@@ -4427,6 +4620,7 @@ function salvarReagendamentoRevisao(e) {
     const item = appData.revisoesItems.find(revisao => revisao.id === id);
     if (!item) return;
     item.dataAlvo = document.getElementById('reagendarRevisaoData').value;
+    if (item.origem === 'trilha') window.KingReviewTrailCore?.reschedule(encontrarAssuntoDaTrilha(item)?.topic, item.dataAlvo);
     item.status = 'pendente';
     item.ultimaRevisaoEm = dataLocalISO();
     item.atualizadoEm = Date.now();
@@ -4610,10 +4804,10 @@ function atualizarResumoRevisoesCronograma() {
 }
 
 function iniciarFilaRevisoesHoje() {
-    const fila = revisoesParaHoje();
+    const temFila = revisoesParaHoje().length || obterFilaErrosDevidos().length || (appData.flashcards?.decks || []).some(deck => window.KingFlashcardsCore?.deckStats(appData, deck.id)?.due);
     showSection('revisoes');
-    filtrarRevisoes(fila.length ? 'hoje' : 'pendentes');
-    if (!fila.length) showToast('Sua fila de hoje está em dia.');
+    filtrarRevisoes(temFila ? 'hoje' : 'pendentes');
+    if (!temFila) showToast('Sua fila de hoje está em dia.');
 }
 
 async function abrirImagemRevisao(imageId, nome = 'Foto da revisão') {
@@ -4690,6 +4884,11 @@ function filtrarRevisoes(filtro = 'pendentes') {
     renderizarRevisoes();
 }
 
+function filtrarOrigemRevisoes(origem) {
+    filtroOrigemRevisoesAtual = ['todas', 'trilhas', 'sessoes', 'erros', 'flashcards', 'manuais'].includes(origem) ? origem : 'todas';
+    renderizarRevisoes();
+}
+
 function renderizarRevisoes() {
     const lista = document.getElementById('revisoesList');
     if (!lista) return;
@@ -4699,19 +4898,22 @@ function renderizarRevisoes() {
     const hojeItens = pendentes.filter(item => item.dataAlvo && item.dataAlvo <= hoje);
     const proximas = pendentes.filter(item => item.dataAlvo && item.dataAlvo > hoje);
     const concluidas = appData.revisoesItems.filter(item => item.status === 'revisado');
-    const minutosHoje = hojeItens.reduce((total, item) => total + (Number(item.estimativaMin) || 5), 0);
+    const errosDevidos = obterFilaErrosDevidos();
+    const decksDevidos = (appData.flashcards?.decks || []).map(deck => ({ deck, count: window.KingFlashcardsCore?.deckStats(appData, deck.id)?.due || 0 })).filter(item => item.count > 0);
+    const gruposHoje = hojeItens.length + errosDevidos.length + decksDevidos.length;
+    const minutosHoje = hojeItens.reduce((total, item) => total + (Number(item.estimativaMin) || 5), 0) + errosDevidos.length * 4 + Math.ceil(decksDevidos.reduce((total, item) => total + item.count, 0) * .4);
 
-    document.getElementById('rev-hoje').textContent = hojeItens.length;
+    document.getElementById('rev-hoje').textContent = gruposHoje;
     document.getElementById('rev-hoje-tempo').textContent = `aprox. ${minutosHoje} min`;
     document.getElementById('rev-pendentes').textContent = pendentes.length;
     document.getElementById('rev-proximas').textContent = proximas.length;
     document.getElementById('rev-concluidas').textContent = concluidas.length;
     const chamadaHoje = document.getElementById('reviewTodayCallout');
-    chamadaHoje.hidden = !hojeItens.length;
-    document.getElementById('reviewTodayCalloutTitle').textContent = hojeItens.length ? `${pluralizar(hojeItens.length, 'revisão', 'revisões')} para hoje · aproximadamente ${minutosHoje} min` : 'Nenhuma revisão para hoje';
+    chamadaHoje.hidden = !gruposHoje;
+    document.getElementById('reviewTodayCalloutTitle').textContent = gruposHoje ? `${pluralizar(gruposHoje, 'grupo', 'grupos')} para hoje · aproximadamente ${minutosHoje} min` : 'Nenhuma revisão para hoje';
     atualizarResumoRevisoesCronograma();
 
-    if (!appData.revisoesItems.length) {
+    if (!appData.revisoesItems.length && !errosDevidos.length && !decksDevidos.length) {
         const resultado = document.getElementById('revisoesResultado');
         if (resultado) resultado.textContent = '0 revisões';
         lista.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">↻</b><strong>Sua caixa está vazia</strong><p>Quando algo travar seu estudo, use “+ Revisar depois” e continue de onde parou.</p><button type="button" class="cycle-btn primary" onclick="abrirModalRevisao()">+ Revisar depois</button></div>';
@@ -4730,15 +4932,21 @@ function renderizarRevisoes() {
     });
 
     const visiveis = ordenados.filter(item => {
+        const origem = item.origem === 'trilha' ? 'trilhas' : item.origem?.includes('sessao') ? 'sessoes' : 'manuais';
+        if (filtroOrigemRevisoesAtual !== 'todas' && filtroOrigemRevisoesAtual !== origem) return false;
         if (filtroRevisoesAtual === 'hoje') return revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo <= hoje;
         if (filtroRevisoesAtual === 'pendentes') return revisaoEstaAtiva(item);
         if (filtroRevisoesAtual === 'proximas') return revisaoEstaAtiva(item) && item.dataAlvo && item.dataAlvo > hoje;
         if (filtroRevisoesAtual === 'concluidas') return item.status === 'revisado';
         return revisaoEstaAtiva(item);
     });
+    const mostrarExtras = ['hoje', 'pendentes'].includes(filtroRevisoesAtual);
+    const mostrarErros = mostrarExtras && ['todas', 'erros'].includes(filtroOrigemRevisoesAtual);
+    const mostrarCartoes = mostrarExtras && ['todas', 'flashcards'].includes(filtroOrigemRevisoesAtual);
+    const extras = (mostrarErros ? errosDevidos.length : 0) + (mostrarCartoes ? decksDevidos.length : 0);
     const resultado = document.getElementById('revisoesResultado');
-    if (resultado) resultado.textContent = pluralizar(visiveis.length, 'revisão', 'revisões');
-    if (!visiveis.length) {
+    if (resultado) resultado.textContent = pluralizar(visiveis.length + extras, 'grupo', 'grupos');
+    if (!visiveis.length && !extras) {
         const mensagens = {
             hoje: ['Nada para revisar hoje', 'Sua fila de hoje está em dia. As próximas revisões continuam guardadas.'],
             proximas: ['Nenhuma revisão futura', 'As revisões com datas futuras aparecerão aqui.'],
@@ -4773,12 +4981,85 @@ function renderizarRevisoes() {
         const cadernoVinculado = localizarCadernoDaRevisao(item);
         const abrirCaderno = cadernoVinculado ? `<button class="cycle-btn review-open-notebook" onclick="abrirCadernoDaRevisao(${item.id})">Abrir caderno</button>` : '';
         const acaoPrincipal = revisado
-            ? `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
-            : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button>`;
-        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong><span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><div class="revision-card-subject">${escaparRevisaoHtml(item.assunto)}</div><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}${abrirCaderno}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="KingFlashcards.fromReview(${item.id})">Criar flashcard</button><button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">Abrir / editar</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, 'Excluir revisão?', 'Esta revisão e sua foto serão removidas da caixa.')">Excluir</button></div></div></details></div></article>`;
-    }).join('');
+            ? item.origem === 'trilha' ? `<button class="cycle-btn" onclick="abrirDetalheRevisao(${item.id})">Ver etapa</button>` : `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
+            : item.origem === 'trilha'
+                ? `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Lembrei bem</button><button class="cycle-btn" onclick="marcarRevisao(${item.id},'fraco')">Ainda fraco</button>`
+                : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button>`;
+        const etapa = item.origem === 'trilha' ? `<span class="revision-badge">R${Number(item.trilhaEtapa) || 1} de ${encontrarAssuntoDaTrilha(item)?.topic?.trilha?.etapas?.length || 4}</span>` : '';
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong>${etapa}<span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><button type="button" class="review-title-button revision-card-subject" onclick="abrirDetalheRevisao(${item.id})">${escaparRevisaoHtml(item.assunto)}</button><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}${abrirCaderno}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="KingFlashcards.fromReview(${item.id})">Criar flashcard</button><button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">${item.origem === 'trilha' ? 'Detalhes' : 'Editar'}</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, '${item.origem === 'trilha' ? 'Encerrar a trilha deste assunto?' : 'Excluir revisão?'}', '${item.origem === 'trilha' ? 'Esta ação encerra a trilha deste assunto. As etapas concluídas permanecem no histórico.' : 'Esta revisão e sua foto serão removidas da caixa.'}')">Excluir</button></div></div></details></div></article>`;
+    }).join('') + (mostrarErros ? errosDevidos.map(erro => `<article class="revision-card review-inbox-card review-source-extra"><div><span class="revision-badge weak">ERRO</span><strong>${escaparRevisaoHtml(erro.materia)} · ${escaparRevisaoHtml(erro.assunto)}</strong><p>${escaparRevisaoHtml(erro.regra || 'Refazer o erro e lembrar a regra anti-erro.')}</p></div><button type="button" class="cycle-btn primary" onclick="iniciarRevisaoCadernoErros(${Number(erro.id)})">Refazer</button></article>`).join('') : '')
+        + (mostrarCartoes ? decksDevidos.map(({ deck, count }) => `<article class="revision-card review-inbox-card review-source-extra"><div><span class="revision-badge">FLASHCARDS</span><strong>${escaparRevisaoHtml(deck.name)}</strong><p>${count} ${count === 1 ? 'cartão' : 'cartões'} para revisar</p></div><button type="button" class="cycle-btn primary" data-review-deck="${escaparRevisaoHtml(deck.id)}">Revisar deck</button></article>`).join('') : '');
     carregarMiniaturasRevisao();
     renderDashboardRevisoes();
+}
+
+document.getElementById('revisoesList')?.addEventListener('click', event => {
+    const button = event.target.closest('[data-review-deck]');
+    if (!button) return;
+    showSection('flashcards');
+    [...document.querySelectorAll('[data-flash-deck]')].find(item => item.dataset.flashDeck === button.dataset.reviewDeck)?.click();
+    window.KingFlashcards?.openReview?.();
+});
+
+function abrirDetalheRevisao(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item) return;
+    const vinculo = localizarCadernoDaRevisao(item);
+    const topico = vinculo?.topico;
+    const materia = vinculo?.materia;
+    const tema = materia?.temas?.find(registro => String(registro.id) === String(topico?.temaId))?.nome;
+    const etapa = topico?.trilha?.etapas?.find(registro => registro.numero === Number(item.trilhaEtapa));
+    const origem = item.origem === 'trilha' ? 'Trilha do assunto' : item.origem?.includes('sessao') ? 'Sessão de estudo'
+        : item.origem?.includes('simulado') ? 'Simulado' : item.origem?.includes('erro') ? 'Caderno de Erros' : 'Revisão manual';
+    const campos = [['Matéria', item.materia], ['Tema', tema], ['Assunto', item.assunto], ['Etapa', etapa ? `R${etapa.numero} de ${topico.trilha.etapas.length}` : ''],
+        ['Estudado em', item.dataEstudo], ['Revisar em', item.dataAlvo], ['Situação', item.status === 'revisado' ? 'Concluída' : 'Pendente'],
+        ['Motivos', (item.motivos || []).map(motivo => REVISAO_MOTIVOS[motivo]).filter(Boolean).join(', ')], ['Intervalo', etapa ? `${topico.trilha.intervalos[etapa.numero - 1]} dias` : '']]
+        .filter(([, valor]) => valor);
+    const anotacoes = [...new Set([topico?.contexto, ...(topico?.trilha?.etapas || []).map(registro => registro.notas), item.observacao, item.questao,
+        ...(topico?.caderno?.paginas || []).map(pagina => pagina.titulo)].map(valor => String(valor || '').trim()).filter(Boolean))];
+    const erros = (appData.cadernoErrosItems || []).filter(erro => String(erro.topicId || '') === String(item.topicId || '#') ||
+        (!erro.topicId && normalizarRevisaoTexto(erro.materia) === normalizarRevisaoTexto(item.materia) && normalizarRevisaoTexto(erro.assunto) === normalizarRevisaoTexto(item.assunto)));
+    const decks = (appData.flashcards?.decks || []).filter(deck => String(deck.topicId || '') === String(item.topicId || '#') ||
+        (!deck.topicId && normalizarRevisaoTexto(deck.topic) === normalizarRevisaoTexto(item.assunto) &&
+            (deck.subjectIds || [deck.subjectId]).map(String).includes(String(materia?.id))));
+    const totalCartoes = (appData.flashcards?.cards || []).filter(card => decks.some(deck => deck.id === card.deckId)).length;
+    document.getElementById('reviewDetailContent').innerHTML = `<div class="review-detail-heading"><span class="workspace-kicker">${escaparRevisaoHtml(origem)}</span><h2 id="reviewDetailTitle">${escaparRevisaoHtml(item.assunto)}</h2><p>Relembre antes de conferir suas anotações.</p></div>
+        <dl class="review-detail-grid">${campos.map(([rotulo, valor]) => `<div><dt>${rotulo}</dt><dd>${escaparRevisaoHtml(valor)}</dd></div>`).join('')}</dl>
+        <section><h3>Tudo o que você anotou</h3>${anotacoes.length ? `<ul class="review-detail-notes">${anotacoes.map(valor => `<li>${escaparRevisaoHtml(valor)}</li>`).join('')}</ul>` : '<p>Sem anotações ainda. Você pode adicionar no caderno deste assunto.</p>'}</section>
+        <section><h3>Como revisar (5 a 10 min)</h3><ol><li>Sem olhar nada, escreva ou fale o que lembra.</li><li>Abra o caderno e compare.</li><li>Resolva 3 a 5 questões.</li><li>Volte aqui e dê baixa com sinceridade.</li></ol></section>
+        <div class="review-detail-actions">${vinculo ? `<button type="button" class="cycle-btn primary" onclick="fecharModal('reviewDetailModal');KingNotebook.openRecall(${item.id})">Revisar com o caderno</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');abrirCadernoDaRevisao(${item.id})">Abrir caderno do assunto</button><button type="button" class="cycle-btn" onclick="abrirTreinoDaRevisao(${item.id})">Treinar 10 questões</button>` : ''}<button type="button" class="cycle-btn" onclick="abrirErrosDaRevisao(${item.id})">Erros deste assunto (${erros.length})</button><button type="button" class="cycle-btn" onclick="abrirFlashcardsDaRevisao(${item.id})">Flashcards deste assunto (${totalCartoes})</button></div>
+        <div class="cycle-modal-actions">${item.status === 'revisado' ? '' : `<button type="button" class="cycle-btn primary" onclick="fecharModal('reviewDetailModal');marcarRevisao(${item.id},'revisado')">Lembrei bem</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');marcarRevisao(${item.id},'fraco')">Ainda fraco</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');adiarRevisao(${item.id},1)">Adiar 1 dia</button>`}<button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal')">Fechar</button></div>`;
+    document.getElementById('reviewDetailModal').classList.add('active');
+}
+
+function abrirErrosDaRevisao(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item) return;
+    fecharModal('reviewDetailModal');
+    showSection('caderno-erros');
+    const busca = document.getElementById('errorSearchInput');
+    if (busca) { busca.value = item.assunto; atualizarFiltrosCadernoErros(); }
+}
+
+function abrirFlashcardsDaRevisao(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item) return;
+    const vinculo = localizarCadernoDaRevisao(item);
+    const deck = (appData.flashcards?.decks || []).find(registro => String(registro.topicId || '') === String(item.topicId || '#') ||
+        (!registro.topicId && normalizarRevisaoTexto(registro.topic) === normalizarRevisaoTexto(item.assunto) &&
+            (registro.subjectIds || [registro.subjectId]).map(String).includes(String(vinculo?.materia?.id))));
+    fecharModal('reviewDetailModal');
+    showSection('flashcards');
+    if (deck) [...document.querySelectorAll('[data-flash-deck]')].find(button => button.dataset.flashDeck === deck.id)?.click();
+    else showToast('Ainda não há um deck deste assunto. Crie um aqui para revisar.', false);
+}
+
+function abrirTreinoDaRevisao(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    const vinculo = localizarCadernoDaRevisao(item);
+    if (!vinculo) return;
+    fecharModal('reviewDetailModal');
+    window.KingPractice?.open({ subjectId: vinculo.materia.id, topic: vinculo.topico.nome });
 }
 
 const CADERNO_ERROS_TIPOS = {
@@ -5874,6 +6155,8 @@ function navegarAbasHub(event) {
 
 const cadernoCapituloAtual = { materiaId: null, topicoIndice: null, paginaId: null, busca: '', filtro: 'todos', limite: 12 };
 let temporizadorCadernoCapitulo = null;
+let cadernoModoLeitura = false;
+let destaqueCadernoSelecao = null;
 const espacoTopicoAtual = { materiaId: null, topicoIndice: null, nome: '', aba: 'visao' };
 let temporizadorContextoTopico = null;
 
@@ -5916,15 +6199,32 @@ function renderizarEspacoTopico() {
     document.getElementById('topicNavTitle').textContent = topico.nome;
     document.getElementById('topicNavSubject').textContent = materia.subject;
     document.getElementById('topicWorkspaceContext').value = topico.contexto || '';
+    const themeSelect = document.getElementById('topicWorkspaceTheme');
+    themeSelect.innerHTML = '<option value="">Conteúdo geral</option>' + (materia.temas || []).sort((a, b) => a.ordem - b.ordem)
+        .map(theme => `<option value="${escaparRevisaoHtml(theme.id)}">${escaparRevisaoHtml(theme.nome)}</option>`).join('');
+    themeSelect.value = topico.temaId || '';
     const analise = obterAnaliseTopico(materia, topico);
     document.getElementById('topicWorkspaceAnalytics').innerHTML = htmlAnaliseTopico(analise);
     document.getElementById('topicWorkspaceHistoryList').innerHTML = htmlHistoricoTopico(analise);
-    const revisao = obterRevisaoAtivaTopico(materia, topico);
-    const concluidas = (appData.revisoesItems || []).filter(item => item.status === 'revisado' && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(topico.nome)).length;
-    document.getElementById('topicWorkspaceReviewState').innerHTML = revisao
-        ? `<div class="topic-workspace-review-status"><strong>${escaparRevisaoHtml(rotuloDataRevisao(revisao.dataAlvo) || 'Revisão pendente')}</strong><small>${concluidas} ${concluidas === 1 ? 'revisão concluída' : 'revisões concluídas'} neste assunto</small></div><button type="button" class="topic-workspace-remove-review" onclick="solicitarRemocaoRevisaoTopico(${materia.id},${espacoTopicoAtual.topicoIndice})">Remover agendamento</button>`
-        : `<div class="topic-workspace-review-status"><strong>Sem revisão agendada</strong><small>${concluidas ? `${concluidas} ${concluidas === 1 ? 'revisão concluída' : 'revisões concluídas'}` : 'Você pode marcar a primeira para amanhã.'}</small></div>`;
-    document.getElementById('topicWorkspaceReviewButton').textContent = revisao ? 'Mudar para amanhã' : 'Revisar amanhã';
+    const trilha = topico.trilha;
+    const etapaAtiva = window.KingReviewTrailCore?.active(topico);
+    const estado = document.getElementById('topicWorkspaceReviewState');
+    const botao = document.getElementById('topicWorkspaceReviewButton');
+    if (trilha?.etapas?.length) {
+        estado.innerHTML = `<ol class="topic-review-timeline">${trilha.etapas.map(etapa => {
+            const data = etapa.concluidaEm || etapa.dataPrevista;
+            const atrasada = etapa.status === 'pendente' && data && data < dataLocalISO();
+            const texto = etapa.status === 'concluida' ? `Concluída ${etapa.concluidaEm.split('-').reverse().join('/')}`
+                : data ? `${atrasada ? 'Atrasada · ' : 'Prevista '}${data.split('-').reverse().join('/')}` : `Após ${trilha.intervalos[etapa.numero - 1]} dias`;
+            return `<li class="${etapa.status === 'concluida' ? 'done' : (atrasada ? 'late' : '')}"><b>R${etapa.numero}</b><span>${escaparRevisaoHtml(texto)}</span>${etapa.status === 'concluida' ? '<span aria-label="Concluída">✓</span>' : ''}</li>`;
+        }).join('')}</ol>${etapaAtiva ? `<label class="topic-review-note">Nota desta revisão (opcional)<input class="cycle-input" id="topicReviewNote" maxlength="300" value="${escaparRevisaoHtml(etapaAtiva.notas || '')}" placeholder="Uma frase sobre o que ainda confunde"></label><div class="topic-review-grade"><button type="button" class="cycle-btn primary" onclick="avaliarTrilhaEspacoTopico('bom')">Lembrei bem</button><button type="button" class="cycle-btn" onclick="avaliarTrilhaEspacoTopico('fraco')">Ainda fraco</button></div>` : '<p>Trilha concluída. O histórico das etapas permanece aqui.</p>'}
+            ${etapaAtiva ? `<button type="button" class="cycle-btn" onclick="revisarCadernoEspacoTopico()">Revisar com o caderno</button>` : ''}<details class="topic-review-intervals"><summary>Ajustar intervalos deste assunto</summary><div>${trilha.intervalos.map((dias, index) => `<label>R${index + 1} após <input type="number" min="1" max="120" value="${dias}" data-trail-interval="${index}"> dias</label>`).join('')}</div><button type="button" class="cycle-btn" onclick="salvarIntervalosTrilhaEspacoTopico()">Salvar intervalos</button></details>`;
+        botao.hidden = true;
+    } else {
+        estado.innerHTML = '<div class="topic-workspace-review-status"><strong>Revisões ainda não iniciadas</strong><small>Uma etapa por vez. A próxima data é calculada quando você dá baixa.</small></div>';
+        botao.hidden = false;
+        botao.textContent = 'Iniciar revisões';
+    }
     alternarAbaEspacoTopico(espacoTopicoAtual.aba, false);
 }
 
@@ -5969,8 +6269,35 @@ function salvarContextoEspacoTopico() {
 function agendarRevisaoEspacoTopico() {
     const { materia, topico } = localizarEspacoTopico();
     if (!topico) return;
-    definirRevisaoTopicoDias(materia.id, espacoTopicoAtual.topicoIndice, 1);
+    iniciarTrilhaAssunto(materia, topico);
+    saveAppData(); renderizarRevisoes();
     renderizarEspacoTopico();
+}
+
+function avaliarTrilhaEspacoTopico(resultado) {
+    const { topico } = localizarEspacoTopico();
+    const etapa = window.KingReviewTrailCore?.active(topico);
+    const revisao = appData.revisoesItems.find(item => item.origem === 'trilha' && String(item.topicId) === String(topico?.id) && Number(item.trilhaEtapa) === etapa?.numero);
+    if (revisao) darBaixaTrilha(revisao, resultado, document.getElementById('topicReviewNote')?.value || '');
+}
+
+function revisarCadernoEspacoTopico() {
+    const { topico } = localizarEspacoTopico();
+    const etapa = window.KingReviewTrailCore?.active(topico);
+    const revisao = appData.revisoesItems.find(item => item.origem === 'trilha' && String(item.topicId) === String(topico?.id) && Number(item.trilhaEtapa) === etapa?.numero);
+    if (revisao) window.KingNotebook?.openRecall(revisao.id);
+}
+
+function salvarIntervalosTrilhaEspacoTopico() {
+    const { topico } = localizarEspacoTopico();
+    if (!topico?.trilha) return;
+    const dias = [...document.querySelectorAll('#topicWorkspaceReviewState [data-trail-interval]')].map(input => Number(input.value));
+    if (dias.length !== topico.trilha.intervalos.length || dias.some(valor => !Number.isInteger(valor) || valor < 1 || valor > 120)) return showToast('Use de 1 a 120 dias em cada etapa.', true);
+    window.KingReviewTrailCore.setIntervals(topico, dias, dataLocalISO(), dataProvaParaTrilha());
+    const vinculo = localizarEspacoTopico();
+    sincronizarEspelhoTrilha(vinculo.materia, topico);
+    saveAppData(); renderizarEspacoTopico(); renderizarRevisoes();
+    showToast('Intervalos atualizados só neste assunto.');
 }
 
 function fecharEspacoTopico() {
@@ -6051,6 +6378,68 @@ function mostrarMaisCadernosCapitulos() {
     renderizarListaCapitulosCaderno();
 }
 
+function abrirModalTema(themeId = '') {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
+    if (!materia) return;
+    const theme = (materia.temas || []).find(item => item.id === themeId);
+    document.getElementById('themeModalTitle').textContent = theme ? 'Renomear tema' : 'Novo tema';
+    document.getElementById('themeEditId').value = theme?.id || '';
+    document.getElementById('themeName').value = theme?.nome || '';
+    document.getElementById('themeModal').classList.add('active');
+    document.getElementById('themeName').focus();
+}
+
+function salvarTema(event) {
+    event.preventDefault();
+    const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
+    const nome = document.getElementById('themeName').value.trim().slice(0, 60);
+    const id = document.getElementById('themeEditId').value;
+    if (!materia || !nome) return;
+    if ((materia.temas || []).some(theme => theme.id !== id && window.KingTopicCore.key(theme.nome) === window.KingTopicCore.key(nome))) return showToast('Já existe um tema com esse nome.', true);
+    if (id) {
+        const theme = materia.temas.find(item => item.id === id);
+        if (!theme) return;
+        theme.nome = nome;
+    } else window.KingTopicCore.createTheme(materia, nome);
+    saveAppData(); fecharModal('themeModal'); renderizarListaCapitulosCaderno();
+    showToast('Tema salvo.');
+}
+
+function moverTema(themeId, direcao) {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
+    const temas = (materia?.temas || []).sort((a, b) => a.ordem - b.ordem);
+    const indice = temas.findIndex(item => item.id === themeId);
+    const destino = indice + (direcao < 0 ? -1 : 1);
+    if (indice < 0 || destino < 0 || destino >= temas.length) return;
+    [temas[indice], temas[destino]] = [temas[destino], temas[indice]];
+    temas.forEach((theme, posicao) => { theme.ordem = posicao; });
+    saveAppData(); renderizarListaCapitulosCaderno();
+}
+
+function solicitarExclusaoTema(themeId) {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
+    const theme = (materia?.temas || []).find(item => item.id === themeId);
+    if (!theme) return;
+    const quantidade = (materia.topicos || []).filter(item => item.temaId === themeId).length;
+    abrirModalDeletar('theme', `${materia.id}:${theme.id}`, 'Excluir este tema?', `${quantidade} ${quantidade === 1 ? 'assunto será movido' : 'assuntos serão movidos'} para Conteúdo geral. Nenhum assunto ou registro será apagado.`, 'Excluir tema');
+}
+
+function excluirTema(materiaId, themeId) {
+    const materia = appData.cycleItems.find(item => String(item.id) === String(materiaId));
+    if (!materia?.temas?.some(item => item.id === themeId)) return;
+    materia.topicos?.forEach(topico => { if (topico.temaId === themeId) topico.temaId = ''; });
+    materia.temas = materia.temas.filter(item => item.id !== themeId);
+    materia.temas.forEach((theme, ordem) => { theme.ordem = ordem; });
+    saveAppData(); renderizarListaCapitulosCaderno(); showToast('Tema excluído. Assuntos preservados em Conteúdo geral.');
+}
+
+function moverTopicoParaTema(themeId) {
+    const { materia, topico } = localizarEspacoTopico();
+    if (!materia || !topico || (themeId && !materia.temas?.some(theme => theme.id === themeId))) return;
+    topico.temaId = themeId || '';
+    saveAppData(); showToast('Assunto movido para o tema escolhido.');
+}
+
 function renderizarListaCapitulosCaderno() {
     const materia = appData.cycleItems.find(item => String(item.id) === String(cadernoCapituloAtual.materiaId));
     const lista = document.getElementById('chapterList');
@@ -6070,13 +6459,24 @@ function renderizarListaCapitulosCaderno() {
         });
     document.getElementById('chapterResultCount').textContent = `${topicos.length} ${topicos.length === 1 ? 'assunto' : 'assuntos'}`;
     document.getElementById('chapterLoadMore').hidden = topicos.length <= cadernoCapituloAtual.limite;
-    lista.innerHTML = topicos.length ? topicos.slice(0, cadernoCapituloAtual.limite).map(({ topico, indice }) => {
+    const renderCard = ({ topico, indice }) => {
         const paginas = Array.isArray(topico.caderno?.paginas) ? topico.caderno.paginas.length : 0;
         const total = paginas + (topico.notas && !topico.cadernoMigrado ? 1 : 0);
         const estado = obterEstadoTopicoControle(materia, topico);
         const nivel = obterNivelDominioTopico(topico);
         const rotulo = estado === 'revisar' ? 'Para revisar' : ['Não iniciado', 'Em estudo', 'Consolidando', 'Dominado'][nivel];
         return `<button type="button" class="chapter-item" onclick="abrirEspacoTopico(${materia.id},${indice})"><span class="chapter-item-number">${String(indice + 1).padStart(2, '0')}</span><span class="chapter-item-copy"><strong>${escaparRevisaoHtml(topico.nome || 'Capítulo')}</strong><small>${total ? `${total} ${total === 1 ? 'página' : 'páginas'} no caderno` : 'Abrir espaço do assunto'}</small></span><span class="chapter-item-status is-${estado === 'revisar' ? 'revisar' : nivel}">${rotulo}</span><span class="chapter-item-arrow" aria-hidden="true">↗</span></button>`;
+    };
+    const pagina = topicos.slice(0, cadernoCapituloAtual.limite);
+    const themes = [{ id: '', nome: 'Conteúdo geral', ordem: -1 }, ...(materia.temas || []).sort((a, b) => a.ordem - b.ordem)];
+    lista.innerHTML = pagina.length ? themes.map((theme, themeIndex) => {
+        const itens = pagina.filter(({ topico }) => String(topico.temaId || '') === String(theme.id));
+        if (!itens.length) return '';
+        const todosDoTema = todos.filter(topico => String(topico.temaId || '') === String(theme.id));
+        const dominados = todosDoTema.filter(topico => obterNivelDominioTopico(topico) === 3).length;
+        const safeId = encodeURIComponent(String(theme.id)).replace(/'/g, '%27');
+        const actions = theme.id ? `<div class="chapter-theme-actions"><button type="button" onclick="abrirModalTema(decodeURIComponent('${safeId}'))">Renomear</button><button type="button" onclick="moverTema(decodeURIComponent('${safeId}'),-1)" ${themeIndex === 1 ? 'disabled' : ''}>Subir</button><button type="button" onclick="moverTema(decodeURIComponent('${safeId}'),1)" ${themeIndex === themes.length - 1 ? 'disabled' : ''}>Descer</button><button type="button" onclick="solicitarExclusaoTema(decodeURIComponent('${safeId}'))">Excluir tema</button></div>` : '';
+        return `<details class="chapter-theme-group" open><summary><strong>${escaparRevisaoHtml(theme.nome)}</strong><span>${dominados} de ${todosDoTema.length} dominados</span></summary>${actions}<div class="chapter-theme-items">${itens.map(renderCard).join('')}</div></details>`;
     }).join('') : `<p class="chapter-page-empty">${materia.topicos?.length ? 'Nenhum capítulo encontrado. Tente outra busca.' : 'Esta matéria ainda não tem capítulos. Adicione-os ao editar a matéria.'}</p>`;
 }
 
@@ -6158,7 +6558,76 @@ function renderizarCadernoCapitulo() {
     const pagina = topico?.caderno?.paginas?.find(item => item.id === cadernoCapituloAtual.paginaId);
     if (!pagina) { editor.innerHTML = '<div class="chapter-editor-empty"><span class="chapter-empty-mark" aria-hidden="true">✎</span><strong>Comece por uma ideia</strong><p>Escreva com suas palavras, guarde um exemplo ou transforme um texto em resumo com o Gemini.</p><div class="chapter-empty-actions"><button type="button" class="cycle-btn primary" onclick="criarPaginaCaderno()">Criar página</button><button type="button" class="cycle-btn" onclick="abrirResumoCaderno()">✦ Resumir texto</button></div></div>'; return; }
     const data = new Date(pagina.atualizadoEm || pagina.criadoEm || Date.now()).toLocaleDateString('pt-BR');
-    editor.innerHTML = `<div class="chapter-editor-top"><span>Atualizada em ${data}</span><button type="button" onclick="solicitarExclusaoPaginaCaderno()">Excluir página</button></div><label>TÍTULO<input id="chapterPageTitle" maxlength="90" value="${escaparRevisaoHtml(pagina.titulo || '')}" placeholder="Ex.: Resumo e exemplos" oninput="atualizarPaginaCaderno('titulo',this.value)"></label><label>ANOTAÇÕES<textarea id="chapterPageText" maxlength="12000" placeholder="Escreva com suas palavras: o que é importante lembrar? Como resolver? Qual foi sua dúvida?" oninput="atualizarPaginaCaderno('texto',this.value)">${escaparRevisaoHtml(pagina.texto || '')}</textarea></label><p class="chapter-editor-hint">O texto é salvo automaticamente. Crie outras páginas para separar fórmulas, exemplos e dúvidas.</p>`;
+    editor.innerHTML = `<div class="chapter-editor-top"><span>Atualizada em ${data}</span><div><button type="button" onclick="alternarLeituraCaderno()">${cadernoModoLeitura ? 'Editar texto' : 'Modo leitura'}</button><button type="button" onclick="solicitarExclusaoPaginaCaderno()">Excluir página</button></div></div><label>TÍTULO<input id="chapterPageTitle" maxlength="90" value="${escaparRevisaoHtml(pagina.titulo || '')}" placeholder="Ex.: Resumo e exemplos" oninput="atualizarPaginaCaderno('titulo',this.value)"></label>${cadernoModoLeitura ? `<div class="chapter-reading" aria-label="Leitura com destaques">${htmlLeituraCaderno(pagina)}</div>` : `<label>ANOTAÇÕES<textarea id="chapterPageText" maxlength="12000" placeholder="Escreva com suas palavras: o que é importante lembrar? Como resolver? Qual foi sua dúvida?" oninput="atualizarPaginaCaderno('texto',this.value)" onmouseup="prepararDestaqueCaderno()" onkeyup="prepararDestaqueCaderno()">${escaparRevisaoHtml(pagina.texto || '')}</textarea></label><div id="chapterHighlightTools" class="chapter-highlight-tools" hidden><span>Marcar trecho selecionado</span><div>${['amarelo','verde','azul','rosa'].map(cor => `<button type="button" class="highlight-color ${cor}" onclick="salvarDestaqueCaderno('${cor}')" aria-label="Destacar em ${cor}" title="${cor}"></button>`).join('')}</div><label>Comentário <input id="chapterHighlightComment" class="cycle-input" maxlength="300" placeholder="Opcional"></label><button type="button" class="cycle-btn" onclick="abrirFlashcardDoDestaque()">Virar flashcard</button></div><div id="chapterHighlightFlashcard" class="chapter-highlight-flashcard" hidden><label>Pergunta<input id="chapterHighlightFront" class="cycle-input" maxlength="400"></label><label>Resposta<textarea id="chapterHighlightBack" class="cycle-input" maxlength="800"></textarea></label><button type="button" class="cycle-btn primary" onclick="salvarFlashcardDoDestaque()">Salvar flashcard</button></div>`}<p class="chapter-editor-hint">O texto é salvo automaticamente. Selecione um trecho para destacá-lo ou transformá-lo em flashcard.</p>`;
+}
+
+function htmlLeituraCaderno(pagina) {
+    const texto = String(pagina.texto || '');
+    const highlights = window.KingNotebookCore?.reanchorHighlights(texto, pagina.destaques || []).filter(item => !item.stale).sort((a, b) => a.inicio - b.inicio) || [];
+    let cursor = 0, html = '';
+    for (const item of highlights) {
+        if (item.inicio < cursor) continue;
+        html += escaparRevisaoHtml(texto.slice(cursor, item.inicio));
+        html += `<mark class="highlight-${['amarelo','verde','azul','rosa'].includes(item.cor) ? item.cor : 'amarelo'}" title="${escaparRevisaoHtml(item.comentario || '')}">${escaparRevisaoHtml(texto.slice(item.inicio, item.fim))}</mark>`;
+        cursor = item.fim;
+    }
+    return (html + escaparRevisaoHtml(texto.slice(cursor))).replace(/\n/g, '<br>') || '<p>Esta página ainda não tem texto.</p>';
+}
+
+function alternarLeituraCaderno() {
+    salvarCadernoPendente();
+    cadernoModoLeitura = !cadernoModoLeitura;
+    renderizarCadernoCapitulo();
+}
+
+function prepararDestaqueCaderno() {
+    const textarea = document.getElementById('chapterPageText');
+    const tools = document.getElementById('chapterHighlightTools');
+    if (!textarea || !tools) return;
+    const inicio = textarea.selectionStart, fim = textarea.selectionEnd;
+    const raw = textarea.value.slice(inicio, fim);
+    const leading = raw.length - raw.trimStart().length;
+    const trecho = raw.trim().slice(0, 600);
+    destaqueCadernoSelecao = trecho ? { inicio: inicio + leading, fim: inicio + leading + trecho.length, trecho } : null;
+    tools.hidden = !destaqueCadernoSelecao;
+}
+
+function salvarDestaqueCaderno(cor) {
+    const { topico } = localizarCadernoCapitulo();
+    const pagina = topico?.caderno?.paginas?.find(item => item.id === cadernoCapituloAtual.paginaId);
+    if (!pagina || !destaqueCadernoSelecao || !['amarelo','verde','azul','rosa'].includes(cor)) return;
+    if (!Array.isArray(pagina.destaques)) pagina.destaques = [];
+    pagina.destaques.push({ id: window.KingTopicCore.makeId('destaque'), ...destaqueCadernoSelecao, cor,
+        comentario: document.getElementById('chapterHighlightComment')?.value.trim().slice(0, 300) || '', criadoEm: Date.now() });
+    salvarAlteracoesCadernoCapitulo();
+    destaqueCadernoSelecao = null;
+    renderizarCadernoCapitulo();
+    showToast('Trecho destacado no caderno.');
+}
+
+function abrirFlashcardDoDestaque() {
+    if (!destaqueCadernoSelecao) return;
+    document.getElementById('chapterHighlightFlashcard').hidden = false;
+    document.getElementById('chapterHighlightFront').value = `O que é: ${destaqueCadernoSelecao.trecho.slice(0, 80)}?`;
+    document.getElementById('chapterHighlightBack').value = destaqueCadernoSelecao.trecho;
+}
+
+function salvarFlashcardDoDestaque() {
+    const { materia, topico } = localizarCadernoCapitulo();
+    if (!materia || !topico || !destaqueCadernoSelecao) return;
+    const candidate = window.KingFlashcardsCore?.normalizeCandidate({ front: document.getElementById('chapterHighlightFront').value, back: document.getElementById('chapterHighlightBack').value });
+    if (!candidate) return showToast('Escreva uma pergunta e uma resposta diferentes.', true);
+    const decks = appData.flashcards.decks;
+    let deck = decks.find(item => String(item.subjectId) === String(materia.id) && String(item.topicId) === String(topico.id));
+    if (!deck) {
+        deck = { id: window.KingTopicCore.makeId('deck'), name: `${materia.subject} · ${topico.nome}`.slice(0, 80), subjectId: String(materia.id), subjectIds: [String(materia.id)], topic: topico.nome, topicId: topico.id, createdAt: Date.now(), updatedAt: Date.now() };
+        decks.push(deck);
+    }
+    if (appData.flashcards.cards.some(item => item.deckId === deck.id && window.KingFlashcardsCore.key(item.front) === window.KingFlashcardsCore.key(candidate.front))) return showToast('Este flashcard já existe no deck.', true);
+    appData.flashcards.cards.push({ id: window.KingTopicCore.makeId('card'), deckId: deck.id, ...candidate, sourceLabel: 'Destaque do caderno', sourceNoteId: cadernoCapituloAtual.paginaId, createdAt: Date.now(), updatedAt: Date.now() });
+    saveAppData();
+    document.getElementById('chapterHighlightFlashcard').hidden = true;
+    showToast('Flashcard criado no deck deste assunto.');
 }
 
 function criarPaginaCaderno() {

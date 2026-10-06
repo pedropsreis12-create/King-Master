@@ -48,7 +48,7 @@
                 const level = clamp(topic.nivelDominio ?? 0, 0, 3);
                 if (level >= 3 || !String(topic.nome || '').trim()) return;
                 const { questions, errors } = history.get(`${key(subject.subject)}|${key(topic.nome)}`) || { questions: 0, errors: 0 };
-                const weight = clamp(data.autopilot?.subjectWeights?.[subject.id] ?? 2, 1, 5);
+                const weight = clamp(data.studentPlan?.configured ? (data.studentPlan.weights?.[subject.id] ?? 2) : (data.autopilot?.subjectWeights?.[subject.id] ?? 2), 1, 5);
                 const score = (3 - level) * 12 + priority(topic.prioridade) * 5 + weight * 2 + (questions ? Math.round(errors / questions * 15) : 0);
                 const reason = questions ? `${errors} erro${errors === 1 ? '' : 's'} em ${questions} questões registradas`
                     : level === 0 ? 'Ainda sem prática registrada' : 'Retomar e praticar este conteúdo';

@@ -27,11 +27,19 @@
     function render() {
         const state = ensure();
         const date = dataLocalISO();
-        const budget = state.todayBudget?.date === date ? Number(state.todayBudget.minutes) : Number(appData.dailyGoalMinutes) || 240;
-        currentPlan = Core.buildDailyPlan(appData, date, { budgetMinutes: budget });
+        const normalGoal = window.KingStudyEvolutionCore?.goalForDay(appData.studentPlan, date, appData.dailyGoalMinutes) ?? (Number(appData.dailyGoalMinutes) || 240);
+        const budget = state.todayBudget?.date === date ? Number(state.todayBudget.minutes) : normalGoal;
         panel.replaceChildren();
         if (!state.enabled) { panel.hidden = true; return; }
         panel.hidden = false;
+        if (budget === 0) {
+            currentPlan = null;
+            const rest = el('div', 'autopilot-head');
+            const copy = el('div');
+            copy.append(el('span', 'workspace-kicker', 'PLANO DE HOJE'), el('h2', '', 'Dia livre no seu plano'), el('p', '', 'Você pode descansar sem quebrar a sequência. Se estudar, o tempo conta como extra.'));
+            rest.append(copy); panel.append(rest); return;
+        }
+        currentPlan = Core.buildDailyPlan(appData, date, { budgetMinutes: budget });
         const head = el('div', 'autopilot-head');
         const title = el('div');
         title.append(el('span', 'workspace-kicker', 'PLANO DE HOJE'), el('h2', '', currentPlan.comeback ? 'Recomeço leve' : 'Seu próximo passo'));
@@ -42,8 +50,8 @@
         title.append(detail);
         const budgetLabel = el('label', 'autopilot-budget'); budgetLabel.append(el('span', '', 'Tempo disponível hoje'));
         const select = el('select', 'cycle-input'); select.id = 'autopilotBudget'; select.setAttribute('aria-label', 'Tempo disponível hoje');
-        const defaultOption = new Option(`Meta normal (${appData.dailyGoalMinutes || 240} min)`, 'default'); select.add(defaultOption);
-        for (const minutes of [30, 60, 90, 120, 240]) if (minutes !== Number(appData.dailyGoalMinutes || 240)) select.add(new Option(`${minutes} min`, String(minutes)));
+        const defaultOption = new Option(`Meta normal (${normalGoal} min)`, 'default'); select.add(defaultOption);
+        for (const minutes of [30, 60, 90, 120, 240]) if (minutes !== normalGoal) select.add(new Option(`${minutes} min`, String(minutes)));
         select.value = state.todayBudget?.date === date ? String(state.todayBudget.minutes) : 'default';
         if (select.value === '') { select.add(new Option(`${budget} min`, String(budget))); select.value = String(budget); }
         budgetLabel.append(select); head.append(title, budgetLabel); panel.append(head);

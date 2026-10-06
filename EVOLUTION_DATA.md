@@ -1,5 +1,17 @@
 # Evolução de dados — 2026-10-02
 
+## Cadernos, trilhas e planejamento — 2026-10-06
+
+- `cycleItems[].topicos[].id` é um ID estável com prefixo `assunto-`. A migração aditiva vincula pelo nome os registros antigos de `historyItems`, `revisoesItems`, `cadernoErrosItems`, `practiceSessions` e `flashcards.decks` com `topicId`; registros sem correspondência continuam legíveis pelo nome. Renomear o assunto atualiza também os nomes desses registros.
+- `cycleItems[].temas[]` contém `{id, nome, ordem}`. Cada assunto pode ter `temaId`; ausência significa o tema virtual “Conteúdo geral”. Excluir um tema mantém os assuntos e move-os para esse grupo geral.
+- `studyLogging.reviewTrail` contém de 2 a 6 intervalos em dias (padrão `[1,7,15,30]`). `topicos[].trilha` mantém uma cópia dos intervalos, a data de início e etapas `{numero,dataPrevista,status,concluidaEm,resultado,notas,tentativasFracas}`. Somente a etapa ativa gera um espelho em `revisoesItems` com `origem:'trilha'`, `topicId` e `trilhaEtapa`. Concluir, adiar e reagendar atualizam o mesmo assunto por ID. `topicos[].desempenhoRecentes` guarda até 20 resultados de questões para avaliar domínio recente sem confundir com o acumulado. Revisões manuais antigas permanecem independentes.
+- `topicos[].caderno.paginas[].destaques[]` guarda posições, trecho, cor, comentário e data de criação. O Caderno central agrega páginas, destaques, regras anti-erro, cartões e notas diretamente das fontes; não copia os textos. Apenas `cadernoCentral.revisados` persiste um mapa de IDs compostos para a data da última revisão visual; `cadernoCentral.legendaCores` guarda os rótulos personalizáveis das quatro cores. Flashcards originados de um destaque usam `sourceNoteId` para ligar a página.
+- `studentPlan` guarda objetivo, curso, nota-alvo, nome e datas informadas para a prova, pesos, ritmo e minutos de cada dia da semana. Sem perfil configurado, o plano diário continua usando `dailyGoalMinutes`. Uma folga com meta zero não é tratada como falha.
+- `planosSemanais[YYYY-Www]` guarda até 12 propostas ou planos aceitos, metas por matéria, tarefas e ajustes. Não altera blocos existentes sem o estudante abrir e confirmar o organizador do Cronograma.
+- `prazos[]` guarda título, tipo, data opcional, prova relacionada e conclusão. Modelos do ENEM ficam sem datas até conferência no edital oficial. O link do Google Agenda cria somente uma proposta de evento após a ação do estudante.
+
+Todos esses campos permanecem no documento privado de progresso e no backup existente. Nenhuma migração destrutiva ou coleção nova foi introduzida. Atenção ao limite de tamanho do documento principal quando houver muitos registros e páginas longas.
+
 ## Plano diário automático — 2026-10-05
 
 - O diagnóstico de erro pode sugerir um flashcard conceitual. Ao salvar um erro com a opção marcada, `flashcards.cards[].sourceErrorId` guarda o ID do erro; o cartão e seu deck entram no mesmo salvamento do registro. Dados antigos não precisam desse campo. Perguntas iguais no mesmo deck não são duplicadas.

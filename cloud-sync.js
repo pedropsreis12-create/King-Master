@@ -576,7 +576,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             if (!mimeType) throw new Error('Formato de edital não compatível.');
             const subjects = (Array.isArray(payload.subjects) ? payload.subjects : []).map(String).filter(Boolean).slice(0, 40);
             const userInstruction = String(payload.instruction || '').trim().slice(0, 500);
-            const instruction = `Leia o conteúdo programático e agrupe somente os assuntos que o estudante precisa aprender. Matérias já cadastradas: ${subjects.join(', ') || 'nenhuma'}. Quando houver correspondência, use exatamente o nome cadastrado. ${userInstruction ? `Preferência do estudante para filtrar ou organizar os resultados (não use para inventar conteúdo): ${userInstruction}.` : ''} Responda SOMENTE neste formato JSON: {"materias":[{"nome":"Matéria","topicos":["Assunto específico"]}]}. Remova duplicatas, títulos administrativos, datas, bibliografia e regras do processo seletivo. Preserve subassuntos úteis e use nomes curtos. Máximo de 30 matérias e 100 tópicos por matéria.`;
+            const instruction = `Leia o conteúdo programático e organize somente o que o estudante precisa aprender em Matéria → Tema → Assunto. Matérias já cadastradas: ${subjects.join(', ') || 'nenhuma'}. Quando houver correspondência, use exatamente o nome cadastrado. ${userInstruction ? `Preferência do estudante para filtrar ou organizar os resultados (não use para inventar conteúdo): ${userInstruction}.` : ''} Responda SOMENTE JSON: {"materias":[{"nome":"Matéria","temas":[{"nome":"Tema","topicos":["Assunto específico"]}]}]}. Use "topicos" diretamente na matéria apenas quando o edital não indicar tema. Remova duplicatas, títulos administrativos, datas, bibliografia e regras do processo seletivo. Preserve subassuntos úteis e use nomes curtos. Máximo de 30 matérias e 100 assuntos por matéria.`;
             const parts = [{ text: instruction }];
             if (mimeType === 'text/plain') parts.push({ text: String(payload.text || '').slice(0, 80000) });
             else {
@@ -589,10 +589,14 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             const raw = String(response.text() || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
             let parsed;
             try { parsed = JSON.parse(raw); } catch { throw new Error('A IA leu o edital, mas não conseguiu organizar a resposta. Tente um arquivo mais nítido.'); }
-            const materias = (Array.isArray(parsed?.materias) ? parsed.materias : []).slice(0, 30).map(item => ({
-                nome: String(item?.nome || '').trim().slice(0, 70),
-                topicos: [...new Set((Array.isArray(item?.topicos) ? item.topicos : []).map(topic => String(topic || '').trim().slice(0, 100)).filter(Boolean))].slice(0, 100)
-            })).filter(item => item.nome && item.topicos.length);
+            const materias = (Array.isArray(parsed?.materias) ? parsed.materias : []).slice(0, 30).map(item => {
+                const diretos = (Array.isArray(item?.topicos) ? item.topicos : []).map(topic => String(topic || '').trim().slice(0, 100));
+                const temas = (Array.isArray(item?.temas) ? item.temas : []).slice(0, 30).flatMap(theme => {
+                    const nomeTema = String(theme?.nome || '').trim().slice(0, 60);
+                    return (Array.isArray(theme?.topicos) ? theme.topicos : []).map(topic => `${nomeTema}: ${String(topic || '').trim().slice(0, 100)}`);
+                });
+                return { nome: String(item?.nome || '').trim().slice(0, 70), topicos: [...new Set([...diretos, ...temas].filter(Boolean))].slice(0, 100) };
+            }).filter(item => item.nome && item.topicos.length);
             return { materias };
         },
         async analyzeAgendaDocument(payload = {}) {

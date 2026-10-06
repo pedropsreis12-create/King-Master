@@ -111,6 +111,8 @@
         document.getElementById('autoErrorFlashcardsToggleBtn')?.setAttribute('aria-pressed', String(appData.autopilot?.autoErrorFlashcards !== false));
         const delay = document.getElementById('autoReviewDelaySelect');
         if (delay) delay.value = String(appData.studyLogging.reviewDelayDays || 1);
+        const trail = document.getElementById('reviewTrailIntervals');
+        if (trail) trail.value = (appData.studyLogging.reviewTrail || [1, 7, 15, 30]).join(', ');
         const retention = document.getElementById('aiRetentionSelect');
         if (retention) retention.value = String(appData.aiSettings.retentionDays || 7);
     }
@@ -143,7 +145,8 @@
         if (appData.onboardingCompleted) return;
         const hasData = Number(appData.totalStudySeconds || 0) > 0 || ['cycleItems','historyItems','agendamentoItems','simuladosItems','redacaoItems','revisoesItems'].some(key => appData[key]?.length);
         if (hasData) { appData.onboardingCompleted = true; saveAppData(); return; }
-        document.getElementById('onboardingModal')?.classList.add('active');
+        if (window.KingStudyEvolution?.openProfile) window.KingStudyEvolution.openProfile();
+        else document.getElementById('onboardingModal')?.classList.add('active');
     }
 
     function completeOnboarding(addSubject) {
@@ -204,6 +207,14 @@
         syncStudySettingsUi(); saveAppData();
     });
     document.getElementById('autoReviewDelaySelect')?.addEventListener('change', event => { appData.studyLogging.reviewDelayDays = Number(event.target.value) || 1; syncStudySettingsUi(); saveAppData(); });
+    document.getElementById('reviewTrailIntervals')?.addEventListener('change', event => {
+        const values = event.target.value.split(/[,;\s]+/).filter(Boolean).map(Number);
+        if (values.length < 2 || values.length > 6 || values.some(days => !Number.isInteger(days) || days < 1 || days > 120)) {
+            syncStudySettingsUi(); showToast('Informe de 2 a 6 intervalos entre 1 e 120 dias.', true); return;
+        }
+        appData.studyLogging.reviewTrail = values;
+        saveAppData(); syncStudySettingsUi(); showToast('Intervalos salvos para novas trilhas.');
+    });
     document.getElementById('aiRetentionSelect')?.addEventListener('change', event => { appData.aiSettings.retentionDays = Number(event.target.value) || 7; window.aplicarRetencaoConversaIa?.(); syncStudySettingsUi(); saveAppData(); });
     document.getElementById('reminderTime')?.addEventListener('change', event => { appData.reminder.time = event.target.value || '19:00'; syncReminderUi(); saveAppData(); });
     document.getElementById('reminderToggleBtn')?.addEventListener('click', setReminderEnabled);

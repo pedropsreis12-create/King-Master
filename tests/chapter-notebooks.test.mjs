@@ -53,10 +53,13 @@ test('a review can open its matching notebook and the notebook shows its own rev
   assert.match(html, /id="topicNotebookReviewsList"/);
   assert.match(html, /onclick="abrirModalRevisaoDoTopico\(\)"/);
   assert.match(script, /function localizarCadernoDaRevisao\(revisao\)/);
+  assert.match(script, /topico: porId\.topic/);
+  assert.match(script, /topico: materia\.topicos\[indice\]/);
   assert.match(script, /function abrirCadernoDaRevisao\(id\)/);
+  assert.match(script, /function abrirFlashcardsDaRevisao\(id\)/);
   assert.match(script, /function renderizarRevisoesDoCaderno\(\)/);
   assert.match(script, /function abrirModalRevisaoDoTopico\(\)/);
   assert.match(script, /class="cycle-btn review-open-notebook"/);
   assert.match(script, /renderizarRevisoesDoCaderno\(\);/);
-  assert.match(script, /\[appData\.revisoesItems, appData\.historyItems, appData\.cadernoErrosItems\]/);
+  assert.match(script, /KingTopicCore\.renameLinked\(appData, materia, topico, nomeAnterior, novoNome\)/);
 });

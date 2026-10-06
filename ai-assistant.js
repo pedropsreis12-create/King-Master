@@ -1,6 +1,7 @@
 /* IA do QG: Gemini interpreta a conversa e estas funções executam ações seguras no King Master. */
 const estadoIaQg = { pendente: null, desfazer: null, ouvindo: false, geminiAtivo: false, processando: false, controller: null, rascunho: null };
 const LIMITE_RESPOSTA_IA = 16000;
+const novoIdAssuntoIa = () => window.KingTopicCore?.makeId('assunto') || `assunto-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const CORES_IA = {
     azul: ['#007aff', '0, 122, 255'], verde: ['#34c759', '52, 199, 89'],
@@ -386,7 +387,7 @@ function executarFerramentaGeminiIaImediata(nome, args = {}) {
         if (!topicoNome) return { ok: false, message: 'Tópico inválido.' };
         if ((materia.topicos || []).some(item => normalizarIa(item.nome) === normalizarIa(topicoNome))) return { ok: false, message: `O tópico ${topicoNome} já existe em ${materia.subject}.` };
         if (!Array.isArray(materia.topicos)) materia.topicos = [];
-        materia.topicos.push({ nome: topicoNome, concluido: false }); renderizarCiclo();
+        materia.topicos.push({ id: novoIdAssuntoIa(), nome: topicoNome, concluido: false }); renderizarCiclo();
         return resultadoFerramentaIa(`Tópico ${topicoNome} adicionado em ${materia.subject}.`, { section: 'planejamento', toast: '✓ Tópico criado pelo Gemini' });
     }
 
@@ -399,7 +400,7 @@ function executarFerramentaGeminiIaImediata(nome, args = {}) {
         const adicionados = [];
         for (const nome of nomes) {
             if (materia.topicos.some(topico => normalizarIa(topico.nome) === normalizarIa(nome))) continue;
-            materia.topicos.push({ nome, concluido: false }); adicionados.push(nome);
+            materia.topicos.push({ id: novoIdAssuntoIa(), nome, concluido: false }); adicionados.push(nome);
         }
         renderizarCiclo();
         return resultadoFerramentaIa(`${adicionados.length} tópico(s) adicionado(s) em ${materia.subject}. Os já existentes foram preservados.`, { added: adicionados, section: 'planejamento', toast: '✓ Tópicos atualizados' });
@@ -749,7 +750,7 @@ function interpretarComandoIa(texto) {
         const nome = limparTextoIa(novoTopico[1], 100);
         if ((materia.topicos || []).some(item => normalizarIa(item.nome) === normalizarIa(nome))) return { text: `O tópico “${nome}” já existe em ${materia.subject}.` };
         if (!Array.isArray(materia.topicos)) materia.topicos = [];
-        materia.topicos.push({ nome, concluido: false });
+        materia.topicos.push({ id: novoIdAssuntoIa(), nome, concluido: false });
         renderizarCiclo();
         return { text: `Adicionei o tópico “${nome}” à matéria ${materia.subject}.`, changed: true, section: 'planejamento', toast: '✓ Tópico criado pela IA' };
     }
@@ -825,7 +826,7 @@ function interpretarComandoIa(texto) {
         if (existente && normalizarIa(existente.subject) === normalizarIa(nome)) return { text: `A matéria ${existente.subject} já está cadastrada.`, section: 'planejamento' };
         const materia = { id: Date.now(), color: corDoComandoIa(texto), subject: nome, targetMin: 0, executedMin: 0, topicos: [], questoes: 0, acertos: 0, erros: 0 };
         const encadeado = texto.match(/\s+e\s+(?:adicione|crie|coloque|cadastre)\s+(?:o\s+|um\s+)?(?:t[oó]pico|assunto)\s+(.+?)[.!?]*$/i);
-        if (encadeado) materia.topicos.push({ nome: limparTextoIa(encadeado[1], 100), concluido: false });
+        if (encadeado) materia.topicos.push({ id: novoIdAssuntoIa(), nome: limparTextoIa(encadeado[1], 100), concluido: false });
         appData.cycleItems.push(materia);
         renderizarCiclo(); renderizarRevisoes();
         return { text: `Matéria ${nome} adicionada${encadeado ? ` com o tópico “${materia.topicos[0].nome}”` : ''}.`, changed: true, section: 'planejamento', toast: '✓ Matéria criada pela IA' };

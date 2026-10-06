@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
     <link rel="stylesheet" href="auth-refresh.css?v=20261006-auth-v1">
     <link rel="stylesheet" href="topic-review-link.css?v=20261006-topic-review-v1">
+    <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -139,6 +140,7 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Aprender</span>
                 <button type="button" class="menu-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Matérias</strong><small>Conteúdo e domínio</small></span></button>
+                <button type="button" class="menu-btn" data-section="caderno-central" aria-controls="caderno-central" onclick="showSection('caderno-central')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Caderno</strong><small>Tudo o que você anotou</small></span></button>
                 <div class="topic-nav-slot" id="topicNavSlot" hidden><button type="button" class="menu-btn topic-nav-button" data-section="topic-workspace" aria-controls="topic-workspace" onclick="showSection('topic-workspace')"><span class="nav-item-icon" aria-hidden="true">↳</span><span class="nav-item-label"><strong id="topicNavTitle">Assunto</strong><small id="topicNavSubject">Matéria</small></span></button><button type="button" class="topic-nav-close" onclick="fecharEspacoTopico()" aria-label="Fechar a aba do assunto" title="Fechar a aba do assunto">×</button></div>
                 <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Caixa de Revisões</strong><small>Capture e retome depois</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
                 <button type="button" class="menu-btn" data-section="flashcards" aria-controls="flashcards" onclick="showSection('flashcards')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Flashcards</strong><small>Recorde no tempo certo</small></span><span class="nav-count" id="navFlashcardsBadge" hidden>0</span></button>
@@ -235,6 +237,9 @@
                 <button class="settings-theme-toggle toggle-btn" id="autoReviewToggleBtn" type="button"><span><strong>Revisão automática</strong><small>Vem marcada ao concluir uma sessão</small></span><i></i></button>
                 <button class="settings-theme-toggle toggle-btn" id="autoErrorFlashcardsToggleBtn" type="button" aria-pressed="true"><span><strong>Flashcards dos erros</strong><small>Ao diagnosticar um erro com IA, sugerir criar um cartão junto do registro</small></span><i></i></button>
                 <label class="settings-select-row"><span><strong>Primeira revisão</strong><small>Prazo sugerido depois do estudo</small></span><select id="autoReviewDelaySelect"><option value="1">No dia seguinte</option><option value="3">Depois de 3 dias</option><option value="7">Depois de 7 dias</option><option value="14">Depois de 14 dias</option><option value="30">Depois de 30 dias</option></select></label>
+                <label class="settings-select-row"><span><strong>Intervalos da trilha de revisões</strong><small>De 2 a 6 etapas, entre 1 e 120 dias. Ex.: 1, 7, 15, 30.</small></span><input id="reviewTrailIntervals" class="cycle-input" type="text" inputmode="numeric" maxlength="24" value="1, 7, 15, 30" aria-label="Intervalos da trilha em dias"></label>
+                <button type="button" class="cycle-btn settings-full-button" onclick="KingStudyEvolution.openProfile()">Personalizar meu plano</button>
+                <details class="notebook-color-settings"><summary>Legenda das cores do caderno</summary><div><label>Amarelo<input class="cycle-input" data-notebook-color-label="amarelo" maxlength="30"></label><label>Verde<input class="cycle-input" data-notebook-color-label="verde" maxlength="30"></label><label>Azul<input class="cycle-input" data-notebook-color-label="azul" maxlength="30"></label><label>Rosa<input class="cycle-input" data-notebook-color-label="rosa" maxlength="30"></label></div></details>
             </div>
             <div class="settings-group">
                 <h3><span>✦</span> Gemini do QG</h3>
@@ -253,6 +258,9 @@
         <section id="dashboard" class="content-section active">
             <h1>Foco e Execução</h1>
             <section id="autopilotPanel" class="autopilot-panel widget" aria-label="Plano de estudo de hoje" aria-live="polite"></section>
+            <section id="studyWeeklyCard" class="widget evolution-weekly" aria-label="Ciclo da semana"></section>
+            <section id="studyDeadlinesToday" class="widget evolution-deadlines" hidden></section>
+            <section id="studyHeatmapToday" class="widget evolution-heatmap" aria-label="Constância recente"></section>
             
             <button type="button" class="widget dashboard-agenda-glance" onclick="showSection('agendamento')" aria-label="Abrir o Agendamento Diário">
                 <span class="dashboard-agenda-copy">
@@ -499,6 +507,7 @@
                     <p>Cadastre conteúdos, acompanhe tópicos e veja onde seu domínio ainda precisa avançar.</p>
                 </div>
                 <div class="cycle-btn-group">
+                    <button type="button" class="cycle-btn" onclick="KingStudyEvolution.openProfile()">Personalizar meu plano</button>
                     <button class="cycle-btn subtle-danger" onclick="abrirModalDeletar('clearCycle', null, 'Apagar matérias?', 'Matérias, tópicos, revisões e sessões relacionadas serão removidos. Flashcards ficam guardados para você realocar depois.')">Limpar matérias</button>
                     <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
                 </div>
@@ -533,7 +542,7 @@
                 <div class="domain-center-stats" id="domainCenterStats" aria-label="Situação dos tópicos"></div>
                 <section class="domain-center-subjects widget" aria-labelledby="domainSubjectsTitle"><div class="domain-center-section-heading"><div><span class="workspace-kicker">POR MATÉRIA</span><h3 id="domainSubjectsTitle">Seu avanço</h3></div></div><div class="domain-center-legend" aria-label="Etapas de domínio"><span><i></i>Não iniciado</span><span><i></i>Em estudo</span><span><i></i>Consolidando</span><span><i></i>Dominado</span></div><div id="mapaContainer"></div></section>
                 <section class="chapter-browser widget" id="chapterBrowser" aria-labelledby="chapterBrowserTitle" hidden>
-                    <div class="chapter-heading"><div><button type="button" class="chapter-back" onclick="fecharCadernosDominio()">← Todas as matérias</button><span class="workspace-kicker">MATÉRIA EM FOCO</span><h3 id="chapterBrowserTitle">Capítulos</h3><p id="chapterBrowserSummary">Encontre o próximo assunto ou retome de onde parou.</p></div><button type="button" class="cycle-btn" id="chapterEditSubject" onclick="editarMateriaCiclo(cadernoCapituloAtual.materiaId)">Editar matéria</button></div>
+                    <div class="chapter-heading"><div><button type="button" class="chapter-back" onclick="fecharCadernosDominio()">← Todas as matérias</button><span class="workspace-kicker">MATÉRIA EM FOCO</span><h3 id="chapterBrowserTitle">Capítulos</h3><p id="chapterBrowserSummary">Encontre o próximo assunto ou retome de onde parou.</p></div><div class="chapter-notebook-actions"><button type="button" class="cycle-btn" onclick="abrirModalTema()">+ Tema</button><button type="button" class="cycle-btn" id="chapterEditSubject" onclick="editarMateriaCiclo(cadernoCapituloAtual.materiaId)">Editar matéria</button></div></div>
                     <div class="chapter-toolbar"><label class="chapter-search"><span aria-hidden="true">⌕</span><input type="search" id="chapterSearchInput" placeholder="Buscar assunto pelo nome" aria-label="Buscar assunto" oninput="filtrarCadernosCapitulos(this.value)"></label><span id="chapterResultCount" class="chapter-result-count" role="status"></span></div>
                     <div class="chapter-filters" role="group" aria-label="Filtrar assuntos"><button type="button" data-chapter-filter="todos" aria-pressed="true" onclick="definirFiltroCadernosCapitulos('todos')">Todos</button><button type="button" data-chapter-filter="novo" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('novo')">Não iniciados</button><button type="button" data-chapter-filter="andamento" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('andamento')">Em andamento</button><button type="button" data-chapter-filter="revisar" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('revisar')">Para revisar</button><button type="button" data-chapter-filter="dominado" aria-pressed="false" onclick="definirFiltroCadernosCapitulos('dominado')">Dominados</button></div>
                     <div class="chapter-list" id="chapterList"></div>
@@ -558,7 +567,7 @@
             </div>
             <div id="topicWorkspaceOverview" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabOverview">
                 <div class="topic-workspace-top-grid">
-                    <article class="widget topic-workspace-context"><span class="workspace-kicker">CONTEXTO DO ASSUNTO</span><h2>O essencial, do seu jeito</h2><p>Resuma o que é, quando usar e o que costuma confundir você. Pode ser só uma frase.</p><label for="topicWorkspaceContext">Minha referência rápida</label><textarea id="topicWorkspaceContext" maxlength="1500" rows="4" placeholder="Ex.: Regra de três relaciona grandezas. Antes de calcular, verifico se são diretamente ou inversamente proporcionais." oninput="atualizarContextoEspacoTopico(this.value)"></textarea><small id="topicWorkspaceContextStatus" role="status">Salvo automaticamente</small></article>
+                    <article class="widget topic-workspace-context"><span class="workspace-kicker">CONTEXTO DO ASSUNTO</span><h2>O essencial, do seu jeito</h2><label for="topicWorkspaceTheme">Tema</label><select id="topicWorkspaceTheme" class="cycle-input" onchange="moverTopicoParaTema(this.value)"></select><p>Resuma o que é, quando usar e o que costuma confundir você. Pode ser só uma frase.</p><label for="topicWorkspaceContext">Minha referência rápida</label><textarea id="topicWorkspaceContext" maxlength="1500" rows="4" placeholder="Ex.: Regra de três relaciona grandezas. Antes de calcular, verifico se são diretamente ou inversamente proporcionais." oninput="atualizarContextoEspacoTopico(this.value)"></textarea><small id="topicWorkspaceContextStatus" role="status">Salvo automaticamente</small></article>
                     <article class="widget topic-workspace-review"><span class="workspace-kicker">REVISÃO</span><h2>Volte a lembrar, não só a reler</h2><p>Revisar é tentar recuperar a ideia sem olhar a resposta; depois confira o caderno e resolva uma questão curta.</p><div id="topicWorkspaceReviewState"></div><div class="topic-workspace-review-actions"><button type="button" class="cycle-btn primary" onclick="iniciarTreinoEspacoTopico()">Treinar 10 questões com IA</button><button type="button" class="cycle-btn" onclick="agendarRevisaoEspacoTopico()" id="topicWorkspaceReviewButton">Revisar amanhã</button><button type="button" class="cycle-btn" onclick="showSection('revisoes')">Caixa de Revisões</button></div></article>
                 </div>
                 <div id="topicWorkspaceAnalytics"></div>
@@ -577,6 +586,7 @@
                 </div>
                 <div class="cycle-btn-group agenda-heading-actions"><button type="button" class="cycle-btn" onclick="KingAgenda.openImport()">✦ Importar com IA</button><button type="button" class="cycle-btn" onclick="KingAgenda.openCategories()">Categorias</button><button type="button" class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button></div>
             </div>
+            <section class="widget evolution-deadline-board"><div class="section-list-heading"><div><span class="workspace-kicker">ENEM E VESTIBULARES</span><h2>Prazos</h2></div><div class="cycle-btn-group"><button type="button" class="cycle-btn" onclick="KingStudyEvolution.addDeadlineTemplates()">Modelos ENEM</button><button type="button" class="cycle-btn primary" onclick="KingStudyEvolution.openDeadline()">+ Prazo</button></div></div><div id="studyDeadlineList"></div></section>
             <p class="calendar-sync-status" id="googleCalendarStatus" role="status">Opcional: envie seus compromissos ao Google Agenda. Só eventos criados pelo King Master serão alterados ou removidos.</p>
             <div class="agenda-calendar-row"><button type="button" class="agenda-calendar-link" id="googleCalendarButton" onclick="window.kingCalendar?.connect()">Vincular Google Agenda</button><span>Seus compromissos ficam salvos no King Master mesmo sem conectar uma conta.</span></div>
             <div class="workspace-metric-strip agenda-summary" aria-label="Resumo da agenda">
@@ -596,6 +606,12 @@
             </div>
             <div class="agenda-find-row"><label class="agenda-search-label" for="agendaSearchInput">Buscar compromisso</label><input id="agendaSearchInput" class="cycle-input" type="search" maxlength="100" placeholder="Buscar por nome, nota ou categoria" oninput="renderizarAgendamento()"><select id="agendaCategoryFilter" class="cycle-input" aria-label="Filtrar por categoria" onchange="renderizarAgendamento()"><option value="">Todas as categorias</option></select></div>
             <div class="agenda-list workspace-list" id="agendamentoList"></div>
+        </section>
+
+        <section id="caderno-central" class="content-section" aria-hidden="true">
+            <div class="workspace-heading"><div><span class="workspace-kicker">SEU CONHECIMENTO EM UM LUGAR</span><h1>Caderno</h1><p>Anotações, destaques, regras anti-erro e flashcards reunidos por matéria, tema e assunto.</p></div></div>
+            <div class="widget notebook-toolbar"><label>Pesquisar<input id="notebookSearch" type="search" placeholder="Texto, matéria ou assunto"></label><label>Tipo<select id="notebookKind"><option value="todos">Tudo</option><option value="pagina">Páginas</option><option value="destaque">Destaques</option><option value="erro">Regras anti-erro</option><option value="card">Flashcards</option><option value="nota">Notas</option></select></label><label>Matéria<select id="notebookSubject"><option value="todos">Todas</option></select></label><label>Tema<select id="notebookTheme"><option value="todos">Todos</option></select></label><label>Origem<select id="notebookSource"><option value="todos">Todas</option><option value="caderno">Caderno do assunto</option><option value="erros">Caderno de Erros</option><option value="flashcards">Flashcards</option><option value="notas">Notas</option></select></label><label>Cor<select id="notebookColor"><option value="todos">Todas</option><option value="amarelo">Amarelo</option><option value="verde">Verde</option><option value="azul">Azul</option><option value="rosa">Rosa</option></select></label><label>Revisão<select id="notebookReview"><option value="todas">Todas</option><option value="pendentes">Pendentes</option><option value="revisados">Revisados</option></select></label></div>
+            <div id="notebookLegend" class="notebook-legend" aria-label="Legenda das cores"></div><p class="workspace-result-count" id="notebookCount" role="status">0 registros</p><div id="notebookResults" class="notebook-results"></div><button type="button" class="cycle-btn" id="notebookMore" hidden>Mostrar mais</button>
         </section>
 
         <section id="revisoes" class="content-section review-inbox-section">
@@ -618,6 +634,7 @@
             </div>
             <div class="review-today-callout" id="reviewTodayCallout" hidden><span aria-hidden="true">↻</span><div><strong id="reviewTodayCalloutTitle">Revisões para hoje</strong><small>Uma fila curta, separada do cronograma.</small></div><button type="button" class="cycle-btn primary" onclick="iniciarFilaRevisoesHoje()">Iniciar revisões</button></div>
             <div class="workspace-toolbar">
+                <label class="review-origin-filter">Origem<select id="reviewOriginFilter" onchange="filtrarOrigemRevisoes(this.value)"><option value="todas">Todas</option><option value="trilhas">Trilhas</option><option value="sessoes">Sessões</option><option value="erros">Erros</option><option value="flashcards">Flashcards</option><option value="manuais">Manuais</option></select></label>
                 <div class="filter-chips" aria-label="Filtrar revisões">
                     <button type="button" data-review-filter="hoje" aria-pressed="false" onclick="filtrarRevisoes('hoje')">Hoje</button>
                     <button type="button" data-review-filter="pendentes" aria-pressed="true" onclick="filtrarRevisoes('pendentes')">Pendentes</button>
@@ -760,6 +777,8 @@
                     <button class="cycle-btn btn-danger" id="btnStopHistory" onclick="encerrarSessaoDashboard()" style="display:none; align-items: center; gap: 8px;"><span style="font-size:1.2rem;">⏹</span> Encerrar Sessão</button>
                 </div>
             </div>
+            <section id="studyHeatmapHistory" class="widget evolution-heatmap" aria-label="Mapa de calor das últimas 26 semanas"></section>
+            <section id="studyAnnualHistory" class="widget evolution-annual" aria-label="Histórico anual"></section>
             <div class="widget lifetime-panel">
                 <div class="section-list-heading"><div><span class="workspace-kicker">DISTRIBUIÇÃO DO FOCO</span><h2>Tempo por matéria</h2></div></div>
                 <div class="lifetime-grid">
@@ -941,6 +960,9 @@
                 <div class="chapter-summary-actions"><span id="chapterSummaryStatus" role="status" aria-live="polite"></span><button type="button" class="cycle-btn primary" id="chapterSummaryGenerate" onclick="gerarResumoCaderno()">✦ Gerar resumo</button></div>
                 <div id="chapterSummaryPreview" hidden><label for="chapterSummaryResult">Prévia editável</label><textarea id="chapterSummaryResult" maxlength="12000" aria-describedby="chapterSummaryNotice"></textarea><p id="chapterSummaryNotice">A IA pode cometer erros. Confira o conteúdo antes de salvar.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharResumoCaderno()">Cancelar</button><button type="button" class="cycle-btn primary" id="chapterSummarySave" onclick="salvarResumoNoCaderno()">Adicionar como nova página</button></div></div>
             </div>
+        </div>
+        <div class="modal-overlay" id="themeModal" role="dialog" aria-modal="true" aria-labelledby="themeModalTitle">
+            <div class="modal-box theme-modal-box"><button type="button" class="modal-close" onclick="fecharModal('themeModal')" aria-label="Fechar tema">×</button><h2 id="themeModalTitle">Novo tema</h2><p>Use temas para organizar os assuntos desta matéria sem perder registros.</p><form onsubmit="salvarTema(event)"><input id="themeEditId" type="hidden"><label for="themeName">Nome do tema</label><input id="themeName" class="cycle-input" maxlength="60" required placeholder="Ex.: Geometria espacial"><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('themeModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar tema</button></div></form></div>
         </div>
         <div class="modal-overlay" id="cycleModal">
             <div class="modal-box subject-editor-modal">
@@ -1136,6 +1158,20 @@
             </div>
         </div>
 
+        <div class="modal-overlay" id="reviewDetailModal">
+            <div class="modal-box modal-wide review-detail-modal" role="dialog" aria-modal="true" aria-labelledby="reviewDetailTitle">
+                <button type="button" class="modal-close" onclick="fecharModal('reviewDetailModal')" aria-label="Fechar">×</button>
+                <div id="reviewDetailContent"></div>
+            </div>
+        </div>
+        <div class="modal-overlay" id="notebookRecallModal">
+            <div class="modal-box modal-wide review-detail-modal" role="dialog" aria-modal="true" aria-labelledby="notebookRecallTitle">
+                <button type="button" class="modal-close" onclick="fecharModal('notebookRecallModal')" aria-label="Fechar">×</button>
+                <span class="workspace-kicker">RECUPERAÇÃO ATIVA</span><h2 id="notebookRecallTitle">Revisar com o caderno</h2><p>Lembre primeiro, depois revele e compare.</p>
+                <div id="notebookRecallList"></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" id="notebookRecallShowAll">Mostrar tudo</button><button type="button" class="cycle-btn primary" data-recall-grade="revisado">Lembrei bem</button><button type="button" class="cycle-btn" data-recall-grade="fraco">Ainda fraco</button></div>
+            </div>
+        </div>
+
         <div class="modal-overlay" id="errorNotebookModal">
             <div class="modal-box modal-wide error-editor-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('errorNotebookModal')" aria-label="Fechar">×</button>
@@ -1273,7 +1309,8 @@
                 <form id="sessionCompleteForm" onsubmit="salvarRegistroSessao(event)">
                     <div class="form-grid two">
                         <div class="cycle-form-group"><label class="cycle-label" for="sessionSubject">Matéria</label><select class="cycle-input" id="sessionSubject" onchange="atualizarTopicosRegistroSessao()" required></select></div>
-                        <div class="cycle-form-group"><label class="cycle-label" for="sessionTopic">Tópico ou assunto estudado</label><input class="cycle-input" id="sessionTopic" list="sessionTopicOptions" placeholder="Pesquise ou escreva um tópico" autocomplete="off" required><datalist id="sessionTopicOptions"></datalist></div>
+                        <div class="cycle-form-group" id="sessionThemeField"><label class="cycle-label" for="sessionTheme">Tema (opcional)</label><select class="cycle-input" id="sessionTheme" onchange="atualizarTopicosRegistroSessao()"><option value="">Todos os temas</option></select></div>
+                        <div class="cycle-form-group" id="sessionTopicField"><label class="cycle-label" for="sessionTopic">Assunto estudado</label><input class="cycle-input" id="sessionTopic" list="sessionTopicOptions" placeholder="Pesquise um assunto ou crie um novo" autocomplete="off" oninput="sugerirAssuntoRegistroSessao()" required><datalist id="sessionTopicOptions"></datalist><input id="sessionTopicId" type="hidden"><div id="sessionTopicHint" class="session-topic-hint" role="status" aria-live="polite"></div></div>
                     </div>
                     <div class="cycle-form-group"><label class="cycle-label" for="sessionNotes">Resumo da sessão <span class="schedule-optional">opcional</span></label><textarea class="cycle-input" id="sessionNotes" rows="3" maxlength="700" placeholder="O que você aprendeu, praticou ou ainda precisa reforçar?"></textarea></div>
                     <fieldset class="session-kind-fieldset"><legend>O que foi feito?</legend><div class="session-kind-options"><label><input type="radio" name="sessionKind" value="estudo" checked onchange="atualizarTipoRegistroSessao()"><span><b>▦</b><strong>Estudo</strong><small>Conteúdo ou exercícios</small></span></label><label><input type="radio" name="sessionKind" value="simulado" onchange="atualizarTipoRegistroSessao()"><span><b>◎</b><strong>Simulado</strong><small>Questões e resultado</small></span></label><label><input type="radio" name="sessionKind" value="redacao" onchange="atualizarTipoRegistroSessao()"><span><b>✎</b><strong>Redação</strong><small>Tema e competências</small></span></label></div></fieldset>
@@ -1360,6 +1397,8 @@
 
         <div class="modal-overlay" id="deleteConfirmModal"><div class="modal-box modal-confirm"><button type="button" class="modal-close" onclick="fecharModalDeletar()" aria-label="Fechar">×</button><div class="cycle-modal-title" id="deleteConfirmTitle">Apagar registro?</div><p class="modal-message" id="deleteConfirmMessage"></p><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="fecharModalDeletar()">Cancelar</button><button class="cycle-btn btn-danger" id="deleteConfirmAction" type="button" onclick="confirmarDelecao()">Apagar</button></div></div></div>
         <div class="modal-overlay onboarding-modal" id="onboardingModal"><div class="modal-box onboarding-box"><div class="onboarding-mark">KM</div><div class="cycle-modal-title">Seu QG está pronto</div><p class="modal-message">Três passos para começar sem se perder entre as ferramentas.</p><div class="onboarding-steps"><span><b>1</b><strong>Adicione suas matérias</strong><small>Monte o conteúdo que realmente estuda.</small></span><span><b>2</b><strong>Inicie um bloco</strong><small>O cronômetro salva o tempo e o XP.</small></span><span><b>3</b><strong>Revise seu avanço</strong><small>Use gráficos, missões e revisões.</small></span></div><div class="cycle-modal-actions"><button class="cycle-btn" type="button" onclick="concluirOnboarding(false)">Explorar primeiro</button><button class="cycle-btn primary" type="button" onclick="concluirOnboarding(true)">Adicionar primeira matéria</button></div></div></div>
+        <div class="modal-overlay" id="studyProfileModal"><div class="modal-box modal-wide evolution-profile-modal" role="dialog" aria-modal="true" aria-labelledby="studyProfileTitle"><button type="button" class="modal-close" onclick="fecharModal('studyProfileModal')" aria-label="Fechar">×</button><span class="workspace-kicker">PREPARAÇÃO SOB MEDIDA</span><h2 id="studyProfileTitle">Personalizar meu plano</h2><p>Altere quando quiser: o histórico é preservado.</p><div id="studyProfileSteps" class="evolution-steps" role="tablist" aria-label="Etapas do perfil"></div><form id="studyProfileForm"><div id="studyProfileBody"></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" id="studyProfileBack">Voltar</button><button type="button" class="cycle-btn primary" id="studyProfileNext">Continuar</button><button type="submit" class="cycle-btn primary" id="studyProfileSave" hidden>Salvar meu plano</button></div></form></div></div>
+        <div class="modal-overlay" id="studyDeadlineModal"><div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="studyDeadlineTitle"><button type="button" class="modal-close" onclick="fecharModal('studyDeadlineModal')" aria-label="Fechar">×</button><div class="cycle-modal-title" id="studyDeadlineTitle">Novo prazo</div><form id="studyDeadlineForm"><input type="hidden" id="studyDeadlineId"><label class="cycle-form-group">Título<input class="cycle-input" id="studyDeadlineName" maxlength="100" required></label><label class="cycle-form-group">Tipo<select class="cycle-input" id="studyDeadlineType"></select></label><label class="cycle-form-group">Data<input class="cycle-input" type="date" id="studyDeadlineDate"></label><label class="cycle-form-group">Prova relacionada<input class="cycle-input" id="studyDeadlineExam" maxlength="80" placeholder="ENEM ou vestibular"></label><div class="cycle-modal-actions"><button type="submit" class="cycle-btn primary">Salvar prazo</button></div></form></div></div>
 
     </main>
 
@@ -1455,22 +1494,28 @@
     <script src="subject-picker.js?v=20261002-v1"></script>
     <script src="habit-core.js?v=20261002-v1"></script>
     <script src="rank-system-v2.js?v=20260929-rank-v2-1"></script>
-    <script src="autopilot-core.js?v=20261005-pace-v2"></script>
-    <script src="script.js?v=20261006-topic-review-v2"></script>
+    <script src="autopilot-core.js?v=20261006-v1"></script>
+    <script src="topic-core.js?v=20261006-v1"></script>
+    <script src="review-trail-core.js?v=20261006-v1"></script>
+    <script src="notebook-core.js?v=20261006-v1"></script>
+    <script src="study-evolution-core.js?v=20261006-v1"></script>
+    <script src="script.js?v=20261006-v4"></script>
+    <script src="notebook.js?v=20261006-v2"></script>
+    <script src="study-evolution.js?v=20261006-v1"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
     <script src="schedule.js?v=20261002-evolution-v1"></script>
     <script src="personal-development.js?v=20261002-evolution-v1"></script>
-    <script src="subject-lab.js?v=20260929-flash-security-v2"></script>
+    <script src="subject-lab.js?v=20261006-v1"></script>
     <script type="module" src="syllabus-pdf.js?v=20261004-agenda-timeout-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
     <script src="academic-context.js?v=20261002-v1"></script>
-    <script src="ai-assistant.js?v=20261002-evolution-v1"></script>
+    <script src="ai-assistant.js?v=20261006-v1"></script>
     <script src="flashcards.js?v=20261002-evolution-v1"></script>
     <script src="mock-exams.js?v=20261005-daily-plan-v1"></script>
     <script src="practice.js?v=20261005-pace-v2"></script>
-    <script src="autopilot.js?v=20261005-pace-v2"></script>
-    <script src="productivity.js?v=20261005-error-flashcards-v2"></script>
+    <script src="autopilot.js?v=20261006-v1"></script>
+    <script src="productivity.js?v=20261006-v1"></script>
     <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
     <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>
     <script src="data-portability.js?v=20260929-overhaul-v4"></script>
@@ -1479,6 +1524,6 @@
     <script src="profile-overhaul.js?v=20260930-achievements-toggle"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20261006-auth-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20261006-v1"></script>
 </body>
 </html>

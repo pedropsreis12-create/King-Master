@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261005-error-ai-v1';
+const CACHE_VERSION = 'king-master-20261006-cadernos-trilhas-v2';
 const APP_SHELL = [
     './',
     './index.html',
@@ -10,6 +10,13 @@ const APP_SHELL = [
     './schedule.css',
     './schedule-planner.css',
     './script.js',
+    './topic-core.js',
+    './review-trail-core.js',
+    './notebook-core.js',
+    './notebook.js',
+    './study-evolution-core.js',
+    './study-evolution.js',
+    './topic-hierarchy.css',
     './agenda-workspace.js',
     './agenda-workspace.css',
     './autopilot-core.js',

@@ -113,11 +113,12 @@
             const selected = group.topicos.filter((_, topicIndex) => document.querySelector(`[data-syllabus-topic="${groupIndex}:${topicIndex}"]`)?.checked);
             if (!subject) { if (selected.length) unmapped += selected.length; return; }
             if (!Array.isArray(subject.topicos)) subject.topicos = [];
-            const known = new Set(subject.topicos.map(item => normalized(item.nome)));
+            const known = new Set(subject.topicos.map(item => `${item.temaId || ''}:${normalized(item.nome)}`));
             selected.forEach(name => {
-                const key = normalized(name);
-                if (!key || known.has(key)) { ignored += 1; return; }
-                subject.topicos.push({ nome: String(name).trim().slice(0, 100), concluido: false, prioridade: 'media', nivelDominio: 0, notas: '', origem: 'edital-ia' });
+                const parsed = window.KingTopicCore.parseTopicInput(subject, name);
+                const key = `${parsed.temaId}:${normalized(parsed.nome)}`;
+                if (!parsed.nome || known.has(key)) { ignored += 1; return; }
+                subject.topicos.push({ id: window.KingTopicCore.makeId('assunto'), nome: parsed.nome, temaId: parsed.temaId, concluido: false, prioridade: 'media', nivelDominio: 0, notas: '', origem: 'edital-ia' });
                 known.add(key); added += 1;
             });
         });

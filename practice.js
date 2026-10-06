@@ -25,7 +25,11 @@
         state.startedAt = Date.now();
         stopClock(); clock = setInterval(() => {
             const clockNode = byId('practiceClock');
-            if (clockNode && state.phase === 'running' && state.answers[state.index]?.choice === undefined) clockNode.textContent = format(elapsed());
+            if (clockNode && state.phase === 'running' && state.answers[state.index]?.choice === undefined) {
+                clockNode.textContent = format(elapsed());
+                if (elapsed() >= 240 && !dialog.querySelector('.practice-pace-hint'))
+                    byId('practiceContent').append(make('p', 'practice-pace-hint', 'Passou de 4 minutos. Considere pular e voltar depois.'));
+            }
         }, 1000);
         render();
     }
@@ -45,6 +49,7 @@
             choices.append(option);
         });
         content.append(progress, stem, choices);
+        if (answer?.choice === undefined && elapsed() >= 240) content.append(make('p', 'practice-pace-hint', 'Passou de 4 minutos. Considere pular e voltar depois.'));
         if (answer?.choice !== undefined) {
             const feedback = make('div', 'practice-feedback');
             feedback.append(make('strong', '', answer.choice === question.correctIndex ? 'Você acertou.' : 'Confira a resposta e a explicação.'), make('p', '', question.explanation));

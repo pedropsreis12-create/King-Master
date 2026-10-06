@@ -11,6 +11,7 @@
 .practice-choice.correct{border-color:#23aa50;background:#e7f8ee;color:#0b6630}
 .practice-choice.wrong{border-color:#d94a4a;background:#fff0f0;color:#a92727}
 .practice-feedback{display:grid;justify-items:start;gap:10px;margin:17px 0 0;padding:16px;border-radius:16px;background:var(--hover-bg,#f5f7fa)}
+.practice-pace-hint{margin:12px 0 0;color:var(--text-muted,#596677);font-size:.78rem;line-height:1.4}
 .practice-feedback p{margin:0;line-height:1.55;white-space:pre-wrap}
 .practice-reasons{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
 .practice-reasons>span{flex-basis:100%;font-size:.78rem;font-weight:800}

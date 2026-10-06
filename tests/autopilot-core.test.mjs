@@ -58,3 +58,16 @@ test('revisões, erros e cartões vencidos são contados sem incluir registros c
     data.flashcards = { decks: [{ id: 'deck' }], cards: [{ id: 'a', deckId: 'deck' }], states: {} };
     assert.deepEqual(Core.dueCounts(data, '2026-10-05', Date.now()), { reviews: 1, errors: 1, cards: 1, total: 3 });
 });
+
+test('ritmo considera apenas questões respondidas nos últimos sete dias e não inventa dados', () => {
+    const data = base();
+    data.practiceSessions = [
+        { data: '2026-09-28', subject: 'Matemática', questions: [{ choice: 1, seconds: 100 }] },
+        { data: '2026-10-03', subject: 'Matemática', questions: [{ choice: 1, seconds: 240 }, { choice: null, seconds: 300 }, { choice: 2, seconds: 180 }] },
+        { data: '2026-10-05', subject: 'História', questions: [{ choice: 0, seconds: 150 }] }
+    ];
+    const rows = Core.paceSummary(data, '2026-10-05');
+    assert.deepEqual(rows.map(row => [row.area, row.questions, row.averageSeconds, row.overTarget]),
+        [['Matemática', 2, 210, true], ['Humanas', 1, 150, false]]);
+    assert.deepEqual(Core.paceSummary(base(), '2026-10-05'), []);
+});

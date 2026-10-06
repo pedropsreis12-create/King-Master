@@ -65,6 +65,31 @@
         return previous ? Math.round((today - previous) / 86400000) : null;
     }
 
+    function paceSummary(data, date) {
+        const end = localDate(date);
+        if (!end) return [];
+        const start = new Date(end); start.setDate(start.getDate() - 6);
+        const areas = [
+            { name: 'Matemática', pattern: /matematica/, target: 200 },
+            { name: 'Natureza', pattern: /fisica|quimica|biologia|ciencias da natureza/, target: 200 },
+            { name: 'Humanas', pattern: /historia|geografia|filosofia|sociologia|ciencias humanas/, target: 180 },
+            { name: 'Linguagens', pattern: /gramatica|lingua|portugues|literatura|ingles|espanhol|redacao|linguagens/, target: 180 }
+        ];
+        const totals = areas.map(area => ({ area: area.name, targetSeconds: area.target, seconds: 0, questions: 0 }));
+        for (const session of data.practiceSessions || []) {
+            const day = localDate(session.data);
+            if (!day || day < start || day > end) continue;
+            const areaIndex = areas.findIndex(area => area.pattern.test(key(session.subject)));
+            if (areaIndex < 0) continue;
+            for (const question of session.questions || []) {
+                const seconds = Number(question.seconds);
+                if (question.choice == null || !Number.isFinite(seconds) || seconds <= 0 || seconds > 3600) continue;
+                totals[areaIndex].seconds += seconds; totals[areaIndex].questions++;
+            }
+        }
+        return totals.filter(row => row.questions).map(row => ({ ...row, averageSeconds: Math.round(row.seconds / row.questions), overTarget: row.seconds / row.questions > row.targetSeconds }));
+    }
+
     function completedFor(data, subject, topic, date) {
         const rows = (data.historyItems || []).filter(item => item.dataISO === date && key(item.materia) === key(subject) && key(item.assunto) === key(topic));
         return { seconds: rows.reduce((sum, item) => sum + Math.max(0, Number(item.tempoSegundos) || 0), 0),
@@ -139,5 +164,5 @@
             source: chosen.length ? 'assuntos' : 'vazio' };
     }
 
-    return { iso, monday, dueCounts, rankTopics, daysSinceLastSession, buildDailyPlan };
+    return { iso, monday, dueCounts, rankTopics, daysSinceLastSession, paceSummary, buildDailyPlan };
 });

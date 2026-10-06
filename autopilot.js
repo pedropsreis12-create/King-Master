@@ -49,6 +49,21 @@
         budgetLabel.append(select); head.append(title, budgetLabel); panel.append(head);
         const note = el('p', 'autopilot-load', `${currentPlan.usedMinutes} min planejados · ${currentPlan.due.total} itens de memória para hoje`);
         panel.append(note);
+        const pace = Core.paceSummary(appData, date);
+        if (pace.length) {
+            const rhythm = el('div', 'autopilot-rhythm');
+            rhythm.append(el('strong', '', 'Ritmo nas questões · últimos 7 dias'));
+            const rows = el('div', 'autopilot-rhythm-grid');
+            for (const area of pace) {
+                const row = el('div', `autopilot-rhythm-area${area.overTarget ? ' is-slow' : ''}`);
+                const mmss = seconds => `${Math.floor(seconds / 60)}m ${String(seconds % 60).padStart(2, '0')}s`;
+                row.append(el('span', '', area.area), el('b', '', mmss(area.averageSeconds)),
+                    el('small', '', `${area.questions} questões · referência ${mmss(area.targetSeconds)}`));
+                rows.append(row);
+            }
+            rhythm.append(rows, el('small', 'autopilot-rhythm-note', 'Referências de ritmo, não notas. A qualidade da resposta vem primeiro.'));
+            panel.append(rhythm);
+        }
         if (!currentPlan.tasks.length) {
             const empty = el('div', 'autopilot-empty');
             empty.append(el('strong', '', 'Monte sua base sem pressa'), el('p', '', 'Cadastre matérias e assuntos ou planeje a semana para receber um próximo passo concreto.'), button('Abrir Matérias', 'subjects'));

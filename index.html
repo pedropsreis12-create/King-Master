@@ -36,9 +36,9 @@
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="profile-overhaul.css?v=20260930-achievements-toggle">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
-    <link rel="stylesheet" href="autopilot.css?v=20261005-daily-plan-v1">
-    <link rel="stylesheet" href="practice.css?v=20261005-practice-v1">
-    <link rel="stylesheet" href="error-ai.css?v=20261005-error-ai-v1">
+    <link rel="stylesheet" href="autopilot.css?v=20261005-pace-v2">
+    <link rel="stylesheet" href="practice.css?v=20261005-pace-v2">
+    <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -216,6 +216,7 @@
             <div class="settings-group">
                 <h3><span>↻</span> Registro de Estudos</h3>
                 <button class="settings-theme-toggle toggle-btn" id="autoReviewToggleBtn" type="button"><span><strong>Revisão automática</strong><small>Vem marcada ao concluir uma sessão</small></span><i></i></button>
+                <button class="settings-theme-toggle toggle-btn" id="autoErrorFlashcardsToggleBtn" type="button" aria-pressed="true"><span><strong>Flashcards dos erros</strong><small>Ao diagnosticar um erro com IA, sugerir criar um cartão junto do registro</small></span><i></i></button>
                 <label class="settings-select-row"><span><strong>Primeira revisão</strong><small>Prazo sugerido depois do estudo</small></span><select id="autoReviewDelaySelect"><option value="1">No dia seguinte</option><option value="3">Depois de 3 dias</option><option value="7">Depois de 7 dias</option><option value="14">Depois de 14 dias</option><option value="30">Depois de 30 dias</option></select></label>
             </div>
             <div class="settings-group">
@@ -1151,6 +1152,7 @@
                         <p class="error-image-status" id="errorImageStatus" role="status"></p>
                         <div class="error-ai-tools"><button type="button" class="cycle-btn" id="errorAiSuggestButton" onclick="sugerirErroComIa()">✦ Ler questão com IA</button><small>A IA sugere campos para você conferir; nada é salvo automaticamente.</small></div>
                         <div class="error-ai-preview" id="errorAiPreview" hidden></div>
+                        <label class="error-ai-flashcard-option" id="errorAiFlashcardOption" hidden><input type="checkbox" id="errorAiFlashcardCheck" checked><span>Criar flashcard deste conceito ao salvar</span></label>
                         <div class="form-grid two">
                             <div class="cycle-form-group"><label class="cycle-label" for="errorAttemptInput">Minha resposta <span>(opcional)</span></label><textarea class="cycle-input" id="errorAttemptInput" rows="3" maxlength="700" placeholder="O que você respondeu ou pensou?"></textarea></div>
                             <div class="cycle-form-group"><label class="cycle-label" for="errorCorrectInput">Resposta correta <span>(opcional)</span></label><textarea class="cycle-input" id="errorCorrectInput" rows="3" maxlength="900" placeholder="Explique com suas palavras, sem copiar uma resolução enorme."></textarea></div>
@@ -1430,14 +1432,14 @@
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20261002-evolution-v1"></script>
     <script src="schedule-planner.js?v=20261002-evolution-v1"></script>
-    <script src="flashcards-core.js?v=20260929-flash-security-v2"></script>
+    <script src="flashcards-core.js?v=20261005-error-flashcards-v2"></script>
     <script src="mock-exam-core.js?v=20261002-v1"></script>
     <script src="practice-core.js?v=20261005-practice-v1"></script>
     <script src="subject-picker.js?v=20261002-v1"></script>
     <script src="habit-core.js?v=20261002-v1"></script>
     <script src="rank-system-v2.js?v=20260929-rank-v2-1"></script>
-    <script src="autopilot-core.js?v=20261005-daily-plan-v1"></script>
-    <script src="script.js?v=20261005-daily-plan-v1"></script>
+    <script src="autopilot-core.js?v=20261005-pace-v2"></script>
+    <script src="script.js?v=20261005-error-flashcards-v2"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
     <script src="schedule.js?v=20261002-evolution-v1"></script>
@@ -1449,9 +1451,9 @@
     <script src="ai-assistant.js?v=20261002-evolution-v1"></script>
     <script src="flashcards.js?v=20261002-evolution-v1"></script>
     <script src="mock-exams.js?v=20261005-daily-plan-v1"></script>
-    <script src="practice.js?v=20261005-practice-v1"></script>
-    <script src="autopilot.js?v=20261005-daily-plan-v1"></script>
-    <script src="productivity.js?v=20260929-overhaul-v4"></script>
+    <script src="practice.js?v=20261005-pace-v2"></script>
+    <script src="autopilot.js?v=20261005-pace-v2"></script>
+    <script src="productivity.js?v=20261005-error-flashcards-v2"></script>
     <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
     <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>
     <script src="data-portability.js?v=20260929-overhaul-v4"></script>
@@ -1460,6 +1462,6 @@
     <script src="profile-overhaul.js?v=20260930-achievements-toggle"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20261005-error-ai-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20261005-error-flashcards-v2"></script>
 </body>
 </html>

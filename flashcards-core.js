@@ -93,6 +93,24 @@
         return result;
     }
 
+    function addFromError(data, { errorId, subjectId, subject, topic, front, back, now = Date.now(), makeId }) {
+        const box = ensure(data);
+        const candidate = normalizeCandidate({ front, back });
+        if (!candidate || !subjectId || !String(topic || '').trim() || typeof makeId !== 'function') return { created: false, reason: 'invalid' };
+        const targetTopic = text(topic, 100);
+        let deck = box.decks.find(item => (item.subjectIds || [item.subjectId]).map(String).includes(String(subjectId)) && key(item.topic) === key(targetTopic));
+        if (deck && box.cards.some(item => item.deckId === deck.id && key(item.front) === key(candidate.front))) return { created: false, reason: 'duplicate' };
+        if (!deck) {
+            deck = { id: makeId('deck'), name: text(`${subject} · ${targetTopic}`, 80), subjectId: String(subjectId),
+                subjectIds: [String(subjectId)], topic: targetTopic, createdAt: now, updatedAt: now };
+            box.decks.push(deck);
+        }
+        const card = { id: makeId('card'), deckId: deck.id, ...candidate, sourceLabel: 'Caderno de Erros',
+            sourceErrorId: errorId, createdAt: now, updatedAt: now };
+        box.cards.push(card);
+        return { created: true, deckId: deck.id, cardId: card.id };
+    }
+
     function deckStats(data, deckId, now = Date.now()) {
         const box = ensure(data);
         const cards = box.cards.filter(card => card.deckId === deckId);
@@ -115,5 +133,5 @@
             .sort((a, b) => (Number(box.states[a.id]?.dueAt) || 0) - (Number(box.states[b.id]?.dueAt) || 0));
     }
 
-    return { DAY, QUALITY, ensure, duplicateDeck, archiveDeck, restoreDeck, nextState, normalizeCandidate, validateCandidates, deckStats, dueCards, key, text };
+    return { DAY, QUALITY, ensure, duplicateDeck, archiveDeck, restoreDeck, nextState, normalizeCandidate, validateCandidates, addFromError, deckStats, dueCards, key, text };
 });

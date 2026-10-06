@@ -6,4 +6,7 @@
 .error-ai-preview p{margin:0;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
 .error-ai-preview .error-ai-caution{font-size:.82rem;color:var(--text-muted,#606b79)}
 .error-ai-preview-actions{display:flex;flex-wrap:wrap;gap:8px}
+.error-ai-flashcard-option{display:flex;align-items:center;gap:10px;margin:-4px 0 18px;padding:12px 14px;border:1px solid var(--border-strong,#d6dce6);border-radius:12px;background:var(--card-bg,#fff);font-weight:700;cursor:pointer}
+.error-ai-flashcard-option[hidden]{display:none}
+.error-ai-flashcard-option input{width:18px;height:18px;accent-color:var(--accent-color,#1765df)}
 @media(max-width:600px){.error-ai-tools .cycle-btn,.error-ai-preview-actions .cycle-btn{width:100%}}

@@ -108,6 +108,7 @@
 
     function syncStudySettingsUi() {
         document.getElementById('autoReviewToggleBtn')?.setAttribute('aria-pressed', String(appData.studyLogging.autoReview !== false));
+        document.getElementById('autoErrorFlashcardsToggleBtn')?.setAttribute('aria-pressed', String(appData.autopilot?.autoErrorFlashcards !== false));
         const delay = document.getElementById('autoReviewDelaySelect');
         if (delay) delay.value = String(appData.studyLogging.reviewDelayDays || 1);
         const retention = document.getElementById('aiRetentionSelect');
@@ -197,6 +198,11 @@
     document.getElementById('dyslexiaToggleBtn')?.addEventListener('click', () => savePreference('dyslexiaMode', appData.accessibility.dyslexiaMode !== true));
     document.getElementById('motionModeSelect')?.addEventListener('change', event => savePreference('motionMode', event.target.value));
     document.getElementById('autoReviewToggleBtn')?.addEventListener('click', () => { appData.studyLogging.autoReview = !appData.studyLogging.autoReview; syncStudySettingsUi(); saveAppData(); });
+    document.getElementById('autoErrorFlashcardsToggleBtn')?.addEventListener('click', () => {
+        if (!appData.autopilot || typeof appData.autopilot !== 'object') appData.autopilot = {};
+        appData.autopilot.autoErrorFlashcards = appData.autopilot.autoErrorFlashcards === false;
+        syncStudySettingsUi(); saveAppData();
+    });
     document.getElementById('autoReviewDelaySelect')?.addEventListener('change', event => { appData.studyLogging.reviewDelayDays = Number(event.target.value) || 1; syncStudySettingsUi(); saveAppData(); });
     document.getElementById('aiRetentionSelect')?.addEventListener('change', event => { appData.aiSettings.retentionDays = Number(event.target.value) || 7; window.aplicarRetencaoConversaIa?.(); syncStudySettingsUi(); saveAppData(); });
     document.getElementById('reminderTime')?.addEventListener('change', event => { appData.reminder.time = event.target.value || '19:00'; syncReminderUi(); saveAppData(); });

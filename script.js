@@ -5039,6 +5039,10 @@ function abrirModalCadernoErro(id = null) {
     if (!form) return;
     form.reset();
     sugestaoErroIa = null;
+    const opcaoFlashcard = document.getElementById('errorAiFlashcardOption');
+    if (opcaoFlashcard) opcaoFlashcard.hidden = true;
+    const criarFlashcard = document.getElementById('errorAiFlashcardCheck');
+    if (criarFlashcard) criarFlashcard.checked = appData.autopilot?.autoErrorFlashcards !== false;
     const previaIa = document.getElementById('errorAiPreview');
     if (previaIa) { previaIa.hidden = true; previaIa.replaceChildren(); }
     const item = id ? obterItensCadernoErros().find(registro => registro.id === Number(id)) : null;
@@ -5085,6 +5089,9 @@ async function sugerirErroComIa() {
             correct: document.getElementById('errorCorrectInput').value,
             subjects: appData.cycleItems.map(item => item.subject)
         });
+        const flashcard = window.KingFlashcardsCore?.normalizeCandidate?.({ front: sugestaoErroIa.flashcardFront, back: sugestaoErroIa.flashcardBack });
+        const opcaoFlashcard = document.getElementById('errorAiFlashcardOption');
+        if (opcaoFlashcard) opcaoFlashcard.hidden = !flashcard;
         preview.replaceChildren();
         const heading = document.createElement('h3'); heading.textContent = 'Sugestão da IA para conferir'; preview.append(heading);
         for (const [label, value] of [['Matéria', sugestaoErroIa.subject], ['Assunto', sugestaoErroIa.topic], ['Questão', sugestaoErroIa.question], ['Resposta', sugestaoErroIa.answer], ['Regra anti-erro', sugestaoErroIa.rule]]) {
@@ -5096,12 +5103,18 @@ async function sugerirErroComIa() {
         const caution = document.createElement('p'); caution.className = 'error-ai-caution';
         caution.textContent = sugestaoErroIa.uncertain ? 'Há trechos incertos. Confira a imagem e o gabarito antes de aceitar.' : 'A IA pode errar. Confira o gabarito e escolha você mesmo por que errou.';
         preview.append(caution);
+        if (flashcard) {
+            const suggestion = document.createElement('p');
+            suggestion.textContent = `Flashcard sugerido: ${flashcard.front} — ${flashcard.back}`;
+            preview.append(suggestion);
+        }
         const actions = document.createElement('div'); actions.className = 'error-ai-preview-actions';
         const apply = document.createElement('button'); apply.type = 'button'; apply.className = 'cycle-btn primary'; apply.textContent = 'Usar nos campos vazios'; apply.onclick = aplicarSugestaoErroIa;
-        const dismiss = document.createElement('button'); dismiss.type = 'button'; dismiss.className = 'cycle-btn'; dismiss.textContent = 'Ignorar'; dismiss.onclick = () => { sugestaoErroIa = null; preview.hidden = true; preview.replaceChildren(); };
+        const dismiss = document.createElement('button'); dismiss.type = 'button'; dismiss.className = 'cycle-btn'; dismiss.textContent = 'Ignorar'; dismiss.onclick = () => { sugestaoErroIa = null; preview.hidden = true; preview.replaceChildren(); document.getElementById('errorAiFlashcardOption').hidden = true; };
         actions.append(apply, dismiss); preview.append(actions);
     } catch (error) {
         sugestaoErroIa = null;
+        document.getElementById('errorAiFlashcardOption').hidden = true;
         status.textContent = String(error?.message || 'Não foi possível analisar agora.').slice(0, 250);
     } finally {
         button.disabled = false; button.textContent = '✦ Ler questão com IA';
@@ -5144,6 +5157,8 @@ async function salvarCadernoErro(event) {
     if (!CADERNO_ERROS_TIPOS[dados.tipo]) return showToast('Escolha por que você errou antes de salvar.', true);
     if (!dataISOParaLocal(dados.proximaRevisao) || dataLocalISO(dataISOParaLocal(dados.proximaRevisao)) !== dados.proximaRevisao) return showToast('Escolha uma data válida para a próxima revisão.', true);
     if (submit) { submit.disabled = true; submit.textContent = cadernoErroImagensRascunho.some(imagem => imagem.nova) ? 'Enviando imagens…' : 'Salvando…'; }
+    const errosAntes = structuredClone(appData.cadernoErrosItems);
+    const flashcardsAntes = structuredClone(appData.flashcards);
     try {
         const imagensSalvas = [];
         for (const imagem of cadernoErroImagensRascunho) {
@@ -5165,6 +5180,18 @@ async function salvarCadernoErro(event) {
         } else {
             appData.cadernoErrosItems.push(normalizarItemCadernoErro({ id: idRegistro, ...dados, etapaRevisao: 0, status: 'aprendendo', criadoEm: Date.now() }));
         }
+        let flashcardCriado = false;
+        if (sugestaoErroIa && document.getElementById('errorAiFlashcardCheck')?.checked && !document.getElementById('errorAiFlashcardOption')?.hidden) {
+            const materia = window.KingFlashcardsCore && appData.cycleItems.find(item => window.KingFlashcardsCore.key(item.subject) === window.KingFlashcardsCore.key(dados.materia));
+            if (materia && window.KingFlashcardsCore?.addFromError) {
+                const added = window.KingFlashcardsCore.addFromError(appData, {
+                    errorId: idRegistro, subjectId: materia.id, subject: materia.subject, topic: dados.assunto,
+                    front: sugestaoErroIa.flashcardFront, back: sugestaoErroIa.flashcardBack,
+                    makeId: prefix => `${prefix}-${crypto.randomUUID()}`
+                });
+                flashcardCriado = added.created;
+            }
+        }
         saveAppData();
         const removidas = cadernoErroImagensOriginais.filter(imageId => !imagensSalvas.some(imagem => imagem.id === imageId));
         removidas.forEach(imageId => {
@@ -5173,8 +5200,10 @@ async function salvarCadernoErro(event) {
         });
         renderizarCadernoErros();
         fecharModal('errorNotebookModal');
-        showToast(idEditado ? 'Registro atualizado.' : 'Erro guardado e pronto para revisão.');
+        showToast(flashcardCriado ? 'Erro guardado e flashcard criado.' : idEditado ? 'Registro atualizado.' : 'Erro guardado e pronto para revisão.');
     } catch (error) {
+        appData.cadernoErrosItems = errosAntes;
+        appData.flashcards = flashcardsAntes;
         definirStatusImagemCadernoErro(error.message || 'Não foi possível salvar as imagens.', true);
         showToast('Não foi possível salvar o registro com as imagens. Seus campos continuam aqui para tentar novamente.', true);
     } finally {

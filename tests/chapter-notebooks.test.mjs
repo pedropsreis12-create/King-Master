@@ -58,4 +58,5 @@ test('a review can open its matching notebook and the notebook shows its own rev
   assert.match(script, /function abrirModalRevisaoDoTopico\(\)/);
   assert.match(script, /class="cycle-btn review-open-notebook"/);
   assert.match(script, /renderizarRevisoesDoCaderno\(\);/);
+  assert.match(script, /\[appData\.revisoesItems, appData\.historyItems, appData\.cadernoErrosItems\]/);
 });

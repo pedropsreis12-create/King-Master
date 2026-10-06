@@ -3296,9 +3296,18 @@ function salvarDetalhesTopico(event, id, tIdx) {
     topico.nome = novoNome;
     topico.prioridade = document.getElementById('topicControlPriority').value;
     topico.notas = document.getElementById('topicControlNotes').value.trim().slice(0, 500);
-    appData.revisoesItems.forEach(item => {
-        if (item.status !== 'revisado' && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject) && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(nomeAnterior)) item.assunto = novoNome;
-    });
+    if (normalizarRevisaoTexto(nomeAnterior) !== normalizarRevisaoTexto(novoNome)) {
+        const pertenceAoTopico = item => normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materia.subject)
+            && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(nomeAnterior);
+        for (const colecao of [appData.revisoesItems, appData.historyItems, appData.cadernoErrosItems]) {
+            colecao.filter(pertenceAoTopico).forEach(item => { item.assunto = novoNome; });
+        }
+        if (String(espacoTopicoAtual.materiaId) === String(id) && espacoTopicoAtual.topicoIndice === tIdx) {
+            espacoTopicoAtual.nome = novoNome;
+            document.getElementById('topicNavTitle').textContent = novoNome;
+            sessionStorage.setItem('kingMasterOpenTopic', JSON.stringify({ materiaId: id, nome: novoNome, aba: espacoTopicoAtual.aba }));
+        }
+    }
     saveAppData(); renderizarListaAssuntos(id); renderizarCiclo(); renderizarRevisoes(); showToast('Controle do tópico atualizado.');
 }
 

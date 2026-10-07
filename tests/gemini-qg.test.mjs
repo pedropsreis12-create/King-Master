@@ -83,6 +83,7 @@ async function cloudHarness(replies, executeTool = () => ({ ok: true, message: '
         document: { getElementById() { return null; }, querySelector() { return null; }, querySelectorAll() { return []; }, documentElement: { classList: { add() {}, remove() {} } } }, localStorage: { getItem() { return null; }, setItem() {} }, __sdk: sdk });
     const source = cloudSource.replace(/import\('https:\/\/www\.gstatic\.com\/firebasejs\/[^/]+\/(firebase-[\w-]+)\.js'\)/g, 'Promise.resolve(__sdk["$1"])');
     await vm.runInContext(`(async () => { ${source}\n})()`, context);
+    await window.kingGeminiReady;
     return { gemini: window.kingGemini, records };
 }
 

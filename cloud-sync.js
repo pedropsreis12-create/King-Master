@@ -199,12 +199,11 @@ if (!firebaseConfigured) {
     };
 } else {
     try {
-    const [{ initializeApp }, authSdk, firestoreSdk, appCheckSdk, aiSdk] = await Promise.all([
+    const [{ initializeApp }, authSdk, firestoreSdk, appCheckSdk] = await Promise.all([
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js'),
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js'),
-        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js'),
-        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-ai.js')
+        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js')
     ]);
 
     const firebaseApp = initializeApp(firebaseConfig);
@@ -240,6 +239,8 @@ if (!firebaseConfigured) {
 
     authSdk.setPersistence(auth, authSdk.browserLocalPersistence).catch(() => {});
 
+    async function initializeGemini() {
+    const aiSdk = await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-ai.js');
     const S = aiSdk.Schema;
     const ferramentasGemini = {
         functionDeclarations: [
@@ -766,6 +767,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         reset() { /* O histórico visível é a única fonte de memória da conversa. */ }
     };
     finishGeminiInitialization();
+    }
 
     function describeAuthError(error) {
         const code = error?.code || '';
@@ -1053,20 +1055,26 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     authGoogleButton?.addEventListener('click', () => startSignIn(googleProvider, 'do Google').catch(error => setAuthFeedback(describeAuthError(error), 'error')));
 
     async function finishAccountLoading(user) {
-        setAuthBusy(true);
+        const recognizedHere = readIdentity()?.uid === user.uid && Boolean(localSnapshot());
+        if (recognizedHere) {
+            // O Firebase já confirmou a identidade; o progresso local pertence a este UID.
+            // A checagem da nuvem continua em segundo plano, sem reter o painel na entrada.
+            updateCloudUi('syncing', user, 'Conferindo as alterações na nuvem…');
+            unlockApplication(user);
+        } else setAuthBusy(true);
         if (authCloudRetryButton) authCloudRetryButton.hidden = true;
         setAuthFeedback('Sincronizando sua conta…');
         try {
             const status = await reconcile(user);
             if (status === 'reloading') return;
             listenRemote(user);
-            unlockApplication(user);
+            if (!recognizedHere) unlockApplication(user);
             setAuthFeedback('Conta sincronizada.', 'success');
         } catch (error) {
             const identity = readIdentity();
             updateCloudUi('error', user, 'Sua conta entrou, mas a nuvem está temporariamente indisponível.');
             if (identity?.uid === user.uid && localSnapshot()) {
-                unlockApplication(user);
+                if (!recognizedHere) unlockApplication(user);
                 window.showToast?.('☁ Conta reconhecida. Seus dados deste aparelho estão disponíveis; a nuvem tentará reconectar.', true);
             } else {
                 lockApplication('Sua conta foi reconhecida, mas não foi possível carregar seus dados da nuvem. Tente novamente.');
@@ -1274,6 +1282,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         getReviewImage,
         deleteReviewImage
     };
+    initializeGemini().catch(error => {
+        finishGeminiInitialization();
+        console.warn('O Gemini do QG não pôde iniciar, mas o acesso à conta continua disponível.', error?.message || error);
+    });
     } catch (error) {
         finishGeminiInitialization();
         updateCloudUi('error', null, 'A conexão com a nuvem não pôde ser iniciada.');

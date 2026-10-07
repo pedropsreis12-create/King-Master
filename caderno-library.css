@@ -81,3 +81,42 @@
 .library-muted { color: var(--text-muted); font-size: .8rem; }
 @media (max-width: 790px) { .library-shell { display: block; } .library-outline { position: static; max-height: none; } .library-detail { display: none; margin-top: 12px; } .library-panel.has-selection .library-outline { display: none; } .library-panel.has-selection .library-detail { display: block; } .library-reference-grid, .library-related-options { grid-template-columns: 1fr; } }
 @media (max-width: 560px) { .library-outline, .library-detail { padding: 16px; min-height: 430px; } .library-form-grid { grid-template-columns: 1fr; } .library-form-wide { grid-column: auto; } .library-inline-bottom { align-items: stretch; flex-direction: column; } .library-detail.is-fullscreen { inset: 4px; } }
+
+/* O conteúdo é o protagonista; controles secundários ficam recolhidos. */
+#caderno-central > .workspace-heading { margin-bottom: 12px; padding: 0; }
+#caderno-central > .workspace-heading h1 { font-size: clamp(1.5rem, 2vw, 2rem); margin: 3px 0; }
+#caderno-central > .workspace-heading p { margin: 0; font-size: .78rem; }
+#caderno-central .workspace-kicker { font-size: .57rem; }
+#caderno-central .library-tabs { display: inline-flex; gap: 3px; margin-bottom: 12px; padding: 3px; border-radius: 12px; }
+#caderno-central .library-tabs button { min-height: 32px; padding: 6px 11px; font-size: .72rem; }
+.library-shell { grid-template-columns: minmax(230px, 280px) minmax(0, 1fr); gap: 12px; }
+.library-outline, .library-detail { min-height: 380px; padding: 18px; border-radius: 20px; box-shadow: 0 8px 28px #0000000b; }
+.library-detail:not(.is-fullscreen) { overflow: visible; }
+.library-outline-head { margin-bottom: 11px; }
+.library-outline-head h2 { font-size: 1.05rem; }
+.library-outline-head .cycle-btn { min-height: 34px; padding: 6px 11px; font-size: .73rem; }
+.library-search, .library-filter { margin-bottom: 7px; gap: 3px; font-size: .68rem; }
+.library-search input, .library-filter select { min-height: 37px; padding: 7px 10px; font-size: .78rem; }
+.library-outline-list { margin-top: 10px; }
+.library-outline-list summary { padding: 6px 2px; }
+.library-tree-topic > summary { max-width: 100%; font-size: .74rem; }
+.library-page-link { padding: 7px 9px; margin-top: 1px; margin-bottom: 1px; }
+.library-page-link span { font-size: .76rem; }
+.library-page-link small { font-size: .64rem; }
+.library-breadcrumb { margin-top: 13px; font-size: .72rem; }
+.library-document-title { margin: 5px 0; font-size: clamp(1.35rem, 2vw, 1.8rem); }
+.library-actions { align-items: center; gap: 6px; margin: 12px 0 16px; padding-bottom: 12px; }
+.library-actions .cycle-btn { min-height: 33px; padding: 6px 10px; font-size: .72rem; }
+.library-reader { min-height: 0; line-height: 1.65; }
+.library-reader p { margin: 7px 0; }
+.library-info-card { margin-top: 12px; padding: 12px 14px; border-radius: 11px; }
+.library-info-card[hidden], .library-reference-grid[hidden] { display: none !important; }
+.library-more { position: relative; margin-left: auto; }
+.library-more > summary { list-style: none; min-height: 33px; display: flex; align-items: center; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 10px; color: var(--text-muted); font-size: .72rem; font-weight: 750; cursor: pointer; }
+.library-more > summary::-webkit-details-marker { display: none; }
+.library-more[open] > summary { color: var(--accent-color); }
+.library-more > div { position: absolute; z-index: 10; top: calc(100% + 5px); right: 0; width: 170px; padding: 5px; border: 1px solid var(--border-color); border-radius: 12px; background: color-mix(in srgb, var(--card-bg) 97%, var(--bg-body)); box-shadow: 0 12px 30px #0002; }
+.library-more button { display: block; width: 100%; padding: 8px 9px; border: 0; border-radius: 7px; background: transparent; color: var(--text-main); text-align: left; font: inherit; font-size: .73rem; font-weight: 700; cursor: pointer; }
+.library-more button:hover { background: var(--hover-bg); }
+.library-more button.danger { color: #d64545; }
+@media (max-width: 790px) { .library-shell { display: block; } .library-outline, .library-detail { min-height: 360px; } }

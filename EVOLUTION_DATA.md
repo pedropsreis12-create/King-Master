@@ -1,5 +1,12 @@
 # Evolução de dados — 2026-10-02
 
+## Biblioteca de cadernos — 2026-10-07
+
+- A nova área Cadernos é uma visão das páginas já existentes em `cycleItems[].topicos[].caderno.paginas[]`. Não duplica textos nem cria coleção separada. A anotação legada `topicos[].notas`, quando ainda não migrada, vira uma página uma única vez usando a marca `cadernoMigrado` já adotada pelo caderno do assunto.
+- Cada página pode ter `status`, `continuation`, `source`, `edition`, `sourcePage`, `checkedAt` e `linkedPageIds`. Campos ausentes em páginas antigas recebem padrões apenas na interface. Os vínculos usam IDs das páginas e continuam opcionais.
+- `versoes[]` guarda no máximo oito estados anteriores por página; uma versão é criada apenas ao salvar uma alteração pelo novo editor. A restauração preserva o estado substituído no mesmo histórico. O limite evita crescimento indefinido do documento principal.
+- Rascunhos de edição ainda não salvos ficam apenas no `localStorage` deste dispositivo, na chave `kingMasterLibraryDraft:<pageId>`. Eles não são enviados à nuvem até o usuário salvar. A exportação Word gera um `.doc` compatível com HTML, não um `.docx` nativo.
+
 ## Cadernos, trilhas e planejamento — 2026-10-06
 
 - `cycleItems[].topicos[].id` é um ID estável com prefixo `assunto-`. A migração aditiva vincula pelo nome os registros antigos de `historyItems`, `revisoesItems`, `cadernoErrosItems`, `practiceSessions` e `flashcards.decks` com `topicId`; registros sem correspondência continuam legíveis pelo nome. Renomear o assunto atualiza também os nomes desses registros.

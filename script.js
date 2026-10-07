@@ -803,7 +803,7 @@ function showSection(sectionId) {
     if(sectionId === 'agendamento') renderizarAgendamento();
     if(sectionId === 'cronograma') window.KingSchedule?.render();
     if(sectionId === 'revisoes') renderizarRevisoes();
-    if(sectionId === 'caderno-central') window.KingNotebook?.render();
+    if(sectionId === 'caderno-central') { window.KingLibrary?.render?.(); window.KingNotebook?.render?.(); }
     if(['dashboard', 'agendamento', 'historico', 'planejamento'].includes(sectionId)) window.KingStudyEvolution?.render?.();
     if(sectionId === 'flashcards') window.KingFlashcards?.render?.();
     if(sectionId === 'caderno-erros') renderizarCadernoErros();
@@ -6748,6 +6748,7 @@ function excluirPaginaCaderno(id) {
     if (cadernoCapituloAtual.paginaId === paginaId) cadernoCapituloAtual.paginaId = topico.caderno.paginas[0]?.id || null;
     salvarAlteracoesCadernoCapitulo();
     renderizarCadernoCapitulo();
+    window.KingLibrary?.render?.();
     showToast('Página excluída do caderno.');
 }
 

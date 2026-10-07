@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261006-cadernos-trilhas-v2';
+const CACHE_VERSION = 'king-master-20261007-biblioteca-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -14,6 +14,9 @@ const APP_SHELL = [
     './review-trail-core.js',
     './notebook-core.js',
     './notebook.js',
+    './caderno-library-core.js',
+    './caderno-library.js',
+    './caderno-library.css',
     './study-evolution-core.js',
     './study-evolution.js',
     './topic-hierarchy.css',

@@ -1404,7 +1404,7 @@ function sincronizarEstadoCofre() {
     cofre?.classList.toggle('is-open', aberto);
     botao.setAttribute('aria-expanded', String(aberto));
     const texto = botao.querySelector('.frame-vault-toggle-copy');
-    if (texto) texto.textContent = aberto ? 'Fechar molduras' : 'Abrir molduras';
+    if (texto) texto.textContent = aberto ? 'Fechar inventário' : 'Abrir inventário';
 }
 
 function toggleFrameVault() {
@@ -1425,11 +1425,12 @@ function renderizarGaleriaMolduras(dados, molduraEquipada) {
     if (count) count.textContent = `${liberadas.length} de ${trilha.length} liberadas`;
     if (mode) mode.textContent = modo === 'aura' ? 'Carreira Aura' : 'Carreira Militar';
     sincronizarEstadoCofre();
-    grid.innerHTML = trilha.map(item => {
+    const insignias = ['military_tech', 'shield', 'workspace_premium', 'stars', 'grade', 'diamond', 'auto_awesome', 'verified', 'target', 'emoji_events', 'bolt', 'hotel_class', 'security', 'workspace_premium', 'brightness_7', 'settings', 'psychology'];
+    grid.innerHTML = trilha.map((item, index) => {
         const desbloqueada = dados.nivel >= item.nivel;
         const equipada = selecionada ? selecionada === item.tema && desbloqueada : molduraEquipada.tema === item.tema;
         return `<button type="button" class="frame-vault-card${desbloqueada ? ' unlocked' : ' locked'}${equipada ? ' equipped' : ''}" onclick="equiparMoldura('${item.tema}')" ${desbloqueada ? '' : 'aria-disabled="true"'}>
-            <span class="frame-vault-mini league-frame rank-frame-${item.tema}" aria-hidden="true"><b>${simboloDaMoldura(item)}</b></span>
+            <span class="frame-vault-mini league-frame rank-frame-${item.tema}" aria-hidden="true"><b class="material-symbols-rounded">${insignias[index]}</b></span>
             <span class="frame-vault-card-copy"><strong>${item.titulo}</strong><small>${desbloqueada ? (equipada ? 'Equipada agora' : `Liberada no nível ${item.nivel}`) : `Desbloqueia no nível ${item.nivel}`}</small></span>
             <span class="frame-vault-state" aria-hidden="true">${equipada ? '✓' : desbloqueada ? 'Usar' : '🔒'}</span>
         </button>`;

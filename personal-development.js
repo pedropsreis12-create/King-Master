@@ -61,17 +61,19 @@
         const goals = space.items.map((item, index) => ({ item, index })).filter(({ item }) => item.type === 'goal');
         const habitHtml = habits.length ? habits.map(({ item, index }) => {
             const rule = habit.frequency(item);
-            const status = habit.status(item, today());
             const weekly = habit.weekProgress(item, today());
             const currentStreak = habit.streak(item, today());
             const best = Math.max(currentStreak, habit.bestStreak(item));
             const frequencyText = rule.mode === 'daily' ? 'Todos os dias' : rule.mode === 'weekly' ? `${rule.timesPerWeek} ${rule.timesPerWeek === 1 ? 'vez' : 'vezes'} por semana` : ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].filter((_, dayIndex) => rule.weekdays.includes(dayIndex)).join(' · ');
-            const heatmap = Array.from({ length: 28 }, (_, offset) => {
-                const date = habit.day(today()); date.setDate(date.getDate() - 27 + offset);
+            const days = Array.from({ length: 7 }, (_, offset) => {
+                const date = habit.day(habit.monday(today())); date.setDate(date.getDate() + offset);
                 const dateKey = habit.key(date), state = habit.status(item, dateKey);
-                return `<span class="personal-heat-day is-${state || 'empty'}${habit.due(item, dateKey) ? '' : ' is-off'}" title="${dateKey}: ${state === 'done' ? 'cumprido' : state === 'missed' ? 'não cumprido' : state === 'skip' ? 'pulado' : 'sem registro'}"></span>`;
+                const due = habit.due(item, dateKey), future = dateKey > today();
+                const label = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'][offset];
+                const description = !due ? 'fora da meta' : state === 'done' ? 'cumprido' : state === 'missed' ? 'não cumprido' : 'sem registro';
+                return `<button type="button" class="personal-week-day is-${state || 'empty'}${due ? '' : ' is-off'}" onclick="KingPersonalDevelopment.cycleHabitDay(${spaceIndex},${index},'${dateKey}')" aria-label="${label}, ${date.toLocaleDateString('pt-BR')}: ${description}" title="${label}, ${date.toLocaleDateString('pt-BR')}: ${description}" ${!due || future ? 'disabled' : ''}><strong>${label}</strong><span>${date.getDate()}</span><small>${state === 'done' ? '✓' : state === 'missed' ? '×' : '·'}</small></button>`;
             }).join('');
-            return `<article class="personal-track-card personal-habit-card"><div class="personal-habit-head"><strong>${escape(item.name || 'Hábito')}</strong><small>${frequencyText}</small></div><div class="personal-habit-score"><span><b>${currentStreak}</b> sequência atual</span><span><b>${best}</b> melhor sequência</span><span><b>${weekly.done}/${weekly.target}</b> nesta semana</span></div><div class="personal-habit-heatmap" aria-label="Últimos 28 dias">${heatmap}</div><div class="personal-track-actions"><button type="button" onclick="KingPersonalDevelopment.openHabitEntry(${spaceIndex},${index})">${status === 'done' ? '✓ Cumpri hoje' : status === 'missed' ? '✕ Não cumpri hoje' : 'Registrar hoje'}</button><button type="button" onclick="KingPersonalDevelopment.openItem(${index})">Editar</button><button type="button" onclick="KingPersonalDevelopment.deleteItem(${index})">Excluir</button></div></article>`;
+            return `<article class="personal-track-card personal-habit-card"><div class="personal-habit-head"><strong>${escape(item.name || 'Hábito')}</strong><small>${frequencyText}</small></div><div class="personal-habit-score"><span><b>${currentStreak}</b> sequência atual</span><span><b>${best}</b> melhor sequência</span><span><b>${weekly.done}/${weekly.target}</b> nesta semana</span></div><div class="personal-habit-week" role="group" aria-label="Dias desta semana para ${escape(item.name || 'hábito')}">${days}</div><p class="personal-habit-hint">Toque: verde → vermelho → neutro. Dias fora da meta ficam apagados.</p><div class="personal-track-actions"><button type="button" onclick="KingPersonalDevelopment.openItem(${index})">Escolher dias / editar</button><button type="button" onclick="KingPersonalDevelopment.deleteItem(${index})">Excluir</button></div></article>`;
         }).join('') : '<p class="personal-inline-empty">Sem hábitos. Adicione um se quiser marcar seus dias.</p>';
         const goalHtml = goals.length ? goals.map(({ item, index }) => {
             const current = Math.max(0, Number(item.current) || 0), target = Math.max(1, Number(item.target) || 1);
@@ -134,7 +136,7 @@
         byId('personalItemTarget').value = item?.target || 10;
         byId('personalItemUnit').value = item?.unit || '';
         const rule = habit.frequency(item);
-        byId('personalHabitFrequency').value = rule.mode;
+        byId('personalHabitFrequency').value = item ? rule.mode : 'weekdays';
         byId('personalHabitTimes').value = String(rule.timesPerWeek);
         byId('personalHabitWeekdays').querySelectorAll('input').forEach(input => { input.checked = rule.weekdays.includes(Number(input.value)); });
         updateItemFields();
@@ -200,6 +202,17 @@
         else { item.checkins = before; render(); }
     }
     function toggleHabit(spaceIndex, itemIndex) { openHabitEntry(spaceIndex, itemIndex); }
+    function cycleHabitDay(spaceIndex, itemIndex, dateKey) {
+        const item = spaces()[spaceIndex]?.items?.[itemIndex];
+        if (item?.type !== 'habit' || !/^\d{4}-\d{2}-\d{2}$/.test(dateKey) || habit.key(habit.day(dateKey)) !== dateKey || dateKey > today() || !habit.due(item, dateKey)) return;
+        const prior = item.checkins?.[dateKey], state = habit.status(item, dateKey);
+        if (!item.checkins || typeof item.checkins !== 'object') item.checkins = {};
+        const next = habit.nextStatus(state);
+        if (next) item.checkins[dateKey] = { status: next, updatedAt: Date.now() };
+        else delete item.checkins[dateKey];
+        try { saveAppData(); render(); }
+        catch { if (prior === undefined) delete item.checkins[dateKey]; else item.checkins[dateKey] = prior; render(); showToast('Não foi possível salvar esse dia.', true); }
+    }
     function setGoal(spaceIndex, itemIndex, value) {
         const item = spaces()[spaceIndex]?.items?.[itemIndex]; if (item?.type !== 'goal') return;
         const number = Number(value); if (!Number.isFinite(number)) return;
@@ -266,6 +279,6 @@
         if (!persist('Removido do Desenvolvimento Pessoal.')) { selectedId = previousSelectedId; restore(before); }
     }
 
-    window.KingPersonalDevelopment = { render, selectSpace, openSpace, saveSpace, openItem, saveItem, updateItemFields, toggleHabit, openHabitEntry, saveHabitEntry, setGoal, changeGoal, openNote, saveNote, deleteSpace, deleteItem, deleteNote, confirmDelete };
+    window.KingPersonalDevelopment = { render, selectSpace, openSpace, saveSpace, openItem, saveItem, updateItemFields, toggleHabit, cycleHabitDay, openHabitEntry, saveHabitEntry, setGoal, changeGoal, openNote, saveNote, deleteSpace, deleteItem, deleteNote, confirmDelete };
     render();
 })();

@@ -11,6 +11,9 @@
         observer: null,
         refreshFrame: 0,
         achievementFilter: 'all',
+        achievementTier: 'all',
+        boardLoading: false,
+        boardLoadedAt: 0,
         lastSummary: null,
         destroyed: false
     };
@@ -256,74 +259,38 @@
         return { data, metrics, rank };
     }
 
-    function progressAchievement(id, icon, name, description, current, target, label, tone = 'blue') {
-        const safeTarget = Math.max(1, number(target));
-        const safeCurrent = Math.max(0, number(current));
-        return {
-            id,
-            icon,
-            name,
-            description,
-            current: safeCurrent,
-            target: safeTarget,
-            progress: clamp((safeCurrent / safeTarget) * 100),
-            unlocked: safeCurrent >= safeTarget,
-            label,
-            tone
-        };
-    }
-
-    function localAchievements(metrics, rank) {
-        const accuracyProgress = metrics.attempts < 20
-            ? (metrics.attempts / 20) * 70
-            : 70 + (Math.min(metrics.accuracy, 70) / 70) * 30;
-        return [
-            progressAchievement('first-focus', '01', 'Primeiro comando', 'Conclua sua primeira sessão de foco.', metrics.sessions, 1, `${Math.min(metrics.sessions, 1)} de 1 sessão`, 'blue'),
-            progressAchievement('steady-week', '07', 'Ritmo de campanha', 'Registre estudo em sete dias diferentes.', metrics.studyDays, 7, `${Math.min(metrics.studyDays, 7)} de 7 dias`, 'violet'),
-            progressAchievement('deep-focus', '10H', 'Foco profundo', 'Acumule dez horas de estudo real.', metrics.totalHours, 10, `${Math.min(metrics.totalHours, 10).toFixed(metrics.totalHours < 10 ? 1 : 0).replace('.', ',')} de 10 horas`, 'cyan'),
-            progressAchievement('topic-path', '10', 'Trilha do saber', 'Domine dez tópicos do seu mapa.', metrics.masteredTopics, 10, `${Math.min(metrics.masteredTopics, 10)} de 10 tópicos`, 'green'),
-            {
-                id: 'sharp-mind', icon: '◎', name: 'Mente afiada', description: 'Mantenha 70% de acerto após pelo menos 20 questões.',
-                current: metrics.attempts, target: 20, progress: clamp(accuracyProgress),
-                unlocked: metrics.attempts >= 20 && metrics.accuracy >= 70,
-                label: metrics.attempts < 20 ? `${metrics.attempts} de 20 questões` : `${metrics.accuracy}% de acerto`, tone: 'amber'
-            },
-            progressAchievement('trial-fire', '◆', 'Prova de fogo', 'Registre seu primeiro simulado completo.', metrics.simulations, 1, `${Math.min(metrics.simulations, 1)} de 1 simulado`, 'red'),
-            progressAchievement('master-word', '✦', 'Palavra de mestre', 'Registre três redações no seu percurso.', metrics.essays, 3, `${Math.min(metrics.essays, 3)} de 3 redações`, 'pink'),
-            progressAchievement('review-guardian', '↻', 'Guardião da memória', 'Conclua dez revisões planejadas.', metrics.reviewed, 10, `${Math.min(metrics.reviewed, 10)} de 10 revisões`, 'indigo'),
-            progressAchievement('rank-climber', '↑', 'Ascensão', 'Alcance o nível 10 do sistema de evolução.', rank.level, 10, `Nível ${Math.min(rank.level, 10)} de 10`, 'gold')
-        ];
-    }
-
     function normalizeExternalAchievement(item, index) {
         if (!item || typeof item !== 'object') return null;
         const id = String(item.id || item.key || `rank-v2-${index}`);
         const target = Math.max(1, number(item.target ?? item.goal ?? item.progress?.target) || 1);
         const current = Math.max(0, number(item.current ?? item.value ?? item.progress?.current));
         const rawProgress = item.progressPercent ?? (typeof item.progress === 'object' ? item.progress.percent : item.progress);
-        const unlocked = Boolean(item.unlocked || item.unlockedAt || item.status === 'unlocked' || item.status === 'claimed' || current >= target);
+        const unlocked = Boolean(item.unlocked || item.unlockedAt || item.status === 'unlocked' || item.status === 'claimed');
         const rarityTone = { 'comum': 'blue', 'rara': 'cyan', 'épica': 'violet', 'epica': 'violet', 'lendária': 'gold', 'lendaria': 'gold', 'mítica': 'pink', 'mitica': 'pink' };
         return {
             id: `v2-${id}`,
-            icon: String(item.icon || item.symbol || '◇').slice(0, 4),
+            icon: String(item.icon || 'workspace_premium').replace(/[^a-z_]/g, '').slice(0, 40),
+            tier: String(item.tier || 'normal').replace(/[^a-z_]/g, ''),
+            tierLabel: String(item.tierLabel || 'Normal').slice(0, 24),
             name: String(item.name || item.title || 'Conquista').slice(0, 70),
             description: String(item.description || item.subtitle || 'Marco especial da sua jornada.').slice(0, 180),
             current,
             target,
-            progress: unlocked ? 100 : clamp(number(rawProgress) || (current / target) * 100),
+            progress: unlocked ? 100 : item.secondaryRequirement && item.secondaryRequirement.value < item.secondaryRequirement.goal
+                ? Math.min(95, clamp(number(rawProgress) || (current / target) * 100))
+                : clamp(number(rawProgress) || (current / target) * 100),
             unlocked,
-            label: String(item.progressLabel || item.label || (unlocked ? 'Conquistada' : `${formatNumber(current)} de ${formatNumber(target)}`)).slice(0, 80),
+            label: String(item.secondaryRequirement && item.secondaryRequirement.value < item.secondaryRequirement.goal
+                ? `${formatNumber(item.secondaryRequirement.value)} de ${formatNumber(item.secondaryRequirement.goal)} questões`
+                : item.progressLabel || item.label || (unlocked ? 'Conquistada' : `${formatNumber(current)} de ${formatNumber(target)}`)).slice(0, 80),
             tone: String(item.tone || rarityTone[String(item.rarity || '').toLowerCase()] || 'violet').replace(/[^a-z-]/gi, '') || 'violet',
             unlockedAt: item.unlockedAt || null
         };
     }
 
     function achievementList(summary) {
-        const local = localAchievements(summary.metrics, summary.rank);
         const external = summary.rank.achievements.map(normalizeExternalAchievement).filter(Boolean);
-        if (!external.length) return local;
-        const externalIds = new Set(external.map(item => item.id.replace(/^v2-/, '')));
-        return [...external, ...local.filter(item => !externalIds.has(item.id))];
+        return external;
     }
 
     function createNavigation(root) {
@@ -384,12 +351,12 @@
             tabindex: '-1'
         });
         const crest = element('div', 'km-rank-brief__crest', null, { 'aria-hidden': 'true' });
-        crest.append(element('span', '', 'KM'), element('i'));
+        crest.append(element('span', 'material-symbols-rounded', 'workspace_premium'), element('i'));
         const copy = element('div', 'km-rank-brief__copy');
         copy.append(
-            element('span', 'km-profile-kicker', 'CLASSIFICAÇÃO ATUAL'),
-            element('h2', '', 'Sua liga', { id: 'kmRankBriefTitle' }),
-            element('p', '', 'Continue estudando para avançar.', { id: 'kmRankBriefSubtitle' })
+            element('span', 'km-profile-kicker', 'SUA CLASSIFICAÇÃO'),
+            element('h2', '', 'Liga Bronze', { id: 'kmRankBriefTitle' }),
+            element('p', '', 'Classificação pessoal por XP da temporada.', { id: 'kmRankBriefSubtitle' })
         );
         const progress = element('div', 'km-rank-brief__progress');
         const progressHead = element('div');
@@ -400,18 +367,89 @@
         });
         track.append(element('span', '', null, { id: 'kmRankBriefBar' }));
         progress.append(progressHead, track, element('small', '', 'Seu progresso aparece aqui.', { id: 'kmRankBriefHint' }));
-        const metrics = element('dl', 'km-rank-brief__metrics');
-        [
-            ['Pontuação', 'kmRankScore', '0'],
-            ['Sequência', 'kmRankStreak', '0 dias'],
-            ['Multiplicador', 'kmRankMultiplier', '1x']
-        ].forEach(([term, id, value]) => {
-            const group = element('div');
-            group.append(element('dt', '', term), element('dd', '', value, { id }));
-            metrics.append(group);
-        });
-        section.append(crest, copy, progress, metrics);
+        const catalog = element('details', 'km-league-catalog');
+        catalog.append(element('summary', '', 'Ver todas as ligas'), element('div', 'km-league-catalog__grid', null, { id: 'kmLeagueCatalog' }));
+        const publicBoard = element('details', 'km-public-board');
+        const boardBody = element('div', 'km-public-board__body');
+        const boardHeader = element('div', 'km-public-board__header');
+        boardHeader.append(
+            element('p', '', 'Entre apenas se quiser publicar seu apelido e XP da temporada. Os dados de estudo continuam privados. Pontuações ainda não são verificadas por servidor.'),
+            element('button', '', 'Participar', { id: 'kmPublicBoardJoin', type: 'button' })
+        );
+        const refresh = element('button', 'km-public-board__refresh', 'Atualizar placar', { type: 'button' });
+        refresh.addEventListener('click', () => refreshPublicBoard(true));
+        const status = element('p', 'km-public-board__status', 'Abra o placar para carregar a classificação.', { id: 'kmPublicBoardStatus', role: 'status' });
+        boardBody.append(boardHeader, refresh, status, element('ol', 'km-public-board__list', null, { id: 'kmPublicBoardList' }));
+        publicBoard.append(element('summary', '', 'Placar público entre estudantes'), boardBody);
+        publicBoard.addEventListener('toggle', () => { if (publicBoard.open) refreshPublicBoard(); });
+        boardHeader.querySelector('button').addEventListener('click', changePublicBoardMembership);
+        section.append(crest, copy, progress, catalog, publicBoard);
         identity.insertAdjacentElement('afterend', section);
+    }
+
+    async function refreshPublicBoard(force = false) {
+        const panel = state.root?.querySelector('.km-public-board');
+        const api = window.KingPublicRanking;
+        if (!panel?.open || state.boardLoading) return;
+        if (!api) {
+            text('kmPublicBoardStatus', 'Preparando conexão com o placar…');
+            return;
+        }
+        if (!force && Date.now() - state.boardLoadedAt < 60_000) return;
+        state.boardLoading = true;
+        text('kmPublicBoardStatus', 'Carregando classificação…');
+        try {
+            const board = await api.list();
+            const list = document.getElementById('kmPublicBoardList');
+            list?.replaceChildren();
+            board.entries.forEach((entry, index) => {
+                const row = element('li', entry.uid === board.uid ? 'is-mine' : '');
+                const league = window.KingRankV2?.leagueForScore(entry.score)?.name || '';
+                row.append(
+                    element('strong', '', String(index + 1).padStart(2, '0')),
+                    element('span', '', entry.uid === board.uid ? `${entry.displayName} · você` : entry.displayName),
+                    element('small', '', league ? `Liga ${league}` : ''),
+                    element('b', '', `${formatNumber(entry.score)} XP`)
+                );
+                list?.append(row);
+            });
+            const membership = document.getElementById('kmPublicBoardJoin');
+            if (membership) membership.textContent = board.joined ? 'Sair do placar' : 'Participar';
+            if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', 'Ainda não há participantes nesta temporada.'));
+            text('kmPublicBoardStatus', `Temporada ${board.seasonId} · ${board.entries.length} ${board.entries.length === 1 ? 'estudante' : 'estudantes'} entre os 30 primeiros · classificação não verificada.`);
+            state.boardLoadedAt = Date.now();
+        } catch (error) {
+            console.warn('Placar público indisponível:', error);
+            const unavailable = /permission-denied|failed-precondition/i.test(String(error?.code || ''));
+            text('kmPublicBoardStatus', unavailable
+                ? 'O placar público ainda precisa ser ativado no banco de dados. Seu perfil privado continua intacto.'
+                : /entre na sua conta/i.test(String(error?.message || ''))
+                    ? 'Entre na sua conta para consultar ou participar do placar público.'
+                : 'Não foi possível carregar o placar agora. Tente novamente.');
+        } finally {
+            state.boardLoading = false;
+        }
+    }
+
+    async function changePublicBoardMembership() {
+        const button = document.getElementById('kmPublicBoardJoin');
+        const api = window.KingPublicRanking;
+        if (!button || !api || button.disabled) return;
+        button.disabled = true;
+        const leaving = button.textContent === 'Sair do placar';
+        text('kmPublicBoardStatus', leaving ? 'Removendo seu perfil público…' : 'Publicando somente apelido, nível e XP sazonal…');
+        try {
+            if (leaving) await api.leave();
+            else await api.join();
+            state.boardLoadedAt = 0;
+            await refreshPublicBoard(true);
+        } catch (error) {
+            text('kmPublicBoardStatus', /permission-denied|failed-precondition/i.test(String(error?.code || ''))
+                ? 'O placar ainda não está disponível no banco de dados.'
+                : 'A alteração não foi salva. Tente novamente.');
+        } finally {
+            button.disabled = false;
+        }
     }
 
     function createSeasonHub(root) {
@@ -489,7 +527,7 @@
         copy.append(
             element('span', 'km-profile-kicker', 'MARCOS DA JORNADA'),
             element('h2', '', 'Conquistas', { id: 'kmAchievementsTitle' }),
-            element('p', '', 'Objetivos claros, progresso verificável e nenhuma recompensa inventada.')
+            element('p', '', '50 marcos reais em cinco níveis de dificuldade.')
         );
         const summary = element('div', 'km-achievements__summary');
         const ring = element('div', 'km-achievements__ring', null, { id: 'kmAchievementRing', role: 'img', 'aria-label': 'Nenhuma conquista desbloqueada' });
@@ -503,7 +541,12 @@
         });
         summary.id = 'kmAchievementSummary';
         const actions = element('div', 'km-achievements__actions');
-        actions.append(summary, toggle);
+        const expand = element('button', 'km-achievements__expand material-symbols-rounded', 'open_in_full', {
+            id: 'kmAchievementsExpand', type: 'button', title: 'Ver conquistas em tela cheia',
+            'aria-label': 'Ver conquistas em tela cheia', 'aria-pressed': 'false'
+        });
+        expand.addEventListener('click', () => toggleAchievementsFullscreen());
+        actions.append(summary, expand, toggle);
         top.append(copy, actions);
         toggle.addEventListener('click', () => {
             const hidden = toggle.getAttribute('aria-expanded') === 'true';
@@ -528,17 +571,31 @@
             buttons[next].focus();
             buttons[next].click();
         });
-        toolbar.append(filters, element('span', 'km-achievements__count', '0 conquistas', { id: 'kmAchievementCount', 'aria-live': 'polite' }));
+        const tier = element('select', 'km-achievements__tier', null, { id: 'kmAchievementTier', 'aria-label': 'Filtrar por dificuldade' });
+        [['all', 'Todas as dificuldades'], ['facil', 'Fácil'], ['normal', 'Normal'], ['media', 'Média'], ['dificil', 'Difícil'], ['muito_dificil', 'Muito difícil']].forEach(([value, label]) => tier.append(element('option', '', label, { value })));
+        tier.addEventListener('change', () => { state.achievementTier = tier.value; if (state.lastSummary) renderAchievements(state.lastSummary); });
+        toolbar.append(filters, tier, element('span', 'km-achievements__count', '0 conquistas', { id: 'kmAchievementCount', 'aria-live': 'polite' }));
         const empty = element('div', 'km-achievements__empty', null, { id: 'kmAchievementEmpty', hidden: true });
         empty.append(element('span', '', '◇', { 'aria-hidden': 'true' }), element('strong', '', 'Nenhuma conquista neste filtro'), element('p', '', 'Mude o filtro para acompanhar os outros marcos da sua jornada.'));
-        const starter = element('div', 'km-achievements__starter', null, { id: 'kmAchievementStarter', hidden: true });
-        starter.append(element('span', '', '01', { 'aria-hidden': 'true' }), element('div'));
-        starter.lastElementChild.append(element('strong', '', 'Sua primeira missão já está disponível'), element('p', '', 'Conclua uma sessão de foco. O perfil evolui a partir de atividade real registrada no King Master.'));
         const body = element('div', 'km-achievements__body', null, { id: 'kmAchievementsBody' });
-        body.append(toolbar, starter, element('div', 'km-achievements__grid', null, { id: 'kmAchievementGrid' }), empty);
+        body.append(toolbar, element('div', 'km-achievements__grid', null, { id: 'kmAchievementGrid', tabindex: '0', 'aria-label': 'Lista rolável de conquistas' }), empty);
         section.append(top, body);
         (xpLab || overview)?.insertAdjacentElement(xpLab ? 'beforebegin' : 'afterend', section);
         try { applyAchievementsVisibility(localStorage.getItem(ACHIEVEMENTS_VISIBILITY_KEY) === 'true'); } catch { applyAchievementsVisibility(false); }
+    }
+
+    function toggleAchievementsFullscreen(force) {
+        const section = document.getElementById('perfil-conquistas');
+        const button = document.getElementById('kmAchievementsExpand');
+        if (!section || !button) return;
+        const expanded = typeof force === 'boolean' ? force : !section.classList.contains('is-fullscreen');
+        section.classList.toggle('is-fullscreen', expanded);
+        document.body.classList.toggle('km-achievements-open', expanded);
+        button.textContent = expanded ? 'close_fullscreen' : 'open_in_full';
+        button.setAttribute('aria-pressed', String(expanded));
+        button.setAttribute('aria-label', expanded ? 'Sair da tela cheia' : 'Ver conquistas em tela cheia');
+        button.title = expanded ? 'Sair da tela cheia' : 'Ver conquistas em tela cheia';
+        if (!expanded) button.focus();
     }
 
     function applyAchievementsVisibility(hidden) {
@@ -600,11 +657,11 @@
                 ? `Faltam ${formatNumber(rank.leagueRemaining)} pontos para avançar`
                 : rank.remainingText;
         text('kmRankBriefTitle', title);
-        text('kmRankBriefSubtitle', `Nível ${rank.level} · ${rank.title}`);
+        text('kmRankBriefSubtitle', 'Classificação pessoal por XP da temporada.');
         text('kmRankBriefProgressLabel', seasonMode ? (rank.leagueIsTop ? 'Classificação máxima' : 'Rumo à próxima classificação') : 'Rumo ao próximo nível');
         text('kmRankBriefPercent', formatPercent(progress));
         text('kmRankBriefHint', seasonMode ? classificationHint : rank.remainingText);
-        text('profileLeagueName', `Título · ${rank.title}`);
+        text('profileLeagueName', /^liga\s/i.test(title) ? title : `Liga ${title}`);
         text('kmRankScore', formatNumber(seasonMode ? rank.seasonScore : rank.xpTotal));
         text('kmRankStreak', plural(rank.streak, 'dia', 'dias'));
         text('kmRankMultiplier', `${String(rank.multiplier.toFixed(2)).replace(/\.00$/, '').replace('.', ',')}x`);
@@ -614,6 +671,22 @@
         if (track) {
             track.setAttribute('aria-valuenow', String(Math.round(progress)));
             track.setAttribute('aria-valuetext', `${formatPercent(progress)}; ${seasonMode ? classificationHint : rank.remainingText}`);
+        }
+        const catalog = document.getElementById('kmLeagueCatalog');
+        const leagues = window.KingRankV2?.LEAGUES || [];
+        if (catalog && leagues.length) {
+            catalog.replaceChildren();
+            const active = leagues.findIndex(item => item.name === rank.league.replace(/^Liga\s+/i, ''));
+            leagues.forEach((league, index) => {
+                const row = element('div', `km-league-item${index === active ? ' is-current' : ''}${index < active ? ' is-passed' : ''}`);
+                row.style.setProperty('--league-color', league.color);
+                row.append(
+                    element('span', 'material-symbols-rounded', index === leagues.length - 1 ? 'emoji_events' : 'workspace_premium', { 'aria-hidden': 'true' }),
+                    element('strong', '', `Liga ${league.name}`),
+                    element('small', '', index === active ? 'Atual' : `${formatNumber(league.start)} XP da temporada`)
+                );
+                catalog.append(row);
+            });
         }
         state.root?.toggleAttribute('data-rank-v2', seasonMode);
     }
@@ -811,10 +884,10 @@
     function renderAchievements(summary) {
         const all = achievementList(summary);
         const unlocked = all.filter(item => item.unlocked);
-        const filtered = all.filter(item => state.achievementFilter === 'all' || (state.achievementFilter === 'unlocked' ? item.unlocked : !item.unlocked));
+        const filtered = all.filter(item => (state.achievementFilter === 'all' || (state.achievementFilter === 'unlocked' ? item.unlocked : !item.unlocked))
+            && (state.achievementTier === 'all' || item.tier === state.achievementTier));
         const grid = document.getElementById('kmAchievementGrid');
         const empty = document.getElementById('kmAchievementEmpty');
-        const starter = document.getElementById('kmAchievementStarter');
         if (!grid) return;
         const overall = all.length ? Math.round((unlocked.length / all.length) * 100) : 0;
         const ring = document.getElementById('kmAchievementRing');
@@ -827,7 +900,6 @@
         const next = all.filter(item => !item.unlocked).sort((a, b) => b.progress - a.progress)[0];
         text('kmAchievementNext', next ? `Mais próxima: ${next.name} · ${formatPercent(next.progress)}` : 'Todas as conquistas disponíveis foram concluídas.');
         text('kmAchievementCount', plural(filtered.length, 'conquista', 'conquistas'));
-        if (starter) starter.hidden = summary.metrics.sessions > 0 || summary.metrics.totalSeconds > 0;
         grid.replaceChildren();
         filtered.forEach((achievement, index) => {
             const card = element('article', `km-achievement-card is-${achievement.tone}${achievement.unlocked ? ' is-unlocked' : ' is-locked'}`, null, {
@@ -835,14 +907,14 @@
             });
             const top = element('div', 'km-achievement-card__top');
             top.append(
-                element('span', 'km-achievement-card__icon', achievement.icon, { 'aria-hidden': 'true' }),
-                element('span', 'km-achievement-card__state', achievement.unlocked ? 'Conquistada' : 'Em progresso')
+                element('span', 'km-achievement-card__icon material-symbols-rounded', achievement.icon, { 'aria-hidden': 'true' }),
+                element('span', 'km-achievement-card__state', achievement.tierLabel)
             );
             const copy = element('div', 'km-achievement-card__copy');
             copy.append(element('h3', '', achievement.name, { id: `km-achievement-name-${index}` }), element('p', '', achievement.description));
             const progress = element('div', 'km-achievement-card__progress');
             const progressCopy = element('div');
-            progressCopy.append(element('span', '', achievement.label), element('strong', '', formatPercent(achievement.progress)));
+            progressCopy.append(element('span', '', achievement.unlocked ? 'Conquistada' : achievement.label), element('strong', '', formatPercent(achievement.progress)));
             const track = element('div', '', null, {
                 role: 'progressbar', 'aria-label': `Progresso de ${achievement.name}`,
                 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(Math.round(achievement.progress))
@@ -896,6 +968,9 @@
         renderWeekly(summary);
         renderAchievements(summary);
         renderFrameState();
+        if (state.boardLoadedAt) window.KingPublicRanking?.syncIfJoined().then(changed => {
+            if (changed && state.root?.querySelector('.km-public-board')?.open) refreshPublicBoard(true);
+        }).catch(() => {});
         applySemantics();
         state.root.dataset.profileOverhaulReady = 'true';
     }
@@ -932,13 +1007,18 @@
         root.dataset.profileOverhaul = VERSION;
         root.querySelector('.profile-overview-grid')?.setAttribute('id', 'perfil-progresso');
         root.querySelector('.profile-overview-grid')?.setAttribute('tabindex', '-1');
-        createNavigation(root);
+        document.getElementById('kmProfileNav')?.remove();
         enhanceIdentity();
         createRankBrief(root);
         createSeasonHub(root);
         createWeeklyPulse();
         createAchievements(root);
         enhanceFrameVault();
+        window.addEventListener('king-public-ranking-ready', () => refreshPublicBoard(true));
+        window.addEventListener('king-master-auth-ready', () => { state.boardLoadedAt = 0; refreshPublicBoard(true); });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && document.getElementById('perfil-conquistas')?.classList.contains('is-fullscreen')) toggleAchievementsFullscreen(false);
+        });
         connectObserver();
         render();
     }

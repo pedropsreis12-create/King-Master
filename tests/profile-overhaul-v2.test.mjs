@@ -7,10 +7,12 @@ const source = await readFile(new URL('../profile-overhaul.js', import.meta.url)
 test('perfil mantém liga sazonal e título vitalício semanticamente separados', () => {
     assert.match(source, /leagueRemaining:/);
     assert.match(source, /Faltam \$\{formatNumber\(rank\.leagueRemaining\)\} pontos para avançar/);
-    assert.match(source, /text\('profileLeagueName', `Título · \$\{rank\.title\}`\)/);
+    assert.match(source, /text\('profileLeagueName', \/\^liga/);
 });
 
-test('perfil não corta a coleção verificada de conquistas', () => {
-    assert.doesNotMatch(source, /local\.filter\(item => !externalIds\.has\(item\.id\)\)\]\.slice\(0, 15\)/);
-    assert.match(source, /return \[\.\.\.external, \.\.\.local\.filter\(item => !externalIds\.has\(item\.id\)\)\];/);
+test('perfil mostra somente as conquistas verificadas e oferece visualização ampliada', () => {
+    assert.match(source, /return external;/);
+    assert.match(source, /function toggleAchievementsFullscreen\(/);
+    assert.match(source, /achievementTier: 'all'/);
+    assert.doesNotMatch(source, /createNavigation\(root\);/);
 });

@@ -14,17 +14,18 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=block" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=20261005-local-xp-v3">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260929-flash-security-v2">
     <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
-    <link rel="stylesheet" href="personal-development.css?v=20260922-flexible-v1">
+    <link rel="stylesheet" href="personal-development.css?v=20261008-week-habits-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
     <link rel="stylesheet" href="topic-workspace.css?v=20260922-topic-workspace-v1">
-    <link rel="stylesheet" href="schedule.css?v=20261002-evolution-v1">
+    <link rel="stylesheet" href="schedule.css?v=20261008-dual-schedule-v1">
     <link rel="stylesheet" href="schedule-planner.css?v=20261002-evolution-v1">
     <link rel="stylesheet" href="quick-improvements.css?v=20260922-notebooks-v1">
     <link rel="stylesheet" href="chapter-refresh.css?v=20260922-chapter-profile-v1">
@@ -34,7 +35,7 @@
     <link rel="stylesheet" href="mock-exams.css?v=20261002-v1">
     <link rel="stylesheet" href="command-palette.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
-    <link rel="stylesheet" href="profile-overhaul.css?v=20260930-achievements-toggle">
+    <link rel="stylesheet" href="profile-overhaul.css?v=20261008-profile-achievements-v2">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
     <link rel="stylesheet" href="practice.css?v=20261005-pace-v2">
     <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
@@ -155,7 +156,6 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Desenvolvimento</span>
                 <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Seu espaço, suas prioridades</small></span></button>
-                <button type="button" class="menu-btn" data-section="notas" aria-controls="notas" onclick="showSection('notas')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Notas</strong><small>Tópicos e anotações</small></span></button>
             </div>
             <div class="nav-cluster nav-cluster-account">
                 <span class="nav-cluster-label">Conta</span>
@@ -181,7 +181,6 @@
         </div>
     </nav>
 
-    <button type="button" class="quick-notes-launch" onclick="abrirNotasRapidas()" aria-label="Abrir notas rápidas" title="Anotar sem interromper o estudo">✎ <span>Anotar</span></button>
 
     <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
         <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Hoje</small></button>
@@ -415,6 +414,11 @@
                 </div>
             </div>
 
+            <div class="schedule-view-controls widget" role="group" aria-label="Modo do cronograma">
+                <div class="schedule-view-switch"><button type="button" id="scheduleFixedViewButton" onclick="KingSchedule.setViewMode('fixed')" aria-pressed="true">Cronograma fixo</button><button type="button" id="scheduleLoadViewButton" onclick="KingSchedule.setViewMode('load')" aria-pressed="false">Carga por matéria</button></div>
+                <label for="scheduleQuickPause">Pausa entre blocos <input type="number" id="scheduleQuickPause" min="0" max="90" step="1" onchange="KingSchedule.setPause(this.value)"> <span>min</span></label>
+            </div>
+
             <div class="schedule-overview-grid">
                 <article class="schedule-progress-card widget">
                     <div class="schedule-progress-ring" id="scheduleProgressRing"><div><strong id="scheduleProgressText">0%</strong><small>concluído</small></div></div>
@@ -445,13 +449,15 @@
             <button type="button" class="schedule-review-queue widget" id="scheduleReviewQueue" onclick="iniciarFilaRevisoesHoje()" hidden><span class="schedule-review-icon" aria-hidden="true">↻</span><span><small>CAIXA DE REVISÕES</small><strong id="scheduleReviewQueueTitle">Nenhuma revisão para hoje</strong><em>As revisões ficam separadas dos blocos normais.</em></span><b>Abrir fila <i aria-hidden="true">›</i></b></button>
             <div class="schedule-suggestion widget" id="scheduleSuggestion" hidden></div>
 
-            <section class="schedule-week-board widget" aria-labelledby="scheduleWeekBoardTitle">
+            <section class="schedule-week-board widget" id="scheduleFixedBoard" aria-labelledby="scheduleWeekBoardTitle">
                 <header class="schedule-week-board-heading"><div><span class="workspace-kicker">PLANO SEMANAL</span><h2 id="scheduleWeekBoardTitle">Sua semana em uma visão</h2><p>Os blocos abaixo usam somente as matérias que você cadastrou.</p></div><button type="button" class="cycle-btn" onclick="KingSchedule.openBlock()">＋ Novo bloco</button></header>
                 <div class="schedule-matrix-scroll"><div class="schedule-week-matrix" id="scheduleWeekMatrix"></div></div>
             </section>
 
+            <section class="schedule-load-board widget" id="scheduleLoadBoard" hidden aria-labelledby="scheduleLoadBoardTitle"><header><div><span class="workspace-kicker">META FLEXÍVEL</span><h2 id="scheduleLoadBoardTitle">Horas por matéria</h2><p>Defina a carga semanal sem prender cada estudo a um horário. O tempo registrado no cronômetro preenche a meta automaticamente.</p><strong id="scheduleLoadTotals" class="schedule-load-totals"></strong></div><button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()">Ajustar disponibilidade</button></header><div id="scheduleLoadSubjects" class="schedule-load-subjects"></div></section>
+
             <div class="schedule-day-strip widget" id="scheduleDayStrip" role="tablist" aria-label="Dias da semana"></div>
-            <div class="schedule-focus-layout">
+            <div class="schedule-focus-layout" id="scheduleFixedDayLayout">
                 <section class="schedule-agenda widget" aria-labelledby="scheduleSelectedDayTitle">
                     <header class="schedule-agenda-heading">
                         <div><span class="workspace-kicker" id="scheduleSelectedDayEyebrow">HOJE</span><h2 id="scheduleSelectedDayTitle">—</h2><p id="scheduleSelectedDaySummary">Dia livre para respirar ou reorganizar.</p></div>
@@ -583,7 +589,6 @@
                 </div>
                 <div class="cycle-btn-group agenda-heading-actions"><button type="button" class="cycle-btn" onclick="KingAgenda.openImport()">✦ Importar com IA</button><button type="button" class="cycle-btn" onclick="KingAgenda.openCategories()">Categorias</button><button type="button" class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button></div>
             </div>
-            <section class="widget evolution-deadline-board"><div class="section-list-heading"><div><span class="workspace-kicker">ENEM E VESTIBULARES</span><h2>Prazos</h2></div><div class="cycle-btn-group"><button type="button" class="cycle-btn" onclick="KingStudyEvolution.addDeadlineTemplates()">Modelos ENEM</button><button type="button" class="cycle-btn primary" onclick="KingStudyEvolution.openDeadline()">+ Prazo</button></div></div><div id="studyDeadlineList"></div></section>
             <p class="calendar-sync-status" id="googleCalendarStatus" role="status">Opcional: envie seus compromissos ao Google Agenda. Só eventos criados pelo King Master serão alterados ou removidos.</p>
             <div class="agenda-calendar-row"><button type="button" class="agenda-calendar-link" id="googleCalendarButton" onclick="window.kingCalendar?.connect()">Vincular Google Agenda</button><span>Seus compromissos ficam salvos no King Master mesmo sem conectar uma conta.</span></div>
             <div class="workspace-metric-strip agenda-summary" aria-label="Resumo da agenda">
@@ -932,10 +937,10 @@
             </div>
             <div class="frame-vault widget" aria-labelledby="frameVaultTitle">
                 <div class="frame-vault-heading">
-                    <div><span class="xp-test-kicker">Arsenal visual</span><h3 id="frameVaultTitle">Molduras desbloqueadas</h3><p>Equipe qualquer moldura conquistada sem alterar seu nível ou título atual.</p></div>
+                    <div><span class="xp-test-kicker">PERSONALIZAÇÃO</span><h3 id="frameVaultTitle">Inventário de molduras</h3><p>Veja o que conquistou e equipe sua moldura favorita.</p></div>
                     <div class="frame-vault-actions">
                         <button type="button" class="cycle-btn" onclick="usarMolduraAutomatica()">Usar a atual</button>
-                        <button type="button" class="frame-vault-toggle" id="frameVaultToggle" aria-expanded="false" aria-controls="frameVaultBody" onclick="toggleFrameVault()"><span class="frame-vault-toggle-copy">Abrir molduras</span><span class="frame-vault-arrow" aria-hidden="true">⌄</span></button>
+                        <button type="button" class="frame-vault-toggle" id="frameVaultToggle" aria-expanded="false" aria-controls="frameVaultBody" onclick="toggleFrameVault()"><span class="material-symbols-rounded" aria-hidden="true">inventory_2</span><span class="frame-vault-toggle-copy">Abrir inventário</span><span class="frame-vault-arrow" aria-hidden="true">⌄</span></button>
                     </div>
                 </div>
                 <div class="frame-vault-body" id="frameVaultBody" hidden>
@@ -1377,7 +1382,7 @@
                             <div class="cycle-form-group"><label class="cycle-label" for="scheduleRegistrationMinutes">Registro após cada bloco</label><select class="cycle-input" id="scheduleRegistrationMinutes"><option value="0">Sem tempo extra</option><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="15">15 minutos</option></select></div>
                         </div>
                         <div class="schedule-flex-grid">
-                            <div class="schedule-flex-group"><div class="schedule-flex-heading"><strong>Pausas</strong><small>A pausa nunca será zerada sem sua escolha.</small></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa padrão</label><select class="cycle-input" id="schedulePauseMinutes"><option value="5">5 min</option><option value="10">10 min</option><option value="15">15 min</option><option value="20">20 min</option><option value="30">30 min</option></select></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMode">Ajuste das pausas</label><select class="cycle-input" id="schedulePauseMode"><option value="fixed">Fixa</option><option value="flexible">Flexível</option></select></div><div class="cycle-form-group" data-flex-control="pause"><label class="cycle-label" for="scheduleMinPauseMinutes">Pausa mínima flexível</label><input type="number" class="cycle-input" id="scheduleMinPauseMinutes" min="1" max="30" value="5"></div></div>
+                            <div class="schedule-flex-group"><div class="schedule-flex-heading"><strong>Pausas</strong><small>Escolha quantos minutos quer entre os blocos.</small></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMinutes">Pausa padrão (min)</label><input type="number" class="cycle-input" id="schedulePauseMinutes" min="0" max="90" step="1" value="15"></div><div class="cycle-form-group"><label class="cycle-label" for="schedulePauseMode">Ajuste das pausas</label><select class="cycle-input" id="schedulePauseMode"><option value="fixed">Fixa</option><option value="flexible">Flexível</option></select></div><div class="cycle-form-group" data-flex-control="pause"><label class="cycle-label" for="scheduleMinPauseMinutes">Pausa mínima flexível</label><input type="number" class="cycle-input" id="scheduleMinPauseMinutes" min="1" max="90" value="5"></div></div>
                             <div class="schedule-flex-group"><div class="schedule-flex-heading"><strong>Duração dos blocos</strong><small>Um bloco mais curto só será usado no modo flexível.</small></div><div class="cycle-form-group"><label class="cycle-label" for="scheduleDurationMode">Ajuste da duração</label><select class="cycle-input" id="scheduleDurationMode"><option value="fixed">Fixa</option><option value="flexible">Flexível</option></select></div><div class="cycle-form-group" data-flex-control="duration"><label class="cycle-label" for="scheduleMinBlockMinutes">Mínimo flexível</label><input type="number" class="cycle-input" id="scheduleMinBlockMinutes" min="15" max="120" value="35"></div><div class="cycle-form-group" data-flex-control="duration"><label class="cycle-label" for="scheduleMaxBlockMinutes">Máximo flexível</label><input type="number" class="cycle-input" id="scheduleMaxBlockMinutes" min="15" max="120" value="50"></div></div>
                         </div>
                         <div class="cycle-form-group" hidden><label class="cycle-label" for="scheduleDailyCapacity">Disponibilidade-base anterior</label><select class="cycle-input" id="scheduleDailyCapacity"><option value="120">2 horas</option><option value="180">3 horas</option><option value="240">4 horas</option><option value="300">5 horas</option><option value="360">6 horas</option></select></div>
@@ -1498,21 +1503,21 @@
     <script src="mock-exam-core.js?v=20261002-v1"></script>
     <script src="practice-core.js?v=20261005-practice-v1"></script>
     <script src="subject-picker.js?v=20261002-v1"></script>
-    <script src="habit-core.js?v=20261002-v1"></script>
-    <script src="rank-system-v2.js?v=20260929-rank-v2-1"></script>
+    <script src="habit-core.js?v=20261008-week-habits-v1"></script>
+    <script src="rank-system-v2.js?v=20261008-profile-achievements-v1"></script>
     <script src="topic-core.js?v=20261006-v1"></script>
     <script src="review-trail-core.js?v=20261006-v1"></script>
     <script src="notebook-core.js?v=20261006-v1"></script>
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
-    <script src="script.js?v=20261007-v1"></script>
+    <script src="script.js?v=20261008-profile-inventory-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
     <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
-    <script src="schedule.js?v=20261002-evolution-v1"></script>
-    <script src="personal-development.js?v=20261002-evolution-v1"></script>
+    <script src="schedule.js?v=20261008-dual-schedule-v3"></script>
+    <script src="personal-development.js?v=20261008-week-habits-v2"></script>
     <script src="subject-lab.js?v=20261006-v1"></script>
     <script type="module" src="syllabus-pdf.js?v=20261004-agenda-timeout-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
@@ -1527,9 +1532,10 @@
     <script src="data-portability.js?v=20260929-overhaul-v4"></script>
     <script src="command-palette.js?v=20260929-overhaul-v4"></script>
     <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
-    <script src="profile-overhaul.js?v=20260930-achievements-toggle"></script>
+    <script src="profile-overhaul.js?v=20261008-profile-achievements-v2"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
     <script type="module" src="cloud-sync.js?v=20261007-v2"></script>
+    <script type="module" src="public-ranking.js?v=20261008-public-ranking-v1"></script>
 </body>
 </html>

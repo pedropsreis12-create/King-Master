@@ -334,3 +334,39 @@
 @media (prefers-reduced-motion: reduce) {
     .schedule-section * { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+/* Duas formas de planejar: horário fixo ou meta semanal por matéria. */
+#scheduleFixedBoard[hidden], #scheduleDayStrip[hidden], #scheduleFixedDayLayout[hidden], #scheduleLoadBoard[hidden] { display: none !important; }
+.schedule-view-controls { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px; margin-bottom: 14px; }
+.schedule-view-switch { display: inline-flex; gap: 4px; padding: 4px; border: 1px solid var(--border-color); border-radius: 13px; background: var(--card-bg); }
+.schedule-view-switch button { border: 0; border-radius: 9px; padding: 10px 14px; background: transparent; color: var(--text-muted); font: 700 .73rem Poppins, sans-serif; cursor: pointer; }
+.schedule-view-switch button[aria-pressed="true"] { background: var(--accent-color); color: #fff; box-shadow: 0 5px 15px rgba(var(--accent-rgb), .2); }
+.schedule-view-controls label { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.schedule-view-controls input { width: 65px; padding: 9px; border: 1px solid var(--border-color); border-radius: 9px; background: var(--card-bg); color: var(--text-main); font: inherit; text-align: center; }
+.schedule-load-board { padding: 22px; margin-bottom: 16px; }
+.schedule-load-board > header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.schedule-load-board h2 { margin: 4px 0; }
+.schedule-load-board p { margin: 0; color: var(--text-muted); font-size: .78rem; }
+.schedule-load-totals { display: inline-block; margin-top: 11px; color: var(--accent-color); font-size: .78rem; }
+.schedule-section.is-load-mode .schedule-overview-grid,
+.schedule-section.is-load-mode #scheduleLoadGuide,
+.schedule-section.is-load-mode #scheduleNotice,
+.schedule-section.is-load-mode .schedule-command-actions,
+.schedule-section.is-load-mode .schedule-heading-actions button[onclick*="openBlock"] { display: none !important; }
+.schedule-load-subjects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.schedule-load-subject { min-width: 0; padding: 17px; border: 1px solid var(--border-color); border-left: 4px solid var(--subject-color); border-radius: 15px; background: color-mix(in srgb, var(--subject-color) 6%, var(--card-bg)); }
+.schedule-load-subject__head { display: flex; align-items: center; gap: 10px; }
+.schedule-load-subject__head > div { flex: 1; min-width: 0; }
+.schedule-load-subject__head strong, .schedule-load-subject__head small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.schedule-load-subject__head small { color: var(--text-muted); font-size: .66rem; }
+.schedule-load-subject__icon { display: grid; place-items: center; width: 35px; height: 35px; border-radius: 10px; background: color-mix(in srgb, var(--subject-color) 16%, var(--card-bg)); }
+.schedule-load-subject__bar { height: 8px; margin: 14px 0; border-radius: 99px; background: var(--border-color); overflow: hidden; }
+.schedule-load-subject__bar span { display: block; height: 100%; border-radius: inherit; background: var(--subject-color); }
+.schedule-load-subject label { display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: .67rem; font-weight: 700; }
+.schedule-load-subject label input { width: 72px; padding: 7px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-main); font: inherit; }
+.schedule-matrix-cell:not(.empty) { grid-template-columns: minmax(0, 1fr) auto; padding: 4px; }
+.schedule-matrix-main { min-width: 0; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 7px; padding: 4px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.schedule-matrix-main > span:nth-child(2) { min-width: 0; }
+.schedule-matrix-duplicate { border: 0; border-radius: 7px; padding: 5px; background: color-mix(in srgb, var(--block-color) 13%, var(--card-bg)); color: var(--text-main); cursor: pointer; }
+.schedule-matrix-duplicate:hover { background: color-mix(in srgb, var(--block-color) 27%, var(--card-bg)); }
+@media (max-width: 740px) { .schedule-view-controls, .schedule-load-board > header { align-items: stretch; flex-direction: column; } .schedule-load-subjects { grid-template-columns: 1fr; } .schedule-view-controls label { justify-content: flex-end; } }

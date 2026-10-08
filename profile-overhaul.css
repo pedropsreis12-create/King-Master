@@ -1883,3 +1883,166 @@ html[data-motion-level="off"] #perfil.km-profile-v2 :is(.km-rank-brief::before, 
     #perfil.km-profile-v2 .km-achievements__summary { align-items: flex-start; }
     #perfil.km-profile-v2 .km-achievements__summary > div:last-child span { white-space: normal; }
 }
+
+/* Perfil compacto: o destaque é a liga, o título, o nível e o XP real. */
+#perfil.km-profile-v2 .material-symbols-rounded {
+    font-family: 'Material Symbols Rounded' !important;
+    font-weight: normal !important;
+    font-style: normal;
+    font-feature-settings: 'liga';
+    letter-spacing: normal;
+}
+#perfil.km-profile-v2 .profile-overview-grid .profile-hero {
+    min-height: 470px;
+    padding: 28px 24px;
+}
+#perfil.km-profile-v2 .profile-hero::after,
+#perfil.km-profile-v2 .profile-rank-scene,
+#perfil.km-profile-v2 .rank-frame-tag,
+#perfil.km-profile-v2 .profile-xp-note,
+#perfil.km-profile-v2 .profile-evolution-caption,
+#perfil.km-profile-v2 .profile-reference-strip { display: none !important; }
+#perfil.km-profile-v2 .profile-hero .profile-league-name {
+    margin: 0 0 20px;
+    color: var(--rank-a, var(--accent-color));
+    letter-spacing: .08em;
+}
+#perfil.km-profile-v2 .profile-level-title { margin-top: 22px; }
+#perfil.km-profile-v2 .profile-next-level { display: block; margin-top: 7px; color: var(--rank-a, var(--text-muted)); font-weight: 700; }
+#perfil.km-profile-v2 .profile-xp-line { width: min(100%, 580px); margin-top: 24px; }
+#perfil.km-profile-v2 .profile-xp-track { width: min(100%, 580px); }
+
+/* Ranking pessoal, baseado nos limiares reais do motor de XP. */
+#perfil.km-profile-v2 .km-rank-brief { grid-template-columns: 72px minmax(0, 1fr) minmax(220px, 1fr); }
+#perfil.km-profile-v2 .km-rank-brief__crest .material-symbols-rounded { font-size: 34px; line-height: 1; }
+#perfil.km-profile-v2 .km-rank-brief__copy p { max-width: 28ch; }
+#perfil.km-profile-v2 .km-league-catalog { grid-column: 1 / -1; min-width: 0; }
+#perfil.km-profile-v2 .km-league-catalog summary {
+    width: fit-content;
+    padding: 9px 13px;
+    border: 1px solid color-mix(in srgb, #fff 26%, transparent);
+    border-radius: 11px;
+    color: inherit;
+    font-size: .66rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+#perfil.km-profile-v2 .km-league-catalog__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-top: 13px; }
+#perfil.km-profile-v2 .km-league-item {
+    min-width: 0;
+    padding: 13px;
+    display: grid;
+    grid-template-columns: 27px minmax(0, 1fr);
+    align-items: center;
+    gap: 4px 8px;
+    border: 1px solid color-mix(in srgb, var(--league-color) 42%, transparent);
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--league-color) 13%, transparent);
+}
+#perfil.km-profile-v2 .km-league-item .material-symbols-rounded { grid-row: span 2; color: var(--league-color); font-size: 25px; }
+#perfil.km-profile-v2 .km-league-item strong { overflow: hidden; color: inherit; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
+#perfil.km-profile-v2 .km-league-item small { opacity: .76; font-size: .52rem; }
+#perfil.km-profile-v2 .km-league-item.is-current { outline: 2px solid var(--league-color); outline-offset: -2px; }
+#perfil.km-profile-v2 .km-public-board { grid-column: 1 / -1; min-width: 0; border-top: 1px solid rgba(255,255,255,.14); padding-top: 12px; }
+#perfil.km-profile-v2 .km-public-board > summary { width: fit-content; padding: 9px 13px; border-radius: 11px; color: inherit; font-size: .66rem; font-weight: 800; cursor: pointer; }
+#perfil.km-profile-v2 .km-public-board__body { margin-top: 13px; padding: 17px; border: 1px solid rgba(255,255,255,.16); border-radius: 15px; background: rgba(255,255,255,.05); }
+#perfil.km-profile-v2 .km-public-board__header { display: flex; align-items: center; justify-content: space-between; gap: 15px; }
+#perfil.km-profile-v2 .km-public-board__header p { max-width: 680px; margin: 0; font-size: .6rem; line-height: 1.55; opacity: .85; }
+#perfil.km-profile-v2 .km-public-board__header button,
+#perfil.km-profile-v2 .km-public-board__refresh { min-height: 36px; padding: 7px 11px; border: 1px solid rgba(255,255,255,.28); border-radius: 10px; background: rgba(255,255,255,.09); color: inherit; font: 700 .6rem Poppins, sans-serif; cursor: pointer; }
+#perfil.km-profile-v2 .km-public-board__header button:hover,
+#perfil.km-profile-v2 .km-public-board__refresh:hover { border-color: var(--accent-color); }
+#perfil.km-profile-v2 .km-public-board__header button:disabled { opacity: .55; cursor: wait; }
+#perfil.km-profile-v2 .km-public-board__refresh { margin-top: 13px; }
+#perfil.km-profile-v2 .km-public-board__status { margin: 12px 0; font-size: .58rem; opacity: .8; }
+#perfil.km-profile-v2 .km-public-board__list { max-height: 350px; margin: 0; padding: 0; overflow-y: auto; list-style: none; scrollbar-width: thin; }
+#perfil.km-profile-v2 .km-public-board__list li { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 12px; border-top: 1px solid rgba(255,255,255,.1); font-size: .64rem; }
+#perfil.km-profile-v2 .km-public-board__list li.is-mine { border-radius: 8px; background: rgba(255,255,255,.11); }
+#perfil.km-profile-v2 .km-public-board__list li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#perfil.km-profile-v2 .km-public-board__list li small { opacity: .7; }
+#perfil.km-profile-v2 .km-public-board__list li b { text-align: right; }
+#perfil.km-profile-v2 .km-public-board__list li.km-public-board__empty { display: block; opacity: .78; }
+
+/* Coleção em janela rolável, com ampliação discreta quando desejado. */
+#perfil.km-profile-v2 .km-achievements { overflow: visible; }
+#perfil.km-profile-v2 .km-achievements__expand {
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: 11px;
+    background: var(--card-bg);
+    color: var(--text-muted);
+    font-size: 21px;
+    cursor: pointer;
+}
+#perfil.km-profile-v2 .km-achievements__expand:hover { color: var(--accent-color); border-color: var(--accent-color); }
+#perfil.km-profile-v2 .km-achievements__expand:focus-visible,
+#perfil.km-profile-v2 .km-achievements__tier:focus-visible,
+#perfil.km-profile-v2 .km-achievements__grid:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 2px; }
+#perfil.km-profile-v2 .km-achievements__tier {
+    min-height: 42px;
+    padding: 0 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 11px;
+    background: var(--card-bg);
+    color: var(--text-main);
+    font: 700 .62rem Poppins, sans-serif;
+}
+#perfil.km-profile-v2 .km-achievements__grid {
+    max-height: 510px;
+    padding: 2px 9px 2px 2px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) transparent;
+}
+#perfil.km-profile-v2 .km-achievement-card { min-height: 184px; }
+#perfil.km-profile-v2 .km-achievement-card__icon.material-symbols-rounded { font-size: 25px; font-weight: normal; }
+#perfil.km-profile-v2 .km-achievement-card.is-locked .km-achievement-card__icon { opacity: .8; }
+#perfil.km-profile-v2 .km-achievement-card__state { text-transform: uppercase; letter-spacing: .06em; }
+body.km-achievements-open { overflow: hidden; }
+#perfil.km-profile-v2 .km-achievements.is-fullscreen {
+    position: fixed;
+    inset: 12px;
+    z-index: 10020;
+    margin: 0;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    overflow-y: auto;
+    box-shadow: 0 0 0 100vmax rgba(6, 12, 25, .78), 0 26px 65px rgba(0, 0, 0, .25);
+}
+#perfil.km-profile-v2 .km-achievements.is-fullscreen .km-achievements__body { min-height: 0; display: flex; flex: 1; flex-direction: column; }
+#perfil.km-profile-v2 .km-achievements.is-fullscreen .km-achievements__grid { max-height: none; min-height: 0; min-width: 0; flex: 1; overflow-x: hidden; }
+
+/* Inventário: cada peça mantém a identidade da sua patente. */
+#perfil.km-profile-v2 .frame-vault-grid { max-height: 530px; padding: 3px 8px 3px 2px; overflow-y: auto; scrollbar-width: thin; }
+#perfil.km-profile-v2 .frame-vault-card {
+    min-height: 94px;
+    border-color: color-mix(in srgb, var(--rank-a, var(--accent-color)) 32%, var(--border-color));
+    background: linear-gradient(135deg, color-mix(in srgb, var(--rank-a, var(--accent-color)) 7%, var(--card-bg)), var(--card-bg));
+}
+#perfil.km-profile-v2 .frame-vault-card.locked { opacity: .68; filter: saturate(.55); }
+#perfil.km-profile-v2 .frame-vault-card.equipped { outline: 2px solid var(--accent-color); outline-offset: -2px; }
+#perfil.km-profile-v2 .frame-vault-mini b.material-symbols-rounded { color: var(--rank-a, #fff); font-size: 30px; font-weight: normal; text-shadow: none; }
+#perfil.km-profile-v2 .frame-vault-toggle > .material-symbols-rounded { font-size: 19px; }
+
+@media (max-width: 800px) {
+    #perfil.km-profile-v2 .km-rank-brief { grid-template-columns: 68px minmax(0, 1fr); }
+    #perfil.km-profile-v2 .km-league-catalog__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #perfil.km-profile-v2 .profile-overview-grid .profile-hero { min-height: 430px; }
+}
+@media (max-width: 580px) {
+    #perfil.km-profile-v2 .km-achievements__actions { justify-content: flex-start; }
+    #perfil.km-profile-v2 .km-achievements__summary { order: -1; }
+    #perfil.km-profile-v2 .km-achievements__grid { max-height: 480px; }
+    #perfil.km-profile-v2 .km-achievements.is-fullscreen { inset: 4px; padding: 15px; }
+    #perfil.km-profile-v2 .km-achievements.is-fullscreen .km-achievements__top { gap: 10px; }
+    #perfil.km-profile-v2 .km-achievements.is-fullscreen .km-achievements__summary { display: none; }
+    #perfil.km-profile-v2 .km-league-catalog__grid { grid-template-columns: 1fr; }
+    #perfil.km-profile-v2 .km-public-board__header { align-items: stretch; flex-direction: column; }
+    #perfil.km-profile-v2 .km-public-board__list li { grid-template-columns: 25px minmax(0, 1fr) auto; }
+    #perfil.km-profile-v2 .km-public-board__list li small { display: none; }
+}

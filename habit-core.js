@@ -21,6 +21,11 @@
         if (value === 'skip' || value?.status === 'skip') return 'skip';
         return '';
     }
+    function nextStatus(value) {
+        if (value === 'done') return 'missed';
+        if (value === 'missed' || value === 'skip') return '';
+        return 'done';
+    }
     function due(item, dateKey) {
         const rule = frequency(item);
         return rule.mode !== 'weekdays' || rule.weekdays.includes(day(dateKey).getDay());
@@ -69,5 +74,5 @@
         for (const dateKey of dates) if (status(item, dateKey) === 'done') best = Math.max(best, streak(item, dateKey));
         return best;
     }
-    return { key, day, monday, frequency, status, due, weekProgress, streak, bestStreak };
+    return { key, day, monday, frequency, status, nextStatus, due, weekProgress, streak, bestStreak };
 });

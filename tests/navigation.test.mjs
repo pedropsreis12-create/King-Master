@@ -61,9 +61,9 @@ test('sidebar and settings use an opaque surface in light and dark themes', () =
   assert.match(usability, /#mainNavigation,\.settings-panel \{ background-color: var\(--menu-surface\)/);
 });
 
-test('notes are a dedicated page where each topic contains multiple saved annotations', async () => {
+test('notes tab is hidden without destroying previously saved topics and annotations', async () => {
   const notesCss = await readFile(new URL('../notes-workspace.css', import.meta.url), 'utf8');
-  assert.match(html, /data-section="notas"[^>]+aria-controls="notas"/);
+  assert.doesNotMatch(html, /data-section="notas"[^>]+aria-controls="notas"/);
   assert.match(html, /<section id="notas" class="content-section notes-section">/);
   assert.match(html, /id="quickNoteBooksList"/);
   assert.match(html, /id="quickNotesList"/);

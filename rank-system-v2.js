@@ -105,33 +105,73 @@
         ]
     };
 
-    const ACHIEVEMENTS = [
-        { id: 'first-focus', icon: '⚡', title: 'Primeira Operação', description: 'Conclua 10 minutos de foco.', metric: 'studyMinutes', goal: 10, rarity: 'comum' },
-        { id: 'focus-10h', icon: '◷', title: 'Motor Aquecido', description: 'Acumule 10 horas reais de estudo.', metric: 'studyMinutes', goal: 600, rarity: 'comum' },
-        { id: 'focus-50h', icon: '◉', title: 'Zona de Profundidade', description: 'Acumule 50 horas reais de estudo.', metric: 'studyMinutes', goal: 3000, rarity: 'rara' },
-        { id: 'focus-100h', icon: '✦', title: 'Centurião do Foco', description: 'Acumule 100 horas reais de estudo.', metric: 'studyMinutes', goal: 6000, rarity: 'épica' },
-        { id: 'questions-100', icon: '◎', title: 'Primeiro Arsenal', description: 'Responda 100 questões registradas.', metric: 'questionsAnswered', goal: 100, rarity: 'comum' },
-        { id: 'questions-500', icon: '⌖', title: 'Campo de Provas', description: 'Responda 500 questões registradas.', metric: 'questionsAnswered', goal: 500, rarity: 'rara' },
-        { id: 'questions-1000', icon: '✺', title: 'Mil Questões', description: 'Responda 1.000 questões registradas.', metric: 'questionsAnswered', goal: 1000, rarity: 'épica' },
-        { id: 'accuracy-80', icon: '◈', title: 'Precisão Cirúrgica', description: 'Mantenha 80% de acerto após 100 questões.', metric: 'accuracy', goal: 80, minMetric: ['questionsAnswered', 100], rarity: 'épica' },
-        { id: 'reviews-50', icon: '↻', title: 'Memória Blindada', description: 'Conclua 50 revisões.', metric: 'reviewsCompleted', goal: 50, rarity: 'rara' },
-        { id: 'cards-100', icon: '▣', title: 'Baralho Tático', description: 'Revise 100 flashcards.', metric: 'flashcardsReviewed', goal: 100, rarity: 'rara' },
-        { id: 'errors-10', icon: '◇', title: 'Caçador de Padrões', description: 'Domine 10 erros do caderno.', metric: 'errorsMastered', goal: 10, rarity: 'épica' },
-        { id: 'essays-5', icon: '✎', title: 'Voz em Formação', description: 'Registre 5 redações.', metric: 'essays', goal: 5, rarity: 'comum' },
-        { id: 'essays-10', icon: '✒', title: 'Autor de Elite', description: 'Registre 10 redações.', metric: 'essays', goal: 10, rarity: 'rara' },
-        { id: 'mocks-5', icon: '▤', title: 'Veterano de Simulados', description: 'Conclua 5 simulados.', metric: 'mockExams', goal: 5, rarity: 'rara' },
-        { id: 'topics-25', icon: '◆', title: 'Cartógrafo do Saber', description: 'Domine 25 tópicos.', metric: 'topicsMastered', goal: 25, rarity: 'épica' },
-        { id: 'streak-7', icon: '🔥', title: 'Semana Imparável', description: 'Alcance uma sequência de 7 dias de estudo.', metric: 'bestStreak', goal: 7, rarity: 'rara' },
-        { id: 'streak-30', icon: '☄', title: 'Constância Lendária', description: 'Alcance uma sequência de 30 dias.', metric: 'bestStreak', goal: 30, rarity: 'lendária' },
-        { id: 'level-10', icon: '▲', title: 'Primeiro Comando', description: 'Alcance o nível 10.', metric: 'level', goal: 10, rarity: 'comum' },
-        { id: 'level-25', icon: '★', title: 'Oficial da Disciplina', description: 'Alcance o nível 25.', metric: 'level', goal: 25, rarity: 'rara' },
-        { id: 'level-50', icon: '✹', title: 'Alto Comando', description: 'Alcance o nível 50.', metric: 'level', goal: 50, rarity: 'épica' },
-        { id: 'level-70', icon: '♛', title: 'Marechal do Saber', description: 'Alcance o nível 70.', metric: 'level', goal: 70, rarity: 'lendária' },
-        { id: 'level-100', icon: '∞', title: 'Além do Limite', description: 'Alcance o nível 100.', metric: 'level', goal: 100, rarity: 'mítica' },
-        { id: 'league-gold', icon: '⬡', title: 'Ascensão Dourada', description: 'Chegue à Liga Ouro em uma temporada.', metric: 'bestLeagueIndex', goal: 3, rarity: 'rara' },
-        { id: 'league-diamond', icon: '♦', title: 'Operação Diamante', description: 'Chegue à Liga Diamante em uma temporada.', metric: 'bestLeagueIndex', goal: 5, rarity: 'épica' },
-        { id: 'league-legend', icon: '♜', title: 'Lenda da Temporada', description: 'Chegue à Liga Lenda.', metric: 'bestLeagueIndex', goal: 7, rarity: 'mítica' }
+    // Metas são cumulativas e derivadas de registros reais; cada faixa tem exatamente dez marcos.
+    // O campo icon usa nomes do catálogo Material Symbols Rounded.
+    const ACHIEVEMENT_TIERS = [
+        ['facil', 'Fácil', [
+            ['focus-5h', 'Primeira base', 'Acumule 5 horas de estudo.', 'studyMinutes', 300, 'timer'],
+            ['questions-50', 'Primeiro lote', 'Registre 50 questões respondidas.', 'questionsAnswered', 50, 'quiz'],
+            ['reviews-10', 'Voltar para fixar', 'Conclua 10 revisões.', 'reviewsCompleted', 10, 'history_edu'],
+            ['cards-30', 'Memória em treino', 'Revise 30 flashcards.', 'flashcardsReviewed', 30, 'style'],
+            ['logged-errors-10', 'Olhar crítico', 'Registre 10 erros para estudar.', 'errorsLogged', 10, 'troubleshoot'],
+            ['mastered-errors-3', 'Correção de rota', 'Domine 3 erros registrados.', 'errorsMastered', 3, 'verified'],
+            ['essays-2', 'Primeiras versões', 'Registre 2 redações.', 'essays', 2, 'edit_note'],
+            ['mocks-2', 'Ensaio de prova', 'Conclua 2 simulados.', 'mockExams', 2, 'fact_check'],
+            ['topics-5', 'Cinco pilares', 'Domine 5 assuntos.', 'topicsMastered', 5, 'menu_book'],
+            ['days-5', 'Cinco dias reais', 'Estude em 5 dias diferentes.', 'activeDays', 5, 'calendar_month']
+        ]],
+        ['normal', 'Normal', [
+            ['focus-15h', 'Ritmo estabelecido', 'Acumule 15 horas de estudo.', 'studyMinutes', 900, 'timer'],
+            ['questions-150', 'Caderno de treino', 'Registre 150 questões.', 'questionsAnswered', 150, 'quiz'],
+            ['reviews-30', 'Memória constante', 'Conclua 30 revisões.', 'reviewsCompleted', 30, 'history_edu'],
+            ['cards-100', 'Baralho tático', 'Revise 100 flashcards.', 'flashcardsReviewed', 100, 'style'],
+            ['logged-errors-25', 'Mapa dos tropeços', 'Registre 25 erros.', 'errorsLogged', 25, 'troubleshoot'],
+            ['mastered-errors-10', 'Padrões vencidos', 'Domine 10 erros registrados.', 'errorsMastered', 10, 'verified'],
+            ['essays-5', 'Voz em formação', 'Registre 5 redações.', 'essays', 5, 'edit_note'],
+            ['mocks-5', 'Veterano de prova', 'Conclua 5 simulados.', 'mockExams', 5, 'fact_check'],
+            ['topics-15', 'Território conhecido', 'Domine 15 assuntos.', 'topicsMastered', 15, 'menu_book'],
+            ['streak-7', 'Semana de disciplina', 'Alcance 7 dias seguidos de estudo.', 'bestStreak', 7, 'local_fire_department']
+        ]],
+        ['media', 'Média', [
+            ['focus-50h', 'Zona de profundidade', 'Acumule 50 horas de estudo.', 'studyMinutes', 3000, 'timer'],
+            ['questions-500', 'Campo de provas', 'Registre 500 questões.', 'questionsAnswered', 500, 'quiz'],
+            ['reviews-100', 'Retenção sólida', 'Conclua 100 revisões.', 'reviewsCompleted', 100, 'history_edu'],
+            ['cards-300', 'Arquivo ativo', 'Revise 300 flashcards.', 'flashcardsReviewed', 300, 'style'],
+            ['logged-errors-60', 'Diagnóstico profundo', 'Registre 60 erros.', 'errorsLogged', 60, 'troubleshoot'],
+            ['mastered-errors-25', 'Ajuste fino', 'Domine 25 erros registrados.', 'errorsMastered', 25, 'verified'],
+            ['essays-12', 'Escrita consistente', 'Registre 12 redações.', 'essays', 12, 'edit_note'],
+            ['mocks-12', 'Simulação frequente', 'Conclua 12 simulados.', 'mockExams', 12, 'fact_check'],
+            ['topics-40', 'Mapa expandido', 'Domine 40 assuntos.', 'topicsMastered', 40, 'menu_book'],
+            ['accuracy-80-300', 'Precisão sustentada', 'Tenha 80% de acerto após 300 questões.', 'accuracy', 80, 'target', ['questionsAnswered', 300]]
+        ]],
+        ['dificil', 'Difícil', [
+            ['focus-150h', 'Centurião do foco', 'Acumule 150 horas de estudo.', 'studyMinutes', 9000, 'timer'],
+            ['questions-1500', 'Treino de elite', 'Registre 1.500 questões.', 'questionsAnswered', 1500, 'quiz'],
+            ['reviews-300', 'Memória blindada', 'Conclua 300 revisões.', 'reviewsCompleted', 300, 'history_edu'],
+            ['cards-1000', 'Mil cartões', 'Revise 1.000 flashcards.', 'flashcardsReviewed', 1000, 'style'],
+            ['logged-errors-150', 'Auditoria pessoal', 'Registre 150 erros.', 'errorsLogged', 150, 'troubleshoot'],
+            ['mastered-errors-60', 'Erros superados', 'Domine 60 erros registrados.', 'errorsMastered', 60, 'verified'],
+            ['essays-30', 'Autor disciplinado', 'Registre 30 redações.', 'essays', 30, 'edit_note'],
+            ['mocks-25', 'Resistência de prova', 'Conclua 25 simulados.', 'mockExams', 25, 'fact_check'],
+            ['topics-100', 'Cem assuntos', 'Domine 100 assuntos.', 'topicsMastered', 100, 'menu_book'],
+            ['streak-30', 'Mês de constância', 'Alcance 30 dias seguidos de estudo.', 'bestStreak', 30, 'local_fire_department']
+        ]],
+        ['muito_dificil', 'Muito difícil', [
+            ['focus-400h', 'Maratona do conhecimento', 'Acumule 400 horas de estudo.', 'studyMinutes', 24000, 'timer'],
+            ['questions-4000', 'Quatro mil decisões', 'Registre 4.000 questões.', 'questionsAnswered', 4000, 'quiz'],
+            ['reviews-800', 'Memória de longo prazo', 'Conclua 800 revisões.', 'reviewsCompleted', 800, 'history_edu'],
+            ['cards-2500', 'Arquivista da memória', 'Revise 2.500 flashcards.', 'flashcardsReviewed', 2500, 'style'],
+            ['league-legend', 'Lenda da temporada', 'Alcance a Liga Lenda em uma temporada.', 'bestLeagueIndex', 7, 'workspace_premium'],
+            ['mastered-errors-150', 'Padrões dominados', 'Domine 150 erros registrados.', 'errorsMastered', 150, 'verified'],
+            ['essays-60', 'Oficina de escrita', 'Registre 60 redações.', 'essays', 60, 'edit_note'],
+            ['mocks-50', 'Ritmo de competição', 'Conclua 50 simulados.', 'mockExams', 50, 'fact_check'],
+            ['topics-250', 'Atlas completo', 'Domine 250 assuntos.', 'topicsMastered', 250, 'menu_book'],
+            ['accuracy-90', 'Precisão extraordinária', 'Tenha 90% de acerto após 1.000 questões.', 'accuracy', 90, 'target', ['questionsAnswered', 1000]]
+        ]]
     ];
+    const ACHIEVEMENTS = ACHIEVEMENT_TIERS.flatMap(([tier, tierLabel, items]) => items.map(([id, title, description, metric, goal, icon, minMetric]) => ({
+        id, title, description, metric, goal, icon, minMetric, tier, tierLabel
+    })));
 
     const DAILY_MISSION_POOL = [
         { key: 'questions', title: 'Campo de questões', description: goal => `Responder ${goal} questões`, type: 'questions_answered', goals: [10, 15, 25], rewards: [55, 75, 110] },
@@ -981,7 +1021,7 @@
                 mode: 'local',
                 verified: false,
                 leaderboard: null,
-                note: 'Ligas e divisões usam apenas progresso real deste perfil. Um placar entre pessoas exige validação autenticada no servidor.'
+                note: 'Ligas usam o progresso deste perfil. O placar público opcional mostra pontuações autodeclaradas, não verificadas no servidor.'
             },
             integrity: {
                 valid: checked.valid,

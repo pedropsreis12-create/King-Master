@@ -126,12 +126,21 @@ test('conquistas são derivadas de evidência explícita e sincronizadas sem dar
     const xpBefore = migrated.state.lifetimeXp;
     const synced = Rank.syncAchievements(migrated.appData, options);
     const ids = synced.newUnlocks.map(item => item.id);
-    assert.ok(ids.includes('first-focus'));
-    assert.ok(ids.includes('questions-100'));
-    assert.ok(ids.includes('accuracy-80'));
+    assert.ok(ids.includes('questions-50'));
+    assert.ok(!ids.includes('focus-5h'));
+    assert.ok(!ids.includes('accuracy-80-300'));
     assert.equal(synced.state.lifetimeXp, xpBefore);
     const again = Rank.syncAchievements(synced.appData, options);
     assert.equal(again.newUnlocks.length, 0);
+});
+
+test('coleção tem 50 conquistas, dez por faixa, sem metas triviais', () => {
+    assert.equal(Rank.ACHIEVEMENTS.length, 50);
+    const tiers = ['facil', 'normal', 'media', 'dificil', 'muito_dificil'];
+    tiers.forEach(tier => assert.equal(Rank.ACHIEVEMENTS.filter(item => item.tier === tier).length, 10));
+    assert.equal(new Set(Rank.ACHIEVEMENTS.map(item => item.id)).size, 50);
+    assert.ok(!Rank.ACHIEVEMENTS.some(item => item.id === 'first-focus'));
+    assert.ok(Rank.ACHIEVEMENTS.every(item => item.icon && item.goal > 0));
 });
 
 test('snapshot é próprio para UI e deixa explícito que não há placar global inventado', () => {

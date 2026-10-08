@@ -2,6 +2,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Placar opcional: somente apelido, pontuação, nível e temporada. Nenhum dado de estudo é público.
+    match /publicRanking/{userId} {
+      allow get: if request.auth != null;
+      allow list: if request.auth != null && request.query.limit <= 30;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'seasonId', 'score', 'level', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'displayName', 'seasonId', 'score', 'level', 'updatedAt'])
+        && request.resource.data.uid == userId
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() >= 2
+        && request.resource.data.displayName.size() <= 32
+        && request.resource.data.seasonId is string
+        && request.resource.data.seasonId.matches('20[0-9][0-9]-(0[1-9]|1[0-2])')
+        && request.resource.data.score is int
+        && request.resource.data.score >= 0
+        && request.resource.data.score <= 1000000
+        && request.resource.data.level is int
+        && request.resource.data.level >= 1
+        && request.resource.data.level <= 100
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow create, update: if request.auth != null

@@ -53,6 +53,7 @@
                 consecutive: Boolean(item.schedule?.consecutive),
                 difficulty: Math.min(3, Math.max(1, Number(item.schedule?.difficulty) || 2)),
                 contentLoad: Math.min(3, Math.max(1, Number(item.schedule?.contentLoad) || 2)),
+                weeklyMinutes: item.schedule?.weeklyMinutes == null ? null : Math.min(1800, Math.max(0, Math.round(Number(item.schedule.weeklyMinutes) || 0))),
                 preferredDay: Math.min(7, Math.max(0, Number(item.schedule?.preferredDay) || 0))
             };
         });
@@ -256,7 +257,7 @@
                 const block = blocks.find(item => Number(item.day) === day && item.start === horario);
                 if (!block) return `<button type="button" class="schedule-matrix-cell empty" data-drop-day="${day}" data-drop-start="${escape(horario)}" onclick="KingSchedule.openBlock(null,${day},'${escape(horario)}')" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnSlot(event,${day},'${escape(horario)}')" aria-label="Adicionar bloco em ${DAY_NAMES[day]} às ${escape(horario)}"><span>＋</span></button>`;
                 const mat = subject(block.subjectId), kind = KINDS[block.kind] || KINDS.teoria, state = STATUS[block.status] || STATUS.pending;
-                return `<button type="button" class="schedule-matrix-cell status-${block.status}" data-drop-block-id="${safeId(block.id)}" style="--block-color:${safeColor(mat?.color)}" draggable="true" ondragstart="KingSchedule.dragStart(event,'${safeId(block.id)}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${safeId(block.id)}')" onclick="KingSchedule.openBlock('${safeId(block.id)}')"><span class="schedule-matrix-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><span><strong>${escape(mat?.subject || 'Matéria removida')}</strong><small>${escape(block.topic || kind.label)}</small></span><i title="${escape(state.label)}">${state.icon}</i></button>`;
+                return `<div class="schedule-matrix-cell status-${block.status}" data-drop-block-id="${safeId(block.id)}" style="--block-color:${safeColor(mat?.color)}" draggable="true" ondragstart="KingSchedule.dragStart(event,'${safeId(block.id)}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${safeId(block.id)}')"><button type="button" class="schedule-matrix-main" onclick="KingSchedule.openBlock('${safeId(block.id)}')" aria-label="Editar bloco de ${escape(mat?.subject || 'matéria removida')}"><span class="schedule-matrix-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><span><strong>${escape(mat?.subject || 'Matéria removida')}</strong><small>${escape(block.topic || kind.label)}</small></span><i title="${escape(state.label)}">${state.icon}</i></button><button type="button" class="schedule-matrix-duplicate" onclick="KingSchedule.duplicateBlock('${safeId(block.id)}')" aria-label="Duplicar bloco de ${escape(mat?.subject || 'matéria removida')}" title="Duplicar bloco">⧉</button></div>`;
             }).join('');
             return `<div class="schedule-matrix-time"><strong>${escape(horario)}</strong><small>${escape(fim)}</small></div>${celulas}`;
         }).join('');
@@ -271,7 +272,7 @@
             : block.status === 'missed'
                 ? `<button type="button" class="cycle-btn" onclick="KingSchedule.setStatus('${id}','pending')">Replanejar</button>`
                 : `<button type="button" class="cycle-btn primary" onclick="KingSchedule.startBlock('${id}')">${block.status === 'running' ? 'Retomar' : 'Estudar'}</button><button type="button" class="cycle-btn" onclick="KingSchedule.openComplete('${id}')">Concluir</button>`;
-        return `<div class="schedule-timeline-row"><div class="schedule-time-rail"><strong>${escape(block.start)}</strong><span></span><small>${escape(end)}</small></div><article class="schedule-focus-block status-${block.status}" draggable="true" data-block-id="${id}" data-drop-block-id="${id}" style="--block-color:${color}" onpointerdown="KingSchedule.pointerDown(event,'${id}')" ondragstart="KingSchedule.dragStart(event,'${id}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${id}')"><header><span class="schedule-focus-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><div><span>${escape(kind.label)}</span><strong>${escape(mat?.subject || 'Matéria removida')}</strong></div><em class="schedule-status-chip">${state.icon} ${state.label}</em></header><h3>${escape(block.topic || `Bloco de ${kind.label.toLocaleLowerCase('pt-BR')}`)}</h3>${block.result?.notes ? `<p class="schedule-result-note">${escape(block.result.notes)}</p>` : ''}<footer><span>${block.duration} min${block.result?.questions ? ` · ${block.result.questions} questões` : ''}</span><div>${action}<button type="button" class="schedule-more-button" onclick="KingSchedule.openBlock('${id}')" aria-label="Editar bloco">•••</button></div></footer></article></div>`;
+        return `<div class="schedule-timeline-row"><div class="schedule-time-rail"><strong>${escape(block.start)}</strong><span></span><small>${escape(end)}</small></div><article class="schedule-focus-block status-${block.status}" draggable="true" data-block-id="${id}" data-drop-block-id="${id}" style="--block-color:${color}" onpointerdown="KingSchedule.pointerDown(event,'${id}')" ondragstart="KingSchedule.dragStart(event,'${id}')" ondragend="KingSchedule.dragEnd(event)" ondragover="KingSchedule.dragOverBlock(event)" ondragleave="KingSchedule.dragLeaveBlock(event)" ondrop="KingSchedule.dropOnBlock(event,'${id}')"><header><span class="schedule-focus-icon">${escape(mat?.schedule?.icon || kind.icon)}</span><div><span>${escape(kind.label)}</span><strong>${escape(mat?.subject || 'Matéria removida')}</strong></div><em class="schedule-status-chip">${state.icon} ${state.label}</em></header><h3>${escape(block.topic || `Bloco de ${kind.label.toLocaleLowerCase('pt-BR')}`)}</h3>${block.result?.notes ? `<p class="schedule-result-note">${escape(block.result.notes)}</p>` : ''}<footer><span>${block.duration} min${block.result?.questions ? ` · ${block.result.questions} questões` : ''}</span><div>${action}<button type="button" class="schedule-more-button" onclick="KingSchedule.duplicateBlock('${id}')" aria-label="Duplicar bloco" title="Duplicar bloco">⧉</button><button type="button" class="schedule-more-button" onclick="KingSchedule.openBlock('${id}')" aria-label="Editar bloco">•••</button></div></footer></article></div>`;
     }
     function pauseHtml(minutes) {
         const plannedInterval = settings().pauseMinutes + settings().registrationMinutes;
@@ -368,7 +369,85 @@
         byId('scheduleWeekRange').textContent = formatRange(visibleWeek);
         byId('scheduleWeekEyebrow').textContent = visibleWeek === currentWeekKey() ? 'SEMANA ATUAL' : visibleWeek < currentWeekKey() ? 'SEMANA ANTERIOR' : 'PRÓXIMA SEMANA';
         renderSummary(); renderNext(); renderBalance(); renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderNotice(); renderReplanButton(); performanceSuggestion();
+        renderViewMode();
         if (typeof atualizarResumoRevisoesCronograma === 'function') atualizarResumoRevisoesCronograma();
+    }
+
+    function renderViewMode() {
+        const flexible = appData.studySchedule.viewMode === 'load';
+        byId('cronograma').classList.toggle('is-load-mode', flexible);
+        byId('scheduleFixedViewButton')?.setAttribute('aria-pressed', String(!flexible));
+        byId('scheduleLoadViewButton')?.setAttribute('aria-pressed', String(flexible));
+        byId('scheduleFixedBoard').hidden = flexible;
+        byId('scheduleDayStrip').hidden = flexible;
+        byId('scheduleFixedDayLayout').hidden = flexible;
+        byId('scheduleLoadBoard').hidden = !flexible;
+        byId('scheduleQuickPause').value = String(settings().pauseMinutes);
+        if (flexible) renderLoadSubjects();
+    }
+
+    function renderLoadSubjects() {
+        const root = byId('scheduleLoadSubjects');
+        if (!root) return;
+        const lastDate = Core.addDays(visibleWeek, 6);
+        let targetTotal = 0, doneTotal = 0;
+        const entries = (appData.historyItems || []).filter(item => {
+            const date = typeof dataHistoricoISO === 'function' ? dataHistoricoISO(item) : item.dataISO;
+            return date >= visibleWeek && date <= lastDate;
+        });
+        root.innerHTML = appData.cycleItems.length ? appData.cycleItems.map(item => {
+            const target = item.schedule.weeklyMinutes == null ? item.schedule.weeklyBlocks * settings().blockMinutes : item.schedule.weeklyMinutes;
+            const seconds = entries.reduce((sum, entry) => {
+                const same = entry.subjectId ? String(entry.subjectId) === String(item.id)
+                    : String(entry.materia || '').trim().toLocaleLowerCase('pt-BR') === String(item.subject).trim().toLocaleLowerCase('pt-BR');
+                return same ? sum + Math.max(0, Number(entry.tempoSegundos) || 0) : sum;
+            }, 0);
+            const done = Math.floor(seconds / 60);
+            targetTotal += target;
+            doneTotal += done;
+            const percent = target ? Math.min(100, Math.round(done / target * 100)) : 0;
+            return `<article class="schedule-load-subject" style="--subject-color:${safeColor(item.color)}"><div class="schedule-load-subject__head"><span class="schedule-load-subject__icon">${escape(item.schedule.icon)}</span><div><strong>${escape(item.subject)}</strong><small>${minutesText(done)} estudados nesta semana${target ? ` · ${percent}% da meta` : ' · defina uma meta'}</small></div><button type="button" class="cycle-btn" onclick="KingSchedule.startLoadSubject('${safeId(item.id)}')">Estudar</button></div><div class="schedule-load-subject__bar" role="progressbar" aria-label="Carga cumprida de ${escape(item.subject)}" aria-valuemin="0" aria-valuemax="${Math.max(1, target)}" aria-valuenow="${Math.min(done, Math.max(1, target))}"><span style="width:${percent}%"></span></div><label>Meta semanal <input type="number" min="0" max="1800" step="10" value="${target}" onchange="KingSchedule.setSubjectLoad('${safeId(item.id)}',this.value)"> min</label></article>`;
+        }).join('') : '<p class="schedule-load-empty">Adicione uma matéria para definir a carga semanal.</p>';
+        byId('scheduleLoadTotals').textContent = `${minutesText(doneTotal)} estudados de ${minutesText(targetTotal)} planejados nesta semana`;
+    }
+
+    function setViewMode(mode) {
+        if (!['fixed', 'load'].includes(mode)) return;
+        appData.studySchedule.viewMode = mode;
+        saveAppData(); render();
+    }
+
+    function setPause(value) {
+        const minutes = Number(value);
+        if (!Number.isInteger(minutes) || minutes < 0 || minutes > 90) {
+            byId('scheduleQuickPause').value = String(settings().pauseMinutes);
+            return toast('Escolha uma pausa entre 0 e 90 minutos.', true);
+        }
+        const current = settings();
+        appData.studySchedule.settings = Core.normalizeSettings({ ...current, pauseMinutes: minutes,
+            pauseMode: minutes === 0 ? 'fixed' : current.pauseMode,
+            minPauseMinutes: Math.min(current.minPauseMinutes, minutes) });
+        saveAppData(); render(); toast(`Pausa entre blocos: ${minutes} min. Os blocos já concluídos não mudaram.`);
+    }
+
+    function setSubjectLoad(id, value) {
+        const item = subject(id), minutes = Number(value);
+        if (!item || !Number.isInteger(minutes) || minutes < 0 || minutes > 1800) return toast('Informe de 0 a 1.800 minutos por semana.', true);
+        item.schedule.weeklyMinutes = minutes;
+        item.schedule.weeklyBlocks = Math.min(30, Math.ceil(minutes / settings().blockMinutes));
+        saveAppData(); render();
+    }
+
+    function startLoadSubject(id) {
+        const item = subject(id); if (!item) return;
+        if (appData.pendingStudySession) return toast('Registre ou descarte a sessão pendente antes de começar.', true);
+        if (typeof isRunning !== 'undefined' && isRunning) return toast('Pause ou conclua o cronômetro atual antes de trocar de matéria.', true);
+        if (typeof currentSeconds !== 'undefined' && currentSeconds >= 5) return toast('Registre ou proteja o tempo da sessão atual antes de iniciar outra matéria.', true);
+        byId('activeSubjectSelect').value = String(item.id);
+        appData.activeScheduleBlock = null;
+        if (typeof setMode === 'function') setMode('estudo');
+        if (typeof atualizarSeletorDeMaterias === 'function') atualizarSeletorDeMaterias();
+        saveAppData(); showSection('dashboard'); toast(`${item.subject}: o tempo estudado contará para sua carga semanal.`);
     }
 
     function reconcileStudiedBlocks() {
@@ -735,7 +814,9 @@
         appData.studySchedule.settings = proposed;
         document.querySelectorAll('#scheduleSubjectPlans .schedule-subject-plan').forEach(card => {
             const item = subject(card.dataset.subjectId); if (!item) return;
-            item.schedule.weeklyBlocks = Math.min(30, Math.max(0, Number(card.querySelector('[data-plan="blocks"]').value) || 0));
+            const newBlocks = Math.min(30, Math.max(0, Number(card.querySelector('[data-plan="blocks"]').value) || 0));
+            if (newBlocks !== item.schedule.weeklyBlocks) item.schedule.weeklyMinutes = newBlocks * proposed.blockMinutes;
+            item.schedule.weeklyBlocks = newBlocks;
             item.schedule.priority = Math.min(3, Math.max(1, Number(card.querySelector('[data-plan="priority"]').value) || 2));
             item.schedule.consecutive = card.querySelector('[data-plan="consecutive"]').checked;
             item.schedule.difficulty = Number(card.querySelector('[data-plan="difficulty"]').value) || 2;
@@ -764,9 +845,9 @@
         if (![...select.options].some(option => String(option.value) === String(value))) select.add(new Option(`${value} min`, String(value)));
         select.value = String(value);
     }
-    function openBlock(id = null, requestedDay = null, requestedStart = null) {
+    function openBlock(id = null, requestedDay = null, requestedStart = null, allowStrictDuplicate = false) {
         ensureData();
-        if (week(false)?.strict) {
+        if (week(false)?.strict && !allowStrictDuplicate) {
             toast('Esta semana foi validada. Altere a matéria na prévia do planejador.');
             return organizeCurrentWeek();
         }
@@ -774,6 +855,7 @@
         const block = id != null ? findBlock(id) : null;
         const day = Number(block?.day || requestedDay || selectedDay || settings().studyDays[0]);
         byId('scheduleBlockForm').reset();
+        byId('scheduleBlockForm').dataset.unlockStrict = allowStrictDuplicate ? 'true' : '';
         byId('scheduleBlockModalTitle').textContent = block ? 'Editar bloco' : 'Planejar estudo';
         byId('scheduleBlockId').value = block?.id || '';
         byId('scheduleBlockWeek').value = visibleWeek;
@@ -786,10 +868,48 @@
         byId('scheduleDeleteBlock').hidden = !block;
         byId('scheduleBlockModal').classList.add('active');
     }
+    function duplicateSlot(source) {
+        const value = settings(), duration = Number(source.duration) || value.blockMinutes;
+        const orderedDays = [...DAYS.filter(day => day >= Number(source.day)), ...DAYS.filter(day => day < Number(source.day))];
+        const agenda = agendaBusyByDay();
+        for (const day of orderedDays) {
+            if (!value.studyDays.includes(day)) continue;
+            const occupied = [
+                ...getDayBlocks(day).map(block => ({ start: Core.toMinutes(block.start), end: Core.toMinutes(block.start) + Number(block.duration) + value.pauseMinutes })),
+                ...(agenda[day] || []).map(entry => ({ start: Core.toMinutes(entry.start), end: Core.toMinutes(entry.end) + value.pauseMinutes }))
+            ].sort((a, b) => a.start - b.start);
+            for (const range of value.availability[day] || []) {
+                let cursor = Math.max(Core.toMinutes(range.start), day === Number(source.day)
+                    ? Core.toMinutes(source.start) + duration + value.pauseMinutes : 0);
+                const limit = Core.toMinutes(range.end);
+                for (const entry of occupied) {
+                    if (entry.end <= cursor) continue;
+                    if (entry.start >= cursor + duration) break;
+                    cursor = Math.max(cursor, entry.end);
+                }
+                if (cursor + duration <= limit) return { day, start: Core.toClock(cursor) };
+            }
+        }
+        return null;
+    }
+    function duplicateBlock(id) {
+        const source = findBlock(id); if (!source) return;
+        const slot = duplicateSlot(source);
+        openBlock(null, slot?.day || source.day, slot?.start || nextStart(source.day), Boolean(week(false)?.strict));
+        byId('scheduleBlockModalTitle').textContent = 'Duplicar bloco';
+        byId('scheduleBlockSubject').value = String(source.subjectId);
+        byId('scheduleBlockKind').value = source.kind;
+        byId('scheduleBlockTopic').value = source.topic || '';
+        setSelectValue(byId('scheduleBlockDuration'), source.duration);
+        byId('scheduleBlockStatus').value = 'pending';
+        updateTopicSuggestions();
+        if (!slot) toast('Não há espaço livre nesta semana para outro bloco. Escolha outro horário antes de salvar.', true);
+    }
     function saveBlock(event) {
         event.preventDefault();
         const key = byId('scheduleBlockWeek').value || visibleWeek, target = week(true, key), rawId = byId('scheduleBlockId').value;
-        if (target.strict) return toast('Esta semana foi validada. Faça alterações na prévia de “Montar com IA”.', true);
+        if (target.strict && byId('scheduleBlockForm').dataset.unlockStrict !== 'true') return toast('Esta semana foi validada. Faça alterações na prévia de “Montar com IA”.', true);
+        if (target.strict) { target.strict = false; target.dayPlans = {}; target.unscheduled = []; }
         const day = Number(byId('scheduleBlockDay').value), existing = rawId ? target.blocks.find(item => String(item.id) === String(rawId)) : null;
         const statusValue = byId('scheduleBlockStatus').value;
         const values = {
@@ -980,7 +1100,8 @@
     window.KingSchedule = {
         render, organizeCurrentWeek, changeWeek, goCurrentWeek, selectDay, copyToNextWeek, replanOverdue,
         closePlanner, editPlannerRules, refreshPlanner, interpretPlannerRequest, applyPlannerPreview, clearAllBlocks,
-        openSettings, saveSettings, addAvailabilityRange, removeAvailabilityRange, applyAvailabilityTemplate, openBlock, saveBlock, deleteEditingBlock, setStatus, startBlock, openComplete,
+        openSettings, saveSettings, addAvailabilityRange, removeAvailabilityRange, applyAvailabilityTemplate, openBlock, duplicateBlock, saveBlock, deleteEditingBlock, setStatus, startBlock, openComplete,
+        setViewMode, setPause, setSubjectLoad, startLoadSubject,
         completeFromSession, openDayClose, closeDayLater, saveDayClose, dragStart, dragEnd, dragOverDay, dragLeaveDay,
         dropToDay, dragOverBlock, dragLeaveBlock, dropOnBlock, dropOnSlot, pointerDown, updateTopicSuggestions,
         applySuggestion, ignoreSuggestion, removeSubject, clearSubjects,

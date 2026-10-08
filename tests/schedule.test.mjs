@@ -76,8 +76,34 @@ test('arrastar para uma célula vazia preserva o horário escolhido e os outros 
     assert.equal(blocks[2].start, '15:45');
     assert.equal(blocks[0].order, 1);
     assert.equal(blocks[2].order, 0);
-    assert.equal(Core.moveBlockToSlot(blocks, 'geo', 4, '14:25').reason, 'occupied');
+    assert.equal(Core.moveBlockToSlot(blocks, 'geo', 4, '14:25').reason, 'protected');
     assert.deepEqual({ day: blocks[0].day, start: blocks[0].start }, { day: 3, start: '17:05' });
+});
+
+test('a mesma linha horizontal aceita blocos em dias diferentes', () => {
+    const blocks = [
+        { id: 'fis', day: 2, start: '14:00', duration: 50, order: 0, status: 'pending' },
+        { id: 'geo', day: 4, start: '16:00', duration: 50, order: 0, status: 'pending' }
+    ];
+    const moved = Core.moveBlockToSlot(blocks, 'geo', 3, '14:00', 5);
+    assert.equal(moved.ok, true);
+    assert.equal(moved.shifted, 0);
+    assert.equal(blocks[0].start, blocks[1].start);
+    assert.notEqual(blocks[0].day, blocks[1].day);
+});
+
+test('uma célula aparentemente vazia encaixa o bloco e ajusta os próximos pendentes', () => {
+    const blocks = [
+        { id: 'geo', day: 3, start: '16:00', duration: 50, order: 0, status: 'pending' },
+        { id: 'mat', day: 4, start: '14:00', duration: 50, order: 0, status: 'completed', registered: true },
+        { id: 'red', day: 4, start: '14:55', duration: 50, order: 1, status: 'pending' },
+        { id: 'qui', day: 4, start: '15:50', duration: 50, order: 2, status: 'pending' }
+    ];
+    const moved = Core.moveBlockToSlot(blocks, 'geo', 4, '15:00', 5);
+    assert.equal(moved.ok, true);
+    assert.equal(moved.shifted, 2);
+    assert.deepEqual(blocks.map(block => block.start), ['15:00', '14:00', '15:55', '16:50']);
+    assert.deepEqual(blocks.map(block => block.order), [1, 0, 2, 3]);
 });
 
 test('organizador usa múltiplos horários livres e não ultrapassa suas janelas', () => {

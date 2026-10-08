@@ -1056,13 +1056,16 @@
         const block = findBlock(id), target = targetId ? findBlock(targetId) : null;
         if (!block || (targetId && !target) || String(block.id) === String(targetId) || !DAYS.includes(Number(day))) return;
         if (start && !targetId) {
-            const moved = Core.moveBlockToSlot(week(false).blocks, id, day, start);
+            const moved = Core.moveBlockToSlot(week(false).blocks, id, day, start, settings().pauseMinutes);
             if (!moved.ok) {
-                if (moved.reason === 'occupied') toast('Esse horário já está ocupado. Escolha outro espaço livre.', true);
+                if (moved.reason === 'protected') toast('Há um bloco concluído nesse horário. Ele não foi movido; escolha outro horário.', true);
+                else if (moved.reason === 'no-space') toast('Não há tempo suficiente neste dia para encaixar os blocos seguintes.', true);
                 return;
             }
             saveAppData(); selectedDay = Number(day); render();
-            toast('✓ Bloco movido para o dia e horário escolhidos.');
+            toast(moved.shifted
+                ? `✓ Bloco colocado às ${start}; ${moved.shifted} ${moved.shifted === 1 ? 'bloco seguinte ajustado' : 'blocos seguintes ajustados'}.`
+                : '✓ Bloco movido para o dia e horário escolhidos.');
             return;
         }
         const oldDay = Number(block.day), destination = Number(day);

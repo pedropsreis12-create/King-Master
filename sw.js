@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261007-auth-biblioteca-v2';
+const CACHE_VERSION = 'king-master-20261008-painel-limpo-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -22,9 +22,6 @@ const APP_SHELL = [
     './topic-hierarchy.css',
     './agenda-workspace.js',
     './agenda-workspace.css',
-    './autopilot-core.js',
-    './autopilot.js',
-    './autopilot.css',
     './practice-core.js',
     './practice.js',
     './practice.css',

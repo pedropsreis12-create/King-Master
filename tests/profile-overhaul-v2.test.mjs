@@ -16,3 +16,11 @@ test('perfil mostra somente as conquistas verificadas e oferece visualização a
     assert.match(source, /achievementTier: 'all'/);
     assert.doesNotMatch(source, /createNavigation\(root\);/);
 });
+
+test('busca de usuários tem aba própria e o catálogo mostra cada divisão', () => {
+    assert.match(source, /\['search', 'Pesquisar usuário'\]/);
+    assert.match(source, /function createUserSearch\(root\)/);
+    assert.match(source, /id: 'perfil-busca'/);
+    assert.match(source, /for \(let division = 1; division <= divisions; division \+= 1\)/);
+    assert.match(source, /Ver todas as 22 classificações/);
+});

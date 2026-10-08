@@ -24,6 +24,25 @@ test('expõe uma API autônoma e determinística', () => {
     assert.deepEqual(Rank.getMissions(emptyData(), options), Rank.getMissions(emptyData(), options));
 });
 
+test('as 22 classificações seguem Bronze a Pro em divisões I, II e III', () => {
+    assert.deepEqual(Rank.LEAGUES.map(item => item.name), ['Bronze', 'Prata', 'Ouro', 'Diamante', 'Mítico', 'Lendário', 'Mestres', 'Pro']);
+    assert.equal(Rank.LEAGUES.slice(0, -1).every(item => item.divisions === 3), true);
+    assert.equal(Rank.leagueForScore(0).label, 'Liga Bronze I');
+    assert.equal(Rank.leagueForScore(400).label, 'Liga Bronze II');
+    assert.equal(Rank.leagueForScore(800).label, 'Liga Bronze III');
+    assert.equal(Rank.leagueForScore(22500).label, 'Liga Pro');
+});
+
+test('índice antigo de liga é recalculado pelo XP real, sem desbloquear Pro indevidamente', () => {
+    const migrated = Rank.migrate(emptyData(), options);
+    const old = structuredClone(migrated.appData);
+    old.rankV2.season.bestLeagueIndex = 7;
+    delete old.rankV2.season.leagueSchemaVersion;
+    const normalized = Rank.migrate(old, options);
+    assert.equal(normalized.state.season.bestLeagueIndex, 0);
+    assert.equal(normalized.state.season.leagueSchemaVersion, 2);
+});
+
 test('migra evidência legada sem alterar o objeto original nem inventar eventos', () => {
     const original = {
         ...emptyData(),

@@ -372,20 +372,20 @@
         track.append(element('span', '', null, { id: 'kmRankBriefBar' }));
         progress.append(progressHead, track, element('small', '', 'Seu progresso aparece aqui.', { id: 'kmRankBriefHint' }));
         const catalog = element('details', 'km-league-catalog');
-        catalog.append(element('summary', '', 'Ver todas as ligas'), element('div', 'km-league-catalog__grid', null, { id: 'kmLeagueCatalog' }));
+        catalog.append(element('summary', '', 'Ver todas as 22 classificações'), element('div', 'km-league-catalog__grid', null, { id: 'kmLeagueCatalog' }));
         section.append(crest, copy, progress, catalog);
         identity.insertAdjacentElement('afterend', section);
     }
 
     function setProfileView(view) {
-        state.profileView = view === 'ranking' ? 'ranking' : 'profile';
+        state.profileView = ['profile', 'ranking', 'search'].includes(view) ? view : 'profile';
         state.root.dataset.profileView = state.profileView;
         state.root.querySelectorAll('[data-profile-view]').forEach(button => {
             const selected = button.dataset.profileView === state.profileView;
             button.classList.toggle('is-current', selected);
             button.setAttribute('aria-current', selected ? 'page' : 'false');
         });
-        if (state.profileView === 'ranking') {
+        if (state.profileView !== 'profile') {
             startPublicBoard();
             state.root.querySelector('.profile-heading')?.scrollIntoView({ block: 'start' });
         } else {
@@ -397,7 +397,7 @@
     function createProfileTabs(root) {
         if (document.getElementById('kmProfileTabs')) return;
         const tabs = element('nav', 'km-profile-tabs km-profile-v2-owned', null, { id: 'kmProfileTabs', 'aria-label': 'Áreas do perfil' });
-        [['profile', 'Meu perfil'], ['ranking', 'Placar']].forEach(([view, label]) => {
+        [['profile', 'Meu perfil'], ['ranking', 'Placar'], ['search', 'Pesquisar usuário']].forEach(([view, label]) => {
             const button = element('button', view === 'profile' ? 'is-current' : '', label, {
                 type: 'button', 'data-profile-view': view, 'aria-current': view === 'profile' ? 'page' : 'false'
             });
@@ -426,22 +426,41 @@
             element('p', '', 'Participação opcional: apenas apelido, nível, liga e XP da temporada aparecem. Pontuações não são verificadas por servidor.'),
             element('button', '', 'Participar', { id: 'kmPublicBoardJoin', type: 'button' })
         );
+        const status = element('p', 'km-public-board__status', 'Abra o placar para acompanhar a temporada.', { id: 'kmPublicBoardStatus', role: 'status' });
+        boardBody.append(boardHeader, status, element('div', 'km-public-board__self', null, { id: 'kmPublicBoardSelf', hidden: true }), element('ol', 'km-public-board__list', null, { id: 'kmPublicBoardList' }));
+        publicBoard.append(title, boardBody);
+        boardHeader.querySelector('button').addEventListener('click', changePublicBoardMembership);
+        root.append(publicBoard);
+    }
+
+    function createUserSearch(root) {
+        if (document.getElementById('perfil-busca')) return;
+        const panel = element('section', 'km-public-board km-user-search km-profile-v2-owned', null, {
+            id: 'perfil-busca', 'aria-labelledby': 'kmUserSearchTitle', tabindex: '-1'
+        });
+        const title = element('header', 'km-public-board__title');
+        const copy = element('div');
+        copy.append(
+            element('span', 'km-profile-kicker', 'COMUNIDADE KING MASTER'),
+            element('h2', '', 'Pesquisar usuário', { id: 'kmUserSearchTitle' }),
+            element('p', '', 'Encontre pelo apelido pessoas que escolheram participar do placar público.')
+        );
+        title.append(copy);
         const search = element('label', 'km-public-board__search');
         search.append(element('span', 'material-symbols-rounded', 'search', { 'aria-hidden': 'true' }));
         const input = element('input', '', null, {
             id: 'kmPublicBoardSearch', type: 'search', autocomplete: 'off', maxlength: '32',
-            placeholder: 'Pesquisar participante pelo nome', 'aria-label': 'Pesquisar participantes pelo nome'
+            placeholder: 'Digite pelo menos duas letras do apelido', 'aria-label': 'Pesquisar usuários pelo apelido'
         });
         input.addEventListener('input', () => {
             window.clearTimeout(state.boardSearchTimer);
             state.boardSearchTimer = window.setTimeout(startPublicBoard, 300);
         });
         search.append(input);
-        const status = element('p', 'km-public-board__status', 'Abra o placar para acompanhar a temporada.', { id: 'kmPublicBoardStatus', role: 'status' });
-        boardBody.append(boardHeader, search, status, element('div', 'km-public-board__self', null, { id: 'kmPublicBoardSelf', hidden: true }), element('ol', 'km-public-board__list', null, { id: 'kmPublicBoardList' }));
-        publicBoard.append(title, boardBody);
-        boardHeader.querySelector('button').addEventListener('click', changePublicBoardMembership);
-        root.append(publicBoard);
+        panel.append(title, search,
+            element('p', 'km-public-board__status', 'Digite um nome para pesquisar.', { id: 'kmUserSearchStatus', role: 'status' }),
+            element('ol', 'km-public-board__list', null, { id: 'kmUserSearchList' }));
+        root.append(panel);
     }
 
     function stopPublicBoard() {
@@ -453,22 +472,23 @@
     }
 
     function renderPublicBoard(board) {
-        const list = document.getElementById('kmPublicBoardList');
+        const searching = state.profileView === 'search';
+        const list = document.getElementById(searching ? 'kmUserSearchList' : 'kmPublicBoardList');
         list?.replaceChildren();
-        const emblemIcons = { bronze: 'military_tech', copper: 'shield', silver: 'security', gold: 'stars', platinum: 'diamond', diamond: 'diamond', master: 'crown', legend: 'auto_awesome' };
+        const emblemIcons = { bronze: 'military_tech', silver: 'security', gold: 'stars', diamond: 'diamond', mythic: 'auto_awesome', legendary: 'local_fire_department', masters: 'crown', pro: 'emoji_events' };
         board.entries.forEach((entry, index) => {
             const rank = window.KingRankV2?.leagueForScore(entry.score);
-            const row = element('li', `km-public-board__entry${entry.uid === board.uid ? ' is-mine' : ''}${!board.searching && index < 3 ? ' is-podium' : ''}`);
+            const row = element('li', `km-public-board__entry${entry.uid === board.uid ? ' is-mine' : ''}${!searching && index < 3 ? ' is-podium' : ''}`);
             if (rank) row.style.setProperty('--entry-color', rank.color);
             const emblem = element('span', `km-rank-emblem km-rank-emblem--${rank?.key || 'bronze'}`, null, { 'aria-hidden': 'true' });
             emblem.append(element('i', 'km-rank-emblem__glow'), element('span', 'material-symbols-rounded', emblemIcons[rank?.key] || 'shield'));
             const identity = element('div', 'km-public-board__identity');
             identity.append(element('strong', '', entry.uid === board.uid ? `${entry.displayName} · você` : entry.displayName), element('small', '', `Nível ${entry.level}`));
             const league = element('span', 'km-public-board__league', rank?.label || 'Liga Bronze');
-            row.append(element('span', 'km-public-board__place', board.searching ? '•' : String(index + 1).padStart(2, '0')), emblem, identity, league, element('b', 'km-public-board__score', `${formatNumber(entry.score)} XP`));
+            row.append(element('span', 'km-public-board__place', searching ? '•' : String(index + 1).padStart(2, '0')), emblem, identity, league, element('b', 'km-public-board__score', `${formatNumber(entry.score)} XP`));
             list?.append(row);
         });
-        if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', board.searching ? 'Nenhuma pessoa encontrada. Tente outro nome.' : 'Ainda não há participantes nesta temporada.'));
+        if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', searching ? 'Nenhuma pessoa encontrada. Tente outro nome.' : 'Ainda não há participantes nesta temporada.'));
         const self = document.getElementById('kmPublicBoardSelf');
         if (self) {
             self.hidden = !board.joined;
@@ -479,38 +499,40 @@
         }
         const membership = document.getElementById('kmPublicBoardJoin');
         if (membership) membership.textContent = board.joined ? 'Sair do placar' : 'Participar';
-        text('kmPublicBoardStatus', board.searching
-            ? `${board.entries.length} ${board.entries.length === 1 ? 'resultado' : 'resultados'} para esta busca · atualização ao vivo`
-            : `Temporada ${board.seasonId} · até 30 primeiros participantes · atualização ao vivo`);
+        if (searching) text('kmUserSearchStatus', `${board.entries.length} ${board.entries.length === 1 ? 'resultado' : 'resultados'} · atualização ao vivo`);
+        else text('kmPublicBoardStatus', `Temporada ${board.seasonId} · até 30 primeiros participantes · atualização ao vivo`);
         state.boardLoadedAt = Date.now();
     }
 
     function startPublicBoard() {
-        if (state.profileView !== 'ranking') return;
+        if (state.profileView === 'profile') return;
         stopPublicBoard();
         const api = window.KingPublicRanking;
+        const searching = state.profileView === 'search';
+        const statusId = searching ? 'kmUserSearchStatus' : 'kmPublicBoardStatus';
         if (!api) {
-            text('kmPublicBoardStatus', 'Preparando conexão com o placar…');
+            text(statusId, 'Preparando conexão com o placar…');
             return;
         }
-        const name = document.getElementById('kmPublicBoardSearch')?.value || '';
-        if (name.trim().length === 1) {
-            text('kmPublicBoardStatus', 'Digite pelo menos duas letras para pesquisar.');
+        const name = searching ? (document.getElementById('kmPublicBoardSearch')?.value || '') : '';
+        if (searching && name.trim().length < 2) {
+            document.getElementById('kmUserSearchList')?.replaceChildren();
+            text(statusId, 'Digite pelo menos duas letras para pesquisar.');
             return;
         }
-        text('kmPublicBoardStatus', name ? 'Pesquisando participantes…' : 'Carregando classificação…');
+        text(statusId, searching ? 'Pesquisando participantes…' : 'Carregando classificação…');
         try {
             state.boardStop = api.watch(name, renderPublicBoard, error => {
                 console.warn('Placar público indisponível:', error);
                 const unavailable = /permission-denied|failed-precondition/i.test(String(error?.code || ''));
-                text('kmPublicBoardStatus', unavailable
+                text(statusId, unavailable
                     ? 'O placar ainda está sendo preparado. Tente novamente em instantes.'
                     : 'A conexão ao vivo caiu. Volte ao perfil e abra o placar novamente.');
             });
             state.boardSyncTimer = window.setInterval(() => api.syncIfJoined().catch(() => {}), 60_000);
         } catch (error) {
             console.warn('Placar público indisponível:', error);
-            text('kmPublicBoardStatus', /entre na sua conta/i.test(String(error?.message || ''))
+            text(statusId, /entre na sua conta/i.test(String(error?.message || ''))
                 ? 'Entre na sua conta para consultar ou participar do placar público.'
                 : 'Não foi possível carregar o placar agora. Tente novamente.');
         }
@@ -760,16 +782,23 @@
         const leagues = window.KingRankV2?.LEAGUES || [];
         if (catalog && leagues.length) {
             catalog.replaceChildren();
-            const active = leagues.findIndex(item => item.name === rank.league.replace(/^Liga\s+/i, ''));
-            leagues.forEach((league, index) => {
-                const row = element('div', `km-league-item${index === active ? ' is-current' : ''}${index < active ? ' is-passed' : ''}`);
-                row.style.setProperty('--league-color', league.color);
-                row.append(
-                    element('span', 'material-symbols-rounded', index === leagues.length - 1 ? 'emoji_events' : 'workspace_premium', { 'aria-hidden': 'true' }),
-                    element('strong', '', `Liga ${league.name}`),
-                    element('small', '', index === active ? 'Atual' : `${formatNumber(league.start)} XP da temporada`)
-                );
-                catalog.append(row);
+            const score = number(rank.seasonScore);
+            const current = window.KingRankV2.leagueForScore(score);
+            leagues.forEach(league => {
+                const divisions = league.divisions > 1 ? league.divisions : 1;
+                for (let division = 1; division <= divisions; division += 1) {
+                    const threshold = Math.round(league.start + (division - 1) * (league.span || 0) / divisions);
+                    const isCurrent = current.key === league.key && (current.division || 1) === division;
+                    const row = element('div', `km-league-item${isCurrent ? ' is-current' : ''}${score >= threshold && !isCurrent ? ' is-passed' : ''}`);
+                    row.style.setProperty('--league-color', league.color);
+                    const numeral = divisions === 1 ? '★' : ['', 'I', 'II', 'III'][division];
+                    row.append(
+                        element('span', 'km-league-item__badge', numeral, { 'aria-hidden': 'true' }),
+                        element('strong', '', `${league.name}${divisions === 1 ? '' : ` ${numeral}`}`),
+                        element('small', '', isCurrent ? 'Sua classificação' : `${formatNumber(threshold)} XP`)
+                    );
+                    catalog.append(row);
+                }
             });
         }
         state.root?.toggleAttribute('data-rank-v2', seasonMode);
@@ -1094,6 +1123,7 @@
         enhanceIdentity();
         createRankBrief(root);
         createPublicBoard(root);
+        createUserSearch(root);
         createSeasonHub(root);
         createWeeklyPulse();
         createAchievements(root);

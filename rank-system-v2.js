@@ -63,14 +63,14 @@
     };
 
     const LEAGUES = [
-        { key: 'bronze', name: 'Bronze', start: 0, span: 800, divisions: 4, color: '#b7794b' },
-        { key: 'copper', name: 'Cobre', start: 800, span: 1000, divisions: 4, color: '#d47a45' },
-        { key: 'silver', name: 'Prata', start: 1800, span: 1400, divisions: 4, color: '#aab7c4' },
-        { key: 'gold', name: 'Ouro', start: 3200, span: 1800, divisions: 4, color: '#f3ba3e' },
-        { key: 'platinum', name: 'Platina', start: 5000, span: 2200, divisions: 4, color: '#56d6c5' },
-        { key: 'diamond', name: 'Diamante', start: 7200, span: 2800, divisions: 4, color: '#78b7ff' },
-        { key: 'master', name: 'Mestre', start: 10000, span: 4000, divisions: 4, color: '#b478ff' },
-        { key: 'legend', name: 'Lenda', start: 14000, span: null, divisions: 1, color: '#ff657a' }
+        { key: 'bronze', name: 'Bronze', start: 0, span: 1200, divisions: 3, color: '#b7794b' },
+        { key: 'silver', name: 'Prata', start: 1200, span: 1800, divisions: 3, color: '#aab7c4' },
+        { key: 'gold', name: 'Ouro', start: 3000, span: 2400, divisions: 3, color: '#f3ba3e' },
+        { key: 'diamond', name: 'Diamante', start: 5400, span: 3000, divisions: 3, color: '#48b7e8' },
+        { key: 'mythic', name: 'Mítico', start: 8400, span: 3600, divisions: 3, color: '#ad54d7' },
+        { key: 'legendary', name: 'Lendário', start: 12000, span: 4500, divisions: 3, color: '#e64e42' },
+        { key: 'masters', name: 'Mestres', start: 16500, span: 6000, divisions: 3, color: '#df7641' },
+        { key: 'pro', name: 'Pro', start: 22500, span: null, divisions: 1, color: '#f2b735' }
     ];
 
     const LEGACY_LEVEL_MARKS = [
@@ -161,7 +161,7 @@
             ['questions-4000', 'Quatro mil decisões', 'Registre 4.000 questões.', 'questionsAnswered', 4000, 'quiz'],
             ['reviews-800', 'Memória de longo prazo', 'Conclua 800 revisões.', 'reviewsCompleted', 800, 'history_edu'],
             ['cards-2500', 'Arquivista da memória', 'Revise 2.500 flashcards.', 'flashcardsReviewed', 2500, 'style'],
-            ['league-legend', 'Lenda da temporada', 'Alcance a Liga Lenda em uma temporada.', 'bestLeagueIndex', 7, 'workspace_premium'],
+            ['league-legend', 'Lendário da temporada', 'Alcance a Liga Lendário em uma temporada.', 'bestLeagueIndex', 5, 'workspace_premium'],
             ['mastered-errors-150', 'Padrões dominados', 'Domine 150 erros registrados.', 'errorsMastered', 150, 'verified'],
             ['essays-60', 'Oficina de escrita', 'Registre 60 redações.', 'essays', 60, 'edit_note'],
             ['mocks-50', 'Ritmo de competição', 'Conclua 50 simulados.', 'mockExams', 50, 'fact_check'],
@@ -316,7 +316,7 @@
         const divisionSpan = league.span / league.divisions;
         const withinLeague = safeScore - league.start;
         const completedDivisions = Math.min(league.divisions - 1, Math.floor(withinLeague / divisionSpan));
-        const division = league.divisions - completedDivisions;
+        const division = completedDivisions + 1;
         const threshold = Math.round(league.start + completedDivisions * divisionSpan);
         const nextThreshold = Math.round(league.start + (completedDivisions + 1) * divisionSpan);
         const progressPercent = clamp(((safeScore - threshold) / Math.max(1, nextThreshold - threshold)) * 100, 0, 100);
@@ -457,6 +457,7 @@
             season: {
                 current: { ...season, xp: legacy.seasonXp, score: legacy.seasonXp, startedAt: now },
                 archive: [],
+                leagueSchemaVersion: 2,
                 bestLeagueIndex: league.index
             },
             dailyBuckets: {},
@@ -509,8 +510,8 @@
             endAt: Math.max(0, integer(item.endAt)),
             xp: Math.max(0, integer(item.xp)),
             score: Math.max(0, integer(item.score ?? item.xp)),
-            leagueKey: String(item.leagueKey || leagueForScore(item.score ?? item.xp).key).slice(0, 30),
-            leagueLabel: String(item.leagueLabel || leagueForScore(item.score ?? item.xp).label).slice(0, 80),
+            leagueKey: leagueForScore(item.score ?? item.xp).key,
+            leagueLabel: leagueForScore(item.score ?? item.xp).label,
             archivedAt: Math.max(0, integer(item.archivedAt, now))
         })).filter(item => /^\d{4}-\d{2}$/.test(item.id)).slice(-MAX_SEASONS);
 
@@ -554,7 +555,12 @@
                 fingerprint: String(source.legacy.fingerprint || '').slice(0, 100),
                 evidence: isObject(source.legacy.evidence) ? clone(source.legacy.evidence) : {}
             } : { migratedAt: now, xpImported: 0, seasonXpImported: 0, fingerprint: '', evidence: {} },
-            season: { current, archive, bestLeagueIndex: clamp(integer(source.season?.bestLeagueIndex, leagueForScore(current.score).index), 0, LEAGUES.length - 1) },
+            season: {
+                current, archive, leagueSchemaVersion: 2,
+                bestLeagueIndex: source.season?.leagueSchemaVersion === 2
+                    ? clamp(integer(source.season.bestLeagueIndex, leagueForScore(current.score).index), 0, LEAGUES.length - 1)
+                    : Math.max(leagueForScore(current.score).index, ...archive.map(item => leagueForScore(item.score).index))
+            },
             dailyBuckets,
             processedEvents,
             history,

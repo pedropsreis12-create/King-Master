@@ -64,6 +64,22 @@ test('um horário escolhido manualmente permanece fixo sem quebrar a sequência'
     assert.deepEqual(blocks.map(block => block.start), ['14:00', '17:30', '18:20']);
 });
 
+test('arrastar para uma célula vazia preserva o horário escolhido e os outros blocos', () => {
+    const blocks = [
+        { id: 'geo', subjectId: 2, day: 4, order: 2, start: '16:35', duration: 50, status: 'pending' },
+        { id: 'mat', subjectId: 1, day: 4, order: 0, start: '14:00', duration: 50, status: 'completed' },
+        { id: 'hist', subjectId: 3, day: 3, order: 0, start: '15:45', duration: 50, status: 'pending' }
+    ];
+    assert.equal(Core.moveBlockToSlot(blocks, 'geo', 3, '17:05').ok, true);
+    assert.deepEqual({ day: blocks[0].day, start: blocks[0].start, fixedStart: blocks[0].fixedStart }, { day: 3, start: '17:05', fixedStart: true });
+    assert.equal(blocks[1].start, '14:00');
+    assert.equal(blocks[2].start, '15:45');
+    assert.equal(blocks[0].order, 1);
+    assert.equal(blocks[2].order, 0);
+    assert.equal(Core.moveBlockToSlot(blocks, 'geo', 4, '14:25').reason, 'occupied');
+    assert.deepEqual({ day: blocks[0].day, start: blocks[0].start }, { day: 3, start: '17:05' });
+});
+
 test('organizador usa múltiplos horários livres e não ultrapassa suas janelas', () => {
     const plan = { ...settings, studyDays: [1, 2], closingMinutes: 0, availability: {
         1: [{ start: '09:00', end: '10:00' }, { start: '15:00', end: '19:00' }],

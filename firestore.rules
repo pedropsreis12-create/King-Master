@@ -2,18 +2,20 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Placar opcional: somente apelido, pontuação, nível e temporada. Nenhum dado de estudo é público.
+    // Placar opcional: somente apelido, busca pelo apelido, pontuação, nível e temporada.
     match /publicRanking/{userId} {
       allow get: if request.auth != null;
       allow list: if request.auth != null && request.query.limit <= 30;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'seasonId', 'score', 'level', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['uid', 'displayName', 'seasonId', 'score', 'level', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'searchName', 'seasonId', 'score', 'level', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'displayName', 'searchName', 'seasonId', 'score', 'level', 'updatedAt'])
         && request.resource.data.uid == userId
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() >= 2
         && request.resource.data.displayName.size() <= 32
+        && request.resource.data.searchName is string
+        && request.resource.data.searchName.matches('[a-z0-9 ]{2,32}')
         && request.resource.data.seasonId is string
         && request.resource.data.seasonId.matches('20[0-9][0-9]-(0[1-9]|1[0-2])')
         && request.resource.data.score is int

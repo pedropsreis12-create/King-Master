@@ -1,5 +1,6 @@
 // Placar opt-in. Cada pessoa publica somente um apelido e sua pontuação sazonal.
 // Sem backend confiável gratuito, a pontuação é autodeclarada e exibida como não verificada.
+import { normalizeSearchName, searchTerm } from './public-ranking-utils.js';
 const [{ initializeApp }, authSdk, firestoreSdk] = await Promise.all([
     import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
     import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js'),
@@ -26,6 +27,7 @@ function snapshotForPublication() {
     const profileName = String(appData?.profileName || '').trim().replace(/\s+/g, ' ').slice(0, 32);
     return {
         displayName: profileName.length >= 2 ? profileName : 'Estudante',
+        searchName: normalizeSearchName(profileName),
         seasonId: rank.season.id,
         score: Math.max(0, Math.min(1000000, Math.round(Number(rank.season.score) || 0))),
         level: Math.max(1, Math.min(100, Math.round(Number(rank.lifetime.level) || 1)))
@@ -45,6 +47,29 @@ function seasonQuery(seasonId) {
     );
 }
 
+function peopleQuery(seasonId, name) {
+    return firestoreSdk.query(
+        firestoreSdk.collection(db, 'publicRanking'),
+        firestoreSdk.where('seasonId', '==', seasonId),
+        firestoreSdk.orderBy('searchName'),
+        firestoreSdk.startAt(name),
+        firestoreSdk.endAt(`${name}\uf8ff`),
+        firestoreSdk.limit(30)
+    );
+}
+
+function mapEntries(results) {
+    return results.docs.map(item => {
+        const data = item.data();
+        return {
+            uid: item.id,
+            displayName: String(data.displayName || 'Estudante').slice(0, 32),
+            score: Math.max(0, Number(data.score) || 0),
+            level: Math.max(1, Number(data.level) || 1)
+        };
+    });
+}
+
 async function list() {
     const user = currentIdentity();
     const current = snapshotForPublication();
@@ -59,15 +84,49 @@ async function list() {
         joined,
         ownScore: own.exists() ? own.data().score : null,
         uid: user.uid,
-        entries: results.docs.map(item => {
-            const data = item.data();
-            return {
-                uid: item.id,
-                displayName: String(data.displayName || 'Estudante').slice(0, 32),
-                score: Math.max(0, Number(data.score) || 0),
-                level: Math.max(1, Number(data.level) || 1)
-            };
-        })
+        entries: mapEntries(results)
+    };
+}
+
+function watch(name, onUpdate, onError) {
+    const user = currentIdentity();
+    const current = snapshotForPublication();
+    const term = searchTerm(name);
+    if (term && term.length < 2) throw new Error('Digite pelo menos duas letras para buscar.');
+    let active = true;
+    let ownReady = false;
+    let resultsReady = false;
+    let own = null;
+    let results = null;
+    const emit = () => {
+        if (!active || !ownReady || !resultsReady) return;
+        onUpdate({
+            seasonId: current.seasonId,
+            joined: Boolean(own?.exists()),
+            ownScore: own?.exists() ? own.data().score : null,
+            uid: user.uid,
+            searching: Boolean(term),
+            entries: mapEntries(results)
+        });
+    };
+    const fail = error => { if (active) onError(error); };
+    const stopOwn = firestoreSdk.onSnapshot(ownDocument(user), snapshot => {
+        own = snapshot;
+        ownReady = true;
+        joined = snapshot.exists();
+        knownUid = user.uid;
+        if (joined && !snapshot.data()?.searchName) syncIfJoined().catch(() => {});
+        emit();
+    }, fail);
+    const stopResults = firestoreSdk.onSnapshot(term ? peopleQuery(current.seasonId, term) : seasonQuery(current.seasonId), snapshot => {
+        results = snapshot;
+        resultsReady = true;
+        emit();
+    }, fail);
+    return () => {
+        active = false;
+        stopOwn();
+        stopResults();
     };
 }
 
@@ -112,7 +171,8 @@ authSdk.onAuthStateChanged(auth, user => {
     knownUid = user?.uid || '';
     lastPublished = null;
     lastPublishAt = 0;
+    window.dispatchEvent(new Event('king-public-ranking-auth-changed'));
 });
 
-window.KingPublicRanking = { list, join, leave, syncIfJoined };
+window.KingPublicRanking = { list, watch, join, leave, syncIfJoined };
 window.dispatchEvent(new Event('king-public-ranking-ready'));

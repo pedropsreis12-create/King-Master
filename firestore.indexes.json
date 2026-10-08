@@ -7,6 +7,14 @@
         { "fieldPath": "seasonId", "order": "ASCENDING" },
         { "fieldPath": "score", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "publicRanking",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "seasonId", "order": "ASCENDING" },
+        { "fieldPath": "searchName", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

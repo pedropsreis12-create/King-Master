@@ -14,6 +14,10 @@
         achievementTier: 'all',
         boardLoading: false,
         boardLoadedAt: 0,
+        boardStop: null,
+        boardSearchTimer: 0,
+        boardSyncTimer: 0,
+        profileView: 'profile',
         lastSummary: null,
         destroyed: false
     };
@@ -369,65 +373,146 @@
         progress.append(progressHead, track, element('small', '', 'Seu progresso aparece aqui.', { id: 'kmRankBriefHint' }));
         const catalog = element('details', 'km-league-catalog');
         catalog.append(element('summary', '', 'Ver todas as ligas'), element('div', 'km-league-catalog__grid', null, { id: 'kmLeagueCatalog' }));
-        const publicBoard = element('details', 'km-public-board');
-        const boardBody = element('div', 'km-public-board__body');
-        const boardHeader = element('div', 'km-public-board__header');
-        boardHeader.append(
-            element('p', '', 'Entre apenas se quiser publicar seu apelido e XP da temporada. Os dados de estudo continuam privados. Pontuações ainda não são verificadas por servidor.'),
-            element('button', '', 'Participar', { id: 'kmPublicBoardJoin', type: 'button' })
-        );
-        const refresh = element('button', 'km-public-board__refresh', 'Atualizar placar', { type: 'button' });
-        refresh.addEventListener('click', () => refreshPublicBoard(true));
-        const status = element('p', 'km-public-board__status', 'Abra o placar para carregar a classificação.', { id: 'kmPublicBoardStatus', role: 'status' });
-        boardBody.append(boardHeader, refresh, status, element('ol', 'km-public-board__list', null, { id: 'kmPublicBoardList' }));
-        publicBoard.append(element('summary', '', 'Placar público entre estudantes'), boardBody);
-        publicBoard.addEventListener('toggle', () => { if (publicBoard.open) refreshPublicBoard(); });
-        boardHeader.querySelector('button').addEventListener('click', changePublicBoardMembership);
-        section.append(crest, copy, progress, catalog, publicBoard);
+        section.append(crest, copy, progress, catalog);
         identity.insertAdjacentElement('afterend', section);
     }
 
-    async function refreshPublicBoard(force = false) {
-        const panel = state.root?.querySelector('.km-public-board');
+    function setProfileView(view) {
+        state.profileView = view === 'ranking' ? 'ranking' : 'profile';
+        state.root.dataset.profileView = state.profileView;
+        state.root.querySelectorAll('[data-profile-view]').forEach(button => {
+            const selected = button.dataset.profileView === state.profileView;
+            button.classList.toggle('is-current', selected);
+            button.setAttribute('aria-current', selected ? 'page' : 'false');
+        });
+        if (state.profileView === 'ranking') {
+            startPublicBoard();
+            state.root.querySelector('.profile-heading')?.scrollIntoView({ block: 'start' });
+        } else {
+            stopPublicBoard();
+            state.root.querySelector('.profile-heading')?.scrollIntoView({ block: 'start' });
+        }
+    }
+
+    function createProfileTabs(root) {
+        if (document.getElementById('kmProfileTabs')) return;
+        const tabs = element('nav', 'km-profile-tabs km-profile-v2-owned', null, { id: 'kmProfileTabs', 'aria-label': 'Áreas do perfil' });
+        [['profile', 'Meu perfil'], ['ranking', 'Placar']].forEach(([view, label]) => {
+            const button = element('button', view === 'profile' ? 'is-current' : '', label, {
+                type: 'button', 'data-profile-view': view, 'aria-current': view === 'profile' ? 'page' : 'false'
+            });
+            button.addEventListener('click', () => setProfileView(view));
+            tabs.append(button);
+        });
+        root.querySelector('.profile-heading')?.insertAdjacentElement('afterend', tabs);
+    }
+
+    function createPublicBoard(root) {
+        if (document.getElementById('perfil-placar')) return;
+        const publicBoard = element('section', 'km-public-board km-profile-v2-owned', null, {
+            id: 'perfil-placar', 'aria-labelledby': 'kmPublicBoardTitle', tabindex: '-1'
+        });
+        const title = element('header', 'km-public-board__title');
+        const titleCopy = element('div');
+        titleCopy.append(
+            element('span', 'km-profile-kicker', 'TEMPORADA ATUAL'),
+            element('h2', '', 'Placar dos estudantes', { id: 'kmPublicBoardTitle' }),
+            element('p', '', 'Acompanhe sua liga e encontre outros estudantes que escolheram participar.')
+        );
+        title.append(titleCopy, element('span', 'km-public-board__live', 'Atualização ao vivo'));
+        const boardBody = element('div', 'km-public-board__body');
+        const boardHeader = element('div', 'km-public-board__header');
+        boardHeader.append(
+            element('p', '', 'Participação opcional: apenas apelido, nível, liga e XP da temporada aparecem. Pontuações não são verificadas por servidor.'),
+            element('button', '', 'Participar', { id: 'kmPublicBoardJoin', type: 'button' })
+        );
+        const search = element('label', 'km-public-board__search');
+        search.append(element('span', 'material-symbols-rounded', 'search', { 'aria-hidden': 'true' }));
+        const input = element('input', '', null, {
+            id: 'kmPublicBoardSearch', type: 'search', autocomplete: 'off', maxlength: '32',
+            placeholder: 'Pesquisar participante pelo nome', 'aria-label': 'Pesquisar participantes pelo nome'
+        });
+        input.addEventListener('input', () => {
+            window.clearTimeout(state.boardSearchTimer);
+            state.boardSearchTimer = window.setTimeout(startPublicBoard, 300);
+        });
+        search.append(input);
+        const status = element('p', 'km-public-board__status', 'Abra o placar para acompanhar a temporada.', { id: 'kmPublicBoardStatus', role: 'status' });
+        boardBody.append(boardHeader, search, status, element('div', 'km-public-board__self', null, { id: 'kmPublicBoardSelf', hidden: true }), element('ol', 'km-public-board__list', null, { id: 'kmPublicBoardList' }));
+        publicBoard.append(title, boardBody);
+        boardHeader.querySelector('button').addEventListener('click', changePublicBoardMembership);
+        root.append(publicBoard);
+    }
+
+    function stopPublicBoard() {
+        window.clearTimeout(state.boardSearchTimer);
+        state.boardStop?.();
+        state.boardStop = null;
+        window.clearInterval(state.boardSyncTimer);
+        state.boardSyncTimer = 0;
+    }
+
+    function renderPublicBoard(board) {
+        const list = document.getElementById('kmPublicBoardList');
+        list?.replaceChildren();
+        const emblemIcons = { bronze: 'military_tech', copper: 'shield', silver: 'security', gold: 'stars', platinum: 'diamond', diamond: 'diamond', master: 'crown', legend: 'auto_awesome' };
+        board.entries.forEach((entry, index) => {
+            const rank = window.KingRankV2?.leagueForScore(entry.score);
+            const row = element('li', `km-public-board__entry${entry.uid === board.uid ? ' is-mine' : ''}${!board.searching && index < 3 ? ' is-podium' : ''}`);
+            if (rank) row.style.setProperty('--entry-color', rank.color);
+            const emblem = element('span', `km-rank-emblem km-rank-emblem--${rank?.key || 'bronze'}`, null, { 'aria-hidden': 'true' });
+            emblem.append(element('i', 'km-rank-emblem__glow'), element('span', 'material-symbols-rounded', emblemIcons[rank?.key] || 'shield'));
+            const identity = element('div', 'km-public-board__identity');
+            identity.append(element('strong', '', entry.uid === board.uid ? `${entry.displayName} · você` : entry.displayName), element('small', '', `Nível ${entry.level}`));
+            const league = element('span', 'km-public-board__league', rank?.label || 'Liga Bronze');
+            row.append(element('span', 'km-public-board__place', board.searching ? '•' : String(index + 1).padStart(2, '0')), emblem, identity, league, element('b', 'km-public-board__score', `${formatNumber(entry.score)} XP`));
+            list?.append(row);
+        });
+        if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', board.searching ? 'Nenhuma pessoa encontrada. Tente outro nome.' : 'Ainda não há participantes nesta temporada.'));
+        const self = document.getElementById('kmPublicBoardSelf');
+        if (self) {
+            self.hidden = !board.joined;
+            if (board.joined) {
+                const rank = window.KingRankV2?.leagueForScore(board.ownScore);
+                self.textContent = `Sua liga: ${rank?.label || 'Bronze'} · ${formatNumber(board.ownScore)} XP na temporada`;
+            }
+        }
+        const membership = document.getElementById('kmPublicBoardJoin');
+        if (membership) membership.textContent = board.joined ? 'Sair do placar' : 'Participar';
+        text('kmPublicBoardStatus', board.searching
+            ? `${board.entries.length} ${board.entries.length === 1 ? 'resultado' : 'resultados'} para esta busca · atualização ao vivo`
+            : `Temporada ${board.seasonId} · até 30 primeiros participantes · atualização ao vivo`);
+        state.boardLoadedAt = Date.now();
+    }
+
+    function startPublicBoard() {
+        if (state.profileView !== 'ranking') return;
+        stopPublicBoard();
         const api = window.KingPublicRanking;
-        if (!panel?.open || state.boardLoading) return;
         if (!api) {
             text('kmPublicBoardStatus', 'Preparando conexão com o placar…');
             return;
         }
-        if (!force && Date.now() - state.boardLoadedAt < 60_000) return;
-        state.boardLoading = true;
-        text('kmPublicBoardStatus', 'Carregando classificação…');
+        const name = document.getElementById('kmPublicBoardSearch')?.value || '';
+        if (name.trim().length === 1) {
+            text('kmPublicBoardStatus', 'Digite pelo menos duas letras para pesquisar.');
+            return;
+        }
+        text('kmPublicBoardStatus', name ? 'Pesquisando participantes…' : 'Carregando classificação…');
         try {
-            const board = await api.list();
-            const list = document.getElementById('kmPublicBoardList');
-            list?.replaceChildren();
-            board.entries.forEach((entry, index) => {
-                const row = element('li', entry.uid === board.uid ? 'is-mine' : '');
-                const league = window.KingRankV2?.leagueForScore(entry.score)?.name || '';
-                row.append(
-                    element('strong', '', String(index + 1).padStart(2, '0')),
-                    element('span', '', entry.uid === board.uid ? `${entry.displayName} · você` : entry.displayName),
-                    element('small', '', league ? `Liga ${league}` : ''),
-                    element('b', '', `${formatNumber(entry.score)} XP`)
-                );
-                list?.append(row);
+            state.boardStop = api.watch(name, renderPublicBoard, error => {
+                console.warn('Placar público indisponível:', error);
+                const unavailable = /permission-denied|failed-precondition/i.test(String(error?.code || ''));
+                text('kmPublicBoardStatus', unavailable
+                    ? 'O placar ainda está sendo preparado. Tente novamente em instantes.'
+                    : 'A conexão ao vivo caiu. Volte ao perfil e abra o placar novamente.');
             });
-            const membership = document.getElementById('kmPublicBoardJoin');
-            if (membership) membership.textContent = board.joined ? 'Sair do placar' : 'Participar';
-            if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', 'Ainda não há participantes nesta temporada.'));
-            text('kmPublicBoardStatus', `Temporada ${board.seasonId} · ${board.entries.length} ${board.entries.length === 1 ? 'estudante' : 'estudantes'} entre os 30 primeiros · classificação não verificada.`);
-            state.boardLoadedAt = Date.now();
+            state.boardSyncTimer = window.setInterval(() => api.syncIfJoined().catch(() => {}), 60_000);
         } catch (error) {
             console.warn('Placar público indisponível:', error);
-            const unavailable = /permission-denied|failed-precondition/i.test(String(error?.code || ''));
-            text('kmPublicBoardStatus', unavailable
-                ? 'O placar público ainda precisa ser ativado no banco de dados. Seu perfil privado continua intacto.'
-                : /entre na sua conta/i.test(String(error?.message || ''))
-                    ? 'Entre na sua conta para consultar ou participar do placar público.'
+            text('kmPublicBoardStatus', /entre na sua conta/i.test(String(error?.message || ''))
+                ? 'Entre na sua conta para consultar ou participar do placar público.'
                 : 'Não foi possível carregar o placar agora. Tente novamente.');
-        } finally {
-            state.boardLoading = false;
         }
     }
 
@@ -441,8 +526,7 @@
         try {
             if (leaving) await api.leave();
             else await api.join();
-            state.boardLoadedAt = 0;
-            await refreshPublicBoard(true);
+            text('kmPublicBoardStatus', leaving ? 'Você saiu do placar.' : 'Você entrou no placar. Sua classificação será atualizada ao vivo.');
         } catch (error) {
             text('kmPublicBoardStatus', /permission-denied|failed-precondition/i.test(String(error?.code || ''))
                 ? 'O placar ainda não está disponível no banco de dados.'
@@ -968,9 +1052,7 @@
         renderWeekly(summary);
         renderAchievements(summary);
         renderFrameState();
-        if (state.boardLoadedAt) window.KingPublicRanking?.syncIfJoined().then(changed => {
-            if (changed && state.root?.querySelector('.km-public-board')?.open) refreshPublicBoard(true);
-        }).catch(() => {});
+        if (state.boardLoadedAt) window.KingPublicRanking?.syncIfJoined().catch(() => {});
         applySemantics();
         state.root.dataset.profileOverhaulReady = 'true';
     }
@@ -1008,14 +1090,17 @@
         root.querySelector('.profile-overview-grid')?.setAttribute('id', 'perfil-progresso');
         root.querySelector('.profile-overview-grid')?.setAttribute('tabindex', '-1');
         document.getElementById('kmProfileNav')?.remove();
+        createProfileTabs(root);
         enhanceIdentity();
         createRankBrief(root);
+        createPublicBoard(root);
         createSeasonHub(root);
         createWeeklyPulse();
         createAchievements(root);
         enhanceFrameVault();
-        window.addEventListener('king-public-ranking-ready', () => refreshPublicBoard(true));
-        window.addEventListener('king-master-auth-ready', () => { state.boardLoadedAt = 0; refreshPublicBoard(true); });
+        window.addEventListener('king-public-ranking-ready', startPublicBoard);
+        window.addEventListener('king-public-ranking-auth-changed', startPublicBoard);
+        window.addEventListener('king-master-auth-ready', () => { state.boardLoadedAt = 0; startPublicBoard(); });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && document.getElementById('perfil-conquistas')?.classList.contains('is-fullscreen')) toggleAchievementsFullscreen(false);
         });
@@ -1044,6 +1129,7 @@
 
     function destroy() {
         state.destroyed = true;
+        stopPublicBoard();
         state.observer?.disconnect();
         if (state.refreshFrame) cancelAnimationFrame(state.refreshFrame);
         window.removeEventListener('king-master-data-changed', scheduleRender);

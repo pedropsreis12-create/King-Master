@@ -128,6 +128,29 @@
         });
         return ordered;
     };
+    function moveBlockToSlot(blocks, id, day, start) {
+        const source = Array.isArray(blocks) ? blocks.find(block => String(block.id) === String(id)) : null;
+        const destination = Number(day);
+        if (!source || !Number.isInteger(destination) || destination < 1 || destination > 7 || !validClock(start)) return { ok: false, reason: 'invalid' };
+        const beginning = toMinutes(start);
+        const ending = beginning + Number(source.duration || 0);
+        if (ending > 1440) return { ok: false, reason: 'invalid' };
+        const conflict = blocks.some(block => block !== source && Number(block.day) === destination
+            && beginning < toMinutes(block.start) + Number(block.duration || 0)
+            && ending > toMinutes(block.start));
+        if (conflict) return { ok: false, reason: 'occupied' };
+        const previousDay = Number(source.day);
+        if (previousDay === destination && source.start === start) return { ok: false, reason: 'unchanged' };
+        source.day = destination;
+        source.start = start;
+        source.fixedStart = true;
+        for (const affectedDay of new Set([previousDay, destination])) {
+            blocks.filter(block => Number(block.day) === affectedDay)
+                .sort((a, b) => toMinutes(a.start) - toMinutes(b.start) || (a.order ?? 999) - (b.order ?? 999))
+                .forEach((block, order) => { block.order = order; });
+        }
+        return { ok: true, previousDay, destination };
+    }
     function organize(subjectsInput, settingsInput, weekKey, options = {}) {
         const settings = normalizeSettings(settingsInput);
         const subjects = (Array.isArray(subjectsInput) ? subjectsInput : []).map(subjectConfig).filter(subject => subject.subject && subject.weeklyBlocks > 0);
@@ -256,5 +279,5 @@
         });
         return detached.size;
     }
-    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, organize, copyWeek, clearAllBlocks, detachPendingSessions };
+    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, moveBlockToSlot, organize, copyWeek, clearAllBlocks, detachPendingSessions };
 })();

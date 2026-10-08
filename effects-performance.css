@@ -1,0 +1,53 @@
+/* Performance sem cortar a identidade visual: brilhos são rasterizados uma vez e movidos por transform. */
+body::before,
+body::after,
+html[data-xp-rank] body::before,
+html[data-xp-rank] body::after,
+html[data-site-design="nebula"] body::before,
+html[data-site-design="nebula"] body::after {
+    width: min(60vw, 850px);
+    height: min(60vw, 850px);
+    filter: none;
+    will-change: transform;
+}
+body::before,
+html[data-xp-rank] body::before,
+html[data-site-design="nebula"] body::before {
+    background: radial-gradient(circle, var(--accent-color) 0%, color-mix(in srgb, var(--accent-color) 42%, transparent) 38%, transparent 73%);
+}
+body::after,
+html[data-xp-rank] body::after,
+html[data-site-design="nebula"] body::after {
+    background: radial-gradient(circle, var(--badge-purple) 0%, color-mix(in srgb, var(--badge-purple) 38%, transparent) 38%, transparent 73%);
+}
+
+/* As 17 miniaturas preservam cores, contornos e brilho; só a moldura em foco se move. */
+#perfil .frame-vault-card:not(:hover):not(:focus-visible):not(.equipped) .frame-vault-mini,
+#perfil .frame-vault-card:not(:hover):not(:focus-visible):not(.equipped) .frame-vault-mini::before,
+#perfil .frame-vault-card:not(:hover):not(:focus-visible):not(.equipped) .frame-vault-mini::after,
+#perfil .frame-vault-card:not(:hover):not(:focus-visible):not(.equipped) .frame-vault-mini * {
+    animation-play-state: paused !important;
+}
+
+/* Em telas de toque, o vidro de dezenas de cartões é pré-misturado.
+   A textura, as sombras e o blur dos painéis principais continuam intactos. */
+@media (max-width: 900px), (pointer: coarse) {
+    html[data-site-design] :is(
+        .widget, .stat-card, .disc-card, .agenda-card, .revision-card,
+        .h-session-card, .daily-mission, .error-card, .flash-deck-card
+    ) {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        background-color: color-mix(in srgb, var(--card-bg) 58%, var(--bg-body) 42%);
+    }
+    html[data-site-design="nebula"] :is(
+        .widget, .stat-card, .disc-card, .agenda-card, .revision-card,
+        .h-session-card, .daily-mission, .error-card, .flash-deck-card
+    ) {
+        background-image: linear-gradient(145deg, rgba(255,255,255,.1), transparent 48%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body::before, body::after { will-change: auto; }
+}

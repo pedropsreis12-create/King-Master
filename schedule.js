@@ -1055,6 +1055,16 @@
         if (week(false)?.strict) return toast('Para manter seus limites de horário, altere a matéria na prévia de “Montar com IA”.', true);
         const block = findBlock(id), target = targetId ? findBlock(targetId) : null;
         if (!block || (targetId && !target) || String(block.id) === String(targetId) || !DAYS.includes(Number(day))) return;
+        if (start && !targetId) {
+            const moved = Core.moveBlockToSlot(week(false).blocks, id, day, start);
+            if (!moved.ok) {
+                if (moved.reason === 'occupied') toast('Esse horário já está ocupado. Escolha outro espaço livre.', true);
+                return;
+            }
+            saveAppData(); selectedDay = Number(day); render();
+            toast('✓ Bloco movido para o dia e horário escolhidos.');
+            return;
+        }
         const oldDay = Number(block.day), destination = Number(day);
         const oldList = getDayBlocks(oldDay).filter(item => item !== block);
         const destinationList = oldDay === destination ? oldList : getDayBlocks(destination);

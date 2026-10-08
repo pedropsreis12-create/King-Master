@@ -19,6 +19,7 @@ test('placar é opcional e só publica um resumo limitado do perfil', () => {
 test('a busca encontra participantes pelo nome sem acentos e fora do top 30', () => {
     assert.equal(normalizeSearchName('  João   D’Ávila '), 'joao d avila');
     assert.equal(searchTerm(' JOÃ '), 'joa');
+    assert.equal(normalizeSearchName('Gustavo121').startsWith(searchTerm('Gustav')), true);
     assert.match(ranking, /orderBy\('searchName'\)/);
     assert.match(ranking, /startAt\(name\)/);
     assert.match(ranking, /endAt\(`\$\{name\}\\uf8ff`\)/);

@@ -23,4 +23,7 @@ test('busca de usuários tem aba própria e o catálogo mostra cada divisão', (
     assert.match(source, /id: 'perfil-busca'/);
     assert.match(source, /for \(let division = 1; division <= divisions; division \+= 1\)/);
     assert.match(source, /Ver todas as 22 classificações/);
+    assert.match(source, /function leagueMascot\(rank\)/);
+    assert.match(source, /className, 'km-user-search__choice'|element\('button', 'km-user-search__choice'/);
+    assert.match(source, /renderSearchSelection\(entry\)/);
 });

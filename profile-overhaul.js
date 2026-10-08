@@ -17,6 +17,7 @@
         boardStop: null,
         boardSearchTimer: 0,
         boardSyncTimer: 0,
+        selectedSearchUid: null,
         profileView: 'profile',
         lastSummary: null,
         destroyed: false
@@ -450,17 +451,49 @@
         search.append(element('span', 'material-symbols-rounded', 'search', { 'aria-hidden': 'true' }));
         const input = element('input', '', null, {
             id: 'kmPublicBoardSearch', type: 'search', autocomplete: 'off', maxlength: '32',
-            placeholder: 'Digite pelo menos duas letras do apelido', 'aria-label': 'Pesquisar usuários pelo apelido'
+            placeholder: 'Ex.: Gustav encontra Gustavo121', 'aria-label': 'Pesquisar usuários pelo início do apelido',
+            'aria-controls': 'kmUserSearchList', 'aria-autocomplete': 'list'
         });
         input.addEventListener('input', () => {
             window.clearTimeout(state.boardSearchTimer);
+            state.selectedSearchUid = null;
+            document.getElementById('kmUserSearchSelection')?.replaceChildren();
             state.boardSearchTimer = window.setTimeout(startPublicBoard, 300);
         });
         search.append(input);
         panel.append(title, search,
             element('p', 'km-public-board__status', 'Digite um nome para pesquisar.', { id: 'kmUserSearchStatus', role: 'status' }),
-            element('ol', 'km-public-board__list', null, { id: 'kmUserSearchList' }));
+            element('ol', 'km-public-board__list', null, { id: 'kmUserSearchList' }),
+            element('section', 'km-user-search__selection', null, { id: 'kmUserSearchSelection', 'aria-live': 'polite' }));
         root.append(panel);
+    }
+
+    function leagueMascot(rank) {
+        const key = rank?.key || 'bronze';
+        const mascot = element('span', `km-rank-mascot km-rank-mascot--${key}`, null, { 'aria-hidden': 'true' });
+        mascot.style.setProperty('--mascot-color', rank?.color || '#b7794b');
+        mascot.append(
+            element('span', 'km-rank-mascot__ears'),
+            element('span', 'km-rank-mascot__head', null, { 'aria-hidden': 'true' }),
+            element('span', 'km-rank-mascot__crest'),
+            element('span', 'km-rank-mascot__division', rank?.division ? ['', 'I', 'II', 'III'][rank.division] : '★')
+        );
+        return mascot;
+    }
+
+    function renderSearchSelection(entry) {
+        const selection = document.getElementById('kmUserSearchSelection');
+        if (!selection) return;
+        selection.replaceChildren();
+        if (!entry) return;
+        const rank = window.KingRankV2?.leagueForScore(entry.score);
+        const details = element('div', 'km-user-search__selection-copy');
+        details.append(
+            element('small', '', 'PARTICIPANTE SELECIONADO'),
+            element('h3', '', entry.displayName),
+            element('p', '', `${rank?.label || 'Liga Bronze'} · Nível ${entry.level} · ${formatNumber(entry.score)} XP nesta temporada`)
+        );
+        selection.append(leagueMascot(rank), details);
     }
 
     function stopPublicBoard() {
@@ -475,19 +508,29 @@
         const searching = state.profileView === 'search';
         const list = document.getElementById(searching ? 'kmUserSearchList' : 'kmPublicBoardList');
         list?.replaceChildren();
-        const emblemIcons = { bronze: 'military_tech', silver: 'security', gold: 'stars', diamond: 'diamond', mythic: 'auto_awesome', legendary: 'local_fire_department', masters: 'crown', pro: 'emoji_events' };
         board.entries.forEach((entry, index) => {
             const rank = window.KingRankV2?.leagueForScore(entry.score);
             const row = element('li', `km-public-board__entry${entry.uid === board.uid ? ' is-mine' : ''}${!searching && index < 3 ? ' is-podium' : ''}`);
             if (rank) row.style.setProperty('--entry-color', rank.color);
-            const emblem = element('span', `km-rank-emblem km-rank-emblem--${rank?.key || 'bronze'}`, null, { 'aria-hidden': 'true' });
-            emblem.append(element('i', 'km-rank-emblem__glow'), element('span', 'material-symbols-rounded', emblemIcons[rank?.key] || 'shield'));
             const identity = element('div', 'km-public-board__identity');
             identity.append(element('strong', '', entry.uid === board.uid ? `${entry.displayName} · você` : entry.displayName), element('small', '', `Nível ${entry.level}`));
             const league = element('span', 'km-public-board__league', rank?.label || 'Liga Bronze');
-            row.append(element('span', 'km-public-board__place', searching ? '•' : String(index + 1).padStart(2, '0')), emblem, identity, league, element('b', 'km-public-board__score', `${formatNumber(entry.score)} XP`));
+            const content = searching ? element('button', 'km-user-search__choice', null, {
+                type: 'button', 'aria-label': `Ver ${entry.displayName}, ${rank?.label || 'Liga Bronze'}`,
+                'aria-pressed': state.selectedSearchUid === entry.uid ? 'true' : 'false'
+            }) : row;
+            content.append(element('span', 'km-public-board__place', searching ? '›' : String(index + 1).padStart(2, '0')), leagueMascot(rank), identity, league, element('b', 'km-public-board__score', `${formatNumber(entry.score)} XP`));
+            if (searching) {
+                content.addEventListener('click', () => {
+                    state.selectedSearchUid = entry.uid;
+                    list?.querySelectorAll('.km-user-search__choice').forEach(button => button.setAttribute('aria-pressed', String(button === content)));
+                    renderSearchSelection(entry);
+                });
+                row.append(content);
+            }
             list?.append(row);
         });
+        if (searching) renderSearchSelection(board.entries.find(entry => entry.uid === state.selectedSearchUid));
         if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', searching ? 'Nenhuma pessoa encontrada. Tente outro nome.' : 'Ainda não há participantes nesta temporada.'));
         const self = document.getElementById('kmPublicBoardSelf');
         if (self) {
@@ -499,7 +542,9 @@
         }
         const membership = document.getElementById('kmPublicBoardJoin');
         if (membership) membership.textContent = board.joined ? 'Sair do placar' : 'Participar';
-        if (searching) text('kmUserSearchStatus', `${board.entries.length} ${board.entries.length === 1 ? 'resultado' : 'resultados'} · atualização ao vivo`);
+        if (searching) text('kmUserSearchStatus', board.entries.length
+            ? `${board.entries.length} ${board.entries.length === 1 ? 'opção encontrada' : 'opções encontradas'} · escolha uma pessoa para ver a liga`
+            : 'Nenhum apelido começa assim entre os participantes públicos.');
         else text('kmPublicBoardStatus', `Temporada ${board.seasonId} · até 30 primeiros participantes · atualização ao vivo`);
         state.boardLoadedAt = Date.now();
     }
@@ -793,7 +838,7 @@
                     row.style.setProperty('--league-color', league.color);
                     const numeral = divisions === 1 ? '★' : ['', 'I', 'II', 'III'][division];
                     row.append(
-                        element('span', 'km-league-item__badge', numeral, { 'aria-hidden': 'true' }),
+                        leagueMascot({ key: league.key, color: league.color, division: divisions === 1 ? null : division }),
                         element('strong', '', `${league.name}${divisions === 1 ? '' : ` ${numeral}`}`),
                         element('small', '', isCurrent ? 'Sua classificação' : `${formatNumber(threshold)} XP`)
                     );

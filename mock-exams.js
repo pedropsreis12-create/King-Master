@@ -35,8 +35,9 @@
         }
     }
     const snapshot = () => ({ exams: structuredClone(exams()), simulados: structuredClone(appData.simuladosItems || []), revisoes: structuredClone(appData.revisoesItems || []) });
+    const quotaKey = () => `king_mock_free_quota:${appData.accountUid || 'legacy'}`;
     function quota() {
-        try { return JSON.parse(localStorage.getItem('king_mock_free_quota') || '{}'); }
+        try { return JSON.parse(localStorage.getItem(quotaKey()) || '{}'); }
         catch { return {}; }
     }
     function quotaAllows() {
@@ -45,7 +46,7 @@
     }
     function recordGeneration() {
         const saved = quota();
-        try { localStorage.setItem('king_mock_free_quota', JSON.stringify({ date: date(), count: saved.date === date() ? (Number(saved.count) || 0) + 1 : 1 })); }
+        try { localStorage.setItem(quotaKey(), JSON.stringify({ date: date(), count: saved.date === date() ? (Number(saved.count) || 0) + 1 : 1 })); }
         catch { /* Cota local é apenas um freio de uso, nunca fonte de dados acadêmicos. */ }
     }
     function openSetup(preset = {}) {

@@ -30,6 +30,7 @@ const REVISAO_MOTIVOS = {
 };
 
 const defaultAppData = {
+    accountUid: '',
     totalStudySeconds: 0, 
     weeklyChart: [0, 0, 0, 0, 0, 0, 0], 
     cycleItems: [], 

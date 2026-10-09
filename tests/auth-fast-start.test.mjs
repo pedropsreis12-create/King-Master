@@ -22,7 +22,7 @@ async function harness(savedUid) {
         KING_MASTER_FIREBASE_CONFIG: { apiKey: 'fixture', authDomain: 'fixture', projectId: 'fixture', appId: 'fixture' },
         location: { hostname: 'example.com', search: '' },
         KingCloudState: { IDENTITY_KEY: 'kingMasterCloudIdentityV2', parseIdentity: store => JSON.parse(store.getItem('kingMasterCloudIdentityV2')) },
-        kingMasterCloudBridge: { exportData: () => ({ lastModifiedAt: 1 }) },
+        kingMasterCloudBridge: { exportData: () => ({ accountUid: savedUid, lastModifiedAt: 1 }) },
         addEventListener() {}, dispatchEvent() {}
     };
     const document = { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [],
@@ -36,11 +36,11 @@ async function harness(savedUid) {
     return { state };
 }
 
-test('uma conta reconhecida abre seus dados locais antes de carregar a IA e a nuvem', async () => {
+test('uma conta reconhecida espera a revisão da nuvem antes de mostrar os dados locais', async () => {
     const { state } = await harness('estudante-1');
     assert.equal(typeof state.authListener, 'function');
     void state.authListener({ uid: 'estudante-1', email: 'estudante@example.com' });
-    assert.equal(state.unlocked, true);
+    assert.equal(state.unlocked, false);
     assert.equal(state.remoteReads, 1);
 });
 

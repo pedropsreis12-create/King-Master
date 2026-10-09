@@ -84,6 +84,16 @@ test('a different Google account downloads only its own existing cloud document'
     assert.equal(result.writes.length, 0);
 });
 
+test('an untagged legacy cache cannot open or overwrite even when the old identity matches', async () => {
+    const result = await start({ savedUid: 'new-user', remote: {
+        ownerUid: 'new-user', cloudRevision: 2, data: { profileName: 'Nova pessoa', lastModifiedAt: 20 }
+    } });
+    await result.enter();
+    assert.equal(result.imports.length, 1);
+    assert.equal(result.writes.length, 0);
+    assert.equal(result.unlocked, false);
+});
+
 test('only an already recognized owner can upload local data', async () => {
     const result = await start({ savedUid: 'new-user', localAccountUid: 'new-user' });
     await result.enter();

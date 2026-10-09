@@ -887,7 +887,9 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         if (remote?.data?.accountUid && remote.data.accountUid !== user.uid) throw new Error('Os dados da nuvem pertencem a outra conta.');
         const remoteRevision = Number(remote?.cloudRevision || 0);
         const localIdentity = readIdentity();
-        const trustedIdentity = local?.accountUid && local.accountUid !== user.uid ? null : localIdentity;
+        // Backups antigos sem UID não são prova de posse. Baixe a cópia autenticada
+        // uma vez antes de liberar o painel ou permitir qualquer envio.
+        const trustedIdentity = local?.accountUid === user.uid ? localIdentity : null;
         const decision = window.KingCloudState.decideInitial({ remoteExists: remoteSnapshot.exists(), remoteRevision,
             localModifiedAt: Number(local?.lastModifiedAt || 0), identity: trustedIdentity, uid: user.uid });
         if (decision === 'reset') {
@@ -1115,27 +1117,24 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
 
     async function finishAccountLoading(user, epoch = sessionEpoch) {
         const local = localSnapshot();
-        const recognizedHere = readIdentity()?.uid === user.uid && Boolean(local) && (!local.accountUid || local.accountUid === user.uid);
-        if (recognizedHere) {
-            // O Firebase já confirmou a identidade; o progresso local pertence a este UID.
-            // A checagem da nuvem continua em segundo plano, sem reter o painel na entrada.
-            updateCloudUi('syncing', user, 'Conferindo as alterações na nuvem…');
-            unlockApplication(user);
-        } else setAuthBusy(true);
+        const recognizedHere = readIdentity()?.uid === user.uid && local?.accountUid === user.uid;
+        // Mesmo o cache identificado aguarda a revisão remota. Assim, um reset
+        // feito em outro aparelho nunca exibe dados antigos durante a entrada.
+        setAuthBusy(true);
         if (authCloudRetryButton) authCloudRetryButton.hidden = true;
         setAuthFeedback('Sincronizando sua conta…');
         try {
             const status = await reconcile(user, epoch);
             if (status === 'reloading' || status === 'stale' || epoch !== sessionEpoch) return;
             listenRemote(user);
-            if (!recognizedHere) unlockApplication(user);
+            unlockApplication(user);
             setAuthFeedback('Conta sincronizada.', 'success');
         } catch (error) {
             if (epoch !== sessionEpoch) return;
             const identity = readIdentity();
             updateCloudUi('error', user, 'Sua conta entrou, mas a nuvem está temporariamente indisponível.');
-            if (identity?.uid === user.uid && localSnapshot() && (!localSnapshot().accountUid || localSnapshot().accountUid === user.uid)) {
-                if (!recognizedHere) unlockApplication(user);
+            if (identity?.uid === user.uid && localSnapshot()?.accountUid === user.uid) {
+                if (recognizedHere) unlockApplication(user);
                 window.showToast?.('☁ Conta reconhecida. Seus dados deste aparelho estão disponíveis; a nuvem tentará reconectar.', true);
             } else {
                 lockApplication('Sua conta foi reconhecida, mas não foi possível carregar seus dados da nuvem. Tente novamente.');

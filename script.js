@@ -602,20 +602,32 @@ function excluirNotaRapida(id) {
 
 window.kingMasterCloudBridge = {
     exportData: () => JSON.parse(JSON.stringify(appData)),
-    resetForAccount: profileName => {
-        const fresh = { ...defaultAppData, profileName: String(profileName || 'Estudante').trim().slice(0, 32) || 'Estudante', lastModifiedAt: Date.now() };
+    resetForAccount: (profileName, accountUid) => {
+        const fresh = { ...defaultAppData, accountUid: String(accountUid || ''), profileName: String(profileName || 'Estudante').trim().slice(0, 32) || 'Estudante', lastModifiedAt: Date.now() };
         localStorage.setItem('qg_pedro_data', JSON.stringify(fresh));
         timerPersistenceReady = false;
         localStorage.removeItem(window.KingTimerRecovery.KEY);
+        sessionStorage.removeItem('kingMasterOpenTopic');
+        sessionStorage.removeItem('kingMasterActiveSection');
         window.location.reload();
     },
-    importData: dados => {
+    importData: (dados, accountUid) => {
         if (!dados || typeof dados !== 'object') return;
-        localStorage.setItem('qg_pedro_data', JSON.stringify({ ...defaultAppData, ...dados }));
+        localStorage.setItem('qg_pedro_data', JSON.stringify({ ...defaultAppData, ...dados, accountUid: String(accountUid || '') }));
         // O fechamento causado pela importação não pode sobrescrever a versão da nuvem.
         timerPersistenceReady = false;
         localStorage.removeItem(window.KingTimerRecovery.KEY);
+        sessionStorage.removeItem('kingMasterOpenTopic');
+        sessionStorage.removeItem('kingMasterActiveSection');
         window.location.reload();
+    },
+    clearForSignOut: () => {
+        timerPersistenceReady = false;
+        localStorage.setItem('qg_pedro_data', JSON.stringify({ ...defaultAppData }));
+        localStorage.removeItem(window.KingTimerRecovery.KEY);
+        sessionStorage.removeItem('kingMasterOpenTopic');
+        sessionStorage.removeItem('kingMasterActiveSection');
+        sessionStorage.removeItem(XP_LAB_SESSION_KEY);
     }
 };
 

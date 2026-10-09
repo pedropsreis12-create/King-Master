@@ -71,7 +71,7 @@ test('cloud import disables close saving so remote data cannot be overwritten', 
     const h = setup(); h.run('toggleTimer()'); h.run('timerPersistenceReady = false');
     h.storage.set('qg_pedro_data', 'remote-snapshot'); h.events.pagehide();
     assert.equal(h.storage.get('qg_pedro_data'), 'remote-snapshot');
-    assert.match(source, /timerPersistenceReady = false;\s*localStorage.removeItem\(window.KingTimerRecovery.KEY\);\s*window.location.reload/);
+    assert.match(source, /timerPersistenceReady = false;\s*localStorage.removeItem\(window.KingTimerRecovery.KEY\);\s*sessionStorage.removeItem\('kingMasterOpenTopic'\);\s*sessionStorage.removeItem\('kingMasterActiveSection'\);\s*window.location.reload/);
 });
 test('stale or malformed checkpoints cannot replace imported progress', () => {
     const h = setup(); h.run('toggleTimer()'); h.advance(4000); h.run('tickTimer()');

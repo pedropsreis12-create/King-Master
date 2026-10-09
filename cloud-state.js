@@ -6,7 +6,9 @@
         catch { return null; }
     }
     function decideInitial({ remoteExists, remoteRevision = 0, localModifiedAt = 0, identity, uid }) {
-        if (!remoteExists) return identity && identity.uid !== uid ? 'reset' : 'upload';
+        // Dados locais sem proprietário comprovado nunca pertencem automaticamente
+        // à primeira conta que entrar neste navegador.
+        if (!remoteExists) return identity?.uid === uid ? 'upload' : 'reset';
         if (!identity || identity.uid !== uid) return 'download';
         if (remoteRevision > Number(identity.cloudRevision || 0)) return 'download';
         if (localModifiedAt > Number(identity.lastLocalRevision || 0)) return 'upload';

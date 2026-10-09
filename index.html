@@ -18,7 +18,7 @@
     <link rel="stylesheet" href="style.css?v=20261008-master-preview-v1">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
-    <link rel="stylesheet" href="usability.css?v=20261008-chart-motion-v1">
+    <link rel="stylesheet" href="usability.css?v=20261008-account-isolation-v1">
     <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
     <link rel="stylesheet" href="personal-development.css?v=20261008-week-habits-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="mock-exams.css?v=20261002-v1">
     <link rel="stylesheet" href="command-palette.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
-        <link rel="stylesheet" href="profile-overhaul.css?v=20261008-master-preview-v1">
+    <link rel="stylesheet" href="profile-overhaul.css?v=20261008-account-isolation-v1">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
     <link rel="stylesheet" href="practice.css?v=20261005-pace-v2">
     <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
@@ -221,7 +221,7 @@
                 </div>
                 <div class="cloud-account-actions">
                     <button type="button" class="cycle-btn primary" id="cloudSignInBtn" onclick="window.kingCloud?.signIn()">Entrar com Google</button>
-                    <button type="button" class="cycle-btn" id="cloudSignOutBtn" onclick="window.kingCloud?.signOut()" hidden>Sair</button>
+                    <button type="button" class="cycle-btn" id="cloudSignOutBtn" onclick="window.kingCloud?.signOut()" hidden>Sair da conta</button>
                 </div>
                 <p class="cloud-account-note">Depois de entrar, cada alteração é salva automaticamente e acompanha você em qualquer dispositivo.</p>
             </div>
@@ -231,7 +231,8 @@
                 <button class="settings-theme-toggle toggle-btn" id="contrastToggleBtn" type="button"><span><strong>Contraste reforçado</strong><small>Contornos e textos mais nítidos</small></span><i></i></button>
                 <button class="settings-theme-toggle toggle-btn dyslexia-toggle" id="dyslexiaToggleBtn" type="button" aria-pressed="false"><span><strong>Leitura para dislexia</strong><small>Fonte simples, linhas amplas e menos distração visual</small></span><i></i></button>
                 <label class="settings-select-row motion-quality-row"><span><strong>Efeitos e animações</strong><small id="motionModeHint">O site escolhe a melhor qualidade para este aparelho</small></span><select id="motionModeSelect"><option value="auto">Automático</option><option value="full">Ativados</option><option value="reduced">Reduzidos</option><option value="off">Desativados</option></select></label>
-                <label class="settings-select-row"><span><strong>Animação dos gráficos</strong><small>Controle apenas a entrada das barras, sem alterar os dados</small></span><select id="chartMotionSelect"><option value="none">Nenhuma</option><option value="low">Baixa</option><option value="high">Alta</option></select></label>
+                <label class="settings-select-row"><span><strong>Animação dos gráficos</strong><small id="chartMotionHint">Escolha a intensidade das animações dos gráficos</small></span><select id="chartMotionSelect"><option value="none">Nenhuma</option><option value="low">Baixa</option><option value="high">Alta</option></select></label>
+                <div class="chart-motion-preview" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
             </div>
             <div class="settings-group">
                 <h3><span>↻</span> Registro de Estudos</h3>
@@ -850,7 +851,10 @@
                         <p id="profileDisplayBio">Construindo meu caminho até o ENEM, um foco de cada vez.</p>
                         <button type="button" class="profile-avatar-remove" onclick="removerImagemPerfil('photo')" hidden>Remover foto</button>
                     </div>
-                    <button type="button" class="cycle-btn profile-edit-toggle" id="profileEditToggle" aria-expanded="false" onclick="toggleEditorPerfil()">Editar perfil</button>
+                    <div class="profile-identity-actions">
+                        <button type="button" class="cycle-btn profile-edit-toggle" id="profileEditToggle" aria-expanded="false" onclick="toggleEditorPerfil()">Editar perfil</button>
+                        <button type="button" class="cycle-btn profile-sign-out" id="profileSignOutBtn" onclick="window.kingCloud?.signOut()" hidden>Sair da conta</button>
+                    </div>
                 </div>
                 <form class="profile-identity-form" id="profileIdentityForm" hidden onsubmit="salvarIdentidadePerfil(event)">
                     <label><span>Nome de usuário</span><input class="cycle-input" id="profileNameInput" maxlength="32" autocomplete="nickname" required></label>
@@ -1516,7 +1520,7 @@
     <script src="notebook-core.js?v=20261006-v1"></script>
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
-    <script src="script.js?v=20261008-chart-motion-v1"></script>
+    <script src="script.js?v=20261008-account-isolation-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>
@@ -1532,7 +1536,7 @@
     <script src="flashcards.js?v=20261002-evolution-v1"></script>
     <script src="mock-exams.js?v=20261005-daily-plan-v1"></script>
     <script src="practice.js?v=20261005-pace-v2"></script>
-    <script src="productivity.js?v=20261008-chart-motion-v1"></script>
+    <script src="productivity.js?v=20261008-account-isolation-v1"></script>
     <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
     <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>
     <script src="data-portability.js?v=20260929-overhaul-v4"></script>
@@ -1540,8 +1544,8 @@
     <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
     <script src="profile-overhaul.js?v=20261008-master-preview-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
-    <script src="cloud-state.js?v=20260907-account-5"></script>
-    <script type="module" src="cloud-sync.js?v=20261007-v2"></script>
+    <script src="cloud-state.js?v=20261008-account-isolation-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20261008-account-isolation-v1"></script>
     <script type="module" src="public-ranking.js?v=20261008-public-ranking-v3"></script>
     <script type="module" src="master-access.js?v=20261008-v1"></script>
 </body>

@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261008-chart-motion-v1';
+const CACHE_VERSION = 'king-master-20261008-account-isolation-v1';
 const APP_SHELL = [
     './',
     './index.html',

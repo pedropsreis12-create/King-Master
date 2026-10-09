@@ -40,6 +40,16 @@ test('Google login offers an explicit fallback and cloud loading can be retried'
     assert.match(cloud, /identity\?\.uid === user\.uid/);
 });
 
+test('signed-in users can leave from profile or settings after pending changes sync', () => {
+    assert.match(html, /id="profileSignOutBtn"[^>]*>Sair da conta<\/button>/);
+    assert.match(html, /id="cloudSignOutBtn"[^>]*>Sair da conta<\/button>/);
+    assert.match(cloud, /profileSignOutButton\.hidden = !authenticated/);
+    assert.match(cloud, /if \(uploadInFlight\) await uploadInFlight/);
+    assert.match(cloud, /await uploadLocal\(user, true\)/);
+    assert.match(cloud, /await authSdk\.signOut\(auth\)/);
+    assert.match(cloud, /window\.location\.reload\(\)/);
+});
+
 test('account creation requires matching strong passwords and a human verification token', () => {
     assert.match(html, /id="authPasswordConfirm"[^>]+minlength="8"/);
     assert.match(html, /id="authHumanCheck"[^>]+role="checkbox"/);

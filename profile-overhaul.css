@@ -287,6 +287,11 @@
     background: var(--km-profile-surface-soft);
 }
 
+#perfil.km-profile-v2 .profile-identity-actions { display: flex; flex-direction: column; gap: 7px; min-width: 118px; }
+#perfil.km-profile-v2 .profile-identity-actions .profile-edit-toggle { margin: 0; }
+#perfil.km-profile-v2 .profile-sign-out { min-height: 34px; border-color: transparent; background: transparent; color: var(--text-muted); font-size: .64rem; }
+#perfil.km-profile-v2 .profile-sign-out:hover { border-color: var(--border-color); background: var(--hover-bg); color: var(--text-main); }
+
 #perfil.km-profile-v2 .km-identity-signals {
     margin-top: 12px;
     display: flex;
@@ -1773,7 +1778,8 @@ html[data-motion-level="off"] #perfil.km-profile-v2 :is(.km-rank-brief::before, 
     #perfil.km-profile-v2 .profile-identity-main { grid-template-columns: 104px minmax(0,1fr); padding: 0 22px 22px; }
     #perfil.km-profile-v2 :is(.profile-identity-avatar-wrap, .profile-identity-avatar) { width: 104px; height: 104px; }
     #perfil.km-profile-v2 .profile-identity-avatar-wrap { margin-top: -48px; }
-    #perfil.km-profile-v2 .profile-edit-toggle { grid-column: 1 / -1; width: 100%; }
+    #perfil.km-profile-v2 .profile-identity-actions { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+    #perfil.km-profile-v2 .profile-identity-actions .profile-edit-toggle { flex: 1; }
     #perfil.km-profile-v2 .profile-identity-form { margin: 0 22px 22px; grid-template-columns: 1fr; }
     #perfil.km-profile-v2 .profile-identity-form-actions { grid-column: auto; }
 

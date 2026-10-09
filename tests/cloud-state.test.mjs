@@ -11,8 +11,9 @@ test('a new device always downloads an existing account before it can upload', (
     assert.equal(state.decideInitial({ remoteExists:true, remoteRevision:8, localModifiedAt:999999, identity:null, uid:'pedro' }), 'download');
     assert.equal(state.decideInitial({ remoteExists:true, remoteRevision:8, localModifiedAt:999999, identity:{uid:'other'}, uid:'pedro' }), 'download');
 });
-test('a new account migrates the local data because no cloud document exists', () => {
-    assert.equal(state.decideInitial({ remoteExists:false, localModifiedAt:10, identity:null, uid:'pedro' }), 'upload');
+test('a brand-new account starts empty even if old anonymous data exists on this device', () => {
+    assert.equal(state.decideInitial({ remoteExists:false, localModifiedAt:10, identity:null, uid:'pedro' }), 'reset');
+    assert.equal(state.decideInitial({ remoteExists:false, localModifiedAt:10, identity:{uid:'pedro'}, uid:'pedro' }), 'upload');
 });
 test('switching accounts never copies the previous account into a new cloud document', () => {
     assert.equal(state.decideInitial({ remoteExists:false, localModifiedAt:99, identity:{uid:'conta-a'}, uid:'conta-b' }), 'reset');

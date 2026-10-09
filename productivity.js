@@ -97,6 +97,12 @@
         if (motionSelect) motionSelect.value = prefs.motionMode;
         const chartMotionSelect = document.getElementById('chartMotionSelect');
         if (chartMotionSelect) chartMotionSelect.value = document.documentElement.dataset.chartMotion;
+        const chartMotionHint = document.getElementById('chartMotionHint');
+        if (chartMotionHint) chartMotionHint.textContent = prefs.motionMode === 'off'
+            ? 'Ative os efeitos gerais para animar os gráficos.'
+            : window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+                ? 'Seu aparelho pediu movimento reduzido; os gráficos ficam parados.'
+                : 'A prévia abaixo mostra a intensidade selecionada.';
         const hint = document.getElementById('motionModeHint');
         if (hint) hint.textContent = prefs.motionMode === 'auto' ? `Automático: ${motionLevelLabel(motionLevel).toLocaleLowerCase('pt-BR')}` : motionLevelLabel(motionLevel);
         refreshMotionSurfaces();

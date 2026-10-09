@@ -330,20 +330,38 @@ html[data-motion-level="off"] :is(.rank-world-particles,.rank-world-energy,.rank
 html[data-motion-level="off"] :is(nav,.modal-overlay,.settings-panel,.auth-gate-card,.profile-hero,.widget,.league-frame) { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 html[data-motion-level="off"] :is(.league-frame,.profile-avatar-frame,.rank-world img,.rank-emblem,.military-insignia) { filter: none !important; text-shadow: none !important; }
 
-/* A preferência dos gráficos é independente dos efeitos decorativos do site. */
+/* A qualidade automática não deve desligar a preferência explícita dos gráficos. */
 @keyframes king-chart-rise { from { transform: scaleY(0.08); opacity: .42; } to { transform: scaleY(1); opacity: 1; } }
 @keyframes king-chart-appear { from { opacity: .48; } to { opacity: 1; } }
-html[data-chart-motion="high"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) {
+.chart-motion-preview { display: flex; align-items: flex-end; gap: 5px; height: 28px; margin: 0 4px 8px; padding: 3px 8px; border-bottom: 1px solid var(--border-color); }
+.chart-motion-preview i { width: 14px; height: 35%; border-radius: 4px 4px 0 0; background: var(--accent-color); opacity: .82; }
+.chart-motion-preview i:nth-child(2) { height: 70%; }.chart-motion-preview i:nth-child(3) { height: 48%; }.chart-motion-preview i:nth-child(4) { height: 100%; }.chart-motion-preview i:nth-child(5) { height: 62%; }
+html[data-chart-motion="high"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span,.topic-time-track i,.topic-performance-track i,.chart-motion-preview i),
+html[data-chart-motion="high"] #perfil.km-profile-v2 .km-weekly-pulse__bar::after,
+html[data-chart-motion="high"] .topic-error-cause i::after {
     transform-origin: bottom;
     animation: king-chart-rise .78s cubic-bezier(.18,.76,.24,1) both;
 }
-html[data-chart-motion="high"] :is(.chart-day,.trend-column,.history-question-day):nth-child(2n) :is(.chart-bar-fill,i,.history-question-track > span) { animation-delay: .07s; }
-html[data-chart-motion="low"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: king-chart-appear .25s ease-out both; }
-html[data-chart-motion="none"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: none !important; transition: none !important; }
-@media (prefers-reduced-motion: reduce) {
-    html :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: none !important; transition: none !important; }
+html[data-chart-motion="low"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span,.topic-time-track i,.topic-performance-track i,.chart-motion-preview i,.topic-answer-ring),
+html[data-chart-motion="low"] #perfil.km-profile-v2 .km-weekly-pulse__bar::after,
+html[data-chart-motion="low"] .topic-error-cause i::after { animation: king-chart-appear .25s ease-out both; }
+html[data-chart-motion="high"] .topic-answer-ring { animation: king-chart-appear .55s ease-out both; }
+html[data-chart-motion="none"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span,.topic-time-track i,.topic-performance-track i,.chart-motion-preview i,.topic-answer-ring),
+html[data-chart-motion="none"] #perfil.km-profile-v2 .km-weekly-pulse__bar::after,
+html[data-chart-motion="none"] .topic-error-cause i::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: no-preference) {
+    html[data-motion-choice="auto"][data-motion-level="off"][data-chart-motion="high"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span,.topic-time-track i,.topic-performance-track i,.chart-motion-preview i),
+    html[data-motion-choice="auto"][data-motion-level="off"][data-chart-motion="high"] #perfil.km-profile-v2 .km-weekly-pulse__bar::after,
+    html[data-motion-choice="auto"][data-motion-level="off"][data-chart-motion="high"] .topic-error-cause i::after { animation: king-chart-rise .78s cubic-bezier(.18,.76,.24,1) both !important; }
+    html[data-motion-choice="auto"][data-motion-level="off"][data-chart-motion="low"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span,.topic-time-track i,.topic-performance-track i,.chart-motion-preview i),
+    html[data-motion-choice="auto"][data-motion-level="off"][data-chart-motion="low"] #perfil.km-profile-v2 .km-weekly-pulse__bar::after,
+    html[data-motion-choice="auto"][data-motion-level="off"][data-chart-motion="low"] .topic-error-cause i::after { animation: king-chart-appear .25s ease-out both !important; }
 }
-html[data-motion-level="off"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+    html :is(.chart-bar-fill,.trend-column i,.history-question-track > span,.topic-time-track i,.topic-performance-track i,.chart-motion-preview i,.topic-answer-ring),
+    html #perfil.km-profile-v2 .km-weekly-pulse__bar::after,
+    html .topic-error-cause i::after { animation: none !important; transition: none !important; }
+}
 
 /* Organizador de tópicos e fechamento de sessão. */
 .motion-quality-row select { min-width: 126px; }

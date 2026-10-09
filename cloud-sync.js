@@ -10,6 +10,7 @@ const accountStatus = document.getElementById('cloudAccountStatus');
 const signInButton = document.getElementById('cloudSignInBtn');
 const syncButton = document.getElementById('cloudSyncBtn');
 const signOutButton = document.getElementById('cloudSignOutBtn');
+const profileSignOutButton = document.getElementById('profileSignOutBtn');
 const authGate = document.getElementById('authGate');
 const authFeedback = document.getElementById('authFeedback');
 const authEmailForm = document.getElementById('authEmailForm');
@@ -165,10 +166,11 @@ function updateCloudUi(state, user = null, message = '') {
         if (user?.photoURL) accountAvatar.style.backgroundImage = `url("${user.photoURL.replace(/"/g, '')}")`;
         else accountAvatar.style.backgroundImage = '';
     }
-    const authenticated = Boolean(user?.uid);
+    const authenticated = Boolean(user?.uid) && user.uid !== 'preview-local';
     if (signInButton) signInButton.hidden = authenticated || state === 'signed-in' || state === 'syncing' || state === 'setup-required';
     if (syncButton) syncButton.hidden = true;
     if (signOutButton) signOutButton.hidden = !authenticated;
+    if (profileSignOutButton) profileSignOutButton.hidden = !authenticated;
     if (!accountTitle || !accountStatus) return;
     if (state === 'setup-required') {
         accountTitle.textContent = 'Nuvem pronta para conectar';
@@ -230,7 +232,11 @@ if (!firebaseConfigured) {
     const db = firestoreSdk.getFirestore(firebaseApp);
     const googleProvider = new authSdk.GoogleAuthProvider();
     let currentUser = null;
+    let accountReadyUid = '';
+    let sessionEpoch = 0;
     let uploadTimer = null;
+    let uploadInFlight = null;
+    let signingOut = false;
     let applyingRemote = false;
     let unsubscribeRemote = null;
     const clientIdKey = 'kingMasterCloudClientId';
@@ -828,23 +834,30 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         localStorage.setItem(window.KingCloudState.IDENTITY_KEY, JSON.stringify(window.KingCloudState.identity(user.uid, cloudRevision, lastLocalRevision, clientId)));
     };
 
-    function downloadRemote(user, remoteData, cloudRevision) {
+    function downloadRemote(user, remoteData, cloudRevision, epoch = sessionEpoch) {
+        if (epoch !== sessionEpoch || currentUser?.uid !== user.uid) return;
         if (!remoteData || typeof remoteData !== 'object') throw new Error('O arquivo da nuvem está incompleto.');
+        if (remoteData.accountUid && remoteData.accountUid !== user.uid) throw new Error('O arquivo da nuvem pertence a outra conta.');
         applyingRemote = true;
         rememberIdentity(user, cloudRevision, Number(remoteData.lastModifiedAt || 0));
         updateCloudUi('syncing', user, 'Baixando seu progresso mais recente…');
         setAuthFeedback('Recuperando seus dados neste dispositivo…', 'success');
-        window.kingMasterCloudBridge?.importData?.(remoteData);
+        window.kingMasterCloudBridge?.importData?.(remoteData, user.uid);
     }
 
-    async function uploadLocal(user, explicit = false) {
+    async function uploadLocal(user, explicit = false, epoch = sessionEpoch) {
+        if (epoch !== sessionEpoch || accountReadyUid !== user?.uid || currentUser?.uid !== user?.uid || auth.currentUser?.uid !== user?.uid || readIdentity()?.uid !== user?.uid) return;
         const data = localSnapshot();
         if (!user || !data || applyingRemote) return;
+        if (data.accountUid && data.accountUid !== user.uid) throw new Error('Os dados locais pertencem a outra conta.');
         updateCloudUi('syncing', user, explicit ? 'Enviando os dados deste dispositivo…' : 'Salvando alterações…');
         const reference = userDocument(user);
         const outcome = await firestoreSdk.runTransaction(db, async transaction => {
             const snapshot = await transaction.get(reference);
             const remote = snapshot.exists() ? snapshot.data() : null;
+            if (epoch !== sessionEpoch || currentUser?.uid !== user.uid || auth.currentUser?.uid !== user.uid || readIdentity()?.uid !== user.uid) return { stale: true };
+            if (remote?.ownerUid && remote.ownerUid !== user.uid) throw new Error('O documento da nuvem pertence a outra conta.');
+            if (remote?.data?.accountUid && remote.data.accountUid !== user.uid) throw new Error('Os dados da nuvem pertencem a outra conta.');
             const remoteRevision = Number(remote?.cloudRevision || 0);
             const identity = readIdentity();
             if (remote?.data && identity?.uid === user.uid && remoteRevision > Number(identity.cloudRevision || 0)) {
@@ -853,39 +866,47 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             const nextRevision = remoteRevision + 1;
             transaction.set(reference, {
                 ownerUid: user.uid, ownerEmail: user.email || '', cloudRevision: nextRevision,
-                sourceClientId: clientId, updatedAtMs: Date.now(), updatedAt: firestoreSdk.serverTimestamp(), data
+                sourceClientId: clientId, updatedAtMs: Date.now(), updatedAt: firestoreSdk.serverTimestamp(), data: { ...data, accountUid: user.uid }
             }, { merge: true });
             return { revision: nextRevision };
         });
-        if (outcome.remote) return downloadRemote(user, outcome.remote, outcome.revision);
+        if (outcome.stale || epoch !== sessionEpoch || currentUser?.uid !== user.uid) return;
+        if (outcome.remote) return downloadRemote(user, outcome.remote, outcome.revision, epoch);
         rememberIdentity(user, outcome.revision, Number(data.lastModifiedAt || 0));
         updateCloudUi('signed-in', user, 'Salvamento automático ativo.');
         return outcome.revision;
     }
 
-    async function reconcile(user) {
+    async function reconcile(user, epoch = sessionEpoch) {
         updateCloudUi('syncing', user, 'Comparando este dispositivo com a nuvem…');
         const remoteSnapshot = await firestoreSdk.getDoc(userDocument(user));
+        if (epoch !== sessionEpoch || currentUser?.uid !== user.uid || auth.currentUser?.uid !== user.uid) return 'stale';
         const local = localSnapshot();
         const remote = remoteSnapshot.exists() ? remoteSnapshot.data() : null;
+        if (remote?.ownerUid && remote.ownerUid !== user.uid) throw new Error('O documento da nuvem pertence a outra conta.');
+        if (remote?.data?.accountUid && remote.data.accountUid !== user.uid) throw new Error('Os dados da nuvem pertencem a outra conta.');
         const remoteRevision = Number(remote?.cloudRevision || 0);
+        const localIdentity = readIdentity();
+        const trustedIdentity = local?.accountUid && local.accountUid !== user.uid ? null : localIdentity;
         const decision = window.KingCloudState.decideInitial({ remoteExists: remoteSnapshot.exists(), remoteRevision,
-            localModifiedAt: Number(local?.lastModifiedAt || 0), identity: readIdentity(), uid: user.uid });
+            localModifiedAt: Number(local?.lastModifiedAt || 0), identity: trustedIdentity, uid: user.uid });
         if (decision === 'reset') {
             rememberIdentity(user, 0, 0);
             updateCloudUi('syncing', user, 'Preparando um espaço novo e separado para esta conta…');
-            window.kingMasterCloudBridge?.resetForAccount?.(user.displayName || user.email?.split('@')[0] || 'Estudante');
+            window.kingMasterCloudBridge?.resetForAccount?.(user.displayName || user.email?.split('@')[0] || 'Estudante', user.uid);
             return 'reloading';
         }
-        if (decision === 'download') { downloadRemote(user, remote?.data, remoteRevision); return 'reloading'; }
-        if (decision === 'upload') await uploadLocal(user, true);
+        if (decision === 'download') { downloadRemote(user, remote?.data, remoteRevision, epoch); return 'reloading'; }
+        accountReadyUid = user.uid;
+        if (decision === 'upload') await uploadLocal(user, true, epoch);
         else updateCloudUi('signed-in', user, 'Todos os dados estão sincronizados.');
-        return 'ready';
+        return epoch === sessionEpoch ? 'ready' : 'stale';
     }
 
     function listenRemote(user) {
         unsubscribeRemote?.();
         unsubscribeRemote = firestoreSdk.onSnapshot(userDocument(user), snapshot => {
+            if (currentUser?.uid !== user.uid || accountReadyUid !== user.uid) return;
             if (!snapshot.exists() || snapshot.metadata.hasPendingWrites || applyingRemote) return;
             const remote = snapshot.data();
             const revision = Number(remote.cloudRevision || 0);
@@ -895,7 +916,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                 return;
             }
             if (remote.data && revision > Number(identity?.cloudRevision || 0)) downloadRemote(user, remote.data, revision);
-        }, () => updateCloudUi('error', user, 'A atualização em tempo real parou. Confira a conexão e entre novamente se necessário.'));
+        }, () => { if (currentUser?.uid === user.uid) updateCloudUi('error', user, 'A atualização em tempo real parou. Confira a conexão e entre novamente se necessário.'); });
     }
 
     function errorImageDocument(imageId) {
@@ -990,10 +1011,48 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     }
 
     window.addEventListener('king-master-data-changed', () => {
-        if (!currentUser || applyingRemote) return;
+        if (!currentUser || accountReadyUid !== currentUser.uid || applyingRemote || signingOut) return;
         clearTimeout(uploadTimer);
-        uploadTimer = setTimeout(() => uploadLocal(currentUser).catch(() => updateCloudUi('error', currentUser, 'Não foi possível sincronizar agora. Seus dados locais permanecem neste dispositivo.')), 1400);
+        uploadTimer = setTimeout(() => {
+            uploadTimer = null;
+            const user = currentUser;
+            if (!user || accountReadyUid !== user.uid) return;
+            const upload = uploadLocal(user);
+            uploadInFlight = upload;
+            upload.catch(() => { if (currentUser?.uid === user.uid) updateCloudUi('error', user, 'Não foi possível sincronizar agora. Seus dados locais permanecem neste dispositivo.'); })
+                .finally(() => { if (uploadInFlight === upload) uploadInFlight = null; });
+        }, 1400);
     });
+
+    async function signOutSafely() {
+        if (signingOut || !currentUser) return;
+        signingOut = true;
+        [signOutButton, profileSignOutButton].forEach(button => { if (button) button.disabled = true; });
+        const appSurfaces = document.querySelectorAll('nav,main,.settings-panel,.ai-qg-launcher,.ai-qg-panel');
+        appSurfaces.forEach(element => { element.inert = true; });
+        const user = currentUser;
+        clearTimeout(uploadTimer);
+        uploadTimer = null;
+        try {
+            if (uploadInFlight) await uploadInFlight;
+            const identity = readIdentity();
+            const local = localSnapshot();
+            if (identity?.uid === user.uid && Number(local?.lastModifiedAt || 0) > Number(identity.lastLocalRevision || 0)) {
+                await uploadLocal(user, true);
+            }
+            await authSdk.signOut(auth);
+            localStorage.removeItem(window.KingCloudState.IDENTITY_KEY);
+            window.kingMasterCloudBridge?.clearForSignOut?.();
+            window.location.reload();
+        } catch {
+            window.showToast?.('Não foi possível sincronizar a última alteração. Confira a conexão e tente sair novamente.', true);
+            updateCloudUi('error', user, 'Suas alterações continuam neste aparelho até a sincronização.');
+            appSurfaces.forEach(element => { element.inert = false; });
+        } finally {
+            signingOut = false;
+            [signOutButton, profileSignOutButton].forEach(button => { if (button) button.disabled = false; });
+        }
+    }
 
     authEmailForm?.addEventListener('submit', async event => {
         event.preventDefault();
@@ -1009,7 +1068,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                 await appCheckSdk.getToken(appCheck, false);
                 const credential = await authSdk.createUserWithEmailAndPassword(auth, email, password);
                 const name = authName.value.trim().slice(0, 40);
-                if (name) { await authSdk.updateProfile(credential.user, { displayName: name }); appData.profileName = name; aplicarIdentidadePerfil(); saveAppData(); }
+                if (name) await authSdk.updateProfile(credential.user, { displayName: name });
             } else await authSdk.signInWithEmailAndPassword(auth, email, password);
         } catch (error) { setAuthFeedback(describeAuthError(error), 'error'); }
         finally { setAuthBusy(false); }
@@ -1054,8 +1113,9 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     });
     authGoogleButton?.addEventListener('click', () => startSignIn(googleProvider, 'do Google').catch(error => setAuthFeedback(describeAuthError(error), 'error')));
 
-    async function finishAccountLoading(user) {
-        const recognizedHere = readIdentity()?.uid === user.uid && Boolean(localSnapshot());
+    async function finishAccountLoading(user, epoch = sessionEpoch) {
+        const local = localSnapshot();
+        const recognizedHere = readIdentity()?.uid === user.uid && Boolean(local) && (!local.accountUid || local.accountUid === user.uid);
         if (recognizedHere) {
             // O Firebase já confirmou a identidade; o progresso local pertence a este UID.
             // A checagem da nuvem continua em segundo plano, sem reter o painel na entrada.
@@ -1065,15 +1125,16 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         if (authCloudRetryButton) authCloudRetryButton.hidden = true;
         setAuthFeedback('Sincronizando sua conta…');
         try {
-            const status = await reconcile(user);
-            if (status === 'reloading') return;
+            const status = await reconcile(user, epoch);
+            if (status === 'reloading' || status === 'stale' || epoch !== sessionEpoch) return;
             listenRemote(user);
             if (!recognizedHere) unlockApplication(user);
             setAuthFeedback('Conta sincronizada.', 'success');
         } catch (error) {
+            if (epoch !== sessionEpoch) return;
             const identity = readIdentity();
             updateCloudUi('error', user, 'Sua conta entrou, mas a nuvem está temporariamente indisponível.');
-            if (identity?.uid === user.uid && localSnapshot()) {
+            if (identity?.uid === user.uid && localSnapshot() && (!localSnapshot().accountUid || localSnapshot().accountUid === user.uid)) {
                 if (!recognizedHere) unlockApplication(user);
                 window.showToast?.('☁ Conta reconhecida. Seus dados deste aparelho estão disponíveis; a nuvem tentará reconectar.', true);
             } else {
@@ -1082,7 +1143,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             }
             console.warn('Falha ao carregar os dados da conta após a autenticação.', error?.code || error?.message || error);
         } finally {
-            setAuthBusy(false);
+            if (epoch === sessionEpoch) setAuthBusy(false);
         }
     }
 
@@ -1240,6 +1301,16 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     };
 
     authSdk.onAuthStateChanged(auth, async user => {
+        sessionEpoch++;
+        accountReadyUid = '';
+        clearTimeout(uploadTimer); uploadTimer = null;
+        unsubscribeRemote?.(); unsubscribeRemote = null;
+        const epoch = sessionEpoch;
+        if (currentUser?.uid && currentUser.uid !== user?.uid) {
+            lockApplication('Trocando para o espaço desta conta…');
+            sessionStorage.removeItem('kingMasterOpenTopic');
+            sessionStorage.removeItem('kingMasterActiveSection');
+        }
         if (user?.uid !== calendarTokenUser) {
             calendarAccessToken = '';
             calendarTokenUser = '';
@@ -1247,6 +1318,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         }
         currentUser = user;
         if (!user) {
+            clearTimeout(uploadTimer); uploadTimer = null;
             if (localPreview) {
                 updateCloudUi('signed-in', { uid: 'preview-local', displayName: 'Prévia local' }, 'Prévia local sem alterar sua nuvem.');
                 unlockApplication({ uid: 'preview-local' });
@@ -1257,7 +1329,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             lockApplication('Entre com Google ou seu cadastro para continuar.');
             return;
         }
-        await finishAccountLoading(user);
+        await finishAccountLoading(user, epoch);
     });
 
     window.addEventListener('online', () => {
@@ -1273,7 +1345,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                 updateCloudUi('error', null, describeAuthError(error));
             }
         },
-        signOut: () => authSdk.signOut(auth),
+        signOut: signOutSafely,
         syncNow: () => currentUser ? reconcile(currentUser) : startSignIn(googleProvider, 'do Google').catch(error => updateCloudUi('error', null, describeAuthError(error))),
         saveErrorImage,
         getErrorImage,

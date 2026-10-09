@@ -26,4 +26,7 @@ test('busca de usuários tem aba própria e o catálogo mostra cada divisão', (
     assert.match(source, /function leagueMascot\(rank\)/);
     assert.match(source, /className, 'km-user-search__choice'|element\('button', 'km-user-search__choice'/);
     assert.match(source, /renderSearchSelection\(entry\)/);
+    assert.match(source, /Adicionar amigo/);
+    assert.match(source, /Aceitar convite/);
+    assert.match(source, /Amizades e convites/);
 });

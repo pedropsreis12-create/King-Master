@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { normalizeSearchName, searchTerm } from '../public-ranking-utils.js';
+import { normalizeSearchName, searchTerm, searchTokens, searchProbe, matchesSearch } from '../public-ranking-utils.js';
 
 const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
 const ranking = await readFile(new URL('../public-ranking.js', import.meta.url), 'utf8');
@@ -12,7 +12,7 @@ test('placar é opcional e só publica um resumo limitado do perfil', () => {
     assert.match(ranking, /async function leave\(/);
     assert.match(ranking, /deleteDoc\(ownDocument\(user\)\)/);
     assert.match(rules, /request\.auth\.uid == userId/);
-    assert.match(rules, /hasOnly\(\['uid', 'displayName', 'searchName', 'seasonId', 'score', 'level', 'updatedAt'\]\)/);
+    assert.match(rules, /hasOnly\(\['uid', 'displayName', 'searchName', 'searchTokens', 'seasonId', 'score', 'level', 'updatedAt'\]\)/);
     assert.doesNotMatch(ranking, /email:|historyItems:|cadernoErrosItems:/);
 });
 
@@ -29,6 +29,30 @@ test('a busca encontra participantes pelo nome sem acentos e fora do top 30', ()
         { fieldPath: 'seasonId', order: 'ASCENDING' },
         { fieldPath: 'searchName', order: 'ASCENDING' }
     ]);
+});
+
+test('a busca encontra trechos em qualquer posição e mantém o apelido completo', () => {
+    const tokens = searchTokens('Gustavo121');
+    assert.ok(tokens.includes('gustav'));
+    assert.ok(tokens.includes('stav'));
+    assert.ok(tokens.includes('121'));
+    assert.equal(searchProbe('  STAV  '), 'stav');
+    assert.equal(matchesSearch('Gustavo121', 'STAV'), true);
+    assert.equal(matchesSearch('Gustavo121', 'Carlos'), false);
+    assert.match(ranking, /array-contains', searchProbe\(term\)/);
+    assert.deepEqual(indexes.indexes[2].fields, [
+        { fieldPath: 'seasonId', order: 'ASCENDING' },
+        { fieldPath: 'searchTokens', arrayConfig: 'CONTAINS' }
+    ]);
+});
+
+test('convites de amizade exigem aceite e ficam visíveis só às pessoas envolvidas', () => {
+    assert.match(ranking, /async function sendInvite\(/);
+    assert.match(ranking, /async function answerInvite\(/);
+    assert.match(ranking, /function watchInvites\(/);
+    assert.match(rules, /match \/friendInvites\/\{inviteId\}/);
+    assert.match(rules, /request\.auth\.uid == resource\.data\.toUid/);
+    assert.match(rules, /resource\.data\.status == 'pending'/);
 });
 
 test('placar ordena a temporada com índice composto e limita a consulta', () => {

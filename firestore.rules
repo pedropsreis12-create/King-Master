@@ -8,14 +8,17 @@ service cloud.firestore {
       allow list: if request.auth != null && request.query.limit <= 30;
       allow create, update: if request.auth != null
         && request.auth.uid == userId
-        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'searchName', 'seasonId', 'score', 'level', 'updatedAt'])
-        && request.resource.data.keys().hasAll(['uid', 'displayName', 'searchName', 'seasonId', 'score', 'level', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['uid', 'displayName', 'searchName', 'searchTokens', 'seasonId', 'score', 'level', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['uid', 'displayName', 'searchName', 'searchTokens', 'seasonId', 'score', 'level', 'updatedAt'])
         && request.resource.data.uid == userId
         && request.resource.data.displayName is string
         && request.resource.data.displayName.size() >= 2
         && request.resource.data.displayName.size() <= 32
         && request.resource.data.searchName is string
         && request.resource.data.searchName.matches('[a-z0-9 ]{2,32}')
+        && request.resource.data.searchTokens is list
+        && request.resource.data.searchTokens.size() > 0
+        && request.resource.data.searchTokens.size() <= 200
         && request.resource.data.seasonId is string
         && request.resource.data.seasonId.matches('20[0-9][0-9]-(0[1-9]|1[0-2])')
         && request.resource.data.score is int
@@ -26,6 +29,39 @@ service cloud.firestore {
         && request.resource.data.level <= 100
         && request.resource.data.updatedAt == request.time;
       allow delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Convites privados entre participantes públicos. Só as duas pessoas envolvidas podem vê-los.
+    match /friendInvites/{inviteId} {
+      allow get: if request.auth != null
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow list: if request.auth != null && request.query.limit <= 50
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['fromUid', 'toUid', 'fromName', 'toName', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasAll(['fromUid', 'toUid', 'fromName', 'toName', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.fromUid == request.auth.uid
+        && request.resource.data.toUid is string
+        && request.resource.data.toUid.size() > 0
+        && request.resource.data.toUid.size() <= 128
+        && request.resource.data.toUid != request.auth.uid
+        && inviteId == request.auth.uid + '_' + request.resource.data.toUid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time
+        && exists(/databases/$(database)/documents/publicRanking/$(request.auth.uid))
+        && exists(/databases/$(database)/documents/publicRanking/$(request.resource.data.toUid))
+        && request.resource.data.fromName == get(/databases/$(database)/documents/publicRanking/$(request.auth.uid)).data.displayName
+        && request.resource.data.toName == get(/databases/$(database)/documents/publicRanking/$(request.resource.data.toUid)).data.displayName
+        && !exists(/databases/$(database)/documents/friendInvites/$(request.resource.data.toUid + '_' + request.auth.uid));
+      allow update: if request.auth != null
+        && request.auth.uid == resource.data.toUid
+        && resource.data.status == 'pending'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+        && request.resource.data.status in ['accepted', 'declined']
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if request.auth != null
+        && (request.auth.uid == resource.data.toUid || request.auth.uid == resource.data.fromUid);
     }
 
     match /users/{userId} {

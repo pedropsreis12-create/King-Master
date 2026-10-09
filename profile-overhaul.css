@@ -2085,10 +2085,27 @@ html[data-motion-level="off"] #perfil.km-profile-v2 :is(.km-rank-brief::before, 
 #perfil.km-profile-v2 .km-user-search__choice:focus-visible { outline: 2px solid var(--accent-color); outline-offset: -3px; }
 #perfil.km-profile-v2 .km-user-search__selection:empty { display: none; }
 #perfil.km-profile-v2 .km-user-search__selection { display: flex; align-items: center; gap: 18px; max-width: 900px; margin-top: 15px; padding: 18px; border: 1px solid var(--border-color); border-radius: 16px; background: color-mix(in srgb, var(--accent-color) 8%, var(--card-bg)); }
+#perfil.km-profile-v2 .km-user-search__selection-copy { flex: 1 1 220px; min-width: 0; }
 #perfil.km-profile-v2 .km-user-search__selection .km-rank-mascot { transform: scale(1.35); margin: 5px 9px; }
 #perfil.km-profile-v2 .km-user-search__selection-copy small { color: var(--accent-color); font-size: .56rem; font-weight: 800; letter-spacing: .09em; }
 #perfil.km-profile-v2 .km-user-search__selection-copy h3 { margin: 2px 0; font-size: 1rem; }
 #perfil.km-profile-v2 .km-user-search__selection-copy p { margin: 0; color: var(--text-muted); font-size: .7rem; }
+#perfil.km-profile-v2 .km-user-search__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+#perfil.km-profile-v2 .km-user-search__actions .km-user-search__feedback { flex-basis: 100%; }
+#perfil.km-profile-v2 .km-user-search__add, #perfil.km-profile-v2 .km-user-search__secondary { min-height: 37px; padding: 8px 12px; border: 1px solid var(--accent-color); border-radius: 10px; background: var(--accent-color); color: #fff; font: 800 .66rem Poppins, sans-serif; cursor: pointer; }
+#perfil.km-profile-v2 .km-user-search__secondary { border-color: var(--border-color); background: var(--card-bg); color: var(--text-main); }
+#perfil.km-profile-v2 .km-user-search__add:disabled, #perfil.km-profile-v2 .km-user-search__secondary:disabled { opacity: .55; cursor: wait; }
+#perfil.km-profile-v2 .km-user-search__relation { color: var(--text-muted); font-size: .68rem; font-weight: 800; }
+#perfil.km-profile-v2 .km-user-search__feedback { min-height: 1em; margin: 0; color: var(--text-muted); font-size: .63rem; }
+#perfil.km-profile-v2 .km-user-search__friends { max-width: 900px; margin-top: 18px; padding: 18px; border: 1px solid var(--border-color); border-radius: 16px; background: var(--card-bg); }
+#perfil.km-profile-v2 .km-user-search__friends h3 { margin: 0 0 10px; font-size: .94rem; }
+#perfil.km-profile-v2 .km-user-search__friends-empty { margin: 0; color: var(--text-muted); font-size: .7rem; }
+#perfil.km-profile-v2 .km-user-search__friends-list { display: grid; gap: 7px; max-height: 280px; overflow-y: auto; }
+#perfil.km-profile-v2 .km-user-search__friend { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border-color); }
+#perfil.km-profile-v2 .km-user-search__friend > div:first-child { display: grid; gap: 2px; min-width: 0; }
+#perfil.km-profile-v2 .km-user-search__friend strong { overflow: hidden; font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
+#perfil.km-profile-v2 .km-user-search__friend small { color: var(--text-muted); font-size: .61rem; }
+#perfil.km-profile-v2 .km-user-search__friend-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 @media (max-width: 700px) {
     #perfil.km-profile-v2 .km-profile-tabs { display: flex; flex-wrap: wrap; width: 100%; }
     #perfil.km-profile-v2 .km-profile-tabs button { flex: 1 1 auto; padding-inline: 10px; }
@@ -2098,6 +2115,8 @@ html[data-motion-level="off"] #perfil.km-profile-v2 :is(.km-rank-brief::before, 
     #perfil.km-profile-v2 .km-public-board__score { grid-column: 4; grid-row: 1; }
     #perfil.km-profile-v2 .km-user-search__choice { grid-template-columns: 26px 38px minmax(0, 1fr) auto; gap: 8px; padding: 9px; }
     #perfil.km-profile-v2 .km-rank-mascot { transform: scale(.9); transform-origin: left center; }
+    #perfil.km-profile-v2 .km-user-search__selection { flex-wrap: wrap; }
+    #perfil.km-profile-v2 .km-user-search__actions { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
     #perfil.km-profile-v2 .km-public-board__list li { transition: none; }

@@ -18,6 +18,12 @@
         boardSearchTimer: 0,
         boardSyncTimer: 0,
         selectedSearchUid: null,
+        selectedSearchEntry: null,
+        searchEntries: [],
+        friendInvites: [],
+        friendStop: null,
+        publicUid: null,
+        publicJoined: false,
         profileView: 'profile',
         lastSummary: null,
         destroyed: false
@@ -387,10 +393,12 @@
             button.setAttribute('aria-current', selected ? 'page' : 'false');
         });
         if (state.profileView !== 'profile') {
+            if (state.profileView !== 'search') stopFriendInvites();
             startPublicBoard();
             state.root.querySelector('.profile-heading')?.scrollIntoView({ block: 'start' });
         } else {
             stopPublicBoard();
+            stopFriendInvites();
             state.root.querySelector('.profile-heading')?.scrollIntoView({ block: 'start' });
         }
     }
@@ -444,19 +452,20 @@
         copy.append(
             element('span', 'km-profile-kicker', 'COMUNIDADE KING MASTER'),
             element('h2', '', 'Pesquisar usuário', { id: 'kmUserSearchTitle' }),
-            element('p', '', 'Encontre pelo apelido pessoas que escolheram participar do placar público.')
+            element('p', '', 'Encontre pessoas pelo início ou por qualquer parte do apelido. Somente participantes do placar aparecem.')
         );
         title.append(copy);
         const search = element('label', 'km-public-board__search');
         search.append(element('span', 'material-symbols-rounded', 'search', { 'aria-hidden': 'true' }));
         const input = element('input', '', null, {
             id: 'kmPublicBoardSearch', type: 'search', autocomplete: 'off', maxlength: '32',
-            placeholder: 'Ex.: Gustav encontra Gustavo121', 'aria-label': 'Pesquisar usuários pelo início do apelido',
+            placeholder: 'Ex.: Gustavo, stav ou 121', 'aria-label': 'Pesquisar usuários por parte do apelido',
             'aria-controls': 'kmUserSearchList', 'aria-autocomplete': 'list'
         });
         input.addEventListener('input', () => {
             window.clearTimeout(state.boardSearchTimer);
             state.selectedSearchUid = null;
+            state.selectedSearchEntry = null;
             document.getElementById('kmUserSearchSelection')?.replaceChildren();
             state.boardSearchTimer = window.setTimeout(startPublicBoard, 300);
         });
@@ -464,7 +473,8 @@
         panel.append(title, search,
             element('p', 'km-public-board__status', 'Digite um nome para pesquisar.', { id: 'kmUserSearchStatus', role: 'status' }),
             element('ol', 'km-public-board__list', null, { id: 'kmUserSearchList' }),
-            element('section', 'km-user-search__selection', null, { id: 'kmUserSearchSelection', 'aria-live': 'polite' }));
+            element('section', 'km-user-search__selection', null, { id: 'kmUserSearchSelection', 'aria-live': 'polite' }),
+            element('section', 'km-user-search__friends', null, { id: 'kmUserFriends', 'aria-label': 'Convites e amizades' }));
         root.append(panel);
     }
 
@@ -493,7 +503,137 @@
             element('h3', '', entry.displayName),
             element('p', '', `${rank?.label || 'Liga Bronze'} · Nível ${entry.level} · ${formatNumber(entry.score)} XP nesta temporada`)
         );
-        selection.append(leagueMascot(rank), details);
+        const action = element('div', 'km-user-search__actions');
+        const relation = state.friendInvites.find(invite =>
+            (invite.fromUid === state.publicUid && invite.toUid === entry.uid)
+            || (invite.toUid === state.publicUid && invite.fromUid === entry.uid));
+        if (entry.uid === state.publicUid) {
+            action.append(element('span', 'km-user-search__relation', 'Este é o seu perfil'));
+        } else if (!relation && !state.publicJoined) {
+            const join = element('button', 'km-user-search__secondary', 'Participar do placar para adicionar', { type: 'button' });
+            join.addEventListener('click', () => setProfileView('ranking'));
+            action.append(join);
+        } else if (!relation) {
+            const add = element('button', 'km-user-search__add', 'Adicionar amigo', { type: 'button' });
+            add.addEventListener('click', () => runFriendAction('send', entry, add));
+            action.append(add);
+        } else if (relation.status === 'pending' && relation.toUid === state.publicUid) {
+            const accept = element('button', 'km-user-search__add', 'Aceitar convite', { type: 'button' });
+            const decline = element('button', 'km-user-search__secondary', 'Recusar', { type: 'button' });
+            accept.addEventListener('click', () => runFriendAction('accept', relation, accept));
+            decline.addEventListener('click', () => runFriendAction('decline', relation, decline));
+            action.append(accept, decline);
+        } else if (relation.status === 'pending') {
+            const cancel = element('button', 'km-user-search__secondary', 'Cancelar convite', { type: 'button' });
+            cancel.addEventListener('click', () => runFriendAction('remove', relation, cancel));
+            action.append(element('span', 'km-user-search__relation', 'Convite enviado'), cancel);
+        } else if (relation.status === 'accepted') {
+            const remove = element('button', 'km-user-search__secondary', 'Remover amizade', { type: 'button' });
+            remove.addEventListener('click', () => runFriendAction('remove', relation, remove));
+            action.append(element('span', 'km-user-search__relation', 'Amigos'), remove);
+        } else {
+            action.append(element('span', 'km-user-search__relation', 'Convite recusado'));
+            if (relation.toUid === state.publicUid) {
+                const clear = element('button', 'km-user-search__secondary', 'Limpar recusa', { type: 'button' });
+                clear.addEventListener('click', () => runFriendAction('remove', relation, clear));
+                action.append(clear);
+            }
+        }
+        action.append(element('p', 'km-user-search__feedback', '', { role: 'status' }));
+        selection.append(leagueMascot(rank), details, action);
+    }
+
+    async function runFriendAction(action, target, button) {
+        const api = window.KingPublicRanking;
+        if (!api || button.disabled) return;
+        button.disabled = true;
+        const feedback = button.parentElement?.querySelector('.km-user-search__feedback')
+            || document.getElementById('kmUserFriendsStatus');
+        if (feedback) feedback.textContent = 'Salvando…';
+        try {
+            if (action === 'send') await api.sendInvite(target.uid);
+            else if (action === 'accept') await api.answerInvite(target, 'accepted');
+            else if (action === 'decline') await api.answerInvite(target, 'declined');
+            else await api.removeInvite(target);
+            if (feedback) feedback.textContent = 'Atualizado.';
+        } catch (error) {
+            if (feedback) feedback.textContent = error?.message || 'Não foi possível salvar. Tente novamente.';
+        } finally {
+            button.disabled = false;
+        }
+    }
+
+    function renderFriendInvites() {
+        const panel = document.getElementById('kmUserFriends');
+        if (!panel) return;
+        panel.replaceChildren(element('h3', '', 'Amizades e convites'));
+        const visible = state.friendInvites.filter(invite => invite.status !== 'declined');
+        if (!visible.length) {
+            panel.append(element('p', 'km-user-search__friends-empty', 'Seus convites e amizades aparecerão aqui.'));
+            return;
+        }
+        const list = element('div', 'km-user-search__friends-list');
+        visible.forEach(invite => {
+            const incoming = invite.toUid === state.publicUid;
+            const otherUid = incoming ? invite.fromUid : invite.toUid;
+            const row = element('div', 'km-user-search__friend');
+            const copy = element('div');
+            copy.append(element('strong', '', incoming ? invite.fromName : invite.toName),
+                element('small', '', invite.status === 'accepted' ? 'Amigo' : incoming ? 'Quer adicionar você' : 'Convite enviado'));
+            const actions = element('div', 'km-user-search__friend-actions');
+            const open = element('button', 'km-user-search__secondary', 'Ver resumo', { type: 'button' });
+            open.addEventListener('click', async () => {
+                open.disabled = true;
+                try {
+                    const entry = await window.KingPublicRanking.profile(otherUid);
+                    if (!entry) throw new Error('Este perfil não está mais público.');
+                    state.selectedSearchUid = entry.uid;
+                    state.selectedSearchEntry = entry;
+                    renderSearchSelection(entry);
+                    document.getElementById('kmUserSearchSelection')?.scrollIntoView({ block: 'nearest' });
+                } catch (error) {
+                    text('kmUserFriendsStatus', error?.message || 'Não foi possível abrir o perfil.');
+                } finally { open.disabled = false; }
+            });
+            actions.append(open);
+            if (invite.status === 'pending' && incoming) {
+                const accept = element('button', 'km-user-search__add', 'Aceitar', { type: 'button' });
+                const decline = element('button', 'km-user-search__secondary', 'Recusar', { type: 'button' });
+                accept.addEventListener('click', () => runFriendAction('accept', invite, accept));
+                decline.addEventListener('click', () => runFriendAction('decline', invite, decline));
+                actions.append(accept, decline);
+            } else if (invite.status === 'pending' || invite.status === 'accepted') {
+                const remove = element('button', 'km-user-search__secondary', invite.status === 'accepted' ? 'Remover' : 'Cancelar', { type: 'button' });
+                remove.addEventListener('click', () => runFriendAction('remove', invite, remove));
+                actions.append(remove);
+            }
+            row.append(copy, actions);
+            list.append(row);
+        });
+        panel.append(list, element('p', 'km-user-search__feedback', '', { id: 'kmUserFriendsStatus', role: 'status' }));
+    }
+
+    function stopFriendInvites() {
+        state.friendStop?.();
+        state.friendStop = null;
+    }
+
+    function startFriendInvites() {
+        if (state.friendStop || state.profileView !== 'search' || !window.KingPublicRanking) return;
+        const api = window.KingPublicRanking;
+        state.publicUid = api.currentUserId();
+        try {
+            state.friendStop = api.watchInvites(invites => {
+                state.friendInvites = invites;
+                renderFriendInvites();
+                if (state.selectedSearchEntry) renderSearchSelection(state.selectedSearchEntry);
+            }, error => {
+                text('kmUserFriendsStatus', `Convites indisponíveis: ${error?.code || 'tente novamente'}.`);
+            });
+        } catch {
+            const panel = document.getElementById('kmUserFriends');
+            panel?.replaceChildren(element('p', '', 'Entre na sua conta para ver amizades e convites.'));
+        }
     }
 
     function stopPublicBoard() {
@@ -506,6 +646,9 @@
 
     function renderPublicBoard(board) {
         const searching = state.profileView === 'search';
+        state.publicUid = board.uid;
+        state.publicJoined = board.joined;
+        if (searching) state.searchEntries = board.entries;
         const list = document.getElementById(searching ? 'kmUserSearchList' : 'kmPublicBoardList');
         list?.replaceChildren();
         board.entries.forEach((entry, index) => {
@@ -523,6 +666,7 @@
             if (searching) {
                 content.addEventListener('click', () => {
                     state.selectedSearchUid = entry.uid;
+                    state.selectedSearchEntry = entry;
                     list?.querySelectorAll('.km-user-search__choice').forEach(button => button.setAttribute('aria-pressed', String(button === content)));
                     renderSearchSelection(entry);
                 });
@@ -530,7 +674,10 @@
             }
             list?.append(row);
         });
-        if (searching) renderSearchSelection(board.entries.find(entry => entry.uid === state.selectedSearchUid));
+        if (searching) {
+            state.selectedSearchEntry = board.entries.find(entry => entry.uid === state.selectedSearchUid) || null;
+            renderSearchSelection(state.selectedSearchEntry);
+        }
         if (list && !list.children.length) list.append(element('li', 'km-public-board__empty', searching ? 'Nenhuma pessoa encontrada. Tente outro nome.' : 'Ainda não há participantes nesta temporada.'));
         const self = document.getElementById('kmPublicBoardSelf');
         if (self) {
@@ -544,7 +691,7 @@
         if (membership) membership.textContent = board.joined ? 'Sair do placar' : 'Participar';
         if (searching) text('kmUserSearchStatus', board.entries.length
             ? `${board.entries.length} ${board.entries.length === 1 ? 'opção encontrada' : 'opções encontradas'} · escolha uma pessoa para ver a liga`
-            : 'Nenhum apelido começa assim entre os participantes públicos.');
+            : 'Nenhum apelido correspondente entre os participantes públicos.');
         else text('kmPublicBoardStatus', `Temporada ${board.seasonId} · até 30 primeiros participantes · atualização ao vivo`);
         state.boardLoadedAt = Date.now();
     }
@@ -554,6 +701,7 @@
         stopPublicBoard();
         const api = window.KingPublicRanking;
         const searching = state.profileView === 'search';
+        if (searching) startFriendInvites();
         const statusId = searching ? 'kmUserSearchStatus' : 'kmPublicBoardStatus';
         if (!api) {
             text(statusId, 'Preparando conexão com o placar…');
@@ -1174,8 +1322,8 @@
         createAchievements(root);
         enhanceFrameVault();
         window.addEventListener('king-public-ranking-ready', startPublicBoard);
-        window.addEventListener('king-public-ranking-auth-changed', startPublicBoard);
-        window.addEventListener('king-master-auth-ready', () => { state.boardLoadedAt = 0; startPublicBoard(); });
+        window.addEventListener('king-public-ranking-auth-changed', () => { stopFriendInvites(); startPublicBoard(); });
+        window.addEventListener('king-master-auth-ready', () => { state.boardLoadedAt = 0; stopFriendInvites(); startPublicBoard(); });
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && document.getElementById('perfil-conquistas')?.classList.contains('is-fullscreen')) toggleAchievementsFullscreen(false);
         });

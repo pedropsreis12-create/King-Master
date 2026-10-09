@@ -84,6 +84,7 @@
         document.documentElement.dataset.fontScale = prefs.fontScale;
         document.documentElement.dataset.motionChoice = prefs.motionMode;
         document.documentElement.dataset.motionLevel = motionLevel;
+        document.documentElement.dataset.chartMotion = ['none', 'low', 'high'].includes(prefs.chartMotion) ? prefs.chartMotion : 'low';
         document.documentElement.classList.toggle('high-contrast', prefs.highContrast);
         document.documentElement.classList.toggle('dyslexia-friendly', prefs.dyslexiaMode === true);
         document.documentElement.classList.toggle('reduce-motion', motionLevel !== 'full');
@@ -94,6 +95,8 @@
         document.getElementById('dyslexiaToggleBtn')?.setAttribute('aria-pressed', String(prefs.dyslexiaMode === true));
         const motionSelect = document.getElementById('motionModeSelect');
         if (motionSelect) motionSelect.value = prefs.motionMode;
+        const chartMotionSelect = document.getElementById('chartMotionSelect');
+        if (chartMotionSelect) chartMotionSelect.value = document.documentElement.dataset.chartMotion;
         const hint = document.getElementById('motionModeHint');
         if (hint) hint.textContent = prefs.motionMode === 'auto' ? `Automático: ${motionLevelLabel(motionLevel).toLocaleLowerCase('pt-BR')}` : motionLevelLabel(motionLevel);
         refreshMotionSurfaces();
@@ -200,6 +203,9 @@
     document.getElementById('contrastToggleBtn')?.addEventListener('click', () => savePreference('highContrast', !appData.accessibility.highContrast));
     document.getElementById('dyslexiaToggleBtn')?.addEventListener('click', () => savePreference('dyslexiaMode', appData.accessibility.dyslexiaMode !== true));
     document.getElementById('motionModeSelect')?.addEventListener('change', event => savePreference('motionMode', event.target.value));
+    document.getElementById('chartMotionSelect')?.addEventListener('change', event => {
+        if (['none', 'low', 'high'].includes(event.target.value)) savePreference('chartMotion', event.target.value);
+    });
     document.getElementById('autoReviewToggleBtn')?.addEventListener('click', () => { appData.studyLogging.autoReview = !appData.studyLogging.autoReview; syncStudySettingsUi(); saveAppData(); });
     document.getElementById('autoErrorFlashcardsToggleBtn')?.addEventListener('click', () => {
         if (!appData.autopilot || typeof appData.autopilot !== 'object') appData.autopilot = {};

@@ -73,7 +73,7 @@ const defaultAppData = {
     selectedFrames: { militar: '', aura: '' },
     frameVaultOpen: false,
     onboardingCompleted: false,
-    accessibility: { fontScale: 'normal', highContrast: false, dyslexiaMode: false, motionMode: 'auto' },
+    accessibility: { fontScale: 'normal', highContrast: false, dyslexiaMode: false, motionMode: 'auto', chartMotion: 'low' },
     studyLogging: { autoReview: true, reviewDelayDays: 1, reviewTrail: [1, 7, 15, 30] },
     autopilot: { enabled: true, dailyMinutes: 240, subjectWeights: {}, todayBudget: null },
     studySchedule: { settings: { startTime: '14:00', studyDays: [1, 2, 3, 4, 5, 6], dailyCapacityMinutes: 240, blockMinutes: 50, pauseMinutes: 15, closingMinutes: 5, maxSubjectsPerDay: 2 }, weeks: {}, suggestions: [] },
@@ -173,6 +173,7 @@ if (!appData.accessibility || typeof appData.accessibility !== 'object') appData
 if (!appData.accessibility.motionMode) appData.accessibility.motionMode = appData.accessibility.reduceMotion ? 'reduced' : 'auto';
 appData.accessibility = { ...defaultAppData.accessibility, ...appData.accessibility };
 if (!['auto', 'full', 'reduced', 'off'].includes(appData.accessibility.motionMode)) appData.accessibility.motionMode = 'auto';
+if (!['none', 'low', 'high'].includes(appData.accessibility.chartMotion)) appData.accessibility.chartMotion = 'low';
 delete appData.accessibility.reduceMotion;
 if (!appData.studyLogging || typeof appData.studyLogging !== 'object') appData.studyLogging = { ...defaultAppData.studyLogging };
 appData.studyLogging = { ...defaultAppData.studyLogging, ...appData.studyLogging };

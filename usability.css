@@ -330,6 +330,21 @@ html[data-motion-level="off"] :is(.rank-world-particles,.rank-world-energy,.rank
 html[data-motion-level="off"] :is(nav,.modal-overlay,.settings-panel,.auth-gate-card,.profile-hero,.widget,.league-frame) { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
 html[data-motion-level="off"] :is(.league-frame,.profile-avatar-frame,.rank-world img,.rank-emblem,.military-insignia) { filter: none !important; text-shadow: none !important; }
 
+/* A preferência dos gráficos é independente dos efeitos decorativos do site. */
+@keyframes king-chart-rise { from { transform: scaleY(0.08); opacity: .42; } to { transform: scaleY(1); opacity: 1; } }
+@keyframes king-chart-appear { from { opacity: .48; } to { opacity: 1; } }
+html[data-chart-motion="high"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) {
+    transform-origin: bottom;
+    animation: king-chart-rise .78s cubic-bezier(.18,.76,.24,1) both;
+}
+html[data-chart-motion="high"] :is(.chart-day,.trend-column,.history-question-day):nth-child(2n) :is(.chart-bar-fill,i,.history-question-track > span) { animation-delay: .07s; }
+html[data-chart-motion="low"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: king-chart-appear .25s ease-out both; }
+html[data-chart-motion="none"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+    html :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: none !important; transition: none !important; }
+}
+html[data-motion-level="off"] :is(.chart-bar-fill,.trend-column i,.history-question-track > span) { animation: none !important; transition: none !important; }
+
 /* Organizador de tópicos e fechamento de sessão. */
 .motion-quality-row select { min-width: 126px; }
 .topics-organizer-modal { width: min(1420px,98vw); height: min(920px,96vh); max-height: 96vh; overflow: hidden; padding: 28px; display: flex; flex-direction: column; }

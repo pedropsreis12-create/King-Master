@@ -66,6 +66,19 @@ test('motion quality can be automatic, full, reduced or disabled', () => {
   assert.doesNotMatch(html, /Backup de Segurança/);
 });
 
+test('chart animation has independent saved none, low and high modes', () => {
+  assert.match(html, /id="chartMotionSelect"/);
+  for (const value of ['none', 'low', 'high']) assert.match(html, new RegExp(`<option value="${value}">`));
+  assert.match(script, /chartMotion: 'low'/);
+  assert.match(script, /includes\(appData\.accessibility\.chartMotion\)/);
+  assert.match(productivity, /dataset\.chartMotion/);
+  assert.match(productivity, /savePreference\('chartMotion'/);
+  assert.match(usability, /data-chart-motion="high"/);
+  assert.match(usability, /data-chart-motion="low"/);
+  assert.match(usability, /data-chart-motion="none"/);
+  assert.match(usability, /prefers-reduced-motion: reduce/);
+});
+
 test('dyslexia reading mode is persistent and improves tracking without removing the chosen accent', () => {
   assert.match(html, /id="dyslexiaToggleBtn"[^>]+aria-pressed="false"/);
   assert.match(script, /dyslexiaMode: false/);

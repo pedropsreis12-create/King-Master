@@ -501,8 +501,20 @@
         details.append(
             element('small', '', 'PARTICIPANTE SELECIONADO'),
             element('h3', '', entry.displayName),
-            element('p', '', `${rank?.label || 'Liga Bronze'} · Nível ${entry.level} · ${formatNumber(entry.score)} XP nesta temporada`)
+            element('p', '', 'Resumo público da temporada; registros pessoais de estudo permanecem privados.')
         );
+        const stats = element('dl', 'km-user-search__stats');
+        [
+            ['Liga', rank?.label || 'Liga Bronze'],
+            ['Nível', String(entry.level)],
+            ['XP da temporada', formatNumber(entry.score)],
+            ['Próxima liga', rank?.isTop ? 'Patente máxima' : `${formatNumber(rank?.remaining || 0)} XP restantes`]
+        ].forEach(([label, value]) => {
+            const item = element('div');
+            item.append(element('dt', '', label), element('dd', '', value));
+            stats.append(item);
+        });
+        details.append(stats);
         const action = element('div', 'km-user-search__actions');
         const relation = state.friendInvites.find(invite =>
             (invite.fromUid === state.publicUid && invite.toUid === entry.uid)
@@ -669,6 +681,7 @@
                     state.selectedSearchEntry = entry;
                     list?.querySelectorAll('.km-user-search__choice').forEach(button => button.setAttribute('aria-pressed', String(button === content)));
                     renderSearchSelection(entry);
+                    document.getElementById('kmUserSearchSelection')?.scrollIntoView({ block: 'nearest' });
                 });
                 row.append(content);
             }

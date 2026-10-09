@@ -2090,6 +2090,10 @@ html[data-motion-level="off"] #perfil.km-profile-v2 :is(.km-rank-brief::before, 
 #perfil.km-profile-v2 .km-user-search__selection-copy small { color: var(--accent-color); font-size: .56rem; font-weight: 800; letter-spacing: .09em; }
 #perfil.km-profile-v2 .km-user-search__selection-copy h3 { margin: 2px 0; font-size: 1rem; }
 #perfil.km-profile-v2 .km-user-search__selection-copy p { margin: 0; color: var(--text-muted); font-size: .7rem; }
+#perfil.km-profile-v2 .km-user-search__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 12px 0 0; }
+#perfil.km-profile-v2 .km-user-search__stats div { min-width: 0; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 9px; background: var(--card-bg); }
+#perfil.km-profile-v2 .km-user-search__stats dt { color: var(--text-muted); font-size: .56rem; }
+#perfil.km-profile-v2 .km-user-search__stats dd { overflow: hidden; margin: 2px 0 0; font-size: .69rem; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
 #perfil.km-profile-v2 .km-user-search__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
 #perfil.km-profile-v2 .km-user-search__actions .km-user-search__feedback { flex-basis: 100%; }
 #perfil.km-profile-v2 .km-user-search__add, #perfil.km-profile-v2 .km-user-search__secondary { min-height: 37px; padding: 8px 12px; border: 1px solid var(--accent-color); border-radius: 10px; background: var(--accent-color); color: #fff; font: 800 .66rem Poppins, sans-serif; cursor: pointer; }

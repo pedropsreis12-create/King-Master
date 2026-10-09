@@ -92,6 +92,8 @@
         const api = window.KingRankV2;
         if (!api || typeof api.snapshot !== 'function') return null;
         try {
+            const preview = window.KingMasterLab?.snapshot?.(data);
+            if (preview) return preview;
             const snapshot = api.snapshot(data, { readOnly: true, source: 'profile-overhaul' });
             return snapshot && typeof snapshot === 'object' ? snapshot : null;
         } catch {
@@ -1353,6 +1355,7 @@
         window.addEventListener('king-rank-v2-ready', scheduleRender);
         window.addEventListener('king-rank-v2-updated', scheduleRender);
         window.addEventListener('king-rank-v2-change', scheduleRender);
+        window.addEventListener('king-master-preview-changed', scheduleRender);
         window.addEventListener('storage', event => {
             if (!event.key || event.key === DATA_KEY) scheduleRender();
             if (!event.key || event.key === ACHIEVEMENTS_VISIBILITY_KEY) {
@@ -1372,6 +1375,7 @@
         window.removeEventListener('king-rank-v2-ready', scheduleRender);
         window.removeEventListener('king-rank-v2-updated', scheduleRender);
         window.removeEventListener('king-rank-v2-change', scheduleRender);
+        window.removeEventListener('king-master-preview-changed', scheduleRender);
         state.root?.classList.remove('km-profile-v2');
         state.root?.querySelectorAll('.km-profile-v2-owned').forEach(node => node.remove());
         state.root = null;

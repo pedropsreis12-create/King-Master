@@ -1,7 +1,22 @@
 const XP_LAB_SESSION_KEY = 'kingMasterXpLabUnlocked';
 const XP_LAB_LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+let XP_LAB_ADMIN = false;
 let XP_LAB_ATIVO = XP_LAB_LOCAL && sessionStorage.getItem(XP_LAB_SESSION_KEY) === 'true';
 document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
+window.addEventListener('king-master-access-changed', event => {
+    XP_LAB_ADMIN = event.detail?.allowed === true;
+    if (!XP_LAB_ADMIN && !XP_LAB_LOCAL) {
+        XP_LAB_ATIVO = false;
+        xpTesteLocal = null;
+        xpTesteData = '';
+        renderGamificacao();
+        window.dispatchEvent(new Event('king-master-preview-changed'));
+    } else if (XP_LAB_ADMIN) {
+        XP_LAB_ATIVO = true;
+        renderizarAtalhosXpTeste();
+    }
+    sincronizarCadeadoXp();
+});
 
 const REVISAO_MOTIVOS = {
     'errei-questao': 'Errei questão',
@@ -1339,6 +1354,30 @@ function criarLimitesDeNivel() {
 const LIMITES_NIVEL = criarLimitesDeNivel();
 const formatarNumero = valor => Math.round(valor).toLocaleString('pt-BR');
 let xpTesteLocal = null;
+let xpTesteData = '';
+
+function snapshotLaboratorioMestre(data) {
+    if (!XP_LAB_ATIVO || (xpTesteLocal === null && !xpTesteData)) return null;
+    const rank = window.KingRankV2;
+    const source = data?.[rank?.STATE_KEY];
+    if (!source || !rank?.snapshot) return null;
+    const previewState = structuredClone(source);
+    if (xpTesteLocal !== null) {
+        const simulated = Math.max(0, Math.min(rank.CONFIG.maxLifetimeXp, xpTesteLocal));
+        previewState.lifetimeXp = simulated;
+        previewState.highestLevel = rank.levelForXp(simulated);
+        previewState.season.current.xp = simulated;
+        previewState.season.current.score = simulated;
+        previewState.season.bestLeagueIndex = rank.leagueForScore(simulated).index;
+    }
+    const simulatedNow = xpTesteData ? new Date(`${xpTesteData}T12:00:00`).getTime() : Date.now();
+    const now = Number.isFinite(simulatedNow) ? simulatedNow : Date.now();
+    return rank.snapshot({ ...data, [rank.STATE_KEY]: previewState }, {
+        readOnly: true, now, utcOffsetMinutes: -new Date(now).getTimezoneOffset(), source: 'master-preview'
+    });
+}
+
+window.KingMasterLab = Object.freeze({ snapshot: snapshotLaboratorioMestre });
 
 function obterNivelAtual(xp) {
     let nivel = 1;
@@ -1761,8 +1800,8 @@ function renderGamificacao(animar = false) {
     renderizarGaleriaMolduras(dados, molduraVisual);
     const status = document.getElementById('xpTestStatus');
     if (status) {
-        status.textContent = xpTesteLocal === null ? 'XP real' : `Teste: ${formatarNumero(dados.xpTotal)} XP`;
-        status.classList.toggle('is-testing', xpTesteLocal !== null);
+        status.textContent = xpTesteLocal === null && !xpTesteData ? 'XP real' : `Prévia${xpTesteLocal === null ? '' : `: ${formatarNumero(xpTesteLocal)} XP`}${xpTesteData ? ` · ${xpTesteData.split('-').reverse().join('/')}` : ''}`;
+        status.classList.toggle('is-testing', xpTesteLocal !== null || Boolean(xpTesteData));
     }
     document.querySelectorAll('.xp-test-milestone').forEach(botao => botao.classList.toggle('active', Number(botao.dataset.xp) === dados.xpTotal && xpTesteLocal !== null));
     if (animar) {
@@ -1776,10 +1815,10 @@ function renderGamificacao(animar = false) {
 }
 
 function sincronizarXpTeste(valor) {
-    const xp = Math.max(0, Math.min(XP_MAXIMO, Math.round(Number(valor) || 0)));
+    const xp = Math.max(0, Math.min(window.KingRankV2?.CONFIG.maxLifetimeXp || XP_MAXIMO, Math.round(Number(valor) || 0)));
     const range = document.getElementById('xpTestRange');
     const input = document.getElementById('xpTestInput');
-    if (range && document.activeElement !== range) range.value = xp;
+    if (range && document.activeElement !== range) range.value = Math.min(XP_MAXIMO, xp);
     if (input && document.activeElement !== input) input.value = xp;
 }
 
@@ -1788,12 +1827,14 @@ function sincronizarCadeadoXp() {
     const cadeado = document.getElementById('xpLabLock');
     const conteudo = document.getElementById('xpTestContent');
     if (!painel || !cadeado || !conteudo) return;
-    painel.hidden = !XP_LAB_LOCAL;
-    if (!XP_LAB_LOCAL) return;
+    painel.hidden = !(XP_LAB_LOCAL || XP_LAB_ADMIN);
+    if (painel.hidden) return;
     painel.classList.toggle('is-locked', !XP_LAB_ATIVO);
     painel.classList.toggle('is-unlocked', XP_LAB_ATIVO);
     cadeado.hidden = XP_LAB_ATIVO;
     conteudo.hidden = !XP_LAB_ATIVO;
+    const close = painel.querySelector('.xp-lab-lock-again');
+    if (close) close.hidden = XP_LAB_ADMIN;
     document.documentElement.dataset.xpLab = String(XP_LAB_ATIVO);
 }
 
@@ -1844,19 +1885,33 @@ window.desbloquearLaboratorioXp = desbloquearLaboratorioXp;
 window.bloquearLaboratorioXp = bloquearLaboratorioXp;
 
 function visualizarXpTeste(valor) {
+    if (!XP_LAB_ATIVO) return;
     if (valor !== undefined) sincronizarXpTeste(valor);
     const input = document.getElementById('xpTestInput');
-    xpTesteLocal = Math.max(0, Math.min(XP_MAXIMO, Math.round(Number(input?.value) || 0)));
+    xpTesteLocal = Math.max(0, Math.min(window.KingRankV2?.CONFIG.maxLifetimeXp || XP_MAXIMO, Math.round(Number(input?.value) || 0)));
     sincronizarXpTeste(xpTesteLocal);
     renderGamificacao(true);
+    window.dispatchEvent(new Event('king-master-preview-changed'));
 }
 
 function sairDoModoTesteXp() {
     xpTesteLocal = null;
+    xpTesteData = '';
+    const dateInput = document.getElementById('xpTestDate');
+    if (dateInput) dateInput.value = '';
     const dados = calcularGamificacao();
     sincronizarXpTeste(dados.xpTotal);
     renderGamificacao(true);
+    window.dispatchEvent(new Event('king-master-preview-changed'));
 }
+
+function visualizarDataTeste(value) {
+    if (!XP_LAB_ATIVO) return;
+    xpTesteData = /^20\d{2}-\d{2}-\d{2}$/.test(value || '') ? value : '';
+    renderGamificacao();
+    window.dispatchEvent(new Event('king-master-preview-changed'));
+}
+window.visualizarDataTeste = visualizarDataTeste;
 
 function renderizarAtalhosXpTeste() {
     const container = document.getElementById('xpTestMilestones');
@@ -1864,7 +1919,7 @@ function renderizarAtalhosXpTeste() {
     const range = document.getElementById('xpTestRange');
     const input = document.getElementById('xpTestInput');
     if (range) range.max = XP_MAXIMO;
-    if (input) input.max = XP_MAXIMO;
+    if (input) input.max = window.KingRankV2?.CONFIG.maxLifetimeXp || XP_MAXIMO;
     container.innerHTML = obterTrilhaVisualAtual().map(marco => `<button type="button" class="xp-test-milestone" data-xp="${marco.xp}" onclick="visualizarXpTeste(${marco.xp})">Lvl ${marco.nivel} · ${marco.titulo}</button>`).join('');
     sincronizarXpTeste(xpTesteLocal === null ? calcularGamificacao().xpTotal : xpTesteLocal);
 }

@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261008-friends-v1';
+const CACHE_VERSION = 'king-master-20261008-master-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -45,6 +45,7 @@ const APP_SHELL = [
     './rank-integration-v2.js',
     './accessibility-v2.js',
     './profile-overhaul.js',
+    './master-access.js',
     './adaptive-design.css',
     './profile-overhaul.css',
     './command-palette.css',

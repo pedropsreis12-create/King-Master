@@ -15,7 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=block" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=20261005-local-xp-v3">
+    <link rel="stylesheet" href="style.css?v=20261008-master-preview-v1">
     <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20260929-flash-security-v2">
@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="mock-exams.css?v=20261002-v1">
     <link rel="stylesheet" href="command-palette.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
-    <link rel="stylesheet" href="profile-overhaul.css?v=20261008-profile-ranking-v9">
+        <link rel="stylesheet" href="profile-overhaul.css?v=20261008-master-preview-v1">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
     <link rel="stylesheet" href="practice.css?v=20261005-pace-v2">
     <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
@@ -912,9 +912,9 @@
                 <div class="xp-test-content" id="xpTestContent" hidden>
                 <div class="xp-test-heading">
                     <div>
-                        <span class="xp-test-kicker">Campo de provas local</span>
-                        <h3 id="xpTestTitle">Controle total de XP</h3>
-                        <p>Teste patentes, insígnias, divisões e animações sem salvar nada no seu progresso.</p>
+                        <span class="xp-test-kicker">CONTA MESTRE · AMBIENTE DE TESTE</span>
+                        <h3 id="xpTestTitle">Teste de progressão</h3>
+                        <p>Visualize níveis, ligas, conquistas e missões sem alterar seu progresso real.</p>
                     </div>
                     <div class="xp-test-heading-actions">
                         <span class="xp-test-status" id="xpTestStatus">XP real</span>
@@ -931,6 +931,10 @@
                     </label>
                     <button type="button" class="cycle-btn primary xp-test-apply" onclick="visualizarXpTeste()">Aplicar e animar</button>
                     <button type="button" class="cycle-btn xp-test-reset" onclick="sairDoModoTesteXp()">Voltar ao XP real</button>
+                </div>
+                <div class="xp-test-scenarios">
+                    <label class="xp-test-number-wrap" for="xpTestDate"><span>Simular outra data</span><input type="date" id="xpTestDate" min="2020-01-01" max="2099-12-31" onchange="visualizarDataTeste(this.value)"></label>
+                    <p>Prévia apenas nesta tela. Nenhum XP, missão, conquista ou data de estudo é salvo ou enviado ao placar.</p>
                 </div>
                 <div class="xp-test-milestones" id="xpTestMilestones" aria-label="Atalhos de títulos e níveis"></div>
                 <button type="button" class="xp-lab-lock-again" onclick="bloquearLaboratorioXp()"><span aria-hidden="true">🔒</span> Fechar laboratório</button>
@@ -1511,7 +1515,7 @@
     <script src="notebook-core.js?v=20261006-v1"></script>
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
-    <script src="script.js?v=20261008-profile-inventory-v1"></script>
+    <script src="script.js?v=20261008-master-preview-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>
@@ -1533,10 +1537,11 @@
     <script src="data-portability.js?v=20260929-overhaul-v4"></script>
     <script src="command-palette.js?v=20260929-overhaul-v4"></script>
     <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
-    <script src="profile-overhaul.js?v=20261008-profile-ranking-v9"></script>
+    <script src="profile-overhaul.js?v=20261008-master-preview-v1"></script>
     <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20260907-account-5"></script>
     <script type="module" src="cloud-sync.js?v=20261007-v2"></script>
     <script type="module" src="public-ranking.js?v=20261008-public-ranking-v3"></script>
+    <script type="module" src="master-access.js?v=20261008-v1"></script>
 </body>
 </html>

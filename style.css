@@ -620,6 +620,10 @@ html[data-rank-mode="aura"][data-xp-rank="instinto"], html[data-rank-mode="aura"
 .xp-test-status { flex: 0 0 auto; padding: 8px 12px; border-radius: 999px; background: var(--hover-bg); border: 1px solid var(--border-strong); color: var(--text-muted); font-size: .68rem; font-weight: 800; }
 .xp-test-status.is-testing { color: var(--accent-color); background: rgba(var(--accent-rgb), .12); border-color: rgba(var(--accent-rgb), .35); }
 .xp-test-controls { display: grid; grid-template-columns: minmax(220px, 1fr) 145px auto auto; gap: 12px; align-items: end; }
+.xp-test-scenarios { display: flex; align-items: end; gap: 16px; margin-top: 14px; }
+.xp-test-scenarios label { flex: 0 0 190px; }
+.xp-test-scenarios p { max-width: 560px; color: var(--text-muted); font-size: .7rem; line-height: 1.5; }
+.xp-test-scenarios input { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 12px; background: var(--hover-bg); color: var(--text-main); font: inherit; }
 .xp-test-range-wrap, .xp-test-number-wrap { display: flex; flex-direction: column; gap: 8px; color: var(--text-muted); font-size: .68rem; font-weight: 800; }
 .xp-test-range-wrap input { width: 100%; accent-color: var(--accent-color); cursor: pointer; }
 .xp-test-number-wrap input { width: 100%; min-height: 43px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border-strong); background: var(--hover-bg); color: var(--text-main); font: 800 .82rem/1 Poppins, sans-serif; outline: none; }
@@ -1316,6 +1320,8 @@ body:has(#deleteConfirmModal.active) .modal-overlay.active:not(#deleteConfirmMod
     .xp-test-heading { flex-direction: column; }
     .xp-test-heading-actions { width: 100%; justify-content: space-between; flex-wrap: wrap; }
     .xp-test-controls { grid-template-columns: 1fr; }
+    .xp-test-scenarios { align-items: stretch; flex-direction: column; }
+    .xp-test-scenarios label { flex: auto; }
     .xp-test-apply, .xp-test-reset { width: 100%; }
     .profile-hero { min-height: 450px; padding: 28px 18px; }
     .avatar-stage { width: 235px; height: 280px; }

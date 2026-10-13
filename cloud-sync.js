@@ -26,6 +26,7 @@ const authHumanCheck = document.getElementById('authHumanCheck');
 const authSubmitButton = document.getElementById('authSubmitBtn');
 const authForgotButton = document.getElementById('authForgotBtn');
 const authGoogleButton = document.getElementById('authGoogleBtn');
+const authGoogleSwitchButton = document.getElementById('authGoogleSwitchBtn');
 const authGoogleRedirectButton = document.getElementById('authGoogleRedirectBtn');
 const authCloudRetryButton = document.getElementById('authCloudRetryBtn');
 const authGateCard = document.getElementById('authGateCard');
@@ -48,7 +49,7 @@ function setAuthFeedback(message, type = '') {
 }
 
 function setAuthBusy(busy) {
-    [authSubmitButton, authGoogleButton, authGoogleRedirectButton, authCloudRetryButton, authForgotButton, authHumanCheck, authRecoveryBackButton].forEach(button => { if (button) button.disabled = busy; });
+    [authSubmitButton, authGoogleButton, authGoogleSwitchButton, authGoogleRedirectButton, authCloudRetryButton, authForgotButton, authHumanCheck, authRecoveryBackButton].forEach(button => { if (button) button.disabled = busy; });
     if (authRecoverySendButton) authRecoverySendButton.disabled = busy || Date.now() < recoveryCooldownUntil;
 }
 
@@ -201,14 +202,19 @@ if (!firebaseConfigured) {
     };
 } else {
     try {
-    const [{ initializeApp }, authSdk, firestoreSdk, appCheckSdk] = await Promise.all([
+    const authCore = window.kingMasterAuthWarmup || Promise.all([
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js'),
-        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js'),
+        import('https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js')
+    ]).then(([appSdk, authSdk]) => {
+        const app = appSdk.getApps?.().length ? appSdk.getApp() : appSdk.initializeApp(firebaseConfig);
+        return { appSdk, authSdk, app, auth: authSdk.getAuth(app) };
+    });
+    const [{ authSdk, app: firebaseApp, auth }, firestoreSdk, appCheckSdk] = await Promise.all([
+        authCore,
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js'),
         import('https://www.gstatic.com/firebasejs/12.18.0/firebase-app-check.js')
     ]);
 
-    const firebaseApp = initializeApp(firebaseConfig);
     // Em falhas de escrita, o log padrão pode incluir o documento inteiro na requisição.
     // O erro tratado abaixo continua visível ao usuário sem expor seu conteúdo no console.
     firestoreSdk.setLogLevel('silent');
@@ -227,7 +233,6 @@ if (!firebaseConfigured) {
     // Aquecimento com cache: não força um novo desafio a cada carregamento.
     // Uma falha inicial pode ser recuperada no próximo pedido, sem desligar o App Check.
     const appCheckReady = appCheckSdk.getToken(appCheck, false).then(() => true, () => false);
-    const auth = authSdk.getAuth(firebaseApp);
     auth.languageCode = 'pt-BR';
     const db = firestoreSdk.getFirestore(firebaseApp);
     const googleProvider = new authSdk.GoogleAuthProvider();
@@ -243,7 +248,8 @@ if (!firebaseConfigured) {
     const clientId = localStorage.getItem(clientIdKey) || crypto.randomUUID();
     localStorage.setItem(clientIdKey, clientId);
 
-    authSdk.setPersistence(auth, authSdk.browserLocalPersistence).catch(() => {});
+    // No navegador o Firebase já mantém a sessão local por padrão. Reaplicar
+    // persistência a cada visita atrasava a restauração de uma conta existente.
 
     async function initializeGemini() {
     const aiSdk = await import('https://www.gstatic.com/firebasejs/12.18.0/firebase-ai.js');
@@ -796,8 +802,8 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
 
     const popupFallbackCodes = new Set(['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/network-request-failed']);
 
-    async function startSignIn(provider, label, method = 'popup') {
-        if (provider === googleProvider) provider.setCustomParameters({ prompt: 'select_account' });
+    async function startSignIn(provider, label, method = 'popup', selectAccount = false) {
+        if (provider === googleProvider) provider.setCustomParameters(selectAccount ? { prompt: 'select_account' } : {});
         setAuthBusy(true); setAuthFeedback(`Abrindo o acesso seguro ${label}…`);
         updateCloudUi('syncing', null, `Abrindo o acesso seguro ${label}…`);
         try {
@@ -1114,6 +1120,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         } finally { setAuthBusy(false); }
     });
     authGoogleButton?.addEventListener('click', () => startSignIn(googleProvider, 'do Google').catch(error => setAuthFeedback(describeAuthError(error), 'error')));
+    authGoogleSwitchButton?.addEventListener('click', () => startSignIn(googleProvider, 'do Google', 'popup', true).catch(error => setAuthFeedback(describeAuthError(error), 'error')));
 
     async function finishAccountLoading(user, epoch = sessionEpoch) {
         const local = localSnapshot();

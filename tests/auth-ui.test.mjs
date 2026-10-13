@@ -40,6 +40,14 @@ test('Google login offers an explicit fallback and cloud loading can be retried'
     assert.match(cloud, /identity\?\.uid === user\.uid/);
 });
 
+test('a entrada padrão dispensa a escolha forçada de conta e preserva a troca explícita', () => {
+    assert.match(html, /id="authGoogleSwitchBtn"[^>]*>Usar outra conta Google/);
+    assert.match(html, /src="auth-warmup\.js\?v=/);
+    assert.match(cloud, /selectAccount \? \{ prompt: 'select_account' \} : \{\}/);
+    assert.match(cloud, /authGoogleSwitchButton\?\.addEventListener/);
+    assert.doesNotMatch(cloud, /authSdk\.setPersistence\(auth, authSdk\.browserLocalPersistence\)/);
+});
+
 test('signed-in users can leave from profile or settings after pending changes sync', () => {
     assert.match(html, /id="profileSignOutBtn"[^>]*>Sair da conta<\/button>/);
     assert.match(html, /id="cloudSignOutBtn"[^>]*>Sair da conta<\/button>/);

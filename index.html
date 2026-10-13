@@ -11,6 +11,9 @@
     <link rel="icon" href="assets/app-icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="assets/app-icon-192.png">
     <link rel="manifest" href="manifest.webmanifest?v=20260907-account-6">
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <script src="firebase-config.js?v=20260831-firebase"></script>
+    <script src="auth-warmup.js?v=20261013-fast-login-v1"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -79,6 +82,7 @@
             <div class="auth-gate-copy"><p id="authGateEyebrow">Bem-vindo de volta</p><h1 id="authGateTitle">Entre no seu espaço</h1><span id="authGateIntro">Seu plano, seus registros e suas revisões estão esperando por você.</span></div>
             <div class="auth-provider-grid">
                 <button type="button" class="auth-provider google" id="authGoogleBtn"><b>G</b> Continuar com Google</button>
+                <button type="button" class="auth-provider-fallback" id="authGoogleSwitchBtn">Usar outra conta Google</button>
                 <button type="button" class="auth-provider-fallback" id="authGoogleRedirectBtn" hidden>Entrar pelo redirecionamento seguro</button>
             </div>
             <div class="auth-divider"><span>ou continue com e-mail</span></div>
@@ -1543,9 +1547,8 @@
     <script src="command-palette.js?v=20260929-overhaul-v4"></script>
     <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
     <script src="profile-overhaul.js?v=20261008-master-preview-v1"></script>
-    <script src="firebase-config.js?v=20260831-firebase"></script>
     <script src="cloud-state.js?v=20261008-account-isolation-v1"></script>
-    <script type="module" src="cloud-sync.js?v=20261008-account-isolation-v3"></script>
+    <script type="module" src="cloud-sync.js?v=20261013-fast-login-v1"></script>
     <script type="module" src="public-ranking.js?v=20261008-public-ranking-v3"></script>
     <script type="module" src="master-access.js?v=20261008-v1"></script>
 </body>

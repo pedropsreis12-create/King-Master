@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261008-account-isolation-v3';
+const CACHE_VERSION = 'king-master-20261013-fast-login-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -10,6 +10,7 @@ const APP_SHELL = [
     './schedule.css',
     './schedule-planner.css',
     './script.js',
+    './auth-warmup.js',
     './topic-core.js',
     './review-trail-core.js',
     './notebook-core.js',

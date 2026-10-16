@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261013-fast-login-v1';
+const CACHE_VERSION = 'king-master-20261015-swap-copy-v1';
 const APP_SHELL = [
     './',
     './index.html',

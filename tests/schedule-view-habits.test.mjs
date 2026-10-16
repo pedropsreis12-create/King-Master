@@ -29,8 +29,9 @@ test('cronograma tem modo fixo, carga por matéria, pausa editável e duplicaç�
     assert.match(html, /id="scheduleLoadViewButton"/);
     assert.match(html, /id="scheduleQuickPause"/);
     assert.match(schedule, /function renderLoadSubjects\(/);
-    assert.match(schedule, /function duplicateSlot\(/);
     assert.match(schedule, /function duplicateBlock\(/);
+    assert.match(schedule, /Core\.duplicateBlockBelow\(/);
+    assert.match(schedule, /Core\.swapBlockPositions\(/);
     assert.match(schedule, /schedule-matrix-duplicate/);
 });
 

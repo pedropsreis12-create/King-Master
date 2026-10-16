@@ -106,6 +106,66 @@ test('uma célula aparentemente vazia encaixa o bloco e ajusta os próximos pend
     assert.deepEqual(blocks.map(block => block.order), [1, 0, 2, 3]);
 });
 
+test('soltar sobre outro bloco troca posições sem criar horários ou linhas novas', () => {
+    const blocks = [
+        { id: 'fis', day: 1, start: '14:00', duration: 50, order: 0, status: 'pending' },
+        { id: 'mat', day: 1, start: '15:00', duration: 50, order: 1, status: 'pending' },
+        { id: 'qui', day: 2, start: '14:00', duration: 50, order: 0, status: 'pending' }
+    ];
+    const timesBefore = [...new Set(blocks.map(block => block.start))].sort();
+    assert.equal(Core.swapBlockPositions(blocks, 'fis', 'mat').ok, true);
+    assert.equal(blocks[0].start, '15:00');
+    assert.equal(blocks[1].start, '14:00');
+    assert.deepEqual([...new Set(blocks.map(block => block.start))].sort(), timesBefore);
+    assert.equal(Core.swapBlockPositions(blocks, 'fis', 'qui').ok, true);
+    assert.deepEqual({ day: blocks[0].day, start: blocks[0].start }, { day: 2, start: '14:00' });
+    assert.deepEqual({ day: blocks[2].day, start: blocks[2].start }, { day: 1, start: '15:00' });
+    assert.deepEqual([...new Set(blocks.map(block => block.start))].sort(), timesBefore);
+});
+
+test('troca impossível não altera os blocos', () => {
+    const blocks = [
+        { id: 'long', day: 1, start: '14:00', duration: 90, order: 0 },
+        { id: 'short', day: 2, start: '14:00', duration: 50, order: 0 },
+        { id: 'next', day: 2, start: '15:00', duration: 50, order: 1 }
+    ];
+    assert.equal(Core.swapBlockPositions(blocks, 'long', 'short').reason, 'no-space');
+    assert.deepEqual(blocks.map(({ day, start }) => ({ day, start })), [
+        { day: 1, start: '14:00' }, { day: 2, start: '14:00' }, { day: 2, start: '15:00' }
+    ]);
+});
+
+test('duplicação de um clique cola abaixo e desloca apenas próximos pendentes', () => {
+    const blocks = [
+        { id: 'fis', subjectId: 1, kind: 'teoria', topic: 'Ondas', day: 1, start: '14:00', duration: 50, order: 0, status: 'completed', registered: true, result: { questions: 10 } },
+        { id: 'mat', subjectId: 2, day: 1, start: '15:00', duration: 50, order: 1, status: 'pending' }
+    ];
+    const copied = Core.duplicateBlockBelow(blocks, 'fis', 'fis-copia', 10,
+        [{ start: '14:00', end: '18:00' }]);
+    assert.equal(copied.ok, true);
+    assert.equal(blocks.length, 3);
+    assert.deepEqual({ day: copied.copy.day, start: copied.copy.start, status: copied.copy.status,
+        registered: copied.copy.registered, result: copied.copy.result },
+    { day: 1, start: '15:00', status: 'pending', registered: false, result: null });
+    assert.equal(blocks[1].start, '16:00');
+    assert.equal(blocks[0].start, '14:00');
+});
+
+test('duplicação sem janela livre ou sobre bloco registrado não grava cópia parcial', () => {
+    const blocks = [
+        { id: 'fis', day: 1, start: '14:00', duration: 50, order: 0, status: 'pending' },
+        { id: 'mat', day: 1, start: '15:00', duration: 50, order: 1, status: 'completed', registered: true }
+    ];
+    assert.equal(Core.duplicateBlockBelow(blocks, 'fis', 'copia', 10).reason, 'protected');
+    assert.equal(blocks.length, 2);
+    assert.equal(blocks[1].start, '15:00');
+    blocks[1].status = 'pending'; blocks[1].registered = false;
+    assert.equal(Core.duplicateBlockBelow(blocks, 'fis', 'copia', 10,
+        [{ start: '14:00', end: '16:00' }]).reason, 'no-space');
+    assert.equal(blocks.length, 2);
+    assert.equal(blocks[1].start, '15:00');
+});
+
 test('organizador usa múltiplos horários livres e não ultrapassa suas janelas', () => {
     const plan = { ...settings, studyDays: [1, 2], closingMinutes: 0, availability: {
         1: [{ start: '09:00', end: '10:00' }, { start: '15:00', end: '19:00' }],

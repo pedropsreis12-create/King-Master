@@ -461,7 +461,7 @@
         search.append(element('span', 'material-symbols-rounded', 'search', { 'aria-hidden': 'true' }));
         const input = element('input', '', null, {
             id: 'kmPublicBoardSearch', type: 'search', autocomplete: 'off', maxlength: '32',
-            placeholder: 'Ex.: Gustavo, stav ou 121', 'aria-label': 'Pesquisar usuários por parte do apelido',
+            placeholder: 'Pesquisar nome de usuário', 'aria-label': 'Pesquisar usuários por parte do apelido',
             'aria-controls': 'kmUserSearchList', 'aria-autocomplete': 'list'
         });
         input.addEventListener('input', () => {

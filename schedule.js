@@ -868,42 +868,17 @@
         byId('scheduleDeleteBlock').hidden = !block;
         byId('scheduleBlockModal').classList.add('active');
     }
-    function duplicateSlot(source) {
-        const value = settings(), duration = Number(source.duration) || value.blockMinutes;
-        const orderedDays = [...DAYS.filter(day => day >= Number(source.day)), ...DAYS.filter(day => day < Number(source.day))];
-        const agenda = agendaBusyByDay();
-        for (const day of orderedDays) {
-            if (!value.studyDays.includes(day)) continue;
-            const occupied = [
-                ...getDayBlocks(day).map(block => ({ start: Core.toMinutes(block.start), end: Core.toMinutes(block.start) + Number(block.duration) + value.pauseMinutes })),
-                ...(agenda[day] || []).map(entry => ({ start: Core.toMinutes(entry.start), end: Core.toMinutes(entry.end) + value.pauseMinutes }))
-            ].sort((a, b) => a.start - b.start);
-            for (const range of value.availability[day] || []) {
-                let cursor = Math.max(Core.toMinutes(range.start), day === Number(source.day)
-                    ? Core.toMinutes(source.start) + duration + value.pauseMinutes : 0);
-                const limit = Core.toMinutes(range.end);
-                for (const entry of occupied) {
-                    if (entry.end <= cursor) continue;
-                    if (entry.start >= cursor + duration) break;
-                    cursor = Math.max(cursor, entry.end);
-                }
-                if (cursor + duration <= limit) return { day, start: Core.toClock(cursor) };
-            }
-        }
-        return null;
-    }
     function duplicateBlock(id) {
         const source = findBlock(id); if (!source) return;
-        const slot = duplicateSlot(source);
-        openBlock(null, slot?.day || source.day, slot?.start || nextStart(source.day), Boolean(week(false)?.strict));
-        byId('scheduleBlockModalTitle').textContent = 'Duplicar bloco';
-        byId('scheduleBlockSubject').value = String(source.subjectId);
-        byId('scheduleBlockKind').value = source.kind;
-        byId('scheduleBlockTopic').value = source.topic || '';
-        setSelectValue(byId('scheduleBlockDuration'), source.duration);
-        byId('scheduleBlockStatus').value = 'pending';
-        updateTopicSuggestions();
-        if (!slot) toast('Não há espaço livre nesta semana para outro bloco. Escolha outro horário antes de salvar.', true);
+        const target = week(false), value = settings(), day = Number(source.day);
+        const newId = `bloco-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const copied = Core.duplicateBlockBelow(target.blocks, id, newId, value.pauseMinutes,
+            value.availability[day] || [], agendaBusyByDay()[day] || []);
+        if (!copied.ok) return toast(copied.reason === 'protected'
+            ? 'Há um bloco concluído abaixo. Mova-o antes de duplicar.'
+            : 'Não há espaço suficiente abaixo deste bloco na disponibilidade do dia.', true);
+        if (target.strict) { target.strict = false; target.dayPlans = {}; target.unscheduled = []; }
+        saveAppData(); selectedDay = day; render(); toast('✓ Cópia criada logo abaixo do bloco.');
     }
     function saveBlock(event) {
         event.preventDefault();
@@ -1052,9 +1027,17 @@
         document.addEventListener('pointercancel', finish);
     }
     function moveBlock(id, day, targetId = null, start = null) {
-        if (week(false)?.strict) return toast('Para manter seus limites de horário, altere a matéria na prévia de “Montar com IA”.', true);
         const block = findBlock(id), target = targetId ? findBlock(targetId) : null;
         if (!block || (targetId && !target) || String(block.id) === String(targetId) || !DAYS.includes(Number(day))) return;
+        if (target) {
+            const targetWeek = week(false);
+            const swapped = Core.swapBlockPositions(targetWeek.blocks, id, targetId);
+            if (!swapped.ok) return toast('A troca faria blocos se sobreporem. Ajuste a duração antes de trocar.', true);
+            if (targetWeek.strict) { targetWeek.strict = false; targetWeek.dayPlans = {}; targetWeek.unscheduled = []; }
+            saveAppData(); selectedDay = Number(day); render(); toast('✓ Blocos trocaram de lugar.');
+            return;
+        }
+        if (week(false)?.strict) return toast('Para manter seus limites de horário, altere a matéria na prévia de “Montar com IA”.', true);
         if (start && !targetId) {
             const moved = Core.moveBlockToSlot(week(false).blocks, id, day, start, settings().pauseMinutes);
             if (!moved.ok) {

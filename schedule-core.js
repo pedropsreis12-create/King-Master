@@ -169,6 +169,70 @@
         }
         return { ok: true, previousDay, destination, shifted };
     }
+    function swapBlockPositions(blocks, sourceId, targetId) {
+        const source = Array.isArray(blocks) ? blocks.find(block => String(block.id) === String(sourceId)) : null;
+        const target = Array.isArray(blocks) ? blocks.find(block => String(block.id) === String(targetId)) : null;
+        if (!source || !target || source === target || !validClock(source.start) || !validClock(target.start)) return { ok: false, reason: 'invalid' };
+        const sourcePosition = { day: Number(source.day), start: source.start };
+        const targetPosition = { day: Number(target.day), start: target.start };
+        const proposed = [
+            { block: source, ...targetPosition },
+            { block: target, ...sourcePosition }
+        ];
+        const overlaps = (left, right) => left.day === right.day
+            && toMinutes(left.start) < toMinutes(right.start) + Number(right.block.duration || 0)
+            && toMinutes(right.start) < toMinutes(left.start) + Number(left.block.duration || 0);
+        for (const item of proposed) {
+            if (toMinutes(item.start) + Number(item.block.duration || 0) > 1440) return { ok: false, reason: 'no-space' };
+            if (blocks.some(other => other !== source && other !== target
+                && overlaps(item, { block: other, day: Number(other.day), start: other.start }))) return { ok: false, reason: 'no-space' };
+        }
+        if (overlaps(proposed[0], proposed[1])) return { ok: false, reason: 'no-space' };
+        source.day = targetPosition.day;
+        source.start = targetPosition.start;
+        source.fixedStart = true;
+        target.day = sourcePosition.day;
+        target.start = sourcePosition.start;
+        target.fixedStart = true;
+        for (const affectedDay of new Set([sourcePosition.day, targetPosition.day])) {
+            blocks.filter(block => Number(block.day) === affectedDay)
+                .sort((a, b) => toMinutes(a.start) - toMinutes(b.start) || (a.order ?? 999) - (b.order ?? 999))
+                .forEach((block, order) => { block.order = order; });
+        }
+        return { ok: true };
+    }
+    function duplicateBlockBelow(blocks, sourceId, newId, pauseMinutes = 0, availability = [], busy = []) {
+        const source = Array.isArray(blocks) ? blocks.find(block => String(block.id) === String(sourceId)) : null;
+        if (!source || blocks.some(block => String(block.id) === String(newId))) return { ok: false, reason: 'invalid' };
+        const pause = Math.max(0, Number(pauseMinutes) || 0);
+        const beginning = toMinutes(source.start) + Number(source.duration || 0) + pause;
+        if (!validClock(source.start) || beginning + Number(source.duration || 0) > 1440) return { ok: false, reason: 'no-space' };
+        const draft = blocks.map(block => ({ ...block }));
+        const copy = { ...source, id: newId, day: 0, start: '00:00', order: 0, fixedStart: true,
+            status: 'pending', registered: false, result: null, group: null };
+        draft.push(copy);
+        const moved = moveBlockToSlot(draft, newId, Number(source.day), toClock(beginning), pause);
+        if (!moved.ok) return moved;
+        const changed = draft.filter(block => String(block.id) === String(newId)
+            || block.start !== blocks.find(original => String(original.id) === String(block.id))?.start);
+        const fitsRange = (block, range) => validClock(range?.start) && validClock(range?.end)
+            && toMinutes(block.start) >= toMinutes(range.start)
+            && toMinutes(block.start) + Number(block.duration || 0) <= toMinutes(range.end);
+        if (Array.isArray(availability) && availability.length && changed.some(block => !availability.some(range => fitsRange(block, range))))
+            return { ok: false, reason: 'no-space' };
+        if (Array.isArray(busy) && changed.some(block => busy.some(range => validClock(range?.start) && validClock(range?.end)
+            && toMinutes(block.start) < toMinutes(range.end)
+            && toMinutes(range.start) < toMinutes(block.start) + Number(block.duration || 0))))
+            return { ok: false, reason: 'no-space' };
+        draft.slice(0, -1).forEach((block, index) => {
+            blocks[index].day = block.day;
+            blocks[index].start = block.start;
+            blocks[index].order = block.order;
+            blocks[index].fixedStart = block.fixedStart;
+        });
+        blocks.push(copy);
+        return { ok: true, copy, shifted: moved.shifted };
+    }
     function organize(subjectsInput, settingsInput, weekKey, options = {}) {
         const settings = normalizeSettings(settingsInput);
         const subjects = (Array.isArray(subjectsInput) ? subjectsInput : []).map(subjectConfig).filter(subject => subject.subject && subject.weeklyBlocks > 0);
@@ -297,5 +361,5 @@
         });
         return detached.size;
     }
-    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, moveBlockToSlot, organize, copyWeek, clearAllBlocks, detachPendingSessions };
+    globalThis.KingScheduleCore = { iso, fromIso, monday, addDays, toMinutes, toClock, addMinutes, normalizeSettings, availableMinutes, subjectConfig, arrangeTimes, moveBlockToSlot, swapBlockPositions, duplicateBlockBelow, organize, copyWeek, clearAllBlocks, detachPendingSessions };
 })();

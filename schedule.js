@@ -21,6 +21,8 @@
     let touchDrag = null;
     let plannerDraft = null;
     let plannerIntent = {};
+    let blockContextMenu = null;
+    let contextBlockId = null;
 
     const byId = id => document.getElementById(id);
     const escape = value => typeof escaparRevisaoHtml === 'function'
@@ -365,6 +367,7 @@
     function render() {
         ensureData();
         if (!byId('scheduleTimeline')) return;
+        closeBlockContextMenu();
         reconcileStudiedBlocks();
         byId('scheduleWeekRange').textContent = formatRange(visibleWeek);
         byId('scheduleWeekEyebrow').textContent = visibleWeek === currentWeekKey() ? 'SEMANA ATUAL' : visibleWeek < currentWeekKey() ? 'SEMANA ANTERIOR' : 'PRÓXIMA SEMANA';
@@ -904,13 +907,22 @@
         saveAppData(); fecharModal('scheduleBlockModal'); selectedDay = day; render(); toast('✓ Bloco salvo na semana.');
     }
     function deleteEditingBlock() {
-        const id = byId('scheduleBlockId').value, key = byId('scheduleBlockWeek').value || visibleWeek, target = week(false, key);
-        if (target?.strict) return toast('Esta semana foi validada. Use “Apagar todos os blocos” para esvaziar o cronograma ou gere uma nova prévia.', true);
-        const block = target?.blocks.find(item => String(item.id) === String(id)); if (!block) return;
-        if (block.registered && !confirm('O histórico do estudo será mantido. Retirar somente o bloco do cronograma?')) return;
+        deleteBlock(byId('scheduleBlockId').value, byId('scheduleBlockWeek').value || visibleWeek);
+    }
+    function deleteBlock(id, key = visibleWeek) {
+        const target = week(false, key);
+        const block = target?.blocks.find(item => String(item.id) === String(id));
+        if (!block) return;
+        const subjectName = subject(block.subjectId)?.subject || 'esta matéria';
+        const historyNotice = block.registered ? '\nO histórico do estudo será mantido.' : '';
+        if (!confirm(`Excluir o bloco de ${subjectName} de ${DAY_NAMES[Number(block.day)] || 'este dia'}?${historyNotice}`)) return;
         detachLinksForRemovedBlocks({ [key]: { blocks: [block] } });
         target.blocks = target.blocks.filter(item => String(item.id) !== String(id));
-        recomputeDay(block.day, key); saveAppData(); fecharModal('scheduleBlockModal'); render(); toast('Bloco retirado do cronograma.');
+        target.blocks.filter(item => Number(item.day) === Number(block.day))
+            .sort((a, b) => Core.toMinutes(a.start) - Core.toMinutes(b.start) || (a.order ?? 999) - (b.order ?? 999))
+            .forEach((item, order) => { item.order = order; });
+        if (target.strict) { target.strict = false; target.dayPlans = {}; target.unscheduled = []; }
+        saveAppData(); fecharModal('scheduleBlockModal'); render(); toast('Bloco retirado do cronograma.');
     }
 
     function setStatus(id, status) {
@@ -986,7 +998,42 @@
         saveAppData(); fecharModal('scheduleDayCloseModal'); render(); toast('✓ Check-in do dia salvo.');
     }
 
-    function dragStart(event, id) { draggedBlockId = String(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', draggedBlockId); event.currentTarget.classList.add('dragging'); }
+    function closeBlockContextMenu() {
+        contextBlockId = null;
+        if (blockContextMenu) blockContextMenu.hidden = true;
+    }
+    function openBlockContextMenu(event) {
+        const root = byId('cronograma');
+        const card = event.target.closest?.('[data-drop-block-id]');
+        if (!card || !root?.contains(card) || !findBlock(card.dataset.dropBlockId)) return;
+        event.preventDefault();
+        if (!blockContextMenu) {
+            blockContextMenu = document.createElement('div');
+            blockContextMenu.className = 'schedule-block-context-menu';
+            blockContextMenu.setAttribute('role', 'menu');
+            blockContextMenu.setAttribute('aria-label', 'Ações do bloco');
+            blockContextMenu.innerHTML = '<button type="button" role="menuitem" data-action="edit"><span class="material-symbols-rounded" aria-hidden="true">edit_square</span>Editar bloco</button><button type="button" role="menuitem" data-action="delete" class="danger"><span class="material-symbols-rounded" aria-hidden="true">delete</span>Excluir bloco</button>';
+            blockContextMenu.addEventListener('click', clickEvent => {
+                const action = clickEvent.target.closest?.('[data-action]')?.dataset.action;
+                const id = contextBlockId;
+                if (!action || !id) return;
+                closeBlockContextMenu();
+                if (action === 'edit') openBlock(id, null, null, Boolean(week(false)?.strict));
+                if (action === 'delete') deleteBlock(id);
+            });
+            document.body.appendChild(blockContextMenu);
+        }
+        contextBlockId = card.dataset.dropBlockId;
+        blockContextMenu.hidden = false;
+        const cardRect = card.getBoundingClientRect();
+        const x = event.clientX || cardRect.left;
+        const y = event.clientY || cardRect.bottom;
+        const menuRect = blockContextMenu.getBoundingClientRect();
+        blockContextMenu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - menuRect.width - 8))}px`;
+        blockContextMenu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - menuRect.height - 8))}px`;
+        blockContextMenu.querySelector('button')?.focus({ preventScroll: true });
+    }
+    function dragStart(event, id) { closeBlockContextMenu(); draggedBlockId = String(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', draggedBlockId); event.currentTarget.classList.add('dragging'); }
     function clearDragTargets() { document.querySelectorAll('.drag-over, .dragging').forEach(item => item.classList.remove('drag-over', 'dragging')); }
     function dragEnd() { draggedBlockId = null; clearDragTargets(); }
     function dragOverDay(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); event.dataTransfer.dropEffect = 'move'; }
@@ -1096,7 +1143,7 @@
     window.KingSchedule = {
         render, organizeCurrentWeek, changeWeek, goCurrentWeek, selectDay, copyToNextWeek, replanOverdue,
         closePlanner, editPlannerRules, refreshPlanner, interpretPlannerRequest, applyPlannerPreview, clearAllBlocks,
-        openSettings, saveSettings, addAvailabilityRange, removeAvailabilityRange, applyAvailabilityTemplate, openBlock, duplicateBlock, saveBlock, deleteEditingBlock, setStatus, startBlock, openComplete,
+        openSettings, saveSettings, addAvailabilityRange, removeAvailabilityRange, applyAvailabilityTemplate, openBlock, duplicateBlock, saveBlock, deleteEditingBlock, deleteBlock, setStatus, startBlock, openComplete,
         setViewMode, setPause, setSubjectLoad, startLoadSubject,
         completeFromSession, openDayClose, closeDayLater, saveDayClose, dragStart, dragEnd, dragOverDay, dragLeaveDay,
         dropToDay, dragOverBlock, dragLeaveBlock, dropOnBlock, dropOnSlot, pointerDown, updateTopicSuggestions,
@@ -1107,6 +1154,13 @@
     byId('schedulePauseMode')?.addEventListener('change', updateFlexControls);
     byId('scheduleDurationMode')?.addEventListener('change', updateFlexControls);
     byId('scheduleMode')?.addEventListener('change', updateFlexControls);
+    byId('cronograma')?.addEventListener('contextmenu', openBlockContextMenu);
+    document.addEventListener('pointerdown', event => {
+        if (blockContextMenu && !blockContextMenu.hidden && !blockContextMenu.contains(event.target)) closeBlockContextMenu();
+    });
+    document.addEventListener('keydown', event => { if (event.key === 'Escape') closeBlockContextMenu(); });
+    window.addEventListener('scroll', closeBlockContextMenu, true);
+    window.addEventListener('resize', closeBlockContextMenu);
     byId('schedulePlannerPreview')?.addEventListener('change', event => {
         const input = event.target.closest('[data-plan-block]');
         if (!input || !plannerDraft) return;

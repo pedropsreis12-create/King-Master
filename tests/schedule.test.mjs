@@ -226,3 +226,16 @@ test('interface liga cronograma, configuração, arrastar e integração ao regi
     assert.match(app, /KingSchedule\?\.completeFromSession/);
     assert.match(app, /studySchedule: \{ settings:/);
 });
+
+test('clique direito mostra editar e excluir nos blocos, com confirmação e sem recalcular horários', () => {
+    const ui = fs.readFileSync(new URL('../schedule.js', import.meta.url), 'utf8');
+    const css = fs.readFileSync(new URL('../schedule.css', import.meta.url), 'utf8');
+    assert.match(ui, /addEventListener\('contextmenu', openBlockContextMenu\)/);
+    assert.match(ui, /closest\?\.\('\[data-drop-block-id\]'\)/);
+    assert.match(ui, /data-action="edit"/);
+    assert.match(ui, /data-action="delete"/);
+    assert.match(ui, /if \(!confirm\(`Excluir o bloco/);
+    assert.match(ui, /detachLinksForRemovedBlocks\(\{ \[key\]: \{ blocks: \[block\] \} \}\)/);
+    assert.doesNotMatch(ui.match(/function deleteBlock\([\s\S]*?\n    \}/)?.[0] || '', /recomputeDay/);
+    assert.match(css, /\.schedule-block-context-menu\[hidden\] \{ display: none; \}/);
+});

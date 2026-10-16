@@ -2219,6 +2219,9 @@ function criarRevisaoAutomaticaRegistro(materia, assunto, dias = 1, origem = 'se
     const materiaSegura = String(materia || 'Sem matéria').trim();
     const assuntoSeguro = String(assunto || '').trim();
     if (!assuntoSeguro) return false;
+    if (appData.revisoesItems.some(item => item.dominadoEm
+        && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materiaSegura)
+        && normalizarRevisaoTexto(item.assunto) === normalizarRevisaoTexto(assuntoSeguro))) return false;
     const dataAlvo = dataFuturaRegistro(dias);
     const duplicada = appData.revisoesItems.some(item => item.status !== 'revisado'
         && normalizarRevisaoTexto(item.materia) === normalizarRevisaoTexto(materiaSegura)
@@ -4329,7 +4332,8 @@ function normalizarItemRevisao(item = {}) {
         historicoRevisoes: Array.isArray(item.historicoRevisoes) ? item.historicoRevisoes.slice(-20) : [],
         criadoEm,
         atualizadoEm: Number(item.atualizadoEm) || criadoEm,
-        revisadoEm: Number(item.revisadoEm) || null
+        revisadoEm: Number(item.revisadoEm) || null,
+        dominadoEm: Number(item.dominadoEm) || null
     };
 }
 
@@ -4647,6 +4651,37 @@ function marcarRevisao(id, novoStatus) {
     showToast(novoStatus === 'fraco' ? 'Revisão voltou à fila como ainda fraca.' : 'Revisão concluída e preservada no histórico.');
 }
 
+function marcarRevisaoDominada(id) {
+    const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
+    if (!item || item.dominadoEm) return;
+    const agora = Date.now();
+    if (item.origem === 'trilha') {
+        const topico = encontrarAssuntoDaTrilha(item)?.topic;
+        if (topico?.trilha) {
+            topico.trilha.encerradaEm = dataLocalISO();
+            topico.trilha.motivoEncerramento = 'dominado';
+            appData.revisoesItems.filter(revisao => revisao.origem === 'trilha' && String(revisao.topicId) === String(item.topicId)
+                && revisao.status !== 'revisado').forEach(revisao => {
+                revisao.status = 'revisado';
+                revisao.dataAlvo = '';
+                revisao.dominadoEm = agora;
+                revisao.revisadoEm = agora;
+                revisao.atualizadoEm = agora;
+            });
+        }
+    }
+    item.status = 'revisado';
+    item.dataAlvo = '';
+    item.dominadoEm = agora;
+    item.revisadoEm = agora;
+    item.atualizadoEm = agora;
+    item.historicoRevisoes = [...(item.historicoRevisoes || []), { acao: 'dominado', em: agora }].slice(-20);
+    saveAppData();
+    renderizarRevisoes();
+    if (document.getElementById('topic-workspace')?.classList.contains('active')) renderizarEspacoTopico();
+    showToast('Assunto dominado. Ele não será agendado para novas revisões.');
+}
+
 function adiarRevisao(id, dias = 1) {
     const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
     if (!item) return;
@@ -4665,8 +4700,35 @@ function adiarRevisao(id, dias = 1) {
 function revisarNovamenteRevisao(id) {
     const item = appData.revisoesItems.find(revisao => revisao.id === Number(id));
     if (!item) return;
+    if (item.dominadoEm && item.origem === 'trilha') {
+        const vinculo = encontrarAssuntoDaTrilha(item);
+        const topico = vinculo?.topic;
+        if (!topico?.trilha) return showToast('Não foi possível encontrar a trilha deste assunto.', true);
+        topico.trilha.encerradaEm = '';
+        topico.trilha.motivoEncerramento = '';
+        let etapa = window.KingReviewTrailCore?.active(topico);
+        if (!etapa) {
+            etapa = topico.trilha.etapas?.at(-1);
+            if (etapa) { etapa.status = 'pendente'; etapa.dataPrevista = dataRevisaoComDias(1); etapa.concluidaEm = ''; }
+        } else {
+            etapa.dataPrevista = dataRevisaoComDias(1);
+        }
+        if (!etapa) return showToast('Esta trilha não possui etapas para reabrir.', true);
+        const espelho = sincronizarEspelhoTrilha(vinculo.subject, topico);
+        appData.revisoesItems.filter(revisao => revisao.origem === 'trilha' && String(revisao.topicId) === String(item.topicId))
+            .forEach(revisao => { revisao.dominadoEm = null; });
+        if (espelho) {
+            espelho.dominadoEm = null;
+            espelho.atualizadoEm = Date.now();
+            espelho.historicoRevisoes = [...(espelho.historicoRevisoes || []), { acao: 'reaberta', em: Date.now(), dataAlvo: etapa.dataPrevista }].slice(-20);
+        }
+        saveAppData(); renderizarRevisoes();
+        showToast('Trilha reaberta para amanhã.');
+        return;
+    }
     if (item.origem === 'trilha') return abrirDetalheRevisao(id);
     item.status = 'pendente';
+    item.dominadoEm = null;
     item.dataAlvo = dataRevisaoComDias(1);
     item.ultimaRevisaoEm = dataLocalISO();
     item.atualizadoEm = Date.now();
@@ -4852,6 +4914,7 @@ function revisoesParaHoje() {
 }
 
 function formatarPrazoRevisao(item) {
+    if (item.dominadoEm) return 'Sem novas revisões';
     if (!item.dataAlvo) return 'Sem data definida';
     const hoje = dataLocalISO();
     if (item.dataAlvo < hoje) {
@@ -5034,8 +5097,8 @@ function renderizarRevisoes() {
         const paraHoje = revisaoEstaAtiva(item) && item.dataAlvo === hoje;
         const revisado = item.status === 'revisado';
         const aindaFraco = item.status === 'fraco';
-        const statusTexto = revisado ? 'Concluída' : (aindaFraco ? 'Ainda fraca' : (estaAtrasada ? 'Atrasada' : (paraHoje ? 'Para hoje' : (item.dataAlvo ? 'Próxima' : 'Pendente'))));
-        const statusClasse = revisado ? 'done' : (aindaFraco ? 'weak' : (estaAtrasada ? 'overdue' : (paraHoje ? 'today' : '')));
+        const statusTexto = item.dominadoEm ? 'Dominado' : (revisado ? 'Concluída' : (aindaFraco ? 'Ainda fraca' : (estaAtrasada ? 'Atrasada' : (paraHoje ? 'Para hoje' : (item.dataAlvo ? 'Próxima' : 'Pendente')))));
+        const statusClasse = item.dominadoEm ? 'mastered' : (revisado ? 'done' : (aindaFraco ? 'weak' : (estaAtrasada ? 'overdue' : (paraHoje ? 'today' : ''))));
         const prioridadeTexto = { alta: 'Alta', media: 'Média', baixa: 'Baixa' }[item.prioridade] || 'Média';
         const origemTexto = item.scheduleBlockId ? 'Bloco do cronograma' : (item.origem?.includes('simulado') ? 'Simulado' : (item.origem?.includes('sessao') ? 'Sessão de estudo' : 'Captura rápida'));
         const materia = appData.cycleItems.find(registro => normalizarRevisaoTexto(registro.subject) === normalizarRevisaoTexto(item.materia));
@@ -5050,13 +5113,15 @@ function renderizarRevisoes() {
         const link = item.link ? `<a class="review-source-link" href="${escaparRevisaoHtml(item.link)}" target="_blank" rel="noopener noreferrer">Abrir link ↗</a>` : '';
         const cadernoVinculado = localizarCadernoDaRevisao(item);
         const abrirCaderno = cadernoVinculado ? `<button class="cycle-btn review-open-notebook" onclick="abrirCadernoDaRevisao(${item.id})">Abrir caderno</button>` : '';
-        const acaoPrincipal = revisado
+        const acaoPrincipal = item.dominadoEm
+            ? `<button class="cycle-btn" onclick="revisarNovamenteRevisao(${item.id})">Voltar a revisar</button>`
+            : revisado
             ? item.origem === 'trilha' ? `<button class="cycle-btn" onclick="abrirDetalheRevisao(${item.id})">Ver etapa</button>` : `<button class="cycle-btn primary" onclick="revisarNovamenteRevisao(${item.id})">Revisar novamente</button>`
             : item.origem === 'trilha'
                 ? `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Lembrei bem</button><button class="cycle-btn" onclick="marcarRevisao(${item.id},'fraco')">Ainda fraco</button>`
                 : `<button class="cycle-btn primary" onclick="marcarRevisao(${item.id},'revisado')">Concluir</button>`;
         const etapa = item.origem === 'trilha' ? `<span class="revision-badge">R${Number(item.trilhaEtapa) || 1} de ${encontrarAssuntoDaTrilha(item)?.topic?.trilha?.etapas?.length || 4}</span>` : '';
-        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong>${etapa}<span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><button type="button" class="review-title-button revision-card-subject" onclick="abrirDetalheRevisao(${item.id})">${escaparRevisaoHtml(item.assunto)}</button><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}${abrirCaderno}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="KingFlashcards.fromReview(${item.id})">Criar flashcard</button><button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">${item.origem === 'trilha' ? 'Detalhes' : 'Editar'}</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, '${item.origem === 'trilha' ? 'Encerrar a trilha deste assunto?' : 'Excluir revisão?'}', '${item.origem === 'trilha' ? 'Esta ação encerra a trilha deste assunto. As etapas concluídas permanecem no histórico.' : 'Esta revisão e sua foto serão removidas da caixa.'}')">Excluir</button></div></div></details></div></article>`;
+        return `<article class="revision-card review-inbox-card ${revisado ? 'reviewed' : ''} ${item.dominadoEm ? 'mastered' : ''}" style="--revision-color:${cor};"><div class="review-card-content">${imagem}<div class="revision-card-main"><header><div><span class="review-subject-dot" style="--subject-color:${cor}"></span><strong class="revision-card-title">${escaparRevisaoHtml(item.materia)}</strong>${etapa}<span class="revision-badge ${statusClasse}">${statusTexto}</span></div><small>${criado}</small></header><button type="button" class="review-title-button revision-card-subject" onclick="abrirDetalheRevisao(${item.id})">${escaparRevisaoHtml(item.assunto)}</button><div class="review-reasons">${motivos}</div><div class="revision-meta"><span class="revision-badge review-due-badge">${formatarPrazoRevisao(item)}</span><span class="revision-badge review-priority-badge priority-${item.prioridade}">${prioridadeTexto}</span></div></div></div><div class="review-card-footer">${acaoPrincipal}${abrirCaderno}${!item.dominadoEm ? `<button class="cycle-btn review-master-button" onclick="marcarRevisaoDominada(${item.id})" title="Parar de agendar este assunto">Dominei</button>` : ''}<details class="review-card-more"><summary>Mais opções</summary><div>${item.observacao ? `<p class="review-note">“${escaparRevisaoHtml(item.observacao)}”</p>` : ''}${detalhes || link ? `<div class="review-card-details">${detalhes}${link}</div>` : ''}${tagsHtml ? `<div class="revision-tags-inline">${tagsHtml}</div>` : ''}<small>${origemTexto} · adicionada ${criado} às ${escaparRevisaoHtml(item.horaEstudo)}</small><div class="revision-actions">${revisado ? '' : `<button class="cycle-btn" onclick="adiarRevisao(${item.id},1)">Adiar 1 dia</button><button class="cycle-btn" onclick="abrirReagendamentoRevisao(${item.id})">Alterar data</button>`}<button class="cycle-btn" onclick="KingFlashcards.fromReview(${item.id})">Criar flashcard</button><button class="cycle-btn" onclick="abrirModalRevisao(${item.id})">${item.origem === 'trilha' ? 'Detalhes' : 'Editar'}</button><button class="cycle-btn revision-delete-btn" onclick="abrirModalDeletar('revisao', ${item.id}, '${item.origem === 'trilha' ? 'Encerrar a trilha deste assunto?' : 'Excluir revisão?'}', '${item.origem === 'trilha' ? 'Esta ação encerra a trilha deste assunto. As etapas concluídas permanecem no histórico.' : 'Esta revisão e sua foto serão removidas da caixa.'}')">Excluir</button></div></div></details></div></article>`;
     }).join('') + (mostrarErros ? errosDevidos.map(erro => `<article class="revision-card review-inbox-card review-source-extra"><div><span class="revision-badge weak">ERRO</span><strong>${escaparRevisaoHtml(erro.materia)} · ${escaparRevisaoHtml(erro.assunto)}</strong><p>${escaparRevisaoHtml(erro.regra || 'Refazer o erro e lembrar a regra anti-erro.')}</p></div><button type="button" class="cycle-btn primary" onclick="iniciarRevisaoCadernoErros(${Number(erro.id)})">Refazer</button></article>`).join('') : '')
         + (mostrarCartoes ? decksDevidos.map(({ deck, count }) => `<article class="revision-card review-inbox-card review-source-extra"><div><span class="revision-badge">FLASHCARDS</span><strong>${escaparRevisaoHtml(deck.name)}</strong><p>${count} ${count === 1 ? 'cartão' : 'cartões'} para revisar</p></div><button type="button" class="cycle-btn primary" data-review-deck="${escaparRevisaoHtml(deck.id)}">Revisar deck</button></article>`).join('') : '');
     carregarMiniaturasRevisao();
@@ -5082,7 +5147,7 @@ function abrirDetalheRevisao(id) {
     const origem = item.origem === 'trilha' ? 'Trilha do assunto' : item.origem?.includes('sessao') ? 'Sessão de estudo'
         : item.origem?.includes('simulado') ? 'Simulado' : item.origem?.includes('erro') ? 'Caderno de Erros' : 'Revisão manual';
     const campos = [['Matéria', item.materia], ['Tema', tema], ['Assunto', item.assunto], ['Etapa', etapa ? `R${etapa.numero} de ${topico.trilha.etapas.length}` : ''],
-        ['Estudado em', item.dataEstudo], ['Revisar em', item.dataAlvo], ['Situação', item.status === 'revisado' ? 'Concluída' : 'Pendente'],
+        ['Estudado em', item.dataEstudo], ['Revisar em', item.dominadoEm ? 'Sem novas revisões' : item.dataAlvo], ['Situação', item.dominadoEm ? 'Dominado' : item.status === 'revisado' ? 'Concluída' : 'Pendente'],
         ['Motivos', (item.motivos || []).map(motivo => REVISAO_MOTIVOS[motivo]).filter(Boolean).join(', ')], ['Intervalo', etapa ? `${topico.trilha.intervalos[etapa.numero - 1]} dias` : '']]
         .filter(([, valor]) => valor);
     const anotacoes = [...new Set([topico?.contexto, ...(topico?.trilha?.etapas || []).map(registro => registro.notas), item.observacao, item.questao,
@@ -5098,7 +5163,7 @@ function abrirDetalheRevisao(id) {
         <section><h3>Tudo o que você anotou</h3>${anotacoes.length ? `<ul class="review-detail-notes">${anotacoes.map(valor => `<li>${escaparRevisaoHtml(valor)}</li>`).join('')}</ul>` : '<p>Sem anotações ainda. Você pode adicionar no caderno deste assunto.</p>'}</section>
         <section><h3>Como revisar (5 a 10 min)</h3><ol><li>Sem olhar nada, escreva ou fale o que lembra.</li><li>Abra o caderno e compare.</li><li>Resolva 3 a 5 questões.</li><li>Volte aqui e dê baixa com sinceridade.</li></ol></section>
         <div class="review-detail-actions">${vinculo ? `<button type="button" class="cycle-btn primary" onclick="fecharModal('reviewDetailModal');KingNotebook.openRecall(${item.id})">Revisar com o caderno</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');abrirCadernoDaRevisao(${item.id})">Abrir caderno do assunto</button><button type="button" class="cycle-btn" onclick="abrirTreinoDaRevisao(${item.id})">Treinar 10 questões</button>` : ''}<button type="button" class="cycle-btn" onclick="abrirErrosDaRevisao(${item.id})">Erros deste assunto (${erros.length})</button><button type="button" class="cycle-btn" onclick="abrirFlashcardsDaRevisao(${item.id})">Flashcards deste assunto (${totalCartoes})</button></div>
-        <div class="cycle-modal-actions">${item.status === 'revisado' ? '' : `<button type="button" class="cycle-btn primary" onclick="fecharModal('reviewDetailModal');marcarRevisao(${item.id},'revisado')">Lembrei bem</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');marcarRevisao(${item.id},'fraco')">Ainda fraco</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');adiarRevisao(${item.id},1)">Adiar 1 dia</button>`}<button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal')">Fechar</button></div>`;
+        <div class="cycle-modal-actions">${item.dominadoEm ? `<button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');revisarNovamenteRevisao(${item.id})">Voltar a revisar</button>` : item.status === 'revisado' ? '' : `<button type="button" class="cycle-btn primary" onclick="fecharModal('reviewDetailModal');marcarRevisao(${item.id},'revisado')">Lembrei bem</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');marcarRevisao(${item.id},'fraco')">Ainda fraco</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');marcarRevisaoDominada(${item.id})">Dominei · não revisar mais</button><button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal');adiarRevisao(${item.id},1)">Adiar 1 dia</button>`}<button type="button" class="cycle-btn" onclick="fecharModal('reviewDetailModal')">Fechar</button></div>`;
     document.getElementById('reviewDetailModal').classList.add('active');
 }
 
@@ -6599,7 +6664,7 @@ function renderizarRevisoesDoCaderno() {
     }).sort((a, b) => Number(b.criadoEm || b.id) - Number(a.criadoEm || a.id));
     lista.innerHTML = vinculadas.length ? vinculadas.slice(0, 6).map(revisao => {
         const data = revisao.dataAlvo ? revisao.dataAlvo.split('-').reverse().join('/') : 'Sem data';
-        const estado = revisao.status === 'revisado' ? 'Concluída' : revisao.status === 'fraco' ? 'Precisa reforçar' : 'Pendente';
+        const estado = revisao.dominadoEm ? 'Dominado' : revisao.status === 'revisado' ? 'Concluída' : revisao.status === 'fraco' ? 'Precisa reforçar' : 'Pendente';
         return `<article class="topic-notebook-review-item"><div><strong>${escaparRevisaoHtml(estado)}</strong><span>${escaparRevisaoHtml(data)}${revisao.observacao ? ` · ${escaparRevisaoHtml(revisao.observacao)}` : ''}</span></div><button type="button" class="cycle-btn" onclick="abrirModalRevisao(${Number(revisao.id)})">Abrir revisão</button></article>`;
     }).join('') + (vinculadas.length > 6 ? `<button type="button" class="cycle-btn" onclick="showSection('revisoes')">Ver todas as ${vinculadas.length} revisões</button>` : '')
         : '<p class="topic-notebook-review-empty">Ainda não há revisão deste assunto. Se algo merecer retorno, marque em segundos e continue estudando.</p>';

@@ -54,3 +54,14 @@ test('prazo da prova antecipa etapa e mudança de intervalo não altera concluí
 test('etapa criada no dia da prova não ultrapassa a data informada', () => {
     assert.equal(trail.dueDate('2026-10-12', 7, '2026-10-12'), '2026-10-12');
 });
+
+test('trilha dominada deixa de agendar etapas e pode voltar à fila', () => {
+    const topic = { nivelDominio: 1 };
+    trail.start(topic, [1, 7], '2026-10-01');
+    topic.trilha.encerradaEm = '2026-10-02';
+    topic.trilha.motivoEncerramento = 'dominado';
+    assert.equal(trail.active(topic), null);
+    assert.equal(trail.resolve(topic, 'bom', '2026-10-02'), null);
+    topic.trilha.encerradaEm = '';
+    assert.equal(trail.active(topic).numero, 1);
+});

@@ -43,6 +43,9 @@
 .review-inbox-section .workspace-toolbar { margin-bottom: 12px; }
 .review-inbox-section .review-today-callout { padding: 11px 14px; border-radius: 13px; }
 .review-inbox-section .revision-list { gap: 8px; }
+.review-inbox-section #revisoesList { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 12px; }
+.review-inbox-section #revisoesList > * { min-width: 0; }
+.review-inbox-section #revisoesList .workspace-empty { grid-column: 1 / -1; }
 .review-inbox-section .review-inbox-card { padding: 13px 15px; align-items: stretch; gap: 8px; border: 1px solid var(--border-color); border-left: 3px solid var(--revision-color); border-radius: 13px; box-shadow: none; }
 .review-inbox-card .review-card-content { gap: 12px; }
 .review-inbox-card .review-card-image { width: 62px; min-height: 62px; border-radius: 9px; }
@@ -54,14 +57,21 @@
 .review-inbox-card .revision-actions { padding-top: 8px; gap: 5px; }
 .review-inbox-card .revision-actions .cycle-btn { min-height: 31px; padding: 5px 9px; font-size: .55rem; }
 .review-inbox-card .revision-delete-btn { margin-left: auto; border-color: transparent; background: transparent; }
-.review-card-footer { padding-top: 8px; display: flex; align-items: flex-start; gap: 9px; border-top: 1px solid var(--border-color); }
+.review-card-footer { padding-top: 8px; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 9px; border-top: 1px solid var(--border-color); }
 .review-card-footer > .cycle-btn { min-height: 32px; padding: 6px 12px; font-size: .58rem; }
+.review-master-button { border-color: rgba(52,199,89,.35); background: rgba(52,199,89,.09); color: #248044; }
+.review-master-button:hover { border-color: #34c759; background: rgba(52,199,89,.16); }
+.review-inbox-card.mastered { border-left-color: #34c759; }
+.revision-badge.mastered { background: rgba(52,199,89,.14); color: #248044; }
 .review-card-more { min-width: 0; flex: 1; }
 .review-card-more summary { min-height: 32px; width: fit-content; padding: 7px 10px; border-radius: 8px; color: var(--text-muted); font-size: .56rem; font-weight: 800; cursor: pointer; }
 .review-card-more summary:hover { background: var(--hover-bg); color: var(--text-main); }
 .review-card-more > div { padding: 8px 0 2px; }
 .review-card-more > div > small { display: block; margin-top: 8px; color: var(--text-muted); font-size: .5rem; }
 .review-inbox-section .workspace-toolbar .filter-chips button { min-height: 33px; padding: 6px 10px; }
+@media (max-width: 820px) {
+    .review-inbox-section #revisoesList { grid-template-columns: minmax(0, 1fr); }
+}
 @media (max-width: 650px) {
     .quick-notes-launch { right: 12px; bottom: 76px; padding: 0; width: 42px; justify-content: center; }
     .quick-notes-launch span { display: none; }

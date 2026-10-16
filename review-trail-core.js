@@ -39,6 +39,7 @@
         return topic.trilha;
     }
     function active(topic) {
+        if (topic?.trilha?.encerradaEm) return null;
         return topic?.trilha?.etapas?.find(step => step.status === 'pendente' && step.dataPrevista) || null;
     }
     function resolve(topic, outcome, today = iso(), examDate = '', notes = '') {

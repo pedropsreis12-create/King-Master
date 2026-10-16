@@ -5244,7 +5244,8 @@ function normalizarItemCadernoErro(item) {
         historicoRevisoes: Array.isArray(item?.historicoRevisoes) ? item.historicoRevisoes.slice(-12) : [],
         criadoEm: Number(item?.criadoEm) || agora,
         atualizadoEm: Number(item?.atualizadoEm) || Number(item?.criadoEm) || agora,
-        ultimaRevisaoEm: Number(item?.ultimaRevisaoEm) || null
+        ultimaRevisaoEm: Number(item?.ultimaRevisaoEm) || null,
+        dominadoEm: Number(item?.dominadoEm) || null
     };
 }
 
@@ -5258,6 +5259,39 @@ function obterFilaErrosDevidos() {
     return obterItensCadernoErros()
         .filter(item => item.status !== 'dominado' && (!item.proximaRevisao || item.proximaRevisao <= hoje))
         .sort((a, b) => (a.proximaRevisao || '').localeCompare(b.proximaRevisao || '') || a.etapaRevisao - b.etapaRevisao || a.atualizadoEm - b.atualizadoEm);
+}
+
+function marcarErroDominado(id) {
+    const item = obterItensCadernoErros().find(registro => registro.id === Number(id));
+    if (!item || item.status === 'dominado') return;
+    const agora = Date.now();
+    item.status = 'dominado';
+    item.proximaRevisao = '';
+    item.dominadoEm = agora;
+    item.atualizadoEm = agora;
+    item.historicoRevisoes = [...item.historicoRevisoes, { em: agora, resultado: 'dominado-manual', etapa: item.etapaRevisao }].slice(-12);
+    saveAppData();
+    renderizarCadernoErros();
+    renderizarRevisoes();
+    atualizarIndicadoresNavegacao();
+    showToast('Erro dominado. Ele saiu da fila de revisões.');
+}
+
+function reativarErroDominado(id) {
+    const item = obterItensCadernoErros().find(registro => registro.id === Number(id));
+    if (!item || item.status !== 'dominado') return;
+    const agora = Date.now();
+    item.etapaRevisao = Math.min(item.etapaRevisao, CADERNO_ERROS_INTERVALOS.length - 1);
+    item.status = 'aprendendo';
+    item.proximaRevisao = dataCadernoErroComDias(1);
+    item.dominadoEm = null;
+    item.atualizadoEm = agora;
+    item.historicoRevisoes = [...item.historicoRevisoes, { em: agora, resultado: 'reaberto', etapa: item.etapaRevisao }].slice(-12);
+    saveAppData();
+    renderizarCadernoErros();
+    renderizarRevisoes();
+    atualizarIndicadoresNavegacao();
+    showToast('Erro reaberto para revisar amanhã.');
 }
 
 function dataCadernoErroComDias(dias) {
@@ -5743,7 +5777,7 @@ function renderizarCadernoErros() {
                 <div class="error-card-top"><div><span class="error-card-subject">${escaparRevisaoHtml(item.materia)}</span><i>•</i><span>${escaparRevisaoHtml(item.assunto)}</span></div><span class="error-card-date ${dataClasse}">${dataTexto}</span></div>
                 <h3>${escaparRevisaoHtml(item.questao)}</h3>${imagensQuestao}
                 <div class="error-card-diagnosis"><span><small>PADRÃO DO ERRO</small>${escaparRevisaoHtml(tipo.nome)}</span><span><small>REGRA ANTI-ERRO</small>${escaparRevisaoHtml(item.regra)}${imagensRegra}</span></div>
-                <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button><button type="button" class="cycle-btn" onclick="KingFlashcards.fromError(${item.id})">✦ Criar flashcard</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
+                <div class="error-card-footer"><div><span class="error-type-chip">${tipo.nome}</span>${origem}<span class="error-memory-progress" title="${item.etapaRevisao} de ${CADERNO_ERROS_INTERVALOS.length} etapas concluídas">${progresso}</span></div><div class="error-card-actions"><button type="button" class="cycle-btn ${devido ? 'primary' : ''}" onclick="iniciarRevisaoCadernoErros(${item.id})">${dominado ? 'Treinar de novo' : 'Revisar'}</button>${dominado ? `<button type="button" class="cycle-btn" onclick="reativarErroDominado(${item.id})">Voltar a revisar</button>` : `<button type="button" class="cycle-btn error-master-button" onclick="marcarErroDominado(${item.id})" title="Tirar este erro da fila de revisões">Dominei</button>`}<button type="button" class="cycle-btn" onclick="KingFlashcards.fromError(${item.id})">✦ Criar flashcard</button><button type="button" class="cycle-btn" onclick="abrirModalCadernoErro(${item.id})">Editar</button><button type="button" class="error-card-delete" onclick="abrirModalDeletar('cadernoErro', ${item.id}, 'Excluir este erro?', 'O registro e todo o histórico de revisão serão removidos.')" aria-label="Excluir registro">×</button></div></div>
             </div>
         </article>`;
     }).join('');
@@ -5823,12 +5857,15 @@ function avaliarRevisaoCadernoErro(resultado) {
         dias = CADERNO_ERROS_INTERVALOS[Math.min(item.etapaRevisao, CADERNO_ERROS_INTERVALOS.length - 1)];
     }
     item.proximaRevisao = item.status === 'dominado' ? '' : dataCadernoErroComDias(dias);
+    item.dominadoEm = item.status === 'dominado' ? item.dominadoEm || Date.now() : null;
     item.revisoes += 1;
     item.ultimaRevisaoEm = Date.now();
     item.atualizadoEm = Date.now();
     item.historicoRevisoes = [...item.historicoRevisoes, { em: Date.now(), resultado, etapa: item.etapaRevisao }].slice(-12);
     saveAppData();
     renderizarCadernoErros();
+    renderizarRevisoes();
+    atualizarIndicadoresNavegacao();
 
     const proximo = obterFilaErrosDevidos().find(registro => registro.id !== item.id);
     if (proximo) {

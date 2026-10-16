@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
 
 const [html, script, style, cloud, rules] = await Promise.all([
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
@@ -49,6 +50,50 @@ test('errors can be searched, filtered by cause and used comfortably on small sc
     assert.match(html, /id="errorStatusFilter"/);
     assert.match(style, /@media \(max-width: 760px\)[\s\S]+\.error-review-rating > div \{ grid-template-columns: 1fr; \}/);
     assert.match(script, /escaparRevisaoHtml\(item\.questao\)/);
+});
+
+test('cards use two columns on wide screens and one on smaller screens', () => {
+    assert.match(style, /\.error-notebook-list \{ display: grid; grid-template-columns: repeat\(2,minmax\(0,1fr\)\)/);
+    assert.match(style, /@media \(max-width: 900px\) \{\s*\.error-notebook-list \{ grid-template-columns: minmax\(0,1fr\)/);
+    assert.match(style, /\.error-notebook-list > \.error-empty-state \{ grid-column: 1 \/ -1/);
+});
+
+test('dominating an error stops scheduling without deleting it and can be undone', () => {
+    const mark = script.match(/function marcarErroDominado\(id\) \{[\s\S]*?(?=\nfunction reativarErroDominado)/)?.[0];
+    const reopen = script.match(/function reativarErroDominado\(id\) \{[\s\S]*?(?=\nfunction dataCadernoErroComDias)/)?.[0];
+    const queue = script.match(/function obterFilaErrosDevidos\(\) \{[\s\S]*?(?=\nfunction marcarErroDominado)/)?.[0];
+    assert.ok(mark && reopen && queue);
+    const item = { id: 42, status: 'aprendendo', etapaRevisao: 2, proximaRevisao: '2026-10-16', historicoRevisoes: [], atualizadoEm: 1 };
+    const items = [item];
+    let saves = 0;
+    const context = {
+        Date, Number, String,
+        obterItensCadernoErros: () => items,
+        dataLocalISO: () => '2026-10-16',
+        dataCadernoErroComDias: () => '2026-10-17',
+        CADERNO_ERROS_INTERVALOS: [1, 3, 7, 14, 30],
+        saveAppData: () => { saves += 1; },
+        renderizarCadernoErros: () => {}, renderizarRevisoes: () => {},
+        atualizarIndicadoresNavegacao: () => {}, showToast: () => {}
+    };
+    runInNewContext(`${queue}\n${mark}\n${reopen}\nthis.actions = { obterFilaErrosDevidos, marcarErroDominado, reativarErroDominado };`, context);
+    context.actions.marcarErroDominado(42);
+    assert.equal(item.status, 'dominado');
+    assert.equal(item.proximaRevisao, '');
+    assert.ok(item.dominadoEm);
+    assert.equal(item.historicoRevisoes.at(-1).resultado, 'dominado-manual');
+    assert.equal(context.actions.obterFilaErrosDevidos().length, 0);
+    context.actions.reativarErroDominado(42);
+    assert.equal(item.status, 'aprendendo');
+    assert.equal(item.proximaRevisao, '2026-10-17');
+    assert.equal(item.dominadoEm, null);
+    assert.equal(item.etapaRevisao, 2);
+    assert.equal(saves, 2);
+    item.status = 'dominado';
+    item.etapaRevisao = 5;
+    context.actions.reativarErroDominado(42);
+    assert.equal(item.etapaRevisao, 4);
+    assert.equal(item.status, 'aprendendo');
 });
 
 test('question images support file selection, paste and drag without bloating the progress document', () => {

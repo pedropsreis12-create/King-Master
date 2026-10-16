@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261016-review-master-v1';
+const CACHE_VERSION = 'king-master-20261016-error-master-v1';
 const APP_SHELL = [
     './',
     './index.html',

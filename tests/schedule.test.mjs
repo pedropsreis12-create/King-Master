@@ -239,3 +239,54 @@ test('clique direito mostra editar e excluir nos blocos, com confirmação e sem
     assert.doesNotMatch(ui.match(/function deleteBlock\([\s\S]*?\n    \}/)?.[0] || '', /recomputeDay/);
     assert.match(css, /\.schedule-block-context-menu\[hidden\] \{ display: none; \}/);
 });
+
+test('seleção múltipla permite excluir só os blocos marcados da semana', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    const ui = fs.readFileSync(new URL('../schedule.js', import.meta.url), 'utf8');
+    const css = fs.readFileSync(new URL('../schedule.css', import.meta.url), 'utf8');
+    assert.match(html, /id="scheduleSelectBlocksButton"/);
+    assert.match(html, /id="scheduleSelectionBar" hidden/);
+    assert.match(html, /id="scheduleDeleteSelectedButton"[^>]*disabled/);
+    assert.match(ui, /function toggleSelectedBlock\(id\)/);
+    assert.match(ui, /function selectAllBlocks\(\)/);
+    assert.match(ui, /function deleteSelectedBlocks\(\)/);
+    assert.match(ui, /if \(!confirm\(`Excluir \$\{removed\.length\}/);
+    assert.match(ui, /detachLinksForRemovedBlocks\(\{ \[visibleWeek\]: \{ blocks: removed \} \}\)/);
+    assert.match(ui, /target\.blocks = target\.blocks\.filter\(block => !selectedBlockIds\.has\(String\(block\.id\)\)\)/);
+    assert.match(ui, /if \(selectionWeek !== visibleWeek\)/);
+    assert.match(ui, /event\.stopImmediatePropagation\(\)/);
+    assert.match(css, /\.is-selecting-blocks \[data-drop-block-id\]\.is-selected/);
+});
+
+test('exclusão em lote preserva os não marcados e não altera horários', () => {
+    const ui = fs.readFileSync(new URL('../schedule.js', import.meta.url), 'utf8');
+    const start = ui.indexOf('    function deleteSelectedBlocks() {');
+    const end = ui.indexOf('    function renderViewMode()', start);
+    assert.ok(start >= 0 && end > start);
+    const blocks = [
+        { id: 'a', day: 1, start: '14:00', order: 0 },
+        { id: 'b', day: 1, start: '15:00', order: 1 },
+        { id: 'c', day: 2, start: '14:00', order: 0, registered: true }
+    ];
+    const target = { blocks, strict: true, dayPlans: { 1: {} }, unscheduled: [{ id: 'x' }] };
+    let confirmed = false, detached = [], saves = 0, renders = 0;
+    const env = {
+        selectionMode: true, selectedBlockIds: new Set(['a', 'c']), visibleWeek: '2026-10-12',
+        DAYS: [1, 2], Core, week: () => target, confirm: () => confirmed,
+        detachLinksForRemovedBlocks: removed => { detached = removed['2026-10-12'].blocks; },
+        renderSelectionUi: () => {}, saveAppData: () => { saves++; }, render: () => { renders++; }, toast: () => {}
+    };
+    vm.runInNewContext(`${ui.slice(start, end)}\nglobalThis.removeSelected = deleteSelectedBlocks;`, env);
+    env.removeSelected();
+    assert.equal(target.blocks.length, 3);
+    assert.equal(saves, 0);
+    confirmed = true;
+    env.removeSelected();
+    assert.deepEqual(target.blocks.map(block => block.id), ['b']);
+    assert.equal(target.blocks[0].start, '15:00');
+    assert.equal(target.blocks[0].order, 0);
+    assert.equal(detached.length, 2);
+    assert.equal(target.strict, false);
+    assert.equal(saves, 1);
+    assert.equal(renders, 1);
+});

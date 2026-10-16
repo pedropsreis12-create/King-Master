@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261015-block-menu-v1';
+const CACHE_VERSION = 'king-master-20261015-bulk-select-v1';
 const APP_SHELL = [
     './',
     './index.html',

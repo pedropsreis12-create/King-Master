@@ -23,6 +23,9 @@
     let plannerIntent = {};
     let blockContextMenu = null;
     let contextBlockId = null;
+    let selectionMode = false;
+    let selectionWeek = visibleWeek;
+    const selectedBlockIds = new Set();
 
     const byId = id => document.getElementById(id);
     const escape = value => typeof escaparRevisaoHtml === 'function'
@@ -368,12 +371,82 @@
         ensureData();
         if (!byId('scheduleTimeline')) return;
         closeBlockContextMenu();
+        if (selectionWeek !== visibleWeek) { selectionMode = false; selectedBlockIds.clear(); selectionWeek = visibleWeek; }
         reconcileStudiedBlocks();
         byId('scheduleWeekRange').textContent = formatRange(visibleWeek);
         byId('scheduleWeekEyebrow').textContent = visibleWeek === currentWeekKey() ? 'SEMANA ATUAL' : visibleWeek < currentWeekKey() ? 'SEMANA ANTERIOR' : 'PRÓXIMA SEMANA';
         renderSummary(); renderNext(); renderBalance(); renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderNotice(); renderReplanButton(); performanceSuggestion();
         renderViewMode();
+        renderSelectionUi();
         if (typeof atualizarResumoRevisoesCronograma === 'function') atualizarResumoRevisoesCronograma();
+    }
+
+    function renderSelectionUi() {
+        const available = new Set((week(false)?.blocks || []).map(block => String(block.id)));
+        if (selectionMode && !available.size) selectionMode = false;
+        for (const id of selectedBlockIds) if (!available.has(id)) selectedBlockIds.delete(id);
+        const count = selectedBlockIds.size;
+        const root = byId('cronograma');
+        root?.classList.toggle('is-selecting-blocks', selectionMode);
+        const toggle = byId('scheduleSelectBlocksButton');
+        if (toggle) {
+            toggle.textContent = selectionMode ? 'Cancelar seleção' : 'Selecionar blocos';
+            toggle.setAttribute('aria-pressed', String(selectionMode));
+            toggle.disabled = !selectionMode && !available.size;
+        }
+        const bar = byId('scheduleSelectionBar');
+        if (bar) bar.hidden = !selectionMode;
+        if (byId('scheduleSelectionCount')) byId('scheduleSelectionCount').textContent = `${count} ${count === 1 ? 'bloco selecionado' : 'blocos selecionados'}`;
+        const deleteButton = byId('scheduleDeleteSelectedButton');
+        if (deleteButton) deleteButton.disabled = count === 0;
+        root?.querySelectorAll('#scheduleWeekMatrix [data-drop-block-id], #scheduleTimeline [data-drop-block-id]').forEach(card => {
+            const selected = selectedBlockIds.has(card.dataset.dropBlockId);
+            card.classList.toggle('is-selected', selectionMode && selected);
+            if (selectionMode) {
+                card.setAttribute('role', 'checkbox');
+                card.setAttribute('aria-checked', String(selected));
+                card.tabIndex = 0;
+            } else {
+                card.removeAttribute('role'); card.removeAttribute('aria-checked'); card.removeAttribute('tabindex');
+            }
+            card.querySelectorAll('button').forEach(button => { button.inert = selectionMode; });
+        });
+    }
+    function toggleSelectionMode(initialId = null) {
+        selectionMode = !selectionMode;
+        selectionWeek = visibleWeek;
+        selectedBlockIds.clear();
+        if (selectionMode && initialId && findBlock(initialId)) selectedBlockIds.add(String(initialId));
+        closeBlockContextMenu();
+        renderSelectionUi();
+    }
+    function toggleSelectedBlock(id) {
+        if (!selectionMode || !findBlock(id)) return;
+        const key = String(id);
+        if (selectedBlockIds.has(key)) selectedBlockIds.delete(key);
+        else selectedBlockIds.add(key);
+        renderSelectionUi();
+    }
+    function selectAllBlocks() {
+        if (!selectionMode) return;
+        (week(false)?.blocks || []).forEach(block => selectedBlockIds.add(String(block.id)));
+        renderSelectionUi();
+    }
+    function deleteSelectedBlocks() {
+        if (!selectionMode || !selectedBlockIds.size) return;
+        const target = week(false);
+        const removed = (target?.blocks || []).filter(block => selectedBlockIds.has(String(block.id)));
+        if (!removed.length) return renderSelectionUi();
+        const registered = removed.filter(block => block.registered).length;
+        if (!confirm(`Excluir ${removed.length} ${removed.length === 1 ? 'bloco selecionado' : 'blocos selecionados'} do cronograma?${registered ? '\nO histórico dos estudos registrados será mantido.' : ''}`)) return;
+        detachLinksForRemovedBlocks({ [visibleWeek]: { blocks: removed } });
+        target.blocks = target.blocks.filter(block => !selectedBlockIds.has(String(block.id)));
+        for (const day of DAYS) target.blocks.filter(block => Number(block.day) === day)
+            .sort((a, b) => Core.toMinutes(a.start) - Core.toMinutes(b.start) || (a.order ?? 999) - (b.order ?? 999))
+            .forEach((block, order) => { block.order = order; });
+        if (target.strict) { target.strict = false; target.dayPlans = {}; target.unscheduled = []; }
+        selectionMode = false; selectedBlockIds.clear();
+        saveAppData(); render(); toast(`${removed.length} ${removed.length === 1 ? 'bloco excluído' : 'blocos excluídos'}. O histórico foi preservado.`);
     }
 
     function renderViewMode() {
@@ -416,6 +489,7 @@
 
     function setViewMode(mode) {
         if (!['fixed', 'load'].includes(mode)) return;
+        if (mode === 'load') { selectionMode = false; selectedBlockIds.clear(); }
         appData.studySchedule.viewMode = mode;
         saveAppData(); render();
     }
@@ -657,7 +731,7 @@
     }
     function changeWeek(direction) { visibleWeek = Core.addDays(visibleWeek, Number(direction) * 7); selectedDay = settings().studyDays[0] || 1; render(); }
     function goCurrentWeek() { visibleWeek = currentWeekKey(); selectedDay = new Date().getDay() || 7; render(); }
-    function selectDay(day) { selectedDay = DAYS.includes(Number(day)) ? Number(day) : 1; renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); }
+    function selectDay(day) { selectedDay = DAYS.includes(Number(day)) ? Number(day) : 1; renderWeekMatrix(); renderDayStrip(); renderTimeline(); renderDayPanel(); renderSelectionUi(); }
     function copyToNextWeek() {
         const source = week(false);
         if (!source?.blocks?.length) return toast('Monte esta semana antes de copiá-la.', true);
@@ -1012,18 +1086,22 @@
             blockContextMenu.className = 'schedule-block-context-menu';
             blockContextMenu.setAttribute('role', 'menu');
             blockContextMenu.setAttribute('aria-label', 'Ações do bloco');
-            blockContextMenu.innerHTML = '<button type="button" role="menuitem" data-action="edit"><span class="material-symbols-rounded" aria-hidden="true">edit_square</span>Editar bloco</button><button type="button" role="menuitem" data-action="delete" class="danger"><span class="material-symbols-rounded" aria-hidden="true">delete</span>Excluir bloco</button>';
+            blockContextMenu.innerHTML = '<button type="button" role="menuitem" data-action="edit"><span class="material-symbols-rounded" aria-hidden="true">edit_square</span>Editar bloco</button><button type="button" role="menuitem" data-action="select"><span class="material-symbols-rounded" aria-hidden="true">checklist</span>Selecionar blocos</button><button type="button" role="menuitem" data-action="delete" class="danger"><span class="material-symbols-rounded" aria-hidden="true">delete</span>Excluir bloco</button>';
             blockContextMenu.addEventListener('click', clickEvent => {
                 const action = clickEvent.target.closest?.('[data-action]')?.dataset.action;
                 const id = contextBlockId;
                 if (!action || !id) return;
                 closeBlockContextMenu();
                 if (action === 'edit') openBlock(id, null, null, Boolean(week(false)?.strict));
+                if (action === 'select') selectionMode ? toggleSelectedBlock(id) : toggleSelectionMode(id);
                 if (action === 'delete') deleteBlock(id);
             });
             document.body.appendChild(blockContextMenu);
         }
         contextBlockId = card.dataset.dropBlockId;
+        const selectAction = blockContextMenu.querySelector('[data-action="select"]');
+        if (selectAction) selectAction.lastChild.textContent = selectionMode
+            ? (selectedBlockIds.has(contextBlockId) ? 'Desmarcar bloco' : 'Marcar bloco') : 'Selecionar blocos';
         blockContextMenu.hidden = false;
         const cardRect = card.getBoundingClientRect();
         const x = event.clientX || cardRect.left;
@@ -1033,7 +1111,7 @@
         blockContextMenu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - menuRect.height - 8))}px`;
         blockContextMenu.querySelector('button')?.focus({ preventScroll: true });
     }
-    function dragStart(event, id) { closeBlockContextMenu(); draggedBlockId = String(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', draggedBlockId); event.currentTarget.classList.add('dragging'); }
+    function dragStart(event, id) { if (selectionMode) { event.preventDefault(); return; } closeBlockContextMenu(); draggedBlockId = String(id); event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', draggedBlockId); event.currentTarget.classList.add('dragging'); }
     function clearDragTargets() { document.querySelectorAll('.drag-over, .dragging').forEach(item => item.classList.remove('drag-over', 'dragging')); }
     function dragEnd() { draggedBlockId = null; clearDragTargets(); }
     function dragOverDay(event) { event.preventDefault(); event.currentTarget.classList.add('drag-over'); event.dataTransfer.dropEffect = 'move'; }
@@ -1041,7 +1119,7 @@
     function dragOverBlock(event) { if (!draggedBlockId) return; event.preventDefault(); event.currentTarget.classList.add('drag-over'); event.dataTransfer.dropEffect = 'move'; }
     function dragLeaveBlock(event) { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.classList.remove('drag-over'); }
     function pointerDown(event, id) {
-        if (event.pointerType === 'mouse' || event.target.closest('button, input, select, a')) return;
+        if (selectionMode || event.pointerType === 'mouse' || event.target.closest('button, input, select, a')) return;
         const startX = event.clientX, startY = event.clientY, source = event.currentTarget;
         const state = { id, source, active: false, timer: null };
         touchDrag = state;
@@ -1143,7 +1221,7 @@
     window.KingSchedule = {
         render, organizeCurrentWeek, changeWeek, goCurrentWeek, selectDay, copyToNextWeek, replanOverdue,
         closePlanner, editPlannerRules, refreshPlanner, interpretPlannerRequest, applyPlannerPreview, clearAllBlocks,
-        openSettings, saveSettings, addAvailabilityRange, removeAvailabilityRange, applyAvailabilityTemplate, openBlock, duplicateBlock, saveBlock, deleteEditingBlock, deleteBlock, setStatus, startBlock, openComplete,
+        openSettings, saveSettings, addAvailabilityRange, removeAvailabilityRange, applyAvailabilityTemplate, openBlock, duplicateBlock, saveBlock, deleteEditingBlock, deleteBlock, toggleSelectionMode, selectAllBlocks, deleteSelectedBlocks, setStatus, startBlock, openComplete,
         setViewMode, setPause, setSubjectLoad, startLoadSubject,
         completeFromSession, openDayClose, closeDayLater, saveDayClose, dragStart, dragEnd, dragOverDay, dragLeaveDay,
         dropToDay, dragOverBlock, dragLeaveBlock, dropOnBlock, dropOnSlot, pointerDown, updateTopicSuggestions,
@@ -1155,6 +1233,17 @@
     byId('scheduleDurationMode')?.addEventListener('change', updateFlexControls);
     byId('scheduleMode')?.addEventListener('change', updateFlexControls);
     byId('cronograma')?.addEventListener('contextmenu', openBlockContextMenu);
+    byId('cronograma')?.addEventListener('click', event => {
+        if (!selectionMode) return;
+        const card = event.target.closest?.('[data-drop-block-id]');
+        if (!card || !byId('cronograma').contains(card)) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        toggleSelectedBlock(card.dataset.dropBlockId);
+    }, true);
+    byId('cronograma')?.addEventListener('keydown', event => {
+        if (!selectionMode || ![' ', 'Enter'].includes(event.key) || !event.target.matches?.('[data-drop-block-id]')) return;
+        event.preventDefault(); toggleSelectedBlock(event.target.dataset.dropBlockId);
+    });
     document.addEventListener('pointerdown', event => {
         if (blockContextMenu && !blockContextMenu.hidden && !blockContextMenu.contains(event.target)) closeBlockContextMenu();
     });

@@ -244,8 +244,14 @@
 /* Quadro semanal: inspirado em uma grade de estudos, mas preenchido somente com as matérias do usuário. */
 .schedule-week-board { margin-bottom: 18px; padding: 22px; overflow: hidden; background: linear-gradient(145deg,color-mix(in srgb,var(--card-bg) 92%,#07131f),color-mix(in srgb,var(--card-bg) 97%,transparent)); }
 .schedule-week-board-heading { margin-bottom: 17px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.schedule-week-board-actions { display: flex; align-items: center; gap: 8px; }
 .schedule-week-board-heading h2 { margin: 3px 0 2px; color: var(--text-main); font-size: 1.05rem; }
 .schedule-week-board-heading p { margin: 0; color: var(--text-muted); font-size: .62rem; }
+.schedule-selection-bar { margin: -2px 0 14px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid color-mix(in srgb, var(--accent-color) 36%, var(--border-color)); border-radius: 12px; background: color-mix(in srgb, var(--accent-color) 7%, var(--card-bg)); }
+.schedule-selection-bar[hidden] { display: none; }
+.schedule-selection-bar strong { color: var(--text-main); font-size: .69rem; }
+.schedule-selection-bar > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.schedule-selection-bar .cycle-btn:disabled { opacity: .45; cursor: not-allowed; }
 .schedule-matrix-scroll { overflow-x: auto; padding-bottom: 5px; scrollbar-width: thin; }
 .schedule-week-matrix { min-width: 1050px; }
 .schedule-matrix-grid { display: grid; grid-template-columns: 92px repeat(7,minmax(128px,1fr)); gap: 5px; }
@@ -257,6 +263,12 @@
 .schedule-matrix-time { padding: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: color-mix(in srgb,var(--text-main) 5%,var(--card-bg)); }
 .schedule-matrix-time strong { color: var(--text-main); font-size: .61rem; }.schedule-matrix-time small { color: var(--text-muted); font-size: .48rem; }
 .schedule-matrix-cell { min-width: 0; padding: 9px; display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: center; gap: 7px; border-color: color-mix(in srgb,var(--block-color) 42%,var(--border-color)); background: linear-gradient(135deg,color-mix(in srgb,var(--block-color) 18%,var(--card-bg)),color-mix(in srgb,var(--block-color) 6%,var(--card-bg))); color: var(--text-main); text-align: left; cursor: pointer; }
+.is-selecting-blocks [data-drop-block-id] { position: relative; cursor: pointer; }
+.is-selecting-blocks [data-drop-block-id] button { pointer-events: none; }
+.is-selecting-blocks [data-drop-block-id]::before { content: ''; position: absolute; z-index: 4; top: 8px; right: 8px; width: 19px; height: 19px; display: grid; place-items: center; border: 2px solid var(--accent-color); border-radius: 6px; background: var(--card-bg); color: #fff; font-size: .7rem; font-weight: 900; }
+.is-selecting-blocks [data-drop-block-id].is-selected { outline: 2px solid var(--accent-color); outline-offset: 1px; box-shadow: 0 0 0 4px rgba(var(--accent-rgb), .12); }
+.is-selecting-blocks [data-drop-block-id].is-selected::before { content: '✓'; background: var(--accent-color); }
+.is-selecting-blocks [data-drop-block-id]:focus-visible { outline: 3px solid var(--accent-color); outline-offset: 2px; }
 .schedule-matrix-cell:hover { transform: translateY(-1px); border-color: var(--block-color); box-shadow: 0 7px 20px color-mix(in srgb,var(--block-color) 15%,transparent); }
 .schedule-matrix-cell.dragging { opacity: .45; }
 .schedule-matrix-icon { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; background: color-mix(in srgb,var(--block-color) 20%,var(--card-bg)); color: color-mix(in srgb,var(--block-color) 72%,var(--text-main)); font-weight: 900; }
@@ -336,6 +348,9 @@
     .schedule-suggestion { grid-template-columns: 34px 1fr; }
     .schedule-suggestion > div:last-child { grid-column: 1 / -1; }
     .schedule-week-board-heading { align-items: stretch; flex-direction: column; }.schedule-week-board-heading .cycle-btn { width:100%; }
+    .schedule-week-board-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .schedule-selection-bar { align-items: stretch; flex-direction: column; }
+    .schedule-selection-bar > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .schedule-week-matrix { min-width: 900px; }.schedule-matrix-grid { grid-template-columns: 75px repeat(7,minmax(116px,1fr)); }
 }
 @media (prefers-reduced-motion: reduce) {

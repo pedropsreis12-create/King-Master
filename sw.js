@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261016-error-master-v1';
+const CACHE_VERSION = 'king-master-20261026-question-pace-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -26,6 +26,9 @@ const APP_SHELL = [
     './practice-core.js',
     './practice.js',
     './practice.css',
+    './question-pace-core.js',
+    './question-pace.js',
+    './question-pace.css',
     './error-ai.css',
     './schedule-core.js',
     './schedule-planner.js',

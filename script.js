@@ -44,6 +44,8 @@ const defaultAppData = {
     simuladosItems: [],
     generatedExams: [],
     practiceSessions: [],
+    questionPaceSessions: [],
+    questionPaceDraft: null,
     redacaoItems: [],
     revisoesItems: [],
     revisaoTags: [],
@@ -125,6 +127,8 @@ if (!Array.isArray(appData.calendarDeletedIds)) appData.calendarDeletedIds = [];
 if (!appData.simuladosItems) appData.simuladosItems = [];
 if (!Array.isArray(appData.generatedExams)) appData.generatedExams = [];
 if (!Array.isArray(appData.practiceSessions)) appData.practiceSessions = [];
+if (!Array.isArray(appData.questionPaceSessions)) appData.questionPaceSessions = [];
+if (!appData.questionPaceDraft || typeof appData.questionPaceDraft !== 'object') appData.questionPaceDraft = null;
 if (!appData.redacaoItems) appData.redacaoItems = [];
 if (!Array.isArray(appData.revisoesItems)) appData.revisoesItems = [];
 if (!Array.isArray(appData.quickNotes)) appData.quickNotes = [];
@@ -836,6 +840,7 @@ function showSection(sectionId) {
     if(['dashboard', 'agendamento', 'historico', 'planejamento'].includes(sectionId)) window.KingStudyEvolution?.render?.();
     if(sectionId === 'flashcards') window.KingFlashcards?.render?.();
     if(sectionId === 'caderno-erros') renderizarCadernoErros();
+    if(sectionId === 'question-timer') window.KingQuestionPace?.render?.();
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
@@ -2386,6 +2391,12 @@ function registrarSessao(segundos, detalhes = null) {
     if (detalhes?.practiceSession) {
         appData.practiceSessions.push(detalhes.practiceSession);
         appData.practiceSessions = appData.practiceSessions.slice(-30);
+    }
+    if (detalhes?.questionPaceSession) {
+        if (!Array.isArray(appData.questionPaceSessions)) appData.questionPaceSessions = [];
+        appData.questionPaceSessions.push(detalhes.questionPaceSession);
+        appData.questionPaceSessions = appData.questionPaceSessions.slice(-30);
+        appData.questionPaceDraft = null;
     }
 
     if (atividade === 'simulado' && detalhes?.simulado) {

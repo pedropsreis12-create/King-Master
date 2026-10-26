@@ -41,6 +41,7 @@
     <link rel="stylesheet" href="profile-overhaul.css?v=20261008-account-isolation-v1">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
     <link rel="stylesheet" href="practice.css?v=20261005-pace-v2">
+    <link rel="stylesheet" href="question-pace.css?v=20261026-v1">
     <link rel="stylesheet" href="error-ai.css?v=20261005-error-flashcards-v2">
     <link rel="stylesheet" href="auth-refresh.css?v=20261006-auth-v1">
     <link rel="stylesheet" href="topic-review-link.css?v=20261006-topic-review-v1">
@@ -151,6 +152,7 @@
                 <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Caixa de Revisões</strong><small>Capture e retome depois</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
                 <button type="button" class="menu-btn" data-section="flashcards" aria-controls="flashcards" onclick="showSection('flashcards')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Flashcards</strong><small>Recorde no tempo certo</small></span><span class="nav-count" id="navFlashcardsBadge" hidden>0</span></button>
                 <button type="button" class="menu-btn" data-section="caderno-erros" aria-controls="caderno-erros" onclick="showSection('caderno-erros')"><span class="nav-item-icon" aria-hidden="true">⌁</span><span class="nav-item-label"><strong>Caderno de Erros</strong><small>Corrigir padrões</small></span><span class="nav-count urgent" id="navErrorBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="question-timer" aria-controls="question-timer" onclick="showSection('question-timer')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Questões</strong><small>Tempo e acertos</small></span></button>
             </div>
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Evolução</span>
@@ -579,7 +581,7 @@
             <div id="topicWorkspaceOverview" class="topic-workspace-panel" role="tabpanel" aria-labelledby="topicWorkspaceTabOverview">
                 <div class="topic-workspace-top-grid">
                     <article class="widget topic-workspace-context"><span class="workspace-kicker">CONTEXTO DO ASSUNTO</span><h2>O essencial, do seu jeito</h2><label for="topicWorkspaceTheme">Tema</label><select id="topicWorkspaceTheme" class="cycle-input" onchange="moverTopicoParaTema(this.value)"></select><p>Resuma o que é, quando usar e o que costuma confundir você. Pode ser só uma frase.</p><label for="topicWorkspaceContext">Minha referência rápida</label><textarea id="topicWorkspaceContext" maxlength="1500" rows="4" placeholder="Ex.: Regra de três relaciona grandezas. Antes de calcular, verifico se são diretamente ou inversamente proporcionais." oninput="atualizarContextoEspacoTopico(this.value)"></textarea><small id="topicWorkspaceContextStatus" role="status">Salvo automaticamente</small></article>
-                    <article class="widget topic-workspace-review"><span class="workspace-kicker">REVISÃO</span><h2>Volte a lembrar, não só a reler</h2><p>Revisar é tentar recuperar a ideia sem olhar a resposta; depois confira o caderno e resolva uma questão curta.</p><div id="topicWorkspaceReviewState"></div><div class="topic-workspace-review-actions"><button type="button" class="cycle-btn primary" onclick="iniciarTreinoEspacoTopico()">Treinar 10 questões com IA</button><button type="button" class="cycle-btn" onclick="agendarRevisaoEspacoTopico()" id="topicWorkspaceReviewButton">Revisar amanhã</button><button type="button" class="cycle-btn" onclick="showSection('revisoes')">Caixa de Revisões</button></div></article>
+                    <article class="widget topic-workspace-review"><span class="workspace-kicker">REVISÃO</span><h2>Volte a lembrar, não só a reler</h2><p>Revisar é tentar recuperar a ideia sem olhar a resposta; depois confira o caderno e resolva uma questão curta.</p><div id="topicWorkspaceReviewState"></div><div class="topic-workspace-review-actions"><button type="button" class="cycle-btn primary" onclick="iniciarTreinoEspacoTopico()">Treinar 10 questões com IA</button><button type="button" class="cycle-btn" onclick="KingQuestionPace.openForTopic()">Cronometrar questões externas</button><button type="button" class="cycle-btn" onclick="agendarRevisaoEspacoTopico()" id="topicWorkspaceReviewButton">Revisar amanhã</button><button type="button" class="cycle-btn" onclick="showSection('revisoes')">Caixa de Revisões</button></div></article>
                 </div>
                 <div id="topicWorkspaceAnalytics"></div>
             </div>
@@ -705,6 +707,32 @@
                     <label><span class="sr-only">Filtrar por status</span><select class="cycle-input" id="errorStatusFilter" onchange="atualizarFiltrosCadernoErros()"><option value="ativos">Em aprendizado</option><option value="devidos">Para revisar</option><option value="dominados">Dominados</option><option value="todos">Todos</option></select></label>
                 </div>
                 <div class="error-notebook-list" id="errorNotebookList" aria-live="polite"></div>
+            </div>
+        </section>
+
+        <section id="question-timer" class="content-section question-pace-section" aria-hidden="true">
+            <div class="workspace-heading question-pace-heading"><div><span class="workspace-kicker">PRÁTICA SEM PRESSA CEGA</span><h1>Tempo por questão</h1><p>Resolva questões onde preferir. Um toque registra o resultado e inicia a próxima; as pausas não entram na conta.</p></div><span class="question-pace-free">Sem IA · sem custo</span></div>
+            <div class="question-pace-layout">
+                <section class="widget question-pace-main" aria-labelledby="questionPacePanelTitle">
+                    <form id="questionPaceSetup" class="question-pace-setup">
+                        <div class="question-pace-panel-head"><span class="workspace-kicker">NOVO TREINO</span><h2 id="questionPacePanelTitle">Prepare seu bloco de questões</h2><p>O relógio pode ficar oculto enquanto você resolve. Os tempos aparecem quando o treino termina.</p></div>
+                        <div class="question-pace-form-grid"><label>Matéria<select class="cycle-input" id="questionPaceSubject" required><option value="">Escolha uma matéria</option></select></label><label>Assunto<input class="cycle-input" id="questionPaceTopic" list="questionPaceTopics" maxlength="100" required placeholder="Ex.: Regra de três"><datalist id="questionPaceTopics"></datalist></label><label>Quantidade<select class="cycle-input" id="questionPaceCount"><option value="10">10 questões</option><option value="15">15 questões</option><option value="20" selected>20 questões</option><option value="30">30 questões</option><option value="45">45 questões</option></select></label><label>Tempo disponível <small>opcional</small><input class="cycle-input" id="questionPaceBudget" type="number" min="1" max="240" inputmode="numeric" placeholder="Ex.: 60 min"></label></div>
+                        <label class="question-pace-hide-clock"><input type="checkbox" id="questionPaceHideClock" checked><span>Ocultar o relógio durante a resolução</span></label>
+                        <div class="question-pace-setup-actions"><button type="submit" class="cycle-btn primary">Iniciar treino</button><small>Se você já estiver usando o cronômetro de estudos, encerre-o primeiro para não contar o tempo duas vezes.</small></div>
+                    </form>
+                    <div id="questionPaceActive" class="question-pace-active" hidden>
+                        <div class="question-pace-panel-head"><span class="workspace-kicker" id="questionPaceContext">TREINO EM ANDAMENTO</span><h2 id="questionPacePosition">Questão 1 de 20</h2><p id="questionPaceHint">Marque o resultado quando terminar esta questão.</p></div>
+                        <div class="question-pace-clock-box"><strong id="questionPaceClock" aria-live="off">00:00</strong><span id="questionPaceClockHelp">Tempo desta questão</span></div>
+                        <div class="question-pace-progress-track" aria-hidden="true"><span id="questionPaceProgress"></span></div>
+                        <label class="question-pace-reference">Número ou referência da questão <small>opcional</small><input class="cycle-input" id="questionPaceReference" maxlength="120" placeholder="Ex.: questão 12 do Ferretto"></label>
+                        <div id="questionPaceOutcomes" class="question-pace-outcomes"><button type="button" class="cycle-btn question-pace-hit" data-pace-action="hit">✓ Acertei</button><button type="button" class="cycle-btn question-pace-miss" data-pace-action="miss">× Errei</button><button type="button" class="cycle-btn" data-pace-action="skip">Pulei</button></div>
+                        <div id="questionPaceCauses" class="question-pace-causes" hidden><strong>Por que errou?</strong><div><button type="button" class="cycle-btn" data-pace-cause="conteudo">Conteúdo</button><button type="button" class="cycle-btn" data-pace-cause="interpretacao">Interpretação</button><button type="button" class="cycle-btn" data-pace-cause="calculo">Cálculo</button><button type="button" class="cycle-btn" data-pace-cause="atencao">Atenção</button><button type="button" class="cycle-btn" data-pace-cause="estrategia">Tempo / estratégia</button></div><button type="button" class="question-pace-cause-back" data-pace-action="cancel-miss">Voltar</button></div>
+                        <div class="question-pace-session-actions"><button type="button" class="cycle-btn" id="questionPacePause" data-pace-action="pause">Pausar / descansar</button><button type="button" class="cycle-btn" data-pace-action="finish">Encerrar e ver resultado</button><button type="button" class="question-pace-discard" data-pace-action="discard">Descartar treino</button></div>
+                        <p id="questionPaceSessionStatus" role="status"></p>
+                    </div>
+                    <div id="questionPaceSummary" class="question-pace-summary" hidden></div>
+                </section>
+                <aside class="widget question-pace-side" aria-labelledby="questionPaceHistoryTitle"><span class="workspace-kicker">SEUS REGISTROS</span><h2 id="questionPaceHistoryTitle">Treinos recentes</h2><p>Compare ritmo e acerto sem transformar o relógio em pressão.</p><div id="questionPaceHistory"></div></aside>
             </div>
         </section>
 
@@ -1517,6 +1545,7 @@
     <script src="flashcards-core.js?v=20261005-error-flashcards-v2"></script>
     <script src="mock-exam-core.js?v=20261002-v1"></script>
     <script src="practice-core.js?v=20261005-practice-v1"></script>
+    <script src="question-pace-core.js?v=20261026-v1"></script>
     <script src="subject-picker.js?v=20261002-v1"></script>
     <script src="habit-core.js?v=20261008-week-habits-v1"></script>
     <script src="rank-system-v2.js?v=20261008-leagues-v2"></script>
@@ -1525,12 +1554,12 @@
     <script src="notebook-core.js?v=20261006-v1"></script>
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
-    <script src="script.js?v=20261016-error-master-v1"></script>
+    <script src="script.js?v=20261026-question-pace-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
-    <script src="sidebar-icons.js?v=20260929-flash-security-v2"></script>
+    <script src="sidebar-icons.js?v=20261026-question-pace-v1"></script>
     <script src="schedule.js?v=20261015-bulk-select-v1"></script>
     <script src="personal-development.js?v=20261008-week-habits-v2"></script>
     <script src="subject-lab.js?v=20261006-v1"></script>
@@ -1541,6 +1570,7 @@
     <script src="flashcards.js?v=20261002-evolution-v1"></script>
     <script src="mock-exams.js?v=20261008-account-isolation-v2"></script>
     <script src="practice.js?v=20261005-pace-v2"></script>
+    <script src="question-pace.js?v=20261026-v1"></script>
     <script src="productivity.js?v=20261008-account-isolation-v1"></script>
     <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
     <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>

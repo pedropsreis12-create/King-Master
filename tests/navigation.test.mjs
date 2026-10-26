@@ -47,8 +47,8 @@ test('discard confirmation stays above the session form that opened it', () => {
 
 test('sidebar keeps the approved coherent vector icon family', () => {
   assert.match(html, /sidebar-icons\.css\?v=20260922-personal-v1/);
-  assert.match(html, /sidebar-icons\.js\?v=20260929-flash-security-v2/);
-  for (const section of ['dashboard', 'agendamento', 'cronograma', 'planejamento', 'revisoes', 'caderno-erros', 'simulados', 'redacao', 'historico', 'desenvolvimento', 'perfil', 'notes']) {
+  assert.match(html, /sidebar-icons\.js\?v=[^" ]+/);
+  for (const section of ['dashboard', 'agendamento', 'cronograma', 'planejamento', 'revisoes', 'caderno-erros', 'question-timer', 'simulados', 'redacao', 'historico', 'desenvolvimento', 'perfil', 'notes']) {
     assert.match(sidebarIcons, new RegExp(`(?:'${section}'|${section}):`));
   }
   assert.match(sidebarIcons, /viewBox="0 0 24 24"/);

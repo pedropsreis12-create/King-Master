@@ -1997,68 +1997,58 @@ function updateDashboardStats() {
 function renderStreak() {
     const streakRow = document.getElementById('streak-row');
     if(!streakRow) return;
-    const diasEstudados = obterDiasDeEstudo();
-    const hojeISO = dataLocalISO();
-    let html = '';
-    for(let i = 29; i >= 0; i--) {
-        const d = new Date();
-        d.setHours(12, 0, 0, 0);
-        d.setDate(d.getDate() - i);
-        const iso = dataLocalISO(d);
-        const estudou = diasEstudados.has(iso);
-        const rotulo = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
-        let classe = 'fail', marca = '×', situacao = 'Não houve estudo';
-        if (d.getDay() === 0) {
-            classe = 'ignored'; marca = '•'; situacao = 'Domingo — descanso da sequência';
-        } else if (d.getDay() === 6 && !estudou) {
-            classe = 'optional'; marca = '○'; situacao = 'Sábado opcional — não quebra a sequência';
-        } else if (estudou) {
-            classe = 'ok'; marca = '✓'; situacao = 'Estudo concluído';
-        } else if (iso === hojeISO) {
-            classe = 'pending'; marca = '·'; situacao = 'Hoje — ainda dá tempo de estudar';
-        }
-        html += `<button type="button" class="streak-dot ${classe}" aria-label="${rotulo}: ${situacao}" data-streak-date="${rotulo}" data-streak-status="${situacao}"><span class="streak-mark">${marca}</span></button>`;
-    }
-    streakRow.innerHTML = html;
-    configurarTooltipsConstancia(streakRow);
-    const sequencia = calcularSequenciaAtual();
-    document.getElementById('constancia-texto').innerHTML = `Constância atual: <b>${sequencia} ${sequencia === 1 ? 'dia' : 'dias'}</b>. Domingo não conta e sábado é opcional.`;
-}
-
-function configurarTooltipsConstancia(streakRow) {
-    let tooltip = document.getElementById('streakTooltip');
-    if (!tooltip) {
-        tooltip = document.createElement('div');
-        tooltip.id = 'streakTooltip';
-        tooltip.className = 'streak-tooltip-fixed';
-        tooltip.setAttribute('role', 'status');
-        document.body.appendChild(tooltip);
-    }
-    let temporizador;
-    const ocultar = () => {
-        clearTimeout(temporizador);
-        tooltip.classList.remove('show');
-    };
-    const mostrar = botao => {
-        clearTimeout(temporizador);
-        tooltip.innerHTML = `<strong>${botao.dataset.streakDate}</strong><small>${botao.dataset.streakStatus}</small>`;
-        tooltip.classList.add('show');
-        const area = botao.getBoundingClientRect();
-        const largura = tooltip.offsetWidth;
-        const esquerda = Math.max(12, Math.min(window.innerWidth - largura - 12, area.left + (area.width / 2) - (largura / 2)));
-        tooltip.style.left = `${esquerda}px`;
-        tooltip.style.top = `${Math.max(12, area.top - tooltip.offsetHeight - 12)}px`;
-    };
-    streakRow.querySelectorAll('.streak-dot').forEach(botao => {
-        botao.addEventListener('pointerenter', () => mostrar(botao));
-        botao.addEventListener('pointerleave', () => { if (document.activeElement !== botao) ocultar(); });
-        botao.addEventListener('focus', () => mostrar(botao));
-        botao.addEventListener('blur', ocultar);
-        botao.addEventListener('click', () => {
-            mostrar(botao);
-            temporizador = setTimeout(ocultar, 2600);
-        });
+    const hoje = new Date();
+    hoje.setHours(12, 0, 0, 0);
+    const hojeISO = dataLocalISO(hoje);
+    const segunda = new Date(hoje);
+    segunda.setDate(hoje.getDate() - ((hoje.getDay() + 6) % 7));
+    const domingo = new Date(segunda);
+    domingo.setDate(segunda.getDate() + 6);
+    const segundosPorDia = new Map();
+    (appData.historyItems || []).forEach(item => {
+        const segundos = Number(item?.tempoSegundos) || 0;
+        if (segundos <= 0) return;
+        const iso = dataHistoricoISO(item);
+        if (iso) segundosPorDia.set(iso, (segundosPorDia.get(iso) || 0) + segundos);
     });
+    const nomes = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+    let diasComEstudo = 0;
+    streakRow.innerHTML = nomes.map((nome, indice) => {
+        const data = new Date(segunda);
+        data.setDate(segunda.getDate() + indice);
+        const iso = dataLocalISO(data);
+        const segundos = segundosPorDia.get(iso) || 0;
+        const estudou = segundos > 0;
+        if (estudou) diasComEstudo++;
+        const dia = data.getDay();
+        let estado, titulo, detalhe, simbolo;
+        if (estudou) {
+            estado = 'studied'; titulo = 'Estudou'; detalhe = formatShortTime(Math.max(segundos, 60)); simbolo = '✓';
+        } else if (iso > hojeISO) {
+            estado = 'future'; titulo = 'Em breve'; detalhe = dia === 0 ? 'Descanso' : dia === 6 ? 'Opcional' : 'Aguardando'; simbolo = '·';
+        } else if (dia === 0) {
+            estado = 'rest'; titulo = 'Descanso'; detalhe = 'Não quebra'; simbolo = '–';
+        } else if (dia === 6) {
+            estado = 'optional'; titulo = 'Opcional'; detalhe = 'Não quebra'; simbolo = '○';
+        } else if (iso === hojeISO) {
+            estado = 'today'; titulo = 'Hoje'; detalhe = 'Em aberto'; simbolo = '·';
+        } else {
+            estado = 'missed'; titulo = 'Sem estudo'; detalhe = 'Dia encerrado'; simbolo = '×';
+        }
+        const dataCompleta = data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+        return `<div class="streak-day streak-day--${estado}${iso === hojeISO ? ' streak-day--current' : ''}" role="listitem" aria-label="${dataCompleta}: ${titulo}${estudou ? `, ${detalhe} registrados` : `, ${detalhe}`}">
+            <div class="streak-day-top"><span>${nome}</span><span>${String(data.getDate()).padStart(2, '0')}</span></div>
+            <span class="streak-day-symbol" aria-hidden="true">${simbolo}</span>
+            <strong>${titulo}</strong><small>${detalhe}</small>
+        </div>`;
+    }).join('');
+    const sequencia = calcularSequenciaAtual();
+    document.getElementById('streak-current-count').textContent = sequencia;
+    document.getElementById('streak-current-label').textContent = sequencia === 1 ? 'dia na sequência' : 'dias na sequência';
+    const inicio = segunda.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+    const fim = domingo.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short' });
+    document.getElementById('streak-week-range').textContent = `${inicio} – ${fim}`;
+    document.getElementById('streak-week-summary').innerHTML = `<strong>${diasComEstudo} ${diasComEstudo === 1 ? 'dia estudado' : 'dias estudados'}</strong><span>nesta semana · segunda a domingo</span>`;
 }
 
 function atualizarLinhaMediaSedilhadDynamica() {

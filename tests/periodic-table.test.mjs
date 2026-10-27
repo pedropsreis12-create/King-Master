@@ -83,13 +83,18 @@ test('nova aba é navegável, funciona offline e respeita as opções de animaç
         assert.ok(html.includes(name));
         assert.ok(serviceWorker.includes(`'./${name}'`));
     }
+    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-bangers.ttf']) {
+        assert.ok(serviceWorker.includes(`'./assets/${name}'`));
+    }
     assert.match(script, /sectionId === 'periodic-table'\) window\.KingPeriodic\?\.render/);
     assert.match(viteConfig, /'periodic-table-data\.js', 'periodic-table-core\.js', 'periodic-table\.js'/);
     assert.match(css, /@keyframes periodic-float/);
     assert.match(html, /periodic-spider-hanging\.png/);
     assert.match(html, /periodic-spider-web\.png/);
+    assert.match(html, /periodic-spider-mask\.png/);
     assert.match(ui, /formatConfiguration\(element\.configuration\)/);
     assert.match(ui, /data-config-help/);
+    assert.match(css, /font-family: 'Periodic Bangers'/);
     assert.match(css, /html\[data-motion-level="off"\] \.periodic-figure \{ animation: none/);
     assert.match(css, /prefers-reduced-motion: reduce/);
 });

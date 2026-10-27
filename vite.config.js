@@ -39,18 +39,20 @@ function staticSiteWorker() {
             body: await readFile(`dist/assets/${name}`, 'utf8'),
             type: name.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8',
           };
-        } else if (/\.(png|webp|jpg|jpeg)$/i.test(name)) {
+        } else if (/\.(png|webp|jpg|jpeg|svg|ttf)$/i.test(name)) {
           const body = await readFile(`dist/assets/${name}`);
-          files[`/assets/${name}`] = { body: body.toString('base64'), type: name.endsWith('.webp') ? 'image/webp' : name.endsWith('.png') ? 'image/png' : 'image/jpeg', binary: true };
+          const type = name.endsWith('.webp') ? 'image/webp' : name.endsWith('.png') ? 'image/png' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : 'image/jpeg';
+          files[`/assets/${name}`] = { body: body.toString('base64'), type, binary: true };
         }
       }
 
       // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
       for (const name of await readdir('assets')) {
-        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-spider-(hanging|web)\.png$/.test(name)) continue;
+        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-(spider-(hanging|web|mask)\.png|spider-symbol\.svg|web-corner\.svg|bangers\.ttf|bangers-OFL\.txt)$/.test(name)) continue;
         const body = await readFile(`assets/${name}`);
         await writeFile(`dist/assets/${name}`, body);
-        files[`/assets/${name}`] = { body: body.toString('base64'), type: name.endsWith('.png') ? 'image/png' : 'image/webp', binary: true };
+        const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.txt') ? 'text/plain; charset=utf-8' : 'image/webp';
+        files[`/assets/${name}`] = name.endsWith('.txt') ? { body: body.toString('utf8'), type } : { body: body.toString('base64'), type, binary: true };
       }
 
       await mkdir('dist/server', { recursive: true });

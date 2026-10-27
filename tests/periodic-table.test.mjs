@@ -104,7 +104,7 @@ test('nova aba é navegável, funciona offline e respeita as opções de animaç
         assert.ok(html.includes(name));
         assert.ok(serviceWorker.includes(`'./${name}'`));
     }
-    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-rick-reference.jpg', 'periodic-portal-background.jpg', 'periodic-bangers.ttf']) {
+    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-rick-reference.png', 'periodic-portal-background.jpg', 'periodic-bangers.ttf']) {
         assert.ok(serviceWorker.includes(`'./assets/${name}'`));
     }
     assert.match(script, /sectionId === 'periodic-table'\) window\.KingPeriodic\?\.render/);
@@ -131,6 +131,6 @@ test('skin Portal compartilha a tabela e a seleção com a skin Aranha', () => {
     assert.match(css, /\.periodic-neon\.periodic-rick \.periodic-element--transition/);
     assert.match(css, /html\[data-motion-level="off"\] \.periodic-rick \.periodic-portal/);
     assert.match(css, /periodic-portal-background\.jpg/);
-    assert.match(viteConfig, /rick-reference\\\.jpg/);
+    assert.match(viteConfig, /rick-reference\\\.png/);
     assert.match(viteConfig, /portal-background\\\.jpg/);
 });

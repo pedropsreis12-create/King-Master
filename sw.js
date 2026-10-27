@@ -1,15 +1,19 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261026-streak-week-v1';
+const CACHE_VERSION = 'king-master-20261026-periodic-v1';
 const APP_SHELL = [
     './',
     './index.html',
     './privacidade.html',
     './manifest.webmanifest',
     './style.css',
+    './periodic-table.css',
     './usability.css',
     './schedule.css',
     './schedule-planner.css',
     './script.js',
+    './periodic-table-data.js',
+    './periodic-table-core.js',
+    './periodic-table.js',
     './auth-warmup.js',
     './topic-core.js',
     './review-trail-core.js',

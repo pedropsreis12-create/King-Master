@@ -1,0 +1,72 @@
+.periodic-section { color: var(--text-main); }
+.periodic-hero { position: relative; isolation: isolate; display: grid; grid-template-columns: minmax(0,1fr) 290px; min-height: 240px; overflow: hidden; margin-bottom: 20px; padding: 30px 36px; border: 1px solid #335079; border-radius: 28px; background: radial-gradient(circle at 85% 35%,rgba(31,90,181,.5),transparent 32%),radial-gradient(circle at 20% 95%,rgba(185,27,47,.26),transparent 38%),linear-gradient(125deg,#10131d,#152339 70%,#0a1424); box-shadow: 0 18px 36px rgba(8,19,39,.16); color: #fff; }
+.periodic-hero::before { position: absolute; inset: 0; z-index: -1; content: ''; background: repeating-linear-gradient(135deg,transparent 0 46px,rgba(255,255,255,.025) 47px 48px); pointer-events: none; }
+.periodic-hero-copy { position: relative; z-index: 2; align-self: center; max-width: 620px; }
+.periodic-eyebrow { display: inline-block; color: #88b7ff; font-size: .66rem; font-weight: 800; letter-spacing: .15em; }
+.periodic-hero h1 { margin: 7px 0 10px; color: #fff; font-size: clamp(2rem,4vw,3.25rem); line-height: 1.05; letter-spacing: -.045em; }
+.periodic-hero h1 em { color: #f3566b; font-style: normal; }
+.periodic-hero p { max-width: 560px; color: #c9d3e1; font-size: .82rem; line-height: 1.65; }
+.periodic-hero-pill { display: inline-flex; align-items: center; gap: 7px; margin-top: 20px; padding: 8px 12px; border: 1px solid #5d779e; border-radius: 999px; background: #192b46bd; color: #dce9fa; font-size: .68rem; }
+.periodic-hero-pill strong { color: #fff; font-size: .9rem; }
+.periodic-art { position: relative; min-height: 180px; }
+.periodic-web { position: absolute; inset: -30px -36px -30px 0; width: calc(100% + 36px); height: calc(100% + 60px); stroke: #afd2ff; stroke-width: 1; opacity: .19; }
+.periodic-figure { position: absolute; display: block; overflow: visible; filter: drop-shadow(0 11px 8px rgba(0,0,0,.37)); animation: periodic-float 4.8s ease-in-out infinite; }
+.periodic-figure--hanging { top: -44px; left: 8px; width: 122px; height: 190px; }
+.periodic-figure--crouched { right: -19px; bottom: -41px; width: 180px; height: 132px; animation-duration: 5.6s; animation-delay: -2.3s; }
+@keyframes periodic-float { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(0,-7px,0); } }
+.periodic-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+.periodic-search { flex: 1 1 290px; position: relative; }
+.periodic-search > span { position: absolute; top: 50%; left: 15px; transform: translateY(-50%); color: var(--accent-color); font-size: 1.35rem; }
+.periodic-search input, .periodic-family-select select { width: 100%; min-height: 47px; border: 1px solid var(--border-strong); border-radius: 13px; background: var(--hover-bg); color: var(--text-main); font: inherit; font-size: .78rem; outline: none; }
+.periodic-search input { padding: 10px 15px 10px 42px; }
+.periodic-family-select { display: grid; gap: 4px; flex: 0 1 230px; color: var(--text-muted); font-size: .62rem; font-weight: 700; }
+.periodic-family-select select { padding: 10px 12px; }
+.periodic-search input:focus-visible, .periodic-family-select select:focus-visible, .periodic-table-scroll:focus-visible { outline: 3px solid rgba(var(--accent-rgb),.32); outline-offset: 2px; }
+.periodic-result-count { margin-left: auto; padding: 12px 14px; border: 1px solid var(--border-strong); border-radius: 12px; color: var(--text-muted); font-size: .7rem; font-weight: 700; white-space: nowrap; }
+.periodic-legend { display: flex; flex-wrap: wrap; gap: 7px 12px; margin: 0 0 13px; }
+.periodic-legend-item { display: inline-flex; align-items: center; gap: 5px; color: var(--text-muted); font-size: .6rem; font-weight: 600; }
+.periodic-legend-item i { width: 9px; height: 9px; border-radius: 3px; background: var(--family); }
+.periodic-table-scroll { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; padding: 15px; border: 1px solid #334762; border-radius: 22px; background: radial-gradient(circle at 50% -40%,#233f68,#101b2d 56%,#0b1220); box-shadow: 0 16px 32px rgba(8,19,39,.11); scrollbar-color: #5a7295 #17263b; }
+.periodic-grid { display: grid; grid-template-columns: 34px repeat(18,minmax(56px,1fr)); grid-template-rows: 21px repeat(7,74px) 18px repeat(2,74px); gap: 5px; min-width: 1155px; margin: 0 auto; }
+.periodic-axis { display: grid; place-items: center; color: #92abc9; font-size: .59rem; font-weight: 800; }
+.periodic-series-label { align-self: center; color: #b9cae1; font-size: .62rem; font-weight: 800; }
+.periodic-series-link { display: flex; align-items: center; justify-content: space-between; gap: 2px; padding: 5px; border: 1px dashed #6e89ad; border-radius: 9px; background: #29405b; color: #e5efff; cursor: pointer; font-size: .57rem; font-weight: 800; }
+.periodic-series-link:hover { background: #395b80; }
+.periodic-element { --family:#7ba6ff; --family-rgb:123,166,255; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 0; padding: 4px 3px; border: 1px solid rgba(var(--family-rgb),.57); border-radius: 9px; background: linear-gradient(155deg,rgba(var(--family-rgb),.26),rgba(var(--family-rgb),.08)); color: #f7fbff; cursor: pointer; text-align: center; transition: transform .18s ease,opacity .18s ease,box-shadow .18s ease,border-color .18s ease; }
+.periodic-element:hover, .periodic-element:focus-visible { z-index: 2; transform: translateY(-3px); border-color: var(--family); box-shadow: 0 7px 16px rgba(0,0,0,.32); outline: none; }
+.periodic-element.is-selected { z-index: 1; border-color: #fff; box-shadow: inset 0 0 0 1px #fff,0 0 0 2px var(--family); }
+.periodic-element.is-dimmed { opacity: .2; }
+.periodic-element-number { position: absolute; top: 4px; left: 5px; color: #c8d8ee; font-size: .48rem; font-weight: 700; }
+.periodic-element strong { color: var(--family); font-size: 1.22rem; line-height: 1; }
+.periodic-element-name { overflow: hidden; max-width: 100%; margin-top: 5px; color: #edf3fd; font-size: .52rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.periodic-element--alkali { --family:#ff6274; --family-rgb:255,98,116; }
+.periodic-element--alkaline { --family:#ff9e62; --family-rgb:255,158,98; }
+.periodic-element--transition { --family:#f0627c; --family-rgb:240,98,124; }
+.periodic-element--post-transition { --family:#ffbc7b; --family-rgb:255,188,123; }
+.periodic-element--metalloid { --family:#e9d278; --family-rgb:233,210,120; }
+.periodic-element--nonmetal { --family:#74b6ff; --family-rgb:116,182,255; }
+.periodic-element--halogen { --family:#91a7ff; --family-rgb:145,167,255; }
+.periodic-element--noble { --family:#b7a4ff; --family-rgb:183,164,255; }
+.periodic-element--lanthanide { --family:#ff81aa; --family-rgb:255,129,170; }
+.periodic-element--actinide { --family:#ec91d9; --family-rgb:236,145,217; }
+.periodic-mobile-hint { margin: 8px 2px 16px; color: var(--text-muted); font-size: .64rem; }
+.periodic-detail { display: grid; grid-template-columns: 138px minmax(0,1fr); gap: 22px; align-items: stretch; min-height: 186px; padding: 18px; border: 1px solid var(--border-strong); border-radius: 22px; background: var(--card-bg); box-shadow: var(--card-shadow); }
+.periodic-detail-identity { display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid rgba(var(--family-rgb),.56); border-radius: 15px; background: linear-gradient(155deg,rgba(var(--family-rgb),.25),rgba(var(--family-rgb),.08)); }
+.periodic-detail-identity > span { align-self: flex-start; margin: 0 0 auto 14px; padding-top: 9px; color: var(--text-muted); font-size: .65rem; font-weight: 800; }
+.periodic-detail-identity strong { color: var(--text-main); font-size: 3.4rem; line-height: 1; }
+.periodic-detail-identity small { margin: auto 0 12px; color: var(--text-main); font-size: .7rem; font-weight: 700; }
+.periodic-detail-main { min-width: 0; }
+.periodic-detail-kicker { color: var(--accent-color); font-size: .59rem; font-weight: 800; letter-spacing: .13em; }
+.periodic-detail h2 { margin: 2px 0 0; color: var(--text-main); font-size: 1.35rem; }
+.periodic-detail-intro { color: var(--text-muted); font-size: .7rem; }
+.periodic-facts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; margin: 15px 0 11px; }
+.periodic-facts > div { min-width: 0; padding: 9px 11px; border: 1px solid var(--border-strong); border-radius: 11px; background: var(--hover-bg); }
+.periodic-facts span { display: block; color: var(--text-muted); font-size: .56rem; }
+.periodic-facts strong { display: block; overflow-wrap: anywhere; color: var(--text-main); font-size: .76rem; }
+.periodic-detail a, .periodic-credit a { color: var(--accent-ink); font-size: .65rem; font-weight: 700; }
+.periodic-credit { margin: 12px 2px 24px; color: var(--text-muted); font-size: .62rem; }
+html[data-motion-level="reduced"] .periodic-figure { animation-duration: 8s; }
+html[data-motion-level="off"] .periodic-figure { animation: none; filter: none; }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion-choice="full"]) .periodic-figure { animation: none; } html:not([data-motion-choice="full"]) .periodic-element { transition: none; } }
+@media (max-width: 760px) { .periodic-hero { grid-template-columns: 1fr; min-height: 315px; padding: 24px; } .periodic-hero-copy { align-self: start; } .periodic-art { width: 225px; min-height: 125px; margin: 0 0 -24px auto; } .periodic-figure--hanging { top: -27px; left: 3px; width: 90px; height: 155px; } .periodic-figure--crouched { right: 0; bottom: -21px; width: 145px; height: 100px; } .periodic-facts { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media (max-width: 520px) { .periodic-hero { padding: 21px; border-radius: 21px; } .periodic-hero h1 { font-size: 2rem; } .periodic-toolbar { display: grid; grid-template-columns: 1fr auto; } .periodic-search { grid-column: 1 / -1; } .periodic-family-select { grid-column: 1; } .periodic-result-count { grid-column: 2; align-self: end; } .periodic-legend { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; } .periodic-legend-item { flex-shrink: 0; } .periodic-table-scroll { padding: 9px; border-radius: 15px; } .periodic-detail { grid-template-columns: 90px minmax(0,1fr); gap: 12px; padding: 12px; } .periodic-detail-identity strong { font-size: 2.5rem; } .periodic-detail h2 { font-size: 1rem; } .periodic-facts { gap: 5px; } .periodic-facts > div { padding: 7px; } }

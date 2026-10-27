@@ -831,6 +831,7 @@ function showSection(sectionId) {
     
     if(sectionId === 'historico') renderizarHistorico();
     if(sectionId === 'planejamento') renderizarCiclo();
+    if(sectionId === 'periodic-table') window.KingPeriodic?.render?.();
     if(sectionId === 'topic-workspace') renderizarEspacoTopico();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();

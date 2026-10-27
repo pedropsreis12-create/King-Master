@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261026-periodic-spider-v2';
+const CACHE_VERSION = 'king-master-20261027-periodic-skins-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -65,6 +65,8 @@ const APP_SHELL = [
     './assets/periodic-spider-hanging.png',
     './assets/periodic-spider-web.png',
     './assets/periodic-spider-mask.png',
+    './assets/periodic-rick-reference.jpg',
+    './assets/periodic-portal-background.jpg',
     './assets/periodic-spider-symbol.svg',
     './assets/periodic-web-corner.svg',
     './assets/periodic-bangers.ttf',

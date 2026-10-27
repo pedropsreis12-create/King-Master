@@ -14,7 +14,19 @@
     const count = document.getElementById('periodicResultCount');
     const legend = document.getElementById('periodicLegend');
     const hangingArt = document.getElementById('periodicSpiderHanging');
+    const skinButtons = [...section.querySelectorAll('[data-periodic-skin]')];
     if ([grid, detail, dock, scrollArea, search, suggestions, clear, count, legend, hangingArt].some(node => !node)) return;
+
+    function setSkin(value, persist = true) {
+        const skin = value === 'portal' ? 'portal' : 'spider';
+        section.classList.toggle('periodic-rick', skin === 'portal');
+        skinButtons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.periodicSkin === skin)));
+        if (persist) {
+            try { globalThis.localStorage?.setItem('king-periodic-skin-v1', skin); } catch { /* Armazenamento indisponível. */ }
+        }
+    }
+    try { setSkin(globalThis.localStorage?.getItem('king-periodic-skin-v1'), false); }
+    catch { setSkin('spider', false); }
 
     const elementsByNumber = new Map(data.map(element => [element.number, element]));
     const familyTotals = Object.values(core.FAMILIES).map(family => ({ ...family,
@@ -192,6 +204,7 @@
             const jump = event.target.closest('[data-jump]');
             if (jump) select(jump.dataset.jump, { reveal: true });
         });
+        skinButtons.forEach(button => button.addEventListener('click', () => setSkin(button.dataset.periodicSkin)));
         detail.addEventListener('click', event => {
             if (event.target.closest('[data-close-detail]')) return clearSelection();
             const help = event.target.closest('[data-config-help]');

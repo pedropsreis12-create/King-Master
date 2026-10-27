@@ -48,10 +48,10 @@ function staticSiteWorker() {
 
       // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
       for (const name of await readdir('assets')) {
-        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-(spider-(hanging|web|mask)\.png|spider-symbol\.svg|web-corner\.svg|bangers\.ttf|bangers-OFL\.txt)$/.test(name)) continue;
+        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-(spider-(hanging|web|mask)\.png|spider-symbol\.svg|web-corner\.svg|rick-reference\.jpg|portal-background\.jpg|bangers\.ttf|bangers-OFL\.txt)$/.test(name)) continue;
         const body = await readFile(`assets/${name}`);
         await writeFile(`dist/assets/${name}`, body);
-        const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.txt') ? 'text/plain; charset=utf-8' : 'image/webp';
+        const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.jpg') ? 'image/jpeg' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.txt') ? 'text/plain; charset=utf-8' : 'image/webp';
         files[`/assets/${name}`] = name.endsWith('.txt') ? { body: body.toString('utf8'), type } : { body: body.toString('base64'), type, binary: true };
       }
 

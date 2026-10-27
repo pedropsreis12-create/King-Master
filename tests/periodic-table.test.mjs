@@ -7,8 +7,9 @@ import '../periodic-table-core.js';
 
 const data = globalThis.KingPeriodicData;
 const core = globalThis.KingPeriodicCore;
-const [html, css, script, ui, serviceWorker, viteConfig] = await Promise.all([
+const [html, previewHtml, css, script, ui, serviceWorker, viteConfig] = await Promise.all([
     readFile(new URL('../index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../preview-periodic.html', import.meta.url), 'utf8'),
     readFile(new URL('../periodic-table.css', import.meta.url), 'utf8'),
     readFile(new URL('../script.js', import.meta.url), 'utf8'),
     readFile(new URL('../periodic-table.js', import.meta.url), 'utf8'),
@@ -41,7 +42,7 @@ test('lantanídeos e actinídeos aparecem nas duas linhas próprias abaixo da ta
     const plain = { innerHTML: '', textContent: '', value: '', hidden: false, addEventListener() {}, setAttribute() {}, querySelectorAll() { return []; } };
     const dock = { append() {} };
     const nodes = {
-        'periodic-table': { classList: { contains: name => name === 'active', add() {}, remove() {} }, addEventListener() {}, querySelectorAll() { return []; } },
+        'periodic-table': { classList: { contains: name => name === 'active', add() {}, remove() {}, toggle() {} }, addEventListener() {}, querySelectorAll() { return []; } },
         periodicGrid: grid,
         periodicDetail: { innerHTML: '', parentElement: dock, classList: { toggle() {} }, addEventListener() {} },
         periodicDetailDock: dock,
@@ -103,7 +104,7 @@ test('nova aba é navegável, funciona offline e respeita as opções de animaç
         assert.ok(html.includes(name));
         assert.ok(serviceWorker.includes(`'./${name}'`));
     }
-    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-bangers.ttf']) {
+    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-rick-reference.jpg', 'periodic-portal-background.jpg', 'periodic-bangers.ttf']) {
         assert.ok(serviceWorker.includes(`'./assets/${name}'`));
     }
     assert.match(script, /sectionId === 'periodic-table'\) window\.KingPeriodic\?\.render/);
@@ -117,4 +118,19 @@ test('nova aba é navegável, funciona offline e respeita as opções de animaç
     assert.match(css, /font-family: 'Periodic Bangers'/);
     assert.match(css, /html\[data-motion-level="off"\] \.periodic-figure \{ animation: none/);
     assert.match(css, /prefers-reduced-motion: reduce/);
+});
+
+test('skin Portal compartilha a tabela e a seleção com a skin Aranha', () => {
+    for (const page of [html, previewHtml]) {
+        assert.match(page, /data-periodic-skin="spider"/);
+        assert.match(page, /data-periodic-skin="portal"/);
+        assert.match(page, /class="periodic-rick-character periodic-rick-character--rick"/);
+    }
+    assert.match(ui, /function setSkin\(value, persist = true\)/);
+    assert.match(ui, /section\.classList\.toggle\('periodic-rick'/);
+    assert.match(css, /\.periodic-neon\.periodic-rick \.periodic-element--transition/);
+    assert.match(css, /html\[data-motion-level="off"\] \.periodic-rick \.periodic-portal/);
+    assert.match(css, /periodic-portal-background\.jpg/);
+    assert.match(viteConfig, /rick-reference\\\.jpg/);
+    assert.match(viteConfig, /portal-background\\\.jpg/);
 });

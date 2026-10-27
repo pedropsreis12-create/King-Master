@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261026-periodic-v2';
+const CACHE_VERSION = 'king-master-20261026-periodic-v4';
 const APP_SHELL = [
     './',
     './index.html',
@@ -61,7 +61,9 @@ const APP_SHELL = [
     './modal-accessibility.js',
     './data-portability.js',
     './assets/app-icon-192.png',
-    './assets/app-icon-512.png'
+    './assets/app-icon-512.png',
+    './assets/periodic-spider-hanging.png',
+    './assets/periodic-spider-web.png'
 ];
 
 self.addEventListener('install', event => {

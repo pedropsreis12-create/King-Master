@@ -37,11 +37,11 @@ test('tabela contém 118 elementos únicos com posições válidas', () => {
 });
 
 test('lantanídeos e actinídeos aparecem nas duas linhas próprias abaixo da tabela', () => {
-    const grid = { innerHTML: '', addEventListener() {}, querySelectorAll() { return []; } };
+    const grid = { innerHTML: '', append() {}, addEventListener() {}, querySelectorAll() { return []; } };
     const plain = { innerHTML: '', textContent: '', value: '', hidden: false, addEventListener() {}, setAttribute() {}, querySelectorAll() { return []; } };
     const dock = { append() {} };
     const nodes = {
-        'periodic-table': { classList: { contains: () => true }, addEventListener() {} },
+        'periodic-table': { classList: { contains: name => name === 'active', add() {}, remove() {} }, addEventListener() {}, querySelectorAll() { return []; } },
         periodicGrid: grid,
         periodicDetail: { innerHTML: '', parentElement: dock, classList: { toggle() {} }, addEventListener() {} },
         periodicDetailDock: dock,
@@ -50,7 +50,8 @@ test('lantanídeos e actinídeos aparecem nas duas linhas próprias abaixo da ta
         periodicSuggestions: { ...plain },
         periodicClear: { ...plain },
         periodicResultCount: { ...plain },
-        periodicLegend: { ...plain }
+        periodicLegend: { ...plain },
+        periodicSpiderHanging: { ...plain }
     };
     runInNewContext(ui, {
         document: { getElementById: id => nodes[id], addEventListener() {} },
@@ -85,6 +86,10 @@ test('nova aba é navegável, funciona offline e respeita as opções de animaç
     assert.match(script, /sectionId === 'periodic-table'\) window\.KingPeriodic\?\.render/);
     assert.match(viteConfig, /'periodic-table-data\.js', 'periodic-table-core\.js', 'periodic-table\.js'/);
     assert.match(css, /@keyframes periodic-float/);
+    assert.match(html, /periodic-spider-hanging\.png/);
+    assert.match(html, /periodic-spider-web\.png/);
+    assert.match(ui, /formatConfiguration\(element\.configuration\)/);
+    assert.match(ui, /data-config-help/);
     assert.match(css, /html\[data-motion-level="off"\] \.periodic-figure \{ animation: none/);
     assert.match(css, /prefers-reduced-motion: reduce/);
 });

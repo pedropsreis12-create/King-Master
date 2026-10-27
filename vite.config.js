@@ -34,16 +34,20 @@ function staticSiteWorker() {
       files['/manifest.webmanifest'] = { body: manifest, type: 'application/manifest+json; charset=utf-8' };
 
       for (const name of assetNames) {
-        if (!name.endsWith('.css') && !name.endsWith('.js')) continue;
-        files[`/assets/${name}`] = {
-          body: await readFile(`dist/assets/${name}`, 'utf8'),
-          type: name.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8',
-        };
+        if (name.endsWith('.css') || name.endsWith('.js')) {
+          files[`/assets/${name}`] = {
+            body: await readFile(`dist/assets/${name}`, 'utf8'),
+            type: name.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8',
+          };
+        } else if (/\.(png|webp|jpg|jpeg)$/i.test(name)) {
+          const body = await readFile(`dist/assets/${name}`);
+          files[`/assets/${name}`] = { body: body.toString('base64'), type: name.endsWith('.webp') ? 'image/webp' : name.endsWith('.png') ? 'image/png' : 'image/jpeg', binary: true };
+        }
       }
 
       // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
       for (const name of await readdir('assets')) {
-        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name)) continue;
+        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-spider-(hanging|web)\.png$/.test(name)) continue;
         const body = await readFile(`assets/${name}`);
         await writeFile(`dist/assets/${name}`, body);
         files[`/assets/${name}`] = { body: body.toString('base64'), type: name.endsWith('.png') ? 'image/png' : 'image/webp', binary: true };

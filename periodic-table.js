@@ -13,17 +13,19 @@
     const clear = document.getElementById('periodicClear');
     const count = document.getElementById('periodicResultCount');
     const legend = document.getElementById('periodicLegend');
-    if ([grid, detail, dock, scrollArea, search, suggestions, clear, count, legend].some(node => !node)) return;
+    const hangingArt = document.getElementById('periodicSpiderHanging');
+    if ([grid, detail, dock, scrollArea, search, suggestions, clear, count, legend, hangingArt].some(node => !node)) return;
 
     const elementsByNumber = new Map(data.map(element => [element.number, element]));
     const familyTotals = Object.values(core.FAMILIES).map(family => ({ ...family,
         count: data.filter(element => core.FAMILIES[element.category]?.key === family.key).length
     }));
-    let selectedNumber = 26;
+    let selectedNumber = 0;
     let activeFamily = '';
     let filteredElements = data;
     let initialized = false;
     const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+    const formatConfiguration = value => escapeHTML(value || '—').replace(/\](?=\d)/g, '] ').replace(/([spdf])(\d+)(?=\s|$)/gi, '$1<sup>$2</sup>');
 
     function elementMarkup(element) {
         const position = core.position(element.number);
@@ -45,9 +47,10 @@
         return `<div class="periodic-detail-header">
                 <div class="periodic-detail-identity periodic-element--${family.key}"><span>${element.number}</span><strong>${escapeHTML(element.symbol)}</strong></div>
                 <div class="periodic-detail-heading"><span class="periodic-detail-kicker">ELEMENTO EM FOCO · ${positionLabel}</span><h3>${escapeHTML(element.name)}</h3><p><i class="periodic-family-dot periodic-element--${family.key}" aria-hidden="true"></i>${escapeHTML(family.label)}</p><div class="periodic-detail-tags"><span>${group}</span><span>Período ${position.period}</span>${block ? `<span>Bloco ${block}</span>` : ''}</div></div>
-                <div class="periodic-detail-nav"><button type="button" data-step="-1" aria-label="Elemento anterior">‹</button><button type="button" data-step="1" aria-label="Próximo elemento">›</button></div>
+                <div class="periodic-detail-nav"><button type="button" data-step="-1" aria-label="Elemento anterior">‹</button><button type="button" data-step="1" aria-label="Próximo elemento">›</button><button type="button" class="periodic-detail-close" data-close-detail aria-label="Fechar detalhes">×</button></div>
             </div>
-            <div class="periodic-facts"><div><span>Número atômico</span><strong>${element.number}</strong></div><div><span>Massa atômica</span><strong>${escapeHTML(mass)} u</strong></div><div><span>Estado padrão</span><strong>${escapeHTML(core.stateLabel(element.state))}</strong></div><div><span>Configuração eletrônica</span><strong>${escapeHTML(element.configuration || '—')}</strong></div></div>
+            <div class="periodic-facts"><div><span>Número atômico</span><strong>${element.number}</strong></div><div><span>Massa atômica</span><strong>${escapeHTML(mass)} u</strong></div><div><span>Estado padrão</span><strong>${escapeHTML(core.stateLabel(element.state))}</strong></div><div class="periodic-config-fact"><span>Configuração eletrônica <button type="button" class="periodic-config-help" data-config-help aria-controls="periodicConfigHelpText" aria-expanded="false" aria-label="Entenda a configuração eletrônica">?</button></span><strong>${formatConfiguration(element.configuration)}</strong></div></div>
+            <p class="periodic-config-explainer" id="periodicConfigHelpText" hidden>Esta notação mostra onde estão os elétrons: o número antes da letra é o nível; s, p, d e f são subníveis; o número em cima é a quantidade de elétrons. O símbolo entre colchetes resume os elétrons internos de um gás nobre.${element.symbol === 'Fe' ? ' No ferro, [Ar] representa 18 elétrons; 4s² adiciona 2 e 3d⁶ adiciona 6, totalizando 26.' : ''}</p>
             <a class="periodic-source-link" href="https://pubchem.ncbi.nlm.nih.gov/element/${encodeURIComponent(element.englishName.toLowerCase())}" target="_blank" rel="noopener noreferrer">Ficha completa na PubChem <span aria-hidden="true">↗</span></a>`;
     }
 
@@ -74,6 +77,8 @@
         const element = elementsByNumber.get(Number(number));
         if (!element) return;
         selectedNumber = element.number;
+        section.classList.add('has-selection');
+        detail.hidden = false;
         grid.querySelectorAll('[data-element]').forEach(button => {
             const active = Number(button.dataset.element) === selectedNumber;
             button.classList.toggle('is-selected', active);
@@ -84,6 +89,16 @@
             bringTileIntoView(selectedNumber);
             if (!detail.classList.contains('is-inline')) detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
+    }
+
+    function clearSelection() {
+        selectedNumber = 0;
+        section.classList.remove('has-selection');
+        detail.hidden = true;
+        grid.querySelectorAll('[data-element]').forEach(button => {
+            button.classList.remove('is-selected');
+            button.setAttribute('aria-pressed', 'false');
+        });
     }
 
     function renderSuggestions() {
@@ -108,11 +123,11 @@
         count.textContent = `${filteredElements.length} ${filteredElements.length === 1 ? 'elemento' : 'elementos'}`;
         clear.hidden = !search.value && !activeFamily;
         renderSuggestions();
-        if (!filteredElements.length) {
+        if (!filteredElements.length && selectedNumber) {
             detail.innerHTML = '<div class="periodic-empty"><strong>Nenhum elemento encontrado</strong><span>Tente outro nome ou escolha uma família diferente.</span></div>';
-        } else if (!matchingNumbers.has(selectedNumber)) {
+        } else if (filteredElements.length && selectedNumber && !matchingNumbers.has(selectedNumber)) {
             select(filteredElements[0].number);
-        } else {
+        } else if (selectedNumber) {
             detail.innerHTML = detailMarkup(elementsByNumber.get(selectedNumber));
         }
     }
@@ -135,7 +150,9 @@
         const groups = Array.from({ length: 18 }, (_, index) => `<span class="periodic-axis periodic-axis--group" style="grid-column:${index + 2};grid-row:1">${index + 1}</span>`).join('');
         const periods = Array.from({ length: 7 }, (_, index) => `<span class="periodic-axis periodic-axis--period" style="grid-column:1;grid-row:${index + 2}">${index + 1}</span>`).join('');
         const series = `<button type="button" class="periodic-series-link" data-jump="57" style="grid-column:4;grid-row:7" aria-label="Ir para os lantanídeos">57–71 <span>↓</span></button><button type="button" class="periodic-series-link" data-jump="89" style="grid-column:4;grid-row:8" aria-label="Ir para os actinídeos">89–103 <span>↓</span></button><span class="periodic-series-label" style="grid-column:1 / span 4;grid-row:10">Lantanídeos</span><span class="periodic-series-label" style="grid-column:1 / span 4;grid-row:11">Actinídeos</span>`;
-        grid.innerHTML = `${groups}${periods}${series}${data.map(elementMarkup).join('')}`;
+        const key = `<div class="periodic-neon-key" aria-label="Famílias de elementos" style="grid-column:7 / 14;grid-row:2 / 5"><span class="periodic-neon-key-title">FAMÍLIAS DA TABELA</span><div>${familyTotals.map(family => `<span class="periodic-neon-key-item periodic-element--${family.key}">${escapeHTML(family.label)}</span>`).join('')}</div><small>Selecione um elemento para ver seus dados</small></div>`;
+        grid.innerHTML = `${groups}${periods}${series}${key}${data.map(elementMarkup).join('')}`;
+        grid.append(hangingArt);
         grid.addEventListener('click', event => {
             const elementButton = event.target.closest('[data-element]');
             if (elementButton) {
@@ -146,6 +163,14 @@
             if (jump) select(jump.dataset.jump, { reveal: true });
         });
         detail.addEventListener('click', event => {
+            if (event.target.closest('[data-close-detail]')) return clearSelection();
+            const help = event.target.closest('[data-config-help]');
+            if (help) {
+                const explanation = detail.querySelector('.periodic-config-explainer');
+                explanation.hidden = !explanation.hidden;
+                help.setAttribute('aria-expanded', String(!explanation.hidden));
+                return;
+            }
             const button = event.target.closest('[data-step]');
             if (button) step(Number(button.dataset.step));
         });
@@ -186,7 +211,7 @@
         });
         if ('ResizeObserver' in window) new ResizeObserver(placeDetail).observe(scrollArea);
         window.addEventListener('resize', placeDetail, { passive: true });
-        select(selectedNumber);
+        if (selectedNumber) select(selectedNumber);
         applyFilter();
         placeDetail();
     }

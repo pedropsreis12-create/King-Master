@@ -40,18 +40,21 @@
         const position = core.position(element.number);
         const family = core.FAMILIES[element.category] || { key: 'unknown', label: 'Família não informada' };
         const group = position.group ? `Grupo ${position.group}` : 'Série interna';
-        const block = String(element.configuration || '').match(/([spdf])\d*$/i)?.[1]?.toLowerCase();
         const mass = String(element.mass || '—').replace('.', ',');
         const current = filteredElements.findIndex(item => item.number === element.number);
         const positionLabel = current < 0 ? 'Fora do filtro' : `${current + 1} de ${filteredElements.length}`;
-        return `<div class="periodic-detail-header">
-                <div class="periodic-detail-identity periodic-element--${family.key}"><span>${element.number}</span><strong>${escapeHTML(element.symbol)}</strong></div>
-                <div class="periodic-detail-heading"><span class="periodic-detail-kicker">ELEMENTO EM FOCO · ${positionLabel}</span><h3>${escapeHTML(element.name)}</h3><p><i class="periodic-family-dot periodic-element--${family.key}" aria-hidden="true"></i>${escapeHTML(family.label)}</p><div class="periodic-detail-tags"><span>${group}</span><span>Período ${position.period}</span>${block ? `<span>Bloco ${block}</span>` : ''}</div></div>
+        return `<div class="periodic-detail-topbar">
+                <span class="periodic-detail-kicker">ELEMENTO EM FOCO · ${positionLabel}</span>
                 <div class="periodic-detail-nav"><button type="button" data-step="-1" aria-label="Elemento anterior">‹</button><button type="button" data-step="1" aria-label="Próximo elemento">›</button><button type="button" class="periodic-detail-close" data-close-detail aria-label="Fechar detalhes">×</button></div>
             </div>
-            <div class="periodic-facts"><div><span>Número atômico</span><strong>${element.number}</strong></div><div><span>Massa atômica</span><strong>${escapeHTML(mass)} u</strong></div><div><span>Estado padrão</span><strong>${escapeHTML(core.stateLabel(element.state))}</strong></div><div class="periodic-config-fact"><span>Configuração eletrônica <button type="button" class="periodic-config-help" data-config-help aria-controls="periodicConfigHelpText" aria-expanded="false" aria-label="Entenda a configuração eletrônica">?</button></span><strong>${formatConfiguration(element.configuration)}</strong></div></div>
+            <h3 class="periodic-detail-screenreader">${escapeHTML(element.name)}</h3>
+            <div class="periodic-diagram" role="group" aria-label="${escapeHTML(element.name)}: número atômico ${element.number}, símbolo ${escapeHTML(element.symbol)}, massa atômica ${escapeHTML(mass)} unidades">
+                <div class="periodic-diagram-labels" aria-hidden="true"><span>NÚMERO ATÔMICO<i></i></span><span>SÍMBOLO<i></i></span><span>NOME<i></i></span><span>MASSA ATÔMICA<i></i></span></div>
+                <div class="periodic-diagram-tile periodic-element--${family.key}"><span class="periodic-diagram-number">${element.number}</span><strong>${escapeHTML(element.symbol)}</strong><span class="periodic-diagram-name">${escapeHTML(element.name)}</span><span class="periodic-diagram-mass">${escapeHTML(mass)}</span></div>
+            </div>
+            <div class="periodic-detail-extras"><span><i class="periodic-family-dot periodic-element--${family.key}" aria-hidden="true"></i>${escapeHTML(family.label)} · ${group} · Período ${position.period} · ${escapeHTML(core.stateLabel(element.state))}</span><span>Configuração: <strong>${formatConfiguration(element.configuration)}</strong> <button type="button" class="periodic-config-help" data-config-help aria-controls="periodicConfigHelpText" aria-expanded="false" aria-label="Entenda a configuração eletrônica">?</button></span><a class="periodic-source-link" href="https://pubchem.ncbi.nlm.nih.gov/element/${encodeURIComponent(element.englishName.toLowerCase())}" target="_blank" rel="noopener noreferrer">PubChem ↗</a></div>
             <p class="periodic-config-explainer" id="periodicConfigHelpText" hidden>Esta notação mostra onde estão os elétrons: o número antes da letra é o nível; s, p, d e f são subníveis; o número em cima é a quantidade de elétrons. O símbolo entre colchetes resume os elétrons internos de um gás nobre.${element.symbol === 'Fe' ? ' No ferro, [Ar] representa 18 elétrons; 4s² adiciona 2 e 3d⁶ adiciona 6, totalizando 26.' : ''}</p>
-            <a class="periodic-source-link" href="https://pubchem.ncbi.nlm.nih.gov/element/${encodeURIComponent(element.englishName.toLowerCase())}" target="_blank" rel="noopener noreferrer">Ficha completa na PubChem <span aria-hidden="true">↗</span></a>`;
+            `;
     }
 
     function placeDetail() {

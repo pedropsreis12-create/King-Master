@@ -1,5 +1,6 @@
 // Fonte: https://pubchem.ncbi.nlm.nih.gov/rest/pug/periodictable/JSON
 // Dados da PubChem armazenados localmente; nomes exibidos em português do Brasil.
+// Massa padrão do ferro: 55.845, conforme CIAAW/IUPAC.
 globalThis.KingPeriodicData = Object.freeze([
   {
     "number": 1,
@@ -256,7 +257,7 @@ globalThis.KingPeriodicData = Object.freeze([
     "symbol": "Fe",
     "name": "Ferro",
     "englishName": "Iron",
-    "mass": "55.84",
+    "mass": "55.845",
     "configuration": "[Ar]4s2 3d6",
     "state": "Solid",
     "category": "Transition metal"

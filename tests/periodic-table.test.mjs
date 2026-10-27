@@ -38,18 +38,23 @@ test('tabela contém 118 elementos únicos com posições válidas', () => {
 
 test('lantanídeos e actinídeos aparecem nas duas linhas próprias abaixo da tabela', () => {
     const grid = { innerHTML: '', addEventListener() {}, querySelectorAll() { return []; } };
-    const plain = { innerHTML: '', textContent: '', value: '', addEventListener() {} };
+    const plain = { innerHTML: '', textContent: '', value: '', hidden: false, addEventListener() {}, setAttribute() {}, querySelectorAll() { return []; } };
+    const dock = { append() {} };
     const nodes = {
-        'periodic-table': { classList: { contains: () => true } },
+        'periodic-table': { classList: { contains: () => true }, addEventListener() {} },
         periodicGrid: grid,
-        periodicDetail: { innerHTML: '' },
+        periodicDetail: { innerHTML: '', parentElement: dock, classList: { toggle() {} }, addEventListener() {} },
+        periodicDetailDock: dock,
+        periodicTableScroll: { clientWidth: 0, addEventListener() {} },
         periodicSearch: { ...plain },
-        periodicFamily: { ...plain },
+        periodicSuggestions: { ...plain },
+        periodicClear: { ...plain },
         periodicResultCount: { ...plain },
         periodicLegend: { ...plain }
     };
     runInNewContext(ui, {
-        document: { getElementById: id => nodes[id] },
+        document: { getElementById: id => nodes[id], addEventListener() {} },
+        window: { addEventListener() {} },
         globalThis: { KingPeriodicData: data, KingPeriodicCore: core },
         Map, Array, Number, String
     });

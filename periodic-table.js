@@ -32,9 +32,9 @@
         if (!shells) return '';
         const outerIndex = shells.length - 1;
         const shellNames = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'];
-        const radii = [12, 22, 32, 42, 52, 61, 70];
         const rings = shells.map((electrons, index) => {
-            const radius = radii[index];
+            // Usa toda a área do desenho mesmo em átomos com poucas camadas.
+            const radius = shells.length === 1 ? 69 : 14 + index * 55 / (shells.length - 1);
             const outer = index === outerIndex;
             const dots = Array.from({ length: electrons }, (_, dot) => {
                 const angle = -Math.PI / 2 + 2 * Math.PI * dot / electrons + (index % 2 ? .18 : 0);
@@ -42,7 +42,8 @@
                 const y = (80 + radius * Math.sin(angle)).toFixed(2);
                 return `<circle class="periodic-atom-electron${outer ? ' is-outer' : ''}" cx="${x}" cy="${y}" r="${outer ? 2.8 : 2.1}"/>`;
             }).join('');
-            return `<circle class="periodic-atom-orbit${outer ? ' is-outer' : ''}" cx="80" cy="80" r="${radius}"/>${dots}`;
+            const seconds = 8 + index * 2.8;
+            return `<circle class="periodic-atom-orbit${outer ? ' is-outer' : ''}" cx="80" cy="80" r="${radius}"/><g class="periodic-atom-electrons${outer ? ' is-outer' : ''}" style="--orbit-duration:${seconds}s;--orbit-slow:${seconds * 2}s;--orbit-direction:${index % 2 ? 'reverse' : 'normal'}">${dots}</g>`;
         }).join('');
         const distribution = shells.map((electrons, index) => `<span class="${index === outerIndex ? 'is-outer' : ''}" title="Camada ${shellNames[index]}: ${electrons} elétrons">${shellNames[index]}<b>${electrons}</b></span>`).join('');
         return `<div class="periodic-atom-model" role="group" aria-label="${escapeHTML(element.name)}: ${shells.length} camadas eletrônicas; ${shells[outerIndex]} elétrons na camada mais externa; distribuição ${shells.join(', ')}">

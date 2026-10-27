@@ -90,6 +90,10 @@ test('camadas eletrônicas somam o número atômico e destacam a camada mais ext
     assert.deepEqual(core.electronShells(data[117]), [2, 8, 18, 32, 32, 18, 8]);
     assert.match(ui, /atomMarkup\(element\)/);
     assert.match(ui, /Camada externa:/);
+    assert.match(ui, /class="periodic-atom-electrons/);
+    assert.match(css, /@keyframes periodic-atom-revolve/);
+    assert.match(css, /data-motion-level="off"\] \.periodic-atom-electrons \{ animation: none/);
+    assert.match(css, /prefers-reduced-motion: reduce\).*periodic-atom-electrons/);
 });
 
 test('nova aba é navegável, funciona offline e respeita as opções de animação', () => {

@@ -39,19 +39,19 @@ function staticSiteWorker() {
             body: await readFile(`dist/assets/${name}`, 'utf8'),
             type: name.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/javascript; charset=utf-8',
           };
-        } else if (/\.(png|webp|jpg|jpeg|svg|ttf)$/i.test(name)) {
+        } else if (/\.(png|webp|jpg|jpeg|svg|ttf|mp3)$/i.test(name)) {
           const body = await readFile(`dist/assets/${name}`);
-          const type = name.endsWith('.webp') ? 'image/webp' : name.endsWith('.png') ? 'image/png' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : 'image/jpeg';
+          const type = name.endsWith('.webp') ? 'image/webp' : name.endsWith('.png') ? 'image/png' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.mp3') ? 'audio/mpeg' : 'image/jpeg';
           files[`/assets/${name}`] = { body: body.toString('base64'), type, binary: true };
         }
       }
 
       // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
       for (const name of await readdir('assets')) {
-        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-(spider-(hanging|web|mask)\.png|spider-symbol\.svg|web-corner\.svg|rick-reference\.png|portal-background\.jpg|bangers\.ttf|bangers-OFL\.txt)$/.test(name)) continue;
+        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-(spider-(hanging|web|mask)\.png|spider-symbol\.svg|web-corner\.svg|rick\.png|morty\.webp|portal-background\.jpg|portal-vortex\.png|portal-gun\.png|portal-gun-sound\.mp3|bangers\.ttf|bangers-OFL\.txt)$/.test(name)) continue;
         const body = await readFile(`assets/${name}`);
         await writeFile(`dist/assets/${name}`, body);
-        const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.jpg') ? 'image/jpeg' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.txt') ? 'text/plain; charset=utf-8' : 'image/webp';
+        const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.jpg') ? 'image/jpeg' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.mp3') ? 'audio/mpeg' : name.endsWith('.txt') ? 'text/plain; charset=utf-8' : 'image/webp';
         files[`/assets/${name}`] = name.endsWith('.txt') ? { body: body.toString('utf8'), type } : { body: body.toString('base64'), type, binary: true };
       }
 

@@ -182,7 +182,7 @@
 .periodic-neon .periodic-element--noble { --family:#78cbfa; --family-rgb:120,203,250; }
 .periodic-neon .periodic-element--lanthanide { --family:#ffa9bf; --family-rgb:255,169,191; }
 .periodic-neon .periodic-element--actinide { --family:#dfaaf4; --family-rgb:223,170,244; }
-.periodic-neon .periodic-neon-key { display: grid; align-content: center; justify-items: center; gap: 10px; padding: 10px; color: #e6f3ff; text-align: center; }
+.periodic-neon .periodic-neon-key { display: grid; grid-column: 7 / 14; grid-row: 2 / 5; align-content: center; justify-items: center; gap: 10px; padding: 10px; color: #e6f3ff; text-align: center; }
 .periodic-neon.has-selection .periodic-neon-key { display: none; }
 .periodic-neon-key-title { color: #8aa7bf; font-size: .53rem; font-weight: 900; letter-spacing: .16em; }
 .periodic-neon-key > div { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px 13px; max-width: 580px; }
@@ -333,7 +333,7 @@ html[data-motion-level="off"] .periodic-atom-electrons { animation: none; will-c
 @media (max-width: 620px) { .periodic-neon .periodic-detail { padding: 9px; } .periodic-neon .periodic-detail-nav { flex-direction: row; } .periodic-detail-visuals { flex-wrap: wrap; gap: 5px; } .periodic-detail-visuals .periodic-diagram { flex: 1 1 210px; width: min(100%,260px); } .periodic-diagram-labels > span { gap: 5px; font-size: .48rem; } .periodic-diagram-labels i { flex-basis: 31px; min-width: 15px; } .periodic-atom-model { flex: 1 1 150px; } .periodic-atom-model svg { width: 150px; height: 150px; } .periodic-detail-extras { justify-content: flex-start; font-size: .55rem; } }
 
 /* Duas skins para a mesma tabela; o seletor não duplica dados nem componentes. */
-.periodic-portal, .periodic-rick-character { display: none; }
+.periodic-portal, .periodic-rick-character, .periodic-key-portal-origin { display: none; }
 .periodic-skin-switch { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 2px; padding: 3px; border: 1px solid #58415a; border-radius: 9px; background: #100e1a; }
 .periodic-skin-switch button { min-height: 29px; padding: 4px 11px; border: 0; border-radius: 6px; background: transparent; color: #bcc9df; cursor: pointer; font: inherit; font-size: .61rem; font-weight: 900; }
 .periodic-skin-switch button:hover, .periodic-skin-switch button:focus-visible { outline: 2px solid #82c8ee; outline-offset: 1px; color: #fff; }
@@ -351,9 +351,9 @@ html[data-motion-level="off"] .periodic-atom-electrons { animation: none; will-c
 .periodic-neon.periodic-rick .periodic-hero h1 em { color: #e6f6a2; text-shadow: 2px 2px 0 #134b3c,4px 4px 0 #3a8b42,0 0 22px rgba(171,239,66,.38); }
 .periodic-neon.periodic-rick .periodic-portal { position: absolute; top: -42px; left: 26px; z-index: 0; display: block; width: 218px; height: 218px; border: 5px solid #97ed34; border-radius: 50%; background: repeating-radial-gradient(ellipse at 48% 48%,#0e5d31 0 8px,#83dc27 9px 12px,#164d30 13px 18px,#aeed3d 19px 21px); box-shadow: 0 0 26px rgba(136,236,52,.58),inset 0 0 30px #003d32; opacity: .86; pointer-events: none; animation: periodic-portal-turn 22s linear infinite; }
 @keyframes periodic-portal-turn { to { transform: rotate(360deg); } }
-.periodic-neon.periodic-rick .periodic-rick-character { position: absolute; z-index: 2; display: block; width: 126px; height: 150px; background-image: url('assets/periodic-rick-reference.png'); background-repeat: no-repeat; background-size: 576px 1024px; pointer-events: none; mask-image: radial-gradient(ellipse at 50% 48%,#000 40%,rgba(0,0,0,.9) 57%,transparent 76%); filter: drop-shadow(0 0 7px rgba(144,226,55,.3)); animation: periodic-rick-float 5.6s ease-in-out infinite; will-change: transform; }
-.periodic-neon.periodic-rick .periodic-rick-character--rick { top: 0; left: 41px; background-position: -445px -106px; }
-.periodic-neon.periodic-rick .periodic-rick-character--morty { top: 0; right: 24px; background-position: -446px -715px; animation-delay: -2.4s; }
+.periodic-neon.periodic-rick .periodic-rick-character { position: absolute; z-index: 1; display: block; width: auto; height: 230px; max-width: none; object-fit: contain; pointer-events: none; filter: drop-shadow(0 0 12px rgba(145,224,59,.5)); animation: periodic-rick-float 5.6s ease-in-out infinite; will-change: transform; }
+.periodic-neon.periodic-rick .periodic-rick-character--rick { bottom: -49px; left: 58px; }
+.periodic-neon.periodic-rick .periodic-rick-character--morty { right: 67px; bottom: -42px; height: 222px; animation-delay: -2.4s; }
 @keyframes periodic-rick-float { 0%,100% { transform: translate3d(0,0,0) rotate(-2deg); } 50% { transform: translate3d(0,-7px,0) rotate(2deg); } }
 .periodic-neon.periodic-rick .periodic-explorer { background: radial-gradient(circle at 12% 45%,rgba(76,146,61,.12),transparent 37%),radial-gradient(circle at 87% 35%,rgba(62,171,155,.13),transparent 36%),#05262d; }
 .periodic-neon.periodic-rick .periodic-search input { border-color: #477e61; background: #092e32; }
@@ -381,10 +381,19 @@ html[data-motion-level="off"] .periodic-atom-electrons { animation: none; will-c
 .periodic-neon.periodic-rick .periodic-element--lanthanide { --family:#d9c5e8; --family-rgb:217,197,232; }
 .periodic-neon.periodic-rick .periodic-element--actinide { --family:#c3acd7; --family-rgb:195,172,215; }
 .periodic-neon.periodic-rick .periodic-series-link { border-color: #9ac56e; background: #145047; color: #ecffc5; }
-.periodic-neon.periodic-rick .periodic-neon-key img { display: none; }
-.periodic-neon.periodic-rick .periodic-neon-key::before { width: 78px; height: 78px; border: 4px solid #b6f052; border-radius: 50%; background: repeating-radial-gradient(ellipse at center,#085342 0 8px,#8ed73d 9px 12px,#2f8252 13px 17px); box-shadow: 0 0 19px rgba(171,230,67,.56); content: ''; animation: periodic-portal-turn 18s linear infinite; }
+.periodic-neon.periodic-rick .periodic-neon-key { position: relative; grid-column: 4 / 14; display: block; min-height: 235px; padding: 0; }
+.periodic-neon.periodic-rick.has-selection .periodic-neon-key { visibility: hidden; }
+.periodic-neon.periodic-rick .periodic-key-spider { display: none; }
+.periodic-neon.periodic-rick .periodic-key-portal-origin { position: absolute; top: 48%; left: 31%; display: block; width: 1px; height: 1px; visibility: hidden; }
+.periodic-neon.periodic-rick .periodic-key-prompt { position: absolute; top: 58px; left: 50%; display: grid; justify-items: center; gap: 5px; width: min(312px,calc(100% - 26px)); padding: 16px 19px 17px; border: 2px solid #a2df64; border-radius: 13px; background: linear-gradient(145deg,rgba(11,65,57,.96),rgba(4,33,40,.96)); box-shadow: 0 8px 0 #071f28,0 0 0 2px rgba(216,251,148,.1) inset; transform: translateX(-50%) rotate(-1deg); }
+.periodic-neon.periodic-rick .periodic-key-prompt::before, .periodic-neon.periodic-rick .periodic-key-prompt::after { position: absolute; color: #d9f787; content: '✦'; font-size: 18px; line-height: 1; }
+.periodic-neon.periodic-rick .periodic-key-prompt::before { top: -12px; right: 17px; }
+.periodic-neon.periodic-rick .periodic-key-prompt::after { bottom: -15px; left: 17px; font-size: 12px; }
+.periodic-neon.periodic-rick .periodic-neon-key-title { font-size: .64rem; text-align: center; }
+.periodic-neon.periodic-rick .periodic-neon-key strong { color: #f0ffd1; font-family: 'Periodic Bangers',Impact,sans-serif; font-size: 1.65rem; font-weight: 400; line-height: 1; letter-spacing: .035em; text-align: center; text-shadow: 2px 2px #147760; }
+.periodic-neon.periodic-rick .periodic-neon-key small { color: #c9e7d7; font-size: .57rem; text-align: center; }
 .periodic-neon.periodic-rick .periodic-neon-key-title { color: #c8f37c; }
-.periodic-neon.periodic-rick .periodic-neon-key strong { color: #d9f697; text-shadow: 2px 2px #14574c; }
+.periodic-neon.periodic-rick .periodic-neon-key strong { color: #effbd6; text-shadow: none; }
 .periodic-neon.periodic-rick .periodic-neon-key small { color: #b8dfc2; }
 .periodic-neon.periodic-rick .periodic-detail, .periodic-neon.periodic-rick .periodic-detail.is-inline { border-color: #609654; background: linear-gradient(140deg,#082d2f,#103d39); box-shadow: 0 0 0 1px rgba(148,217,83,.2),0 0 29px rgba(94,194,87,.14); }
 .periodic-neon.periodic-rick .periodic-detail-kicker, .periodic-neon.periodic-rick .periodic-atom-title { color: #ceef9e; }
@@ -398,9 +407,26 @@ html[data-motion-level="off"] .periodic-atom-electrons { animation: none; will-c
 .periodic-neon.periodic-rick .periodic-atom-valence { color: #d3f78e; }
 .periodic-neon.periodic-rick .periodic-credit { background: #041e24; color: #afd0bc; }
 .periodic-neon.periodic-rick .periodic-credit a { color: #d1f576; }
-html[data-motion-level="off"] .periodic-rick .periodic-portal, html[data-motion-level="off"] .periodic-rick .periodic-rick-character, html[data-motion-level="off"] .periodic-rick .periodic-neon-key::before { animation: none; will-change: auto; }
-html[data-motion-level="reduced"] .periodic-rick .periodic-portal, html[data-motion-level="reduced"] .periodic-rick .periodic-neon-key::before { animation-duration: 38s; }
+html[data-motion-level="off"] .periodic-rick .periodic-portal, html[data-motion-level="off"] .periodic-rick .periodic-rick-character { animation: none; will-change: auto; }
+html[data-motion-level="reduced"] .periodic-rick .periodic-portal { animation-duration: 38s; }
 html[data-motion-level="reduced"] .periodic-rick .periodic-rick-character { animation-duration: 11s; }
-@media (prefers-reduced-motion: reduce) { html:not([data-motion-choice="full"]) .periodic-rick .periodic-portal, html:not([data-motion-choice="full"]) .periodic-rick .periodic-rick-character, html:not([data-motion-choice="full"]) .periodic-rick .periodic-neon-key::before { animation: none; will-change: auto; } }
-@media (max-width: 760px) { .periodic-neon.periodic-rick .periodic-hero { min-height: 135px; padding: 14px 90px; } .periodic-neon.periodic-rick .periodic-portal { top: -25px; left: -22px; width: 170px; height: 170px; } .periodic-neon.periodic-rick .periodic-rick-character--rick { left: 0; transform: scale(.82); } .periodic-neon.periodic-rick .periodic-rick-character--morty { right: -25px; transform: scale(.82); } }
-@media (max-width: 520px) { .periodic-neon.periodic-rick .periodic-hero { min-height: 126px; padding: 12px 65px; } .periodic-neon.periodic-rick .periodic-hero h1 { font-size: clamp(1.55rem,7.5vw,2.25rem); } .periodic-neon.periodic-rick .periodic-portal { top: 2px; left: -26px; width: 115px; height: 115px; } .periodic-neon.periodic-rick .periodic-rick-character--rick { top: -7px; left: -27px; } .periodic-neon.periodic-rick .periodic-rick-character--morty { top: 4px; right: -53px; } }
+@media (prefers-reduced-motion: reduce) { html:not([data-motion-choice="full"]) .periodic-rick .periodic-portal, html:not([data-motion-choice="full"]) .periodic-rick .periodic-rick-character { animation: none; will-change: auto; } }
+@media (max-width: 760px) { .periodic-neon.periodic-rick .periodic-hero { min-height: 135px; padding: 14px 90px; } .periodic-neon.periodic-rick .periodic-portal { top: -25px; left: -22px; width: 170px; height: 170px; } .periodic-neon.periodic-rick .periodic-rick-character--rick { bottom: -47px; left: 7px; height: 189px; } .periodic-neon.periodic-rick .periodic-rick-character--morty { right: 8px; bottom: -39px; height: 184px; } }
+@media (max-width: 520px) { .periodic-neon.periodic-rick .periodic-hero { min-height: 126px; padding: 12px 65px; } .periodic-neon.periodic-rick .periodic-hero h1 { font-size: clamp(1.55rem,7.5vw,2.25rem); } .periodic-neon.periodic-rick .periodic-portal { top: 2px; left: -26px; width: 115px; height: 115px; } .periodic-neon.periodic-rick .periodic-rick-character--rick { bottom: -35px; left: -3px; height: 148px; } .periodic-neon.periodic-rick .periodic-rick-character--morty { right: -9px; bottom: -34px; height: 146px; } }
+
+/* A arma e o portal da transição só existem enquanto um elemento entra ou sai. */
+.periodic-neon.periodic-rick .periodic-detail.is-portal-pending { opacity: 0; pointer-events: none; }
+.periodic-portal-fx { position: fixed; inset: 0; z-index: 100000; overflow: hidden; pointer-events: none; }
+.periodic-portal-fx-anchor { position: absolute; top: var(--portal-y); left: var(--portal-x); width: 172px; height: 172px; transform: translate(-50%,-50%); }
+.periodic-portal-fx-vortex { display: block; width: 100%; height: 100%; object-fit: contain; animation: periodic-fx-vortex 900ms ease-in-out both; }
+.periodic-portal-fx-gun { position: absolute; top: 53%; left: -56%; width: 125px; height: 82px; object-fit: contain; animation: periodic-fx-gun 900ms ease-in-out both; }
+.periodic-portal-fx-ghost { position: absolute; top: var(--ghost-y); left: var(--ghost-x); z-index: 1; display: grid; grid-template-rows: 18px 51px 23px; align-items: center; width: 90px; height: 106px; padding: 5px 7px; border: 2px solid #dfff89; border-radius: 5px; background: var(--ghost-color); box-shadow: 0 0 20px rgba(163,239,71,.55); color: #17332d; text-align: center; animation: periodic-fx-enter 900ms cubic-bezier(.22,.74,.3,1) both; }
+.periodic-portal-fx-ghost span { align-self: start; text-align: left; font-size: .67rem; font-weight: 900; }
+.periodic-portal-fx-ghost strong { font-size: 2.6rem; font-weight: 900; line-height: 1; }
+.periodic-portal-fx-ghost small { overflow: hidden; font-size: .64rem; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.periodic-portal-fx--exit .periodic-portal-fx-ghost { animation-name: periodic-fx-exit; }
+@keyframes periodic-fx-vortex { 0% { opacity: 0; transform: scale(.04) rotate(-75deg); } 22% { opacity: 1; transform: scale(.96) rotate(-10deg); } 61% { opacity: 1; transform: scale(1.04) rotate(18deg); } 83% { opacity: 1; transform: scale(.9) rotate(32deg); } 100% { opacity: 0; transform: scale(.04) rotate(55deg); } }
+@keyframes periodic-fx-gun { 0% { opacity: 0; transform: translate3d(-20px,12px,0) rotate(-22deg); } 12%,55% { opacity: 1; transform: translate3d(0,0,0) rotate(-7deg); } 100% { opacity: 0; transform: translate3d(-12px,18px,0) rotate(-17deg); } }
+@keyframes periodic-fx-enter { 0%,16% { opacity: 0; transform: translate3d(0,0,0) scale(.14) rotate(-15deg); } 26% { opacity: 1; } 83% { opacity: 1; transform: translate3d(var(--ghost-dx),var(--ghost-dy),0) scale(1) rotate(0); } 100% { opacity: 0; transform: translate3d(var(--ghost-dx),var(--ghost-dy),0) scale(1) rotate(0); } }
+@keyframes periodic-fx-exit { 0% { opacity: 0; transform: translate3d(0,0,0) scale(1); } 12% { opacity: 1; } 82% { opacity: 1; transform: translate3d(var(--ghost-dx),var(--ghost-dy),0) scale(.14) rotate(16deg); } 100% { opacity: 0; transform: translate3d(var(--ghost-dx),var(--ghost-dy),0) scale(.04) rotate(25deg); } }
+@media (max-width: 620px) { .periodic-neon.periodic-rick .periodic-neon-key { display: none; } }

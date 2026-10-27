@@ -104,7 +104,7 @@ test('nova aba é navegável, funciona offline e respeita as opções de animaç
         assert.ok(html.includes(name));
         assert.ok(serviceWorker.includes(`'./${name}'`));
     }
-    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-rick-reference.png', 'periodic-portal-background.jpg', 'periodic-bangers.ttf']) {
+    for (const name of ['periodic-spider-hanging.png', 'periodic-spider-web.png', 'periodic-spider-mask.png', 'periodic-spider-symbol.svg', 'periodic-web-corner.svg', 'periodic-rick.png', 'periodic-morty.webp', 'periodic-portal-background.jpg', 'periodic-portal-vortex.png', 'periodic-portal-gun.png', 'periodic-portal-gun-sound.mp3', 'periodic-bangers.ttf']) {
         assert.ok(serviceWorker.includes(`'./assets/${name}'`));
     }
     assert.match(script, /sectionId === 'periodic-table'\) window\.KingPeriodic\?\.render/);
@@ -124,13 +124,26 @@ test('skin Portal compartilha a tabela e a seleção com a skin Aranha', () => {
     for (const page of [html, previewHtml]) {
         assert.match(page, /data-periodic-skin="spider"/);
         assert.match(page, /data-periodic-skin="portal"/);
-        assert.match(page, /class="periodic-rick-character periodic-rick-character--rick"/);
+        assert.match(page, /class="periodic-rick-character periodic-rick-character--rick" src="assets\/periodic-rick\.png"/);
+        assert.match(page, /class="periodic-rick-character periodic-rick-character--morty" src="assets\/periodic-morty\.webp"/);
     }
     assert.match(ui, /function setSkin\(value, persist = true\)/);
     assert.match(ui, /section\.classList\.toggle\('periodic-rick'/);
     assert.match(css, /\.periodic-neon\.periodic-rick \.periodic-element--transition/);
     assert.match(css, /html\[data-motion-level="off"\] \.periodic-rick \.periodic-portal/);
     assert.match(css, /periodic-portal-background\.jpg/);
-    assert.match(viteConfig, /rick-reference\\\.png/);
+    assert.match(viteConfig, /rick\\\.png/);
+    assert.match(viteConfig, /morty\\\.webp/);
+    assert.match(ui, /periodic-key-portal-origin/);
+    assert.doesNotMatch(ui, /periodic-key-(rick|morty)/);
+    assert.doesNotMatch(ui, /periodic-saucer\.png/);
+    assert.match(ui, /runPortalEffect\('enter'/);
+    assert.match(ui, /runPortalEffect\('exit'/);
+    assert.match(ui, /periodic-portal-gun-sound\.mp3/);
+    assert.match(ui, /playPortalSound\(\)/);
+    assert.match(css, /\.periodic-portal-fx--exit \.periodic-portal-fx-ghost/);
     assert.match(viteConfig, /portal-background\\\.jpg/);
+    assert.match(viteConfig, /portal-vortex\\\.png/);
+    assert.match(viteConfig, /portal-gun\\\.png/);
+    assert.match(viteConfig, /portal-gun-sound\\\.mp3/);
 });

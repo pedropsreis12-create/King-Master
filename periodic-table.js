@@ -36,8 +36,82 @@
     let activeFamily = '';
     let filteredElements = data;
     let initialized = false;
+    let portalEffect = null;
+    const portalSound = typeof window.Audio === 'function' ? new window.Audio('assets/periodic-portal-gun-sound.mp3') : null;
+    if (portalSound) { portalSound.preload = 'auto'; portalSound.volume = .38; }
     const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const formatConfiguration = value => escapeHTML(value || '—').replace(/\](?=\d)/g, '] ').replace(/([spdf])(\d+)(?=\s|$)/gi, '$1<sup>$2</sup>');
+
+    function portalMotionAllowed() {
+        const root = document.documentElement;
+        if (root.dataset.motionLevel === 'off' || root.dataset.motionLevel === 'reduced') return false;
+        return !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || root.dataset.motionChoice === 'full';
+    }
+
+    function portalOrigin() {
+        const art = grid.querySelector('.periodic-key-portal-origin');
+        const rect = art?.getBoundingClientRect();
+        const frame = scrollArea.getBoundingClientRect();
+        const visible = rect?.width && rect.right > 0 && rect.left < window.innerWidth && rect.bottom > 0 && rect.top < window.innerHeight;
+        const x = visible ? rect.left + rect.width / 2 : frame.left + Math.min(frame.width * .3, 230);
+        const y = visible ? rect.top + rect.height / 2 : frame.top + 125;
+        return { x: Math.max(82, Math.min(window.innerWidth - 82, x)), y: Math.max(90, Math.min(window.innerHeight - 90, y)) };
+    }
+
+    function detailTarget() {
+        const rect = (detail.querySelector('.periodic-diagram-tile') || detail).getBoundingClientRect();
+        return {
+            x: Math.max(55, Math.min(window.innerWidth - 55, rect.left + rect.width / 2)),
+            y: Math.max(65, Math.min(window.innerHeight - 65, rect.top + rect.height / 2))
+        };
+    }
+
+    function cancelPortalEffect() {
+        if (portalEffect) {
+            clearTimeout(portalEffect.timer);
+            portalEffect.layer.remove();
+            portalEffect = null;
+        }
+        detail.classList.remove('is-portal-pending');
+    }
+
+    function playPortalSound() {
+        try {
+            if (!portalSound) return;
+            portalSound.pause();
+            portalSound.currentTime = 0;
+            void portalSound.play().catch(() => {});
+        } catch { /* Áudio pode estar indisponível neste dispositivo. */ }
+    }
+
+    function runPortalEffect(direction, element, origin, target, done) {
+        const from = direction === 'enter' ? origin : target;
+        const to = direction === 'enter' ? target : origin;
+        const tile = grid.querySelector(`[data-element="${element.number}"]`);
+        const color = tile ? window.getComputedStyle(tile).backgroundColor : '#dce9a3';
+        const layer = document.createElement('div');
+        layer.className = `periodic-portal-fx periodic-portal-fx--${direction}`;
+        layer.setAttribute('aria-hidden', 'true');
+        layer.style.setProperty('--portal-x', `${origin.x}px`);
+        layer.style.setProperty('--portal-y', `${origin.y}px`);
+        layer.style.setProperty('--ghost-x', `${from.x - 45}px`);
+        layer.style.setProperty('--ghost-y', `${from.y - 53}px`);
+        layer.style.setProperty('--ghost-dx', `${to.x - from.x}px`);
+        layer.style.setProperty('--ghost-dy', `${to.y - from.y}px`);
+        layer.style.setProperty('--ghost-color', color);
+        layer.innerHTML = `<div class="periodic-portal-fx-anchor"><img class="periodic-portal-fx-vortex" src="assets/periodic-portal-vortex.png" alt=""><img class="periodic-portal-fx-gun" src="assets/periodic-portal-gun.png" alt=""></div><div class="periodic-portal-fx-ghost"><span>${element.number}</span><strong>${escapeHTML(element.symbol)}</strong><small>${escapeHTML(element.name)}</small></div>`;
+        document.body.append(layer);
+        playPortalSound();
+        const current = { layer, timer: 0 };
+        portalEffect = current;
+        current.timer = window.setTimeout(() => {
+            if (portalEffect !== current) return;
+            layer.remove();
+            portalEffect = null;
+            detail.classList.remove('is-portal-pending');
+            done?.();
+        }, 900);
+    }
 
     function atomMarkup(element) {
         const shells = core.electronShells(element);
@@ -115,9 +189,12 @@
         }
     }
 
-    function select(number, { reveal = false } = {}) {
+    function select(number, { reveal = false, animate = false } = {}) {
         const element = elementsByNumber.get(Number(number));
         if (!element) return;
+        const usePortal = animate && section.classList.contains('periodic-rick') && portalMotionAllowed();
+        const origin = usePortal ? portalOrigin() : null;
+        cancelPortalEffect();
         selectedNumber = element.number;
         section.classList.add('has-selection');
         detail.hidden = false;
@@ -127,13 +204,23 @@
             button.setAttribute('aria-pressed', String(active));
         });
         detail.innerHTML = detailMarkup(element);
+        if (usePortal) {
+            detail.classList.add('is-portal-pending');
+            runPortalEffect('enter', element, origin, detailTarget(), () => {
+                if (reveal) {
+                    bringTileIntoView(selectedNumber);
+                    if (!detail.classList.contains('is-inline')) detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            });
+            return;
+        }
         if (reveal) {
             bringTileIntoView(selectedNumber);
             if (!detail.classList.contains('is-inline')) detail.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
     }
 
-    function clearSelection() {
+    function clearSelectionNow() {
         selectedNumber = 0;
         section.classList.remove('has-selection');
         detail.hidden = true;
@@ -141,6 +228,17 @@
             button.classList.remove('is-selected');
             button.setAttribute('aria-pressed', 'false');
         });
+    }
+
+    function clearSelection() {
+        const element = elementsByNumber.get(selectedNumber);
+        const usePortal = element && section.classList.contains('periodic-rick') && portalMotionAllowed();
+        if (!usePortal) { cancelPortalEffect(); clearSelectionNow(); return; }
+        const origin = portalOrigin();
+        const target = detailTarget();
+        cancelPortalEffect();
+        detail.classList.add('is-portal-pending');
+        runPortalEffect('exit', element, origin, target, clearSelectionNow);
     }
 
     function renderSuggestions() {
@@ -182,7 +280,7 @@
         const items = filteredElements.length ? filteredElements : data;
         const current = items.findIndex(element => element.number === selectedNumber);
         const next = items[(current + direction + items.length) % items.length] || items[0];
-        select(next.number, { reveal: true });
+        select(next.number, { reveal: true, animate: true });
     }
 
     function initialize() {
@@ -192,19 +290,19 @@
         const groups = Array.from({ length: 18 }, (_, index) => `<span class="periodic-axis periodic-axis--group" style="grid-column:${index + 2};grid-row:1">${index + 1}</span>`).join('');
         const periods = Array.from({ length: 7 }, (_, index) => `<span class="periodic-axis periodic-axis--period" style="grid-column:1;grid-row:${index + 2}">${index + 1}</span>`).join('');
         const series = `<button type="button" class="periodic-series-link" data-jump="57" style="grid-column:4;grid-row:7" aria-label="Ir para os lantanídeos">57–71 <span>↓</span></button><button type="button" class="periodic-series-link" data-jump="89" style="grid-column:4;grid-row:8" aria-label="Ir para os actinídeos">89–103 <span>↓</span></button><span class="periodic-series-label" style="grid-column:1 / span 4;grid-row:10">Lantanídeos</span><span class="periodic-series-label" style="grid-column:1 / span 4;grid-row:11">Actinídeos</span>`;
-        const key = `<div class="periodic-neon-key" aria-label="Explore os elementos" style="grid-column:7 / 14;grid-row:2 / 5"><img src="assets/periodic-spider-symbol.svg" alt="" aria-hidden="true"><span class="periodic-neon-key-title">118 ELEMENTOS</span><strong>UM UNIVERSO PARA EXPLORAR</strong><small>Selecione um elemento para investigar</small></div>`;
+        const key = `<div class="periodic-neon-key" aria-label="Explore os elementos"><img class="periodic-key-spider" src="assets/periodic-spider-symbol.svg" alt="" aria-hidden="true"><span class="periodic-key-portal-origin" aria-hidden="true"></span><div class="periodic-key-prompt"><span class="periodic-neon-key-title">118 ELEMENTOS</span><strong>ESCOLHA UM ELEMENTO</strong><small>Toque na tabela para investigar</small></div></div>`;
         grid.innerHTML = `${groups}${periods}${series}${key}${data.map(elementMarkup).join('')}`;
         grid.append(hangingArt);
         grid.addEventListener('click', event => {
             const elementButton = event.target.closest('[data-element]');
             if (elementButton) {
                 if (elementButton.classList.contains('is-dimmed')) { search.value = ''; activeFamily = ''; applyFilter(); }
-                return select(elementButton.dataset.element, { reveal: !detail.classList.contains('is-inline') });
+                return select(elementButton.dataset.element, { reveal: !detail.classList.contains('is-inline'), animate: true });
             }
             const jump = event.target.closest('[data-jump]');
-            if (jump) select(jump.dataset.jump, { reveal: true });
+            if (jump) select(jump.dataset.jump, { reveal: true, animate: true });
         });
-        skinButtons.forEach(button => button.addEventListener('click', () => setSkin(button.dataset.periodicSkin)));
+        skinButtons.forEach(button => button.addEventListener('click', () => { cancelPortalEffect(); setSkin(button.dataset.periodicSkin); }));
         detail.addEventListener('click', event => {
             if (event.target.closest('[data-close-detail]')) return clearSelection();
             const help = event.target.closest('[data-config-help]');
@@ -230,14 +328,14 @@
             if (event.key !== 'Enter' || !filteredElements.length) return;
             event.preventDefault();
             const exact = filteredElements.find(element => core.normalize(element.symbol) === core.normalize(search.value) || String(element.number) === search.value.trim());
-            select((exact || filteredElements[0]).number, { reveal: true });
+            select((exact || filteredElements[0]).number, { reveal: true, animate: true });
             suggestions.hidden = true;
             search.setAttribute('aria-expanded', 'false');
         });
         suggestions.addEventListener('click', event => {
             const button = event.target.closest('[data-suggestion]');
             if (!button) return;
-            select(button.dataset.suggestion, { reveal: true });
+            select(button.dataset.suggestion, { reveal: true, animate: true });
             suggestions.hidden = true;
             search.setAttribute('aria-expanded', 'false');
         });

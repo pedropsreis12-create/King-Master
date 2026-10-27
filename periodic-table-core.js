@@ -50,5 +50,25 @@
         return estimated ? `Estimado: ${labels[estimated[1]].toLowerCase()}` : 'Não informado';
     }
 
-    globalThis.KingPeriodicCore = Object.freeze({ FAMILIES, position, normalize, matches, stateLabel });
+    // Expande o gás nobre abreviado e soma os subníveis pelo número quântico principal.
+    // Representa elétrons por camada, não uma previsão da valência química de metais de transição.
+    function electronShells(element) {
+        const nobleCores = {
+            He: [2], Ne: [2, 8], Ar: [2, 8, 8], Kr: [2, 8, 18, 8],
+            Xe: [2, 8, 18, 18, 8], Rn: [2, 8, 18, 32, 18, 8]
+        };
+        const configuration = String(element?.configuration || '');
+        const coreName = configuration.match(/\[([A-Za-z]+)\]/)?.[1];
+        if (coreName && !nobleCores[coreName]) return null;
+        const shells = coreName ? [...nobleCores[coreName]] : [];
+        for (const [, level, , electrons] of configuration.matchAll(/([1-7])([spdf])(\d+)/g)) {
+            const index = Number(level) - 1;
+            shells[index] = (shells[index] || 0) + Number(electrons);
+        }
+        if (!shells.length || shells.some(count => !Number.isInteger(count) || count < 0)) return null;
+        if (shells.reduce((sum, count) => sum + count, 0) !== Number(element?.number)) return null;
+        return shells;
+    }
+
+    globalThis.KingPeriodicCore = Object.freeze({ FAMILIES, position, normalize, matches, stateLabel, electronShells });
 })();

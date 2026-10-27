@@ -76,6 +76,22 @@ test('busca aceita nome com ou sem acento, símbolo, número e família', () => 
     assert.equal(core.stateLabel('Gas'), 'Gasoso');
 });
 
+test('camadas eletrônicas somam o número atômico e destacam a camada mais externa', () => {
+    for (const element of data) {
+        const shells = core.electronShells(element);
+        assert.ok(shells, `Configuração incompleta de ${element.symbol}`);
+        assert.equal(shells.reduce((sum, electrons) => sum + electrons, 0), element.number);
+        assert.ok(shells.every(electrons => Number.isInteger(electrons) && electrons >= 0));
+    }
+    assert.deepEqual(core.electronShells(data[0]), [1]);
+    assert.deepEqual(core.electronShells(data[7]), [2, 6]);
+    assert.deepEqual(core.electronShells(data[25]), [2, 8, 14, 2]);
+    assert.deepEqual(core.electronShells(data[45]), [2, 8, 18, 18]);
+    assert.deepEqual(core.electronShells(data[117]), [2, 8, 18, 32, 32, 18, 8]);
+    assert.match(ui, /atomMarkup\(element\)/);
+    assert.match(ui, /Camada externa:/);
+});
+
 test('nova aba é navegável, funciona offline e respeita as opções de animação', () => {
     assert.match(html, /data-section="periodic-table" aria-controls="periodic-table"/);
     assert.match(html, /<section id="periodic-table" class="content-section/);

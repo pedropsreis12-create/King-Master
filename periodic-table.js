@@ -27,6 +27,32 @@
     const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
     const formatConfiguration = value => escapeHTML(value || '—').replace(/\](?=\d)/g, '] ').replace(/([spdf])(\d+)(?=\s|$)/gi, '$1<sup>$2</sup>');
 
+    function atomMarkup(element) {
+        const shells = core.electronShells(element);
+        if (!shells) return '';
+        const outerIndex = shells.length - 1;
+        const shellNames = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'];
+        const radii = [12, 22, 32, 42, 52, 61, 70];
+        const rings = shells.map((electrons, index) => {
+            const radius = radii[index];
+            const outer = index === outerIndex;
+            const dots = Array.from({ length: electrons }, (_, dot) => {
+                const angle = -Math.PI / 2 + 2 * Math.PI * dot / electrons + (index % 2 ? .18 : 0);
+                const x = (80 + radius * Math.cos(angle)).toFixed(2);
+                const y = (80 + radius * Math.sin(angle)).toFixed(2);
+                return `<circle class="periodic-atom-electron${outer ? ' is-outer' : ''}" cx="${x}" cy="${y}" r="${outer ? 2.8 : 2.1}"/>`;
+            }).join('');
+            return `<circle class="periodic-atom-orbit${outer ? ' is-outer' : ''}" cx="80" cy="80" r="${radius}"/>${dots}`;
+        }).join('');
+        const distribution = shells.map((electrons, index) => `<span class="${index === outerIndex ? 'is-outer' : ''}" title="Camada ${shellNames[index]}: ${electrons} elétrons">${shellNames[index]}<b>${electrons}</b></span>`).join('');
+        return `<div class="periodic-atom-model" role="group" aria-label="${escapeHTML(element.name)}: ${shells.length} camadas eletrônicas; ${shells[outerIndex]} elétrons na camada mais externa; distribuição ${shells.join(', ')}">
+            <span class="periodic-atom-title">CAMADAS ELETRÔNICAS</span>
+            <svg viewBox="0 0 160 160" aria-hidden="true" focusable="false"><circle class="periodic-atom-nucleus" cx="80" cy="80" r="9"/><text x="80" y="80" text-anchor="middle" dominant-baseline="central">${escapeHTML(element.symbol)}</text>${rings}</svg>
+            <div class="periodic-atom-distribution" aria-hidden="true">${distribution}</div>
+            <strong class="periodic-atom-valence">Camada externa: ${shells[outerIndex]} e⁻</strong>
+        </div>`;
+    }
+
     function elementMarkup(element) {
         const position = core.position(element.number);
         const familyKey = core.FAMILIES[element.category]?.key || 'unknown';
@@ -48,12 +74,12 @@
                 <div class="periodic-detail-nav"><button type="button" data-step="-1" aria-label="Elemento anterior">‹</button><button type="button" data-step="1" aria-label="Próximo elemento">›</button><button type="button" class="periodic-detail-close" data-close-detail aria-label="Fechar detalhes">×</button></div>
             </div>
             <h3 class="periodic-detail-screenreader">${escapeHTML(element.name)}</h3>
-            <div class="periodic-diagram" role="group" aria-label="${escapeHTML(element.name)}: número atômico ${element.number}, símbolo ${escapeHTML(element.symbol)}, massa atômica ${escapeHTML(mass)} unidades">
+            <div class="periodic-detail-visuals"><div class="periodic-diagram" role="group" aria-label="${escapeHTML(element.name)}: número atômico ${element.number}, símbolo ${escapeHTML(element.symbol)}, massa atômica ${escapeHTML(mass)} unidades">
                 <div class="periodic-diagram-labels" aria-hidden="true"><span>NÚMERO ATÔMICO<i></i></span><span>SÍMBOLO<i></i></span><span>NOME<i></i></span><span>MASSA ATÔMICA<i></i></span></div>
                 <div class="periodic-diagram-tile periodic-element--${family.key}"><span class="periodic-diagram-number">${element.number}</span><strong>${escapeHTML(element.symbol)}</strong><span class="periodic-diagram-name">${escapeHTML(element.name)}</span><span class="periodic-diagram-mass">${escapeHTML(mass)}</span></div>
-            </div>
+            </div>${atomMarkup(element)}</div>
             <div class="periodic-detail-extras"><span><i class="periodic-family-dot periodic-element--${family.key}" aria-hidden="true"></i>${escapeHTML(family.label)} · ${group} · Período ${position.period} · ${escapeHTML(core.stateLabel(element.state))}</span><span>Configuração: <strong>${formatConfiguration(element.configuration)}</strong> <button type="button" class="periodic-config-help" data-config-help aria-controls="periodicConfigHelpText" aria-expanded="false" aria-label="Entenda a configuração eletrônica">?</button></span><a class="periodic-source-link" href="https://pubchem.ncbi.nlm.nih.gov/element/${encodeURIComponent(element.englishName.toLowerCase())}" target="_blank" rel="noopener noreferrer">PubChem ↗</a></div>
-            <p class="periodic-config-explainer" id="periodicConfigHelpText" hidden>Esta notação mostra onde estão os elétrons: o número antes da letra é o nível; s, p, d e f são subníveis; o número em cima é a quantidade de elétrons. O símbolo entre colchetes resume os elétrons internos de um gás nobre.${element.symbol === 'Fe' ? ' No ferro, [Ar] representa 18 elétrons; 4s² adiciona 2 e 3d⁶ adiciona 6, totalizando 26.' : ''}</p>
+            <p class="periodic-config-explainer" id="periodicConfigHelpText" hidden>Esta notação mostra onde estão os elétrons: o número antes da letra é o nível; s, p, d e f são subníveis; o número em cima é a quantidade de elétrons. O símbolo entre colchetes resume os elétrons internos de um gás nobre.${element.symbol === 'Fe' ? ' No ferro, [Ar] representa 18 elétrons; 4s² adiciona 2 e 3d⁶ adiciona 6, totalizando 26.' : ''}${['Transition metal', 'Lanthanide', 'Actinide'].includes(element.category) ? ' A camada externa destacada não indica, sozinha, todos os elétrons que podem participar de ligações neste metal.' : ''}</p>
             `;
     }
 

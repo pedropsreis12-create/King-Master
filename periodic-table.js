@@ -85,22 +85,25 @@
     }
 
     function runPortalEffect(direction, element, origin, target, done) {
-        const from = direction === 'enter' ? origin : target;
-        const to = direction === 'enter' ? target : origin;
+        const sectionRect = section.getBoundingClientRect();
+        const relativeToTable = point => ({ x: point.x - sectionRect.left, y: point.y - sectionRect.top });
+        const portal = relativeToTable(origin);
+        const from = relativeToTable(direction === 'enter' ? origin : target);
+        const to = relativeToTable(direction === 'enter' ? target : origin);
         const tile = grid.querySelector(`[data-element="${element.number}"]`);
         const color = tile ? window.getComputedStyle(tile).backgroundColor : '#dce9a3';
         const layer = document.createElement('div');
         layer.className = `periodic-portal-fx periodic-portal-fx--${direction}`;
         layer.setAttribute('aria-hidden', 'true');
-        layer.style.setProperty('--portal-x', `${origin.x}px`);
-        layer.style.setProperty('--portal-y', `${origin.y}px`);
+        layer.style.setProperty('--portal-x', `${portal.x}px`);
+        layer.style.setProperty('--portal-y', `${portal.y}px`);
         layer.style.setProperty('--ghost-x', `${from.x - 45}px`);
         layer.style.setProperty('--ghost-y', `${from.y - 53}px`);
         layer.style.setProperty('--ghost-dx', `${to.x - from.x}px`);
         layer.style.setProperty('--ghost-dy', `${to.y - from.y}px`);
         layer.style.setProperty('--ghost-color', color);
         layer.innerHTML = `<div class="periodic-portal-fx-anchor"><img class="periodic-portal-fx-vortex" src="assets/periodic-portal-vortex.png" alt=""><img class="periodic-portal-fx-gun" src="assets/periodic-portal-gun.png" alt=""></div><div class="periodic-portal-fx-ghost"><span>${element.number}</span><strong>${escapeHTML(element.symbol)}</strong><small>${escapeHTML(element.name)}</small></div>`;
-        document.body.append(layer);
+        section.append(layer);
         playPortalSound();
         const current = { layer, timer: 0 };
         portalEffect = current;

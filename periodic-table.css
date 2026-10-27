@@ -229,7 +229,7 @@ html[data-motion-level="off"] .periodic-figure { animation: none; filter: none; 
 @media (max-width: 620px) { .periodic-neon .periodic-hero { display: flex; align-items: center; min-height: 76px; padding: 11px 14px; } .periodic-neon .periodic-hero-copy { max-width: calc(100% - 70px); } .periodic-neon .periodic-hero h1 { font-size: 1.32rem; } .periodic-neon .periodic-header-spider { top: -17px; right: 5px; width: 65px; height: 88px; } .periodic-neon .periodic-explorer { padding: 0 9px 10px; } .periodic-neon .periodic-legend { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 5px; scrollbar-width: none; } .periodic-neon .periodic-legend::-webkit-scrollbar { display: none; } .periodic-neon .periodic-table-topline { padding: 7px 8px 0; } .periodic-neon .periodic-table-scroll { padding: 6px 8px 10px; } .periodic-neon .periodic-neon-key { display: none; } .periodic-config-explainer { position: static; transform: none; } }
 
 /* Poster em vermelho e azul inspirado na referência, preservando a leitura da tabela. */
-.periodic-neon { --spider-red:#ed3550; --spider-blue:#4b9cf5; overflow: hidden; border: 1px solid #743047; border-radius: 22px; background: #05070e; box-shadow: 0 22px 55px rgba(6,9,25,.24),0 0 35px rgba(190,31,56,.1); color: #f7f8fc; }
+.periodic-neon { --spider-red:#ed3550; --spider-blue:#4b9cf5; position: relative; overflow: hidden; border: 1px solid #743047; border-radius: 22px; background: #05070e; box-shadow: 0 22px 55px rgba(6,9,25,.24),0 0 35px rgba(190,31,56,.1); color: #f7f8fc; }
 .periodic-neon .periodic-hero { min-height: 148px; justify-content: center; overflow: hidden; padding: 18px 160px 18px 190px; border: 0; border-radius: 0; background: radial-gradient(ellipse at 2% 42%,rgba(166,21,42,.5),transparent 40%),radial-gradient(ellipse at 96% 42%,rgba(26,78,168,.55),transparent 40%),#05060c; }
 .periodic-neon .periodic-hero::before { position: absolute; inset: 0; z-index: 0; display: block; width: auto; height: auto; border: 0; border-radius: 0; background: url('assets/periodic-web-corner.svg') left top / 220px 220px no-repeat; content: ''; opacity: .56; }
 .periodic-neon .periodic-hero::after { position: absolute; right: 0; bottom: 0; left: 0; display: block; width: auto; height: 3px; border: 0; border-radius: 0; background: linear-gradient(90deg,#ca233d 0%,#f34c5d 40%,#487ff4 65%,#1755bd 100%); box-shadow: 0 0 14px rgba(197,45,84,.55); content: ''; }
@@ -416,7 +416,7 @@ html[data-motion-level="reduced"] .periodic-rick .periodic-rick-character { anim
 
 /* A arma e o portal da transição só existem enquanto um elemento entra ou sai. */
 .periodic-neon.periodic-rick .periodic-detail.is-portal-pending { opacity: 0; pointer-events: none; }
-.periodic-portal-fx { position: fixed; inset: 0; z-index: 100000; overflow: hidden; pointer-events: none; }
+.periodic-portal-fx { position: absolute; inset: 0; z-index: 100000; overflow: hidden; pointer-events: none; }
 .periodic-portal-fx-anchor { position: absolute; top: var(--portal-y); left: var(--portal-x); width: 172px; height: 172px; transform: translate(-50%,-50%); }
 .periodic-portal-fx-vortex { display: block; width: 100%; height: 100%; object-fit: contain; animation: periodic-fx-vortex 900ms ease-in-out both; }
 .periodic-portal-fx-gun { position: absolute; top: 53%; left: -56%; width: 125px; height: 82px; object-fit: contain; animation: periodic-fx-gun 900ms ease-in-out both; }

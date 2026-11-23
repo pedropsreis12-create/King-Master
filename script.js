@@ -2889,7 +2889,11 @@ window.addEventListener('pageshow', () => {
 document.addEventListener('visibilitychange', () => {
     if (!timerPersistenceReady) return;
     tickTimer();
-    if (document.hidden) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
+    // Cada alteração já é salva na hora; ao trocar de aba só o cronômetro em andamento precisa de um envio completo.
+    if (document.hidden) {
+        if (isRunning) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
+        else persistTimerCheckpoint();
+    }
 });
 
 function prepararAudioAlarme() {

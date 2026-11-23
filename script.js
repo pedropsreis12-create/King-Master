@@ -813,7 +813,7 @@ function showSection(sectionId) {
             b.removeAttribute('aria-current');
         }
     });
-    const secoesDock = new Set(['dashboard', 'planejamento', 'cronograma', 'revisoes']);
+    const secoesDock = new Set(['dashboard', 'planejamento', 'metas', 'revisoes']);
     document.querySelectorAll('.dock-btn[data-section]').forEach(b => {
         const ativa = b.dataset.section === sectionId;
         b.classList.toggle('active', ativa);

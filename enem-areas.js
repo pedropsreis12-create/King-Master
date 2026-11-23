@@ -71,9 +71,10 @@
             if (ativa) botao.setAttribute('aria-current', 'page'); else botao.removeAttribute('aria-current');
         });
         if (sectionId === 'planejamento') document.title = `${atual ? AREAS[atual].curto : 'Todas as matérias'} · King Master`;
-        if (sectionId === 'agendamento') {
-            document.title = 'Plano semanal · King Master';
-            const plano = document.querySelector('.menu-btn[data-section="cronograma"]');
+        if (sectionId === 'agendamento' || sectionId === 'cronograma') {
+            document.title = `${sectionId === 'cronograma' ? 'Cronograma' : 'Compromissos e provas'} · King Master`;
+            document.querySelector('.dock-btn[data-section="metas"]')?.classList.add('active');
+            const plano = document.querySelector('.menu-btn[data-section="metas"]');
             plano?.classList.add('active');
             plano?.setAttribute('aria-current', 'page');
         }

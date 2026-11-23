@@ -257,3 +257,49 @@ html[data-visual] .enem-writing-card { padding: 16px 20px; }
 /* Celular: o aviso de semana vazia não fica cortado dentro da grade rolável */
 .schedule-week-matrix:has(> .schedule-matrix-empty) { min-width: 0 !important; width: 100% !important; }
 .schedule-matrix-empty { min-width: 0 !important; width: 100% !important; text-align: center; }
+
+/* Metas */
+html[data-visual] .metas-countdown { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 24px; margin: 0 0 18px; padding: 18px 22px; }
+.metas-countdown-main { display: grid; justify-items: center; padding: 10px 18px; border-radius: 12px; background: rgba(var(--accent-rgb), .1); color: var(--accent-ink); }
+.metas-countdown-main strong { font-size: 2.2rem; line-height: 1; font-weight: 800; }
+.metas-countdown-main span { font-size: .78rem; font-weight: 600; }
+.metas-countdown dl { display: grid; gap: 8px; margin: 0; }
+.metas-countdown dt { font-size: .7rem; color: var(--text-muted); }
+.metas-countdown dd { margin: 0; font-weight: 700; font-size: .9rem; }
+.metas-countdown p { margin: 0; color: var(--text-muted); font-size: .8rem; line-height: 1.5; }
+@media (max-width: 900px) { html[data-visual] .metas-countdown { grid-template-columns: 1fr; gap: 12px; } }
+.metas-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 6px; }
+.metas-group { margin: 14px 0 22px; }
+.metas-group h2 { margin: 0 0 10px; font-size: 1rem; font-weight: 800; }
+.metas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.meta-card { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--border-color); border-left: 4px solid var(--accent-color); border-radius: var(--km-radius); background: var(--card-bg); box-shadow: var(--card-shadow); }
+.meta-card.is-cumprida { border-left-color: #2f9e44; }
+.meta-card.is-expirada { border-left-color: #adb5bd; opacity: .8; }
+.meta-card header { display: flex; justify-content: space-between; gap: 10px; }
+.meta-card h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+.meta-type { color: var(--text-muted); font-size: .74rem; }
+.meta-card-menu { display: flex; gap: 2px; }
+.meta-card-menu button { width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: var(--text-muted); cursor: pointer; }
+.meta-card-menu button:hover { background: var(--hover-bg); color: var(--text-main); }
+.meta-card-menu button.danger:hover { background: #fdecec; color: #c92a2a; }
+.meta-progress-row { display: flex; justify-content: space-between; align-items: baseline; font-size: .86rem; }
+.meta-progress-row span { color: var(--text-muted); font-weight: 700; }
+.meta-bar { height: 10px; margin-top: 6px; border-radius: 99px; background: var(--hover-bg); overflow: hidden; }
+.meta-bar span { display: block; height: 100%; border-radius: inherit; background: var(--accent-color); }
+.meta-card.is-cumprida .meta-bar span { background: #2f9e44; }
+.meta-deadline { margin: 0; color: var(--text-muted); font-size: .76rem; }
+.meta-card.is-cumprida .meta-deadline { color: #2b8a3e; font-weight: 600; }
+.meta-subtasks { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.meta-subtasks label { display: flex; gap: 8px; align-items: flex-start; font-size: .84rem; cursor: pointer; }
+.meta-subtasks input:checked + span { text-decoration: line-through; color: var(--text-muted); }
+.meta-number { display: grid; grid-template-columns: 40px 1fr 40px; gap: 6px; }
+.meta-number input { text-align: center; }
+.metas-suggestions { margin: 10px 0 0; padding: 14px 0 0; border-top: 1px solid var(--border-color); }
+.metas-suggestions .enem-presets { margin-top: 8px; }
+.meta-form .meta-type-switch { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 4px 0 12px; }
+.meta-type-switch label { display: flex; gap: 8px; padding: 10px; border: 1px solid var(--border-strong); border-radius: 10px; cursor: pointer; }
+.meta-type-switch label:has(input:checked) { border-color: var(--accent-color); background: rgba(var(--accent-rgb), .08); }
+.meta-type-switch strong { display: block; font-size: .84rem; }
+.meta-type-switch small { color: var(--text-muted); font-size: .7rem; }
+.meta-repeat { display: flex; align-items: center; gap: 8px; align-self: end; padding-bottom: 10px; font-size: .84rem; }
+@media (max-width: 640px) { .meta-form .meta-type-switch { grid-template-columns: 1fr; } }

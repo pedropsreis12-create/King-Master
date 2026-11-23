@@ -213,7 +213,7 @@ test('interface liga cronograma, configuração, arrastar e integração ao regi
     const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
     const ui = fs.readFileSync(new URL('../schedule.js', import.meta.url), 'utf8');
     const app = fs.readFileSync(new URL('../script.js', import.meta.url), 'utf8');
-    assert.match(html, /data-section="cronograma"/);
+    assert.match(html, /data-plan-tab="cronograma"/);
     assert.match(html, /id="scheduleSettingsModal"/);
     assert.match(html, /id="scheduleDayCloseModal"/);
     assert.match(html, /id="scheduleDayStrip"/);

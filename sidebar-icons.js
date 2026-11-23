@@ -3,6 +3,7 @@
     const icons = {
         dashboard: '<path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V20h11v-9.5"/><path d="M10 20v-5h4v5"/>',
         agendamento: '<rect x="4" y="5.5" width="16" height="14" rx="3"/><path d="M8 3.5v4M16 3.5v4M4 10h16"/><path d="M8 14h3M8 17h6"/>',
+        metas: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/>',
         cronograma: '<rect x="3.5" y="4" width="17" height="16" rx="3"/><path d="M8 2.5V6M16 2.5V6M3.5 9h17M8 13h2M14 13h2M8 16.5h2M14 16.5h2"/>',
         planejamento: '<path d="M5 4.5h11a3 3 0 0 1 3 3V20H8a3 3 0 0 1-3-3z"/><path d="M8 4.5V17a3 3 0 0 0 3 3M11 9h5M11 12.5h5"/>',
         revisoes: '<path d="M20 7v5h-5"/><path d="M18.2 16a8 8 0 1 1 .7-8.2L20 12"/><path d="M12 8v4l2.5 1.5"/>',

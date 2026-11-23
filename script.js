@@ -3251,17 +3251,58 @@ function renderizarCiclo() {
         return;
     }
 
-    grid.innerHTML = visiveis.map(i => {
-        let exec = i.executedMin || 0; 
-        let txtExec = exec >= 60 ? `${Math.floor(exec/60)}h${Math.floor(exec%60).toString().padStart(2,'0')}m` : `${Math.floor(exec%60)}m`;
-        let concluidos = i.topicos ? i.topicos.filter(t => obterNivelDominioTopico(t) === 3).length : 0, totalTopicos = i.topicos ? i.topicos.length : 0;
-        const progresso = totalTopicos ? Math.round(concluidos / totalTopicos * 100) : 0;
-        const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
-        const cor = corSegura(i.color);
-        const materiaId = Number(i.id) || 0;
-        const questoes = Math.max(0, Number(i.acertos) || 0) + Math.max(0, Number(i.erros) || 0);
-        const estado = totalTopicos ? `${progresso}% do conteúdo dominado` : 'Pronta para organizar';
-        return `<article class="disc-card" style="--subject-color:${cor};border-left-color:${cor};"><div class="disc-card-main"><div class="disc-card-top"><div><strong class="disc-title">${nome}</strong><span class="disc-type">${estado}</span></div><div class="workspace-card-actions"><button type="button" class="workspace-icon-button" onclick="editarMateriaCiclo(${materiaId})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="workspace-icon-button danger" onclick="abrirModalDeletar('cycle', ${materiaId}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Flashcards ficam guardados para realocação.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div></div><div class="disc-stats-row"><div class="ds-box"><span class="ds-val">${concluidos}/${totalTopicos}</span><span class="ds-lbl">Tópicos</span></div><div class="ds-box"><span class="ds-val" style="color:${cor};">${txtExec}</span><span class="ds-lbl">Tempo</span></div><div class="ds-box"><span class="ds-val">${questoes}</span><span class="ds-lbl">Questões</span></div></div><div class="disc-progress" aria-label="${progresso}% dos tópicos dominados"><span style="width:${progresso}%"></span></div><button type="button" class="subject-chapters-link" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${materiaId})" ${totalTopicos ? '' : 'disabled'}>${totalTopicos ? 'Abrir assuntos e cadernos ↗' : 'Adicione um assunto para começar'}</button></div></article>`;
+    grid.innerHTML = renderizarGradeMaterias(visiveis);
+}
+
+function cartaoMateriaHtml(i) {
+    const exec = Math.max(0, Number(i.executedMin) || 0);
+    const tempo = exec >= 60 ? `${Math.floor(exec / 60)}h${String(Math.floor(exec % 60)).padStart(2, '0')}` : `${Math.floor(exec)}min`;
+    const topicos = Array.isArray(i.topicos) ? i.topicos : [];
+    const dominados = topicos.filter(t => obterNivelDominioTopico(t) === 3).length;
+    const progresso = topicos.length ? Math.round(dominados / topicos.length * 100) : 0;
+    const nome = escaparRevisaoHtml(i.subject || 'Sem nome');
+    const cor = corSegura(i.color);
+    const materiaId = Number(i.id) || 0;
+    const acertos = Math.max(0, Number(i.acertos) || 0), erros = Math.max(0, Number(i.erros) || 0);
+    const questoes = acertos + erros;
+    const taxa = questoes ? `${Math.round(acertos / questoes * 100)}%` : '—';
+    const icone = escaparRevisaoHtml(i.schedule?.icon && i.schedule.icon !== '●' ? i.schedule.icon : (i.subject || '?').trim().charAt(0).toLocaleUpperCase('pt-BR'));
+    const area = window.KingEnemAreas?.AREAS[window.KingEnemAreas.areaOf(i)]?.curto || 'Outra';
+    const acao = topicos.length
+        ? `<button type="button" class="subject-card-open" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${materiaId})">Estudar assuntos <span aria-hidden="true">→</span></button>`
+        : `<button type="button" class="subject-card-open is-empty" onclick="editarMateriaCiclo(${materiaId})">Adicionar assuntos <span aria-hidden="true">+</span></button>`;
+    return `<article class="subject-card" style="--subject-color:${cor}">
+        <header class="subject-card-head">
+            <span class="subject-card-icon" aria-hidden="true">${icone}</span>
+            <div class="subject-card-title"><h3>${nome}</h3><span>${area} · ${pluralizar(topicos.length, 'assunto')}</span></div>
+            <div class="subject-card-menu"><button type="button" onclick="editarMateriaCiclo(${materiaId})" aria-label="Editar ${nome}" title="Editar">✎</button><button type="button" class="danger" onclick="abrirModalDeletar('cycle', ${materiaId}, 'Apagar matéria por completo?', 'A matéria, seus tópicos, revisões e sessões do histórico serão apagados. Flashcards ficam guardados para realocação.')" aria-label="Apagar ${nome}" title="Apagar">×</button></div>
+        </header>
+        <div class="subject-card-progress" aria-label="${progresso}% dos assuntos dominados">
+            <div class="subject-card-progress-label"><span>Domínio</span><strong>${progresso}%</strong></div>
+            <div class="subject-card-bar"><span style="width:${progresso}%"></span></div>
+            <small>${dominados} de ${topicos.length} assuntos dominados</small>
+        </div>
+        <dl class="subject-card-stats">
+            <div><dt>Tempo</dt><dd>${tempo}</dd></div>
+            <div><dt>Questões</dt><dd>${questoes}</dd></div>
+            <div><dt>Acerto</dt><dd>${taxa}</dd></div>
+        </dl>
+        ${acao}
+    </article>`;
+}
+
+function renderizarGradeMaterias(materias) {
+    const Areas = window.KingEnemAreas;
+    if (!Areas || Areas.current()) return `<div class="subject-card-grid">${materias.map(cartaoMateriaHtml).join('')}</div>`;
+    const ordem = ['linguagens', 'humanas', 'natureza', 'matematica', 'outra'];
+    return ordem.map(id => {
+        const doGrupo = materias.filter(item => Areas.areaOf(item) === id);
+        if (!doGrupo.length) return '';
+        const area = Areas.AREAS[id];
+        const titulo = area ? area.nome : 'Outras matérias';
+        const cor = area ? area.cor : '#64748b';
+        const abrir = area ? `<button type="button" class="subject-group-open" onclick="KingEnemAreas.set('${id}')">Ver área <span aria-hidden="true">→</span></button>` : '';
+        return `<section class="subject-group" style="--area-color:${cor}" aria-label="${titulo}"><header class="subject-group-head"><h2>${titulo}</h2><span>${pluralizar(doGrupo.length, 'matéria')}</span>${abrir}</header><div class="subject-card-grid">${doGrupo.map(cartaoMateriaHtml).join('')}</div></section>`;
     }).join('');
 }
 
@@ -3724,6 +3765,7 @@ function renderizarQuestoesSemanaHistorico() {
     }), { questoes: 0, acertos: 0, erros: 0, brancos: 0 });
     const ultima = dias.at(-1).data;
     const periodo = `${segunda.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${ultima.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`.replaceAll('.', '');
+    if (!document.getElementById('historyQuestionChart')) return resumo;
     document.getElementById('historyQuestionsRange').textContent = periodo;
     document.getElementById('hist-week-questions').textContent = resumo.questoes;
     document.getElementById('hist-week-hits').textContent = resumo.acertos;

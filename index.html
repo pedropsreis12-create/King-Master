@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261123-enem-v1">
+    <link rel="stylesheet" href="enem-theme.css?v=20261123-materias-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -299,14 +299,7 @@
                 </div>
             </div>
 
-            <section class="history-questions widget" aria-labelledby="historyQuestionsTitle"><div class="history-questions-head"><div><span class="workspace-kicker">QUESTÕES DA SEMANA</span><h2 id="historyQuestionsTitle">Seu desempenho de segunda a domingo</h2><p id="historyQuestionsRange">Semana atual</p></div></div><div class="history-question-metrics"><div><small>Questões feitas</small><strong id="hist-week-questions">0</strong></div><div><small>Acertos</small><strong id="hist-week-hits">0</strong></div><div><small>Erros</small><strong id="hist-week-errors">0</strong></div><div><small>Taxa de acerto</small><strong id="hist-week-rate">—</strong></div></div><div class="history-question-chart" id="historyQuestionChart" role="img" aria-label="Acertos e erros por dia da semana"></div><p class="history-question-note" id="historyQuestionsNote">Inclui sessões e simulados avulsos sem duplicar registros.</p></section>
-
-            <div class="widget daily-missions" id="dailyMissions" aria-labelledby="dailyMissionsTitle">
-                <div class="daily-missions-heading"><div><span>MISSÕES DE HOJE</span><h2 id="dailyMissionsTitle">Avance uma etapa por vez</h2></div><strong id="dailyMissionsScore">0/3</strong></div>
-                <div class="daily-missions-grid" id="dailyMissionsGrid"></div>
-            </div>
-            
-            <section class="widget streak-widget" aria-labelledby="streak-title">
+<section class="widget streak-widget" aria-labelledby="streak-title">
                 <div class="streak-heading">
                     <div>
                         <span class="workspace-kicker">SEU RITMO</span>
@@ -518,22 +511,16 @@
                 <div>
                     <span class="workspace-kicker">ÁREAS DO ENEM</span>
                     <h1 id="planejamentoTitulo">Todas as matérias</h1>
-                    <p>Cadastre conteúdos, acompanhe tópicos e veja onde seu domínio ainda precisa avançar.</p>
+                    <p>Suas matérias organizadas pelas áreas da prova. Abra uma matéria para estudar os assuntos.</p>
                 </div>
                 <div class="cycle-btn-group">
-                    <button type="button" class="cycle-btn" onclick="KingStudyEvolution.openProfile()">Personalizar meu plano</button>
-                    <button class="cycle-btn subtle-danger" onclick="abrirModalDeletar('clearCycle', null, 'Apagar matérias?', 'Matérias, tópicos, revisões e sessões relacionadas serão removidos. Flashcards ficam guardados para você realocar depois.')">Limpar matérias</button>
-                    <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
+                    <button type="button" class="cycle-btn" onclick="KingSubjectLab.openSyllabus()"><span aria-hidden="true">✦</span> Ler edital com IA</button>
+                    <button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
                 </div>
             </div>
             <div class="enem-area-chips" id="enemAreaChips" role="group" aria-label="Filtrar por área do ENEM"><button type="button" data-enem-area-chip="" aria-pressed="true" onclick="KingEnemAreas.set('')">Todas</button><button type="button" data-enem-area-chip="linguagens" aria-pressed="false" onclick="KingEnemAreas.set('linguagens')">Linguagens</button><button type="button" data-enem-area-chip="humanas" aria-pressed="false" onclick="KingEnemAreas.set('humanas')">Humanas</button><button type="button" data-enem-area-chip="natureza" aria-pressed="false" onclick="KingEnemAreas.set('natureza')">Natureza</button><button type="button" data-enem-area-chip="matematica" aria-pressed="false" onclick="KingEnemAreas.set('matematica')">Matemática</button></div>
             <section class="enem-area-banner widget" id="enemAreaBanner" aria-live="polite" hidden></section>
-            <article class="subject-ai-card widget">
-                <span class="subject-ai-mark" aria-hidden="true">✦</span>
-                <div><span class="workspace-kicker">IA INTEGRADA ÀS MATÉRIAS</span><h2>Transforme um edital em tópicos organizados</h2><p>Envie PDF, imagem ou texto. A IA separa os assuntos e você confere tudo antes de adicionar às matérias existentes.</p></div>
-                <button type="button" class="cycle-btn primary" onclick="KingSubjectLab.openSyllabus()">Ler edital com IA</button>
-            </article>
-            <div class="workspace-tabs" role="tablist" aria-label="Visualização das matérias" onkeydown="navegarAbasHub(event)">
+<div class="workspace-tabs" role="tablist" aria-label="Visualização das matérias" onkeydown="navegarAbasHub(event)">
                 <button type="button" id="tab-ciclo" role="tab" aria-selected="true" aria-controls="aba-ciclo-content" tabindex="0" onclick="alternarAbasHub('ciclo')"><span aria-hidden="true">▦</span> Minhas matérias</button>
                 <button type="button" id="tab-dominio" role="tab" aria-selected="false" aria-controls="aba-dominio-content" tabindex="-1" onclick="alternarAbasHub('dominio')"><span aria-hidden="true">◎</span> Central de domínio</button>
             </div>
@@ -549,6 +536,7 @@
                     <span class="workspace-result-count" id="materiasResultado" aria-live="polite">0 matérias</span>
                 </div>
                 <div class="disciplinas-grid" id="disciplinasGrid"></div>
+                <p class="subjects-footer-actions"><button type="button" class="subjects-clear-link" onclick="abrirModalDeletar('clearCycle', null, 'Apagar matérias?', 'Matérias, tópicos, revisões e sessões relacionadas serão removidos. Flashcards ficam guardados para você realocar depois.')">Apagar todas as matérias</button></p>
             </div>
             <div id="aba-dominio-content" class="workspace-tab-panel" role="tabpanel" aria-labelledby="tab-dominio" tabindex="0" hidden>
                 <div class="domain-center-hero widget">
@@ -1530,7 +1518,7 @@
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
     <script src="enem-areas.js?v=20261123-enem-v1"></script>
-    <script src="script.js?v=20261123-enem-v1"></script>
+    <script src="script.js?v=20261123-materias-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>

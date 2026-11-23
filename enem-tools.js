@@ -234,38 +234,9 @@
         box.innerHTML = `<div class="enem-perf-head"><div><span class="workspace-kicker">DESEMPENHO POR ÁREA</span><h2>Onde você está na prova</h2></div></div><div class="enem-perf-grid">${cards}</div><div class="enem-worst"><h3>Assuntos que mais pedem atenção</h3>${lista}</div>`;
     }
 
-    /* ---------- Redação: temas das últimas edições ---------- */
-    const TEMAS = [
-        [2024, 'Desafios para a valorização da herança africana no Brasil'],
-        [2023, 'Desafios para o enfrentamento da invisibilidade do trabalho de cuidado realizado pela mulher no Brasil'],
-        [2022, 'Desafios para a valorização de comunidades e povos tradicionais no Brasil'],
-        [2021, 'Invisibilidade e registro civil: garantia de acesso à cidadania no Brasil'],
-        [2020, 'O estigma associado às doenças mentais na sociedade brasileira'],
-        [2019, 'Democratização do acesso ao cinema no Brasil'],
-        [2018, 'Manipulação do comportamento do usuário pelo controle de dados na internet'],
-        [2017, 'Desafios para a formação educacional de surdos no Brasil'],
-        [2016, 'Caminhos para combater a intolerância religiosa no Brasil'],
-        [2015, 'A persistência da violência contra a mulher na sociedade brasileira'],
-        [2014, 'Publicidade infantil em questão no Brasil'],
-        [2013, 'Efeitos da implantação da Lei Seca no Brasil'],
-    ];
-
-    function renderRedacao() {
-        const box = document.getElementById('enemWritingTools');
-        if (!box || box.dataset.ready) return;
-        box.dataset.ready = '1';
-        const temas = TEMAS.map(([ano, tema]) => `<li><span><b>${ano}</b> ${esc(tema)}</span><button type="button" class="cycle-btn" data-tema="${esc(tema)}">Treinar</button></li>`).join('');
-        box.innerHTML = `<details class="widget enem-writing-card" open><summary><span class="workspace-kicker">BANCO DE TEMAS</span><h2>Temas das últimas edições do ENEM</h2></summary><ul class="enem-theme-list">${temas}</ul></details>`;
-        box.querySelectorAll('[data-tema]').forEach(botao => botao.addEventListener('click', () => {
-            window.abrirModalRedacao?.();
-            setTimeout(() => { const campo = document.getElementById('redTheme'); if (campo) { campo.value = botao.dataset.tema; campo.dispatchEvent(new Event('input', { bubbles: true })); } }, 60);
-        }));
-    }
-
     function onSection(id) {
         if (id === 'dashboard') renderMeta();
         if (id === 'historico') renderDesempenho();
-        if (id === 'redacao') renderRedacao();
     }
     window.addEventListener('king-master-section', event => onSection(event.detail));
     window.addEventListener('king-master-data-changed', () => {
@@ -276,5 +247,5 @@
     const inicial = () => onSection(document.querySelector('.content-section.active')?.id || 'dashboard');
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inicial, { once: true }); else setTimeout(inicial, 0);
 
-    window.KingEnemTools = Object.freeze({ CONTEUDOS, aplicarConteudos, abrirConteudos, abrirPesos, abrirSimuladoEnem, renderMeta, renderDesempenho, renderRedacao });
+    window.KingEnemTools = Object.freeze({ CONTEUDOS, aplicarConteudos, abrirConteudos, abrirPesos, abrirSimuladoEnem, renderMeta, renderDesempenho });
 })();

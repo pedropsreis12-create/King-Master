@@ -127,3 +127,18 @@ test('metas automáticas medem horas e questões no período e marcam a meta com
   assert.equal(progresso({ tipo: 'check', subtarefas: [{ feito: true }, { feito: false }] }).pct, 50);
   assert.equal(ENEM_PREVISTO.oficial, false);
 });
+
+test('banco de temas marca o tema como concluído quando há redação com o mesmo tema', async () => {
+  const vm = await import('node:vm');
+  const source = await readFile(new URL('../temas-redacao.js', import.meta.url), 'utf8');
+  const scope = {
+    window: { addEventListener() {} }, document: { readyState: 'complete', addEventListener() {}, querySelector: () => null, getElementById: () => null },
+    appData: { temasRedacao: [{ id: 't1', titulo: 'Desafios para ampliar a leitura entre jovens no Brasil', origem: 'ia' }], redacaoItems: [{ theme: 'desafios para ampliar a leitura entre jovens no Brasil.', date: '2026-11-20' }] },
+    setTimeout, Date, Number, String, Set, Array, Object,
+  };
+  vm.runInNewContext(`${source}; this.T = window.KingTemasRedacao;`, scope);
+  const todos = scope.T.todos();
+  assert.ok(todos.length >= 13);
+  assert.ok(scope.T.redacaoDoTema(todos.find(t => t.id === 't1')));
+  assert.equal(scope.T.redacaoDoTema(todos.find(t => t.origem === 'enem')), null);
+});

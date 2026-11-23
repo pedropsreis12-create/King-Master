@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261123-temas-v2">
+    <link rel="stylesheet" href="enem-theme.css?v=20261123-abas-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -774,7 +774,7 @@
         </section>
 
         <!-- Redação e Histórico continuam iguais -->
-        <section id="redacao" class="content-section">
+        <section id="redacao" class="content-section" data-red-view="redacoes">
             <div class="workspace-heading">
                 <div>
                     <span class="workspace-kicker">EVOLUA POR COMPETÊNCIA</span>
@@ -783,6 +783,7 @@
                 </div>
                 <button class="cycle-btn primary" onclick="abrirModalRedacao()">+ Registrar redação</button>
             </div>
+            <div class="plan-tabs redacao-tabs" role="tablist" aria-label="Redação"><button type="button" role="tab" data-red-tab="redacoes" aria-selected="true">Minhas redações</button><button type="button" role="tab" data-red-tab="temas" aria-selected="false">Banco de temas</button></div>
             <div id="enemWritingTools" class="enem-writing-tools"></div>
             <div class="stats-grid writing-summary-grid">
                 <div class="stat-card"><div class="stat-label">Média Global</div><div class="stat-value" id="red-media" style="color: var(--text-main);">0</div></div>
@@ -1529,7 +1530,7 @@
     <script src="script.js?v=20261123-metas-v1"></script>
     <script src="enem-tools.js?v=20261123-temas-v1"></script>
     <script src="metas.js?v=20261123-metas-v1"></script>
-    <script src="temas-redacao.js?v=20261123-temas-v2"></script>
+    <script src="temas-redacao.js?v=20261123-abas-v1"></script>
     <script src="auto-backup.js?v=20261123-tools-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>

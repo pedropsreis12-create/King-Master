@@ -159,8 +159,18 @@
         requestAnimationFrame(() => overlay.classList.add('active'));
     }
 
+    function mostrarAba(aba) {
+        const secao = document.getElementById('redacao');
+        if (!secao) return;
+        const temas = aba === 'temas';
+        secao.dataset.redView = temas ? 'temas' : 'redacoes';
+        secao.querySelectorAll('[data-red-tab]').forEach(botao => botao.setAttribute('aria-selected', String(botao.dataset.redTab === secao.dataset.redView)));
+        if (temas) render();
+    }
+
     document.addEventListener('click', event => {
         const alvo = event.target.closest('button');
+        if (alvo?.dataset.redTab) { mostrarAba(alvo.dataset.redTab); return; }
         if (!alvo || !alvo.closest('#enemWritingTools')) return;
         if (alvo.dataset.temaFiltro) { filtro = alvo.dataset.temaFiltro; render(); }
         else if (alvo.dataset.escrever) escrever(alvo.dataset.escrever);
@@ -179,10 +189,11 @@
     document.addEventListener('change', event => {
         if (event.target.matches?.('#enemWritingTools [data-tema-eixo]')) { eixoFiltro = event.target.value; render(); }
     });
-    window.addEventListener('king-master-section', event => { if (event.detail === 'redacao') render(); });
-    window.addEventListener('king-master-data-changed', () => { if (document.querySelector('#redacao.active')) render(); });
-    const inicial = () => { if (document.querySelector('#redacao.active')) render(); };
+    // Ao entrar na Redação, a tela abre nas redações; os temas só aparecem na aba própria.
+    window.addEventListener('king-master-section', event => { if (event.detail === 'redacao') mostrarAba('redacoes'); });
+    window.addEventListener('king-master-data-changed', () => { if (document.querySelector('#redacao.active[data-red-view="temas"]')) render(); });
+    const inicial = () => mostrarAba('redacoes');
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inicial, { once: true }); else setTimeout(inicial, 0);
 
-    window.KingTemasRedacao = Object.freeze({ render, todos, redacaoDoTema, abrirGerador });
+    window.KingTemasRedacao = Object.freeze({ render, todos, redacaoDoTema, abrirGerador, mostrarAba });
 })();

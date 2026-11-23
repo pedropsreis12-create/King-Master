@@ -10,6 +10,7 @@ const APP_SHELL = [
     './schedule.css',
     './schedule-planner.css',
     './script.js',
+    './enem-areas.js',
     './auth-warmup.js',
     './topic-core.js',
     './review-trail-core.js',

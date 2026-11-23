@@ -14,8 +14,9 @@ const [html, script, usability, style, sidebarIcons, sidebarIconStyles] = await 
 
 test('primary navigation is grouped by study intent and identifies the current destination', () => {
   assert.match(html, /nav-cluster-label">Agora/);
-  assert.match(html, /nav-cluster-label">Aprender/);
-  assert.match(html, /nav-cluster-label">Evolução/);
+  assert.match(html, /nav-cluster-label">Áreas do ENEM/);
+  assert.match(html, /data-enem-area="matematica"/);
+  assert.match(html, /nav-cluster-label">Treino de prova/);
   assert.match(html, /data-section="dashboard"[^>]+aria-controls="dashboard"[^>]+aria-current="page"/);
   assert.match(script, /b\.dataset\.section === sectionId/);
   assert.match(script, /setAttribute\('aria-current', 'page'\)/);
@@ -85,4 +86,24 @@ test('modules are removed from the interface without erasing saved attachment me
   assert.doesNotMatch(html, /id="tab-modulos"|id="aba-modulos-content"|id="moduleUploadModal"|subject-modules\.js/);
   assert.doesNotMatch(script, /KingModules|alternarAbasHub\('modulos'\)/);
   assert.match(script, /subjectContentModules: \{\}/);
+});
+
+test('áreas do ENEM classificam matérias pelo nome ou pela escolha salva', async () => {
+  const vm = await import('node:vm');
+  const source = await readFile(new URL('../enem-areas.js', import.meta.url), 'utf8');
+  const scope = { window: {}, sessionStorage: { getItem: () => '', setItem() {} }, document: { querySelectorAll: () => [], querySelector: () => null, getElementById: () => null } };
+  vm.runInNewContext(source, scope);
+  const { areaOf } = scope.window.KingEnemAreas;
+  assert.equal(areaOf({ subject: 'Matemática Básica' }), 'matematica');
+  assert.equal(areaOf({ subject: 'Química Orgânica' }), 'natureza');
+  assert.equal(areaOf({ subject: 'História do Brasil' }), 'humanas');
+  assert.equal(areaOf({ subject: 'Interpretação de Texto' }), 'linguagens');
+  assert.equal(areaOf({ subject: 'Física', area: 'matematica' }), 'matematica');
+  assert.equal(areaOf({ subject: 'Programação' }), 'outra');
+});
+
+test('agenda fica dentro do plano semanal', () => {
+  assert.doesNotMatch(html, /data-section="agendamento"/);
+  assert.match(html, /data-plan-tab="agendamento"/);
+  assert.match(html, /data-plan-tab="cronograma"/);
 });

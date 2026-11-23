@@ -137,28 +137,34 @@
         <div class="nav-tabs" aria-label="Áreas do King Master">
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Agora</span>
-                <button type="button" class="menu-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span class="nav-item-icon" aria-hidden="true">⌂</span><span class="nav-item-label"><strong>Hoje</strong><small>Foco e progresso</small></span></button>
-                <button type="button" class="menu-btn" data-section="agendamento" aria-controls="agendamento" onclick="showSection('agendamento')"><span class="nav-item-icon" aria-hidden="true">◷</span><span class="nav-item-label"><strong>Agenda</strong><small>Seu próximo bloco</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
-                <button type="button" class="menu-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Cronograma</strong><small>Planeje sua semana</small></span></button>
+                <button type="button" class="menu-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span class="nav-item-icon" aria-hidden="true">⌂</span><span class="nav-item-label"><strong>Início</strong><small>Foco do dia</small></span></button>
+                <button type="button" class="menu-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Plano semanal</strong><small>Cronograma e compromissos</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
             </div>
             <div class="nav-cluster">
-                <span class="nav-cluster-label">Aprender</span>
-                <button type="button" class="menu-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Matérias</strong><small>Conteúdo e domínio</small></span></button>
-                <button type="button" class="menu-btn" data-section="caderno-central" aria-controls="caderno-central" onclick="showSection('caderno-central')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Cadernos</strong><small>Biblioteca e anotações</small></span></button>
+                <span class="nav-cluster-label">Áreas do ENEM</span>
+                <button type="button" class="menu-btn" data-section="planejamento" data-enem-area="linguagens" aria-controls="planejamento" onclick="KingEnemAreas.open('linguagens')"><span class="nav-item-icon" aria-hidden="true">Aa</span><span class="nav-item-label"><strong>Linguagens</strong><small>Português, literatura, idiomas</small></span></button>
+                <button type="button" class="menu-btn" data-section="planejamento" data-enem-area="humanas" aria-controls="planejamento" onclick="KingEnemAreas.open('humanas')"><span class="nav-item-icon" aria-hidden="true">◍</span><span class="nav-item-label"><strong>Humanas</strong><small>História, geografia, filosofia</small></span></button>
+                <button type="button" class="menu-btn" data-section="planejamento" data-enem-area="natureza" aria-controls="planejamento" onclick="KingEnemAreas.open('natureza')"><span class="nav-item-icon" aria-hidden="true">⚗</span><span class="nav-item-label"><strong>Natureza</strong><small>Biologia, física, química</small></span></button>
+                <button type="button" class="menu-btn" data-section="planejamento" data-enem-area="matematica" aria-controls="planejamento" onclick="KingEnemAreas.open('matematica')"><span class="nav-item-icon" aria-hidden="true">∑</span><span class="nav-item-label"><strong>Matemática</strong><small>Álgebra, geometria, estatística</small></span></button>
+                <button type="button" class="menu-btn" data-section="planejamento" data-enem-area="" aria-controls="planejamento" onclick="KingEnemAreas.open('')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Todas as matérias</strong><small>Conteúdos e domínio</small></span></button>
                 <div class="topic-nav-slot" id="topicNavSlot" hidden><button type="button" class="menu-btn topic-nav-button" data-section="topic-workspace" aria-controls="topic-workspace" onclick="showSection('topic-workspace')"><span class="nav-item-icon" aria-hidden="true">↳</span><span class="nav-item-label"><strong id="topicNavTitle">Assunto</strong><small id="topicNavSubject">Matéria</small></span></button><button type="button" class="topic-nav-close" onclick="fecharEspacoTopico()" aria-label="Fechar a aba do assunto" title="Fechar a aba do assunto">×</button></div>
-                <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Caixa de Revisões</strong><small>Capture e retome depois</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
-                <button type="button" class="menu-btn" data-section="flashcards" aria-controls="flashcards" onclick="showSection('flashcards')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Flashcards</strong><small>Recorde no tempo certo</small></span><span class="nav-count" id="navFlashcardsBadge" hidden>0</span></button>
-                <button type="button" class="menu-btn" data-section="caderno-erros" aria-controls="caderno-erros" onclick="showSection('caderno-erros')"><span class="nav-item-icon" aria-hidden="true">⌁</span><span class="nav-item-label"><strong>Caderno de Erros</strong><small>Corrigir padrões</small></span><span class="nav-count urgent" id="navErrorBadge" hidden>0</span></button>
-                <button type="button" class="menu-btn" data-section="question-timer" aria-controls="question-timer" onclick="showSection('question-timer')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Questões</strong><small>Tempo e acertos</small></span></button>
             </div>
             <div class="nav-cluster">
-                <span class="nav-cluster-label">Evolução</span>
-                <button type="button" class="menu-btn" data-section="simulados" aria-controls="simulados" onclick="showSection('simulados')"><span class="nav-item-icon" aria-hidden="true">◎</span><span class="nav-item-label"><strong>Simulados</strong><small>Resultados e gargalos</small></span></button>
-                <button type="button" class="menu-btn" data-section="redacao" aria-controls="redacao" onclick="showSection('redacao')"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Redação</strong><small>Notas por competência</small></span></button>
-                <button type="button" class="menu-btn" data-section="historico" aria-controls="historico" onclick="showSection('historico')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Histórico</strong><small>Sessões e dedicação</small></span></button>
+                <span class="nav-cluster-label">Treino de prova</span>
+                <button type="button" class="menu-btn" data-section="question-timer" aria-controls="question-timer" onclick="showSection('question-timer')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Questões</strong><small>Tempo e acertos</small></span></button>
+                <button type="button" class="menu-btn" data-section="simulados" aria-controls="simulados" onclick="showSection('simulados')"><span class="nav-item-icon" aria-hidden="true">◎</span><span class="nav-item-label"><strong>Simulados</strong><small>Notas e gargalos</small></span></button>
+                <button type="button" class="menu-btn" data-section="redacao" aria-controls="redacao" onclick="showSection('redacao')"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Redação</strong><small>As 5 competências</small></span></button>
             </div>
-<div class="nav-cluster nav-cluster-account">
-                <span class="nav-cluster-label">Conta</span>
+            <div class="nav-cluster">
+                <span class="nav-cluster-label">Revisar</span>
+                <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Revisões</strong><small>No tempo certo</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="flashcards" aria-controls="flashcards" onclick="showSection('flashcards')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Flashcards</strong><small>Memorize fórmulas e conceitos</small></span><span class="nav-count" id="navFlashcardsBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="caderno-erros" aria-controls="caderno-erros" onclick="showSection('caderno-erros')"><span class="nav-item-icon" aria-hidden="true">⌁</span><span class="nav-item-label"><strong>Caderno de Erros</strong><small>Não repetir o erro</small></span><span class="nav-count urgent" id="navErrorBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="caderno-central" aria-controls="caderno-central" onclick="showSection('caderno-central')"><span class="nav-item-icon" aria-hidden="true">▥</span><span class="nav-item-label"><strong>Cadernos</strong><small>Resumos e anotações</small></span></button>
+            </div>
+            <div class="nav-cluster nav-cluster-account">
+                <span class="nav-cluster-label">Você</span>
+                <button type="button" class="menu-btn" data-section="historico" aria-controls="historico" onclick="showSection('historico')"><span class="nav-item-icon" aria-hidden="true">◔</span><span class="nav-item-label"><strong>Desempenho</strong><small>Sua evolução</small></span></button>
                 <button type="button" class="menu-btn" data-section="perfil" aria-controls="perfil" onclick="showSection('perfil')"><span class="nav-item-icon" aria-hidden="true">♙</span><span class="nav-item-label"><strong>Meu Perfil</strong><small>Nível e conquistas</small></span></button>
             </div>
         </div>
@@ -183,9 +189,9 @@
 
 
     <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
-        <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Hoje</small></button>
+        <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Início</small></button>
         <button type="button" class="dock-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span aria-hidden="true">▦</span><small>Matérias</small></button>
-        <button type="button" class="dock-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span aria-hidden="true">▤</span><small>Semana</small></button>
+        <button type="button" class="dock-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span aria-hidden="true">▤</span><small>Plano</small></button>
         <button type="button" class="dock-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span aria-hidden="true">↻</span><small>Revisar</small></button>
         <button type="button" class="dock-btn dock-more" id="dockMoreButton" aria-controls="mainNavigation" aria-expanded="false" onclick="toggleMobileNav()"><span aria-hidden="true">•••</span><small>Mais</small></button>
     </div>
@@ -402,9 +408,10 @@
 
         <!-- CRONOGRAMA SEMANAL -->
         <section id="cronograma" class="content-section schedule-section">
+            <div class="plan-tabs" role="tablist" aria-label="Plano semanal"><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="true" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="false" onclick="showSection('agendamento')">Compromissos e provas</button></div>
             <div class="workspace-heading schedule-heading">
                 <div>
-                    <span class="workspace-kicker">CENTRAL DA SEMANA</span>
+                    <span class="workspace-kicker">PLANO SEMANAL</span>
                     <h1>Cronograma</h1>
                     <p>Veja o que importa agora, distribua seu esforço e reajuste a semana sem perder o controle.</p>
                 </div>
@@ -508,8 +515,8 @@
         <section id="planejamento" class="content-section">
             <div class="workspace-heading">
                 <div>
-                    <span class="workspace-kicker">ORGANIZE O QUE PRECISA APRENDER</span>
-                    <h1>Matérias</h1>
+                    <span class="workspace-kicker">ÁREAS DO ENEM</span>
+                    <h1 id="planejamentoTitulo">Todas as matérias</h1>
                     <p>Cadastre conteúdos, acompanhe tópicos e veja onde seu domínio ainda precisa avançar.</p>
                 </div>
                 <div class="cycle-btn-group">
@@ -518,6 +525,8 @@
                     <button class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
                 </div>
             </div>
+            <div class="enem-area-chips" id="enemAreaChips" role="group" aria-label="Filtrar por área do ENEM"><button type="button" data-enem-area-chip="" aria-pressed="true" onclick="KingEnemAreas.set('')">Todas</button><button type="button" data-enem-area-chip="linguagens" aria-pressed="false" onclick="KingEnemAreas.set('linguagens')">Linguagens</button><button type="button" data-enem-area-chip="humanas" aria-pressed="false" onclick="KingEnemAreas.set('humanas')">Humanas</button><button type="button" data-enem-area-chip="natureza" aria-pressed="false" onclick="KingEnemAreas.set('natureza')">Natureza</button><button type="button" data-enem-area-chip="matematica" aria-pressed="false" onclick="KingEnemAreas.set('matematica')">Matemática</button></div>
+            <section class="enem-area-banner widget" id="enemAreaBanner" aria-live="polite" hidden></section>
             <article class="subject-ai-card widget">
                 <span class="subject-ai-mark" aria-hidden="true">✦</span>
                 <div><span class="workspace-kicker">IA INTEGRADA ÀS MATÉRIAS</span><h2>Transforme um edital em tópicos organizados</h2><p>Envie PDF, imagem ou texto. A IA separa os assuntos e você confere tudo antes de adicionar às matérias existentes.</p></div>
@@ -584,10 +593,11 @@
 
         <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
         <section id="agendamento" class="content-section">
+            <div class="plan-tabs" role="tablist" aria-label="Plano semanal"><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="false" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="true" onclick="showSection('agendamento')">Compromissos e provas</button></div>
             <div class="workspace-heading">
                 <div>
-                    <span class="workspace-kicker">PLANEJE SEM SOBRECARGA</span>
-                    <h1>Agenda</h1>
+                    <span class="workspace-kicker">PLANO SEMANAL</span>
+                    <h1>Compromissos e provas</h1>
                     <p>Veja o que vence hoje, o que vem depois e o que já foi concluído.</p>
                 </div>
                 <div class="cycle-btn-group agenda-heading-actions"><button type="button" class="cycle-btn" onclick="KingAgenda.openImport()">✦ Importar com IA</button><button type="button" class="cycle-btn" onclick="KingAgenda.openCategories()">Categorias</button><button type="button" class="cycle-btn primary" onclick="abrirModalAgendamento()">+ Novo compromisso</button></div>
@@ -997,6 +1007,10 @@
                                 <div class="cycle-form-group">
                                     <label class="cycle-label" for="cycleSubject">Nome da matéria</label>
                                     <input type="text" id="cycleSubject" class="cycle-input" required autocomplete="off" maxlength="50" placeholder="Ex.: a matéria que você está estudando" oninput="atualizarPreviewMateria()">
+                                </div>
+                                <div class="cycle-form-group">
+                                    <label class="cycle-label" for="cycleArea">Área do ENEM</label>
+                                    <select id="cycleArea" class="cycle-input"><option value="">Descobrir pelo nome</option><option value="linguagens">Linguagens</option><option value="humanas">Ciências Humanas</option><option value="natureza">Ciências da Natureza</option><option value="matematica">Matemática</option><option value="outra">Outra / Redação</option></select>
                                 </div>
                                 <div class="cycle-form-group subject-icon-field">
                                     <label class="cycle-label" for="cycleIcon">Símbolo da matéria</label>
@@ -1515,6 +1529,7 @@
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
     <script src="script.js?v=20261026-periodic-v1"></script>
+    <script src="enem-areas.js?v=20261123-enem-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>

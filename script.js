@@ -804,7 +804,7 @@ function showSection(sectionId) {
     });
     let abaAtiva = null;
     document.querySelectorAll('.menu-btn[data-section]').forEach(b => {
-        const ativa = b.dataset.section === sectionId;
+        const ativa = b.dataset.section === sectionId && !b.dataset.enemArea;
         b.classList.toggle('active', ativa);
         if (ativa) {
             b.setAttribute('aria-current', 'page');
@@ -830,7 +830,7 @@ function showSection(sectionId) {
     window.scrollTo({ top: 0, behavior: 'auto' });
     
     if(sectionId === 'historico') renderizarHistorico();
-    if(sectionId === 'planejamento') renderizarCiclo();
+    if(sectionId === 'planejamento') { renderizarCiclo(); window.KingEnemAreas?.renderBanner?.(); }
     if(sectionId === 'topic-workspace') renderizarEspacoTopico();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
@@ -846,6 +846,7 @@ function showSection(sectionId) {
     if(sectionId === 'perfil') renderGamificacao();
     if(sectionId === 'notas') renderizarNotasRapidas();
     atualizarIndicadoresNavegacao();
+    window.KingEnemAreas?.syncNav?.(sectionId);
 }
 
 function atualizarIndicadoresNavegacao() {
@@ -3100,6 +3101,7 @@ function abrirModalCiclo() {
     document.getElementById('cycleSaveButton').textContent = 'Criar matéria';
     document.getElementById('cycleSaveHint').textContent = 'Somente o nome é obrigatório.';
     document.getElementById('cycleEditId').value = "";
+    const campoAreaNova = document.getElementById('cycleArea'); if (campoAreaNova) campoAreaNova.value = window.KingEnemAreas?.current?.() || '';
     document.getElementById('cycleColor').value = '#007aff';
     document.getElementById('cycleIcon').value = '●';
     document.getElementById('cyclePriority').value = '2';
@@ -3130,6 +3132,7 @@ function editarMateriaCiclo(id) {
     document.getElementById('cycleSaveHint').textContent = 'Seu histórico e seus tópicos atuais serão preservados.';
     document.getElementById('cycleEditId').value = mat.id;
     document.getElementById('cycleSubject').value = mat.subject;
+    const campoArea = document.getElementById('cycleArea'); if (campoArea) campoArea.value = mat.area || '';
     document.getElementById('cycleColor').value = mat.color || '#007aff';
     document.getElementById('cycleIcon').value = mat.schedule?.icon || '●';
     document.getElementById('cyclePriority').value = String(mat.schedule?.priority || 2);
@@ -3152,6 +3155,7 @@ function salvarMateriaCiclo(e) {
     const idEdit = document.getElementById('cycleEditId').value;
     const color = document.getElementById('cycleColor').value || '#007aff';
     const subject = document.getElementById('cycleSubject').value.trim();
+    const area = ['linguagens', 'humanas', 'natureza', 'matematica', 'outra'].includes(document.getElementById('cycleArea')?.value) ? document.getElementById('cycleArea').value : '';
     const schedule = { icon: document.getElementById('cycleIcon').value || '●', priority: Math.min(3, Math.max(1, Number(document.getElementById('cyclePriority').value) || 2)), weeklyBlocks: Math.min(30, Math.max(0, Number(document.getElementById('cycleWeeklyBlocks').value) || 0)), consecutive: document.getElementById('cycleConsecutive').checked };
     const novosTopicos = normalizarListaTopicosMateria(document.getElementById('cycleInitialTopics').value);
     let quantidadeTopicosAdicionados = novosTopicos.length;
@@ -3170,15 +3174,15 @@ function salvarMateriaCiclo(e) {
                 .map(item => ({ id: window.KingTopicCore.makeId('assunto'), ...item, concluido: false }));
             quantidadeTopicosAdicionados = adicionados.length;
             const nomeAnterior = appData.cycleItems[idx].subject;
-            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, schedule, topicos: [...atuais, ...adicionados] };
+            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, area, schedule, topicos: [...atuais, ...adicionados] };
             if (normalizarRevisaoTexto(nomeAnterior) !== normalizarRevisaoTexto(subject)) renomearMateriaNosRegistros(nomeAnterior, subject);
         } 
     } else { 
-        const novaMateria = { id: Date.now(), color, subject, schedule, targetMin: 0, executedMin: 0, temas: [], topicos: [], questoes: 0, acertos: 0, erros: 0 };
+        const novaMateria = { id: Date.now(), color, subject, area, schedule, targetMin: 0, executedMin: 0, temas: [], topicos: [], questoes: 0, acertos: 0, erros: 0 };
         novaMateria.topicos = novosTopicos.map(valor => ({ id: window.KingTopicCore.makeId('assunto'), ...window.KingTopicCore.parseTopicInput(novaMateria, valor), concluido: false }));
         appData.cycleItems.push(novaMateria);
     }
-    saveAppData(); renderizarCiclo(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
+    saveAppData(); renderizarCiclo(); window.KingEnemAreas?.renderBanner?.(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
     showToast(quantidadeTopicosAdicionados ? `📚 Matéria salva com ${quantidadeTopicosAdicionados} ${quantidadeTopicosAdicionados === 1 ? 'tópico' : 'tópicos'}!` : '📚 Matéria salva!');
 }
 
@@ -3216,7 +3220,8 @@ function renderizarCiclo() {
     const grid = document.getElementById('disciplinasGrid');
     if(!grid) return;
 
-    const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
+    const todasMaterias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
+    const materias = window.KingEnemAreas ? todasMaterias.filter(window.KingEnemAreas.matches) : todasMaterias;
     const topicos = materias.flatMap(item => Array.isArray(item.topicos) ? item.topicos : []);
     const dominados = topicos.filter(item => obterNivelDominioTopico(item) === 3).length;
     const definirTexto = (id, texto) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = texto; };
@@ -3228,6 +3233,11 @@ function renderizarCiclo() {
     const visiveis = materias.filter(item => !buscaMateriasAtual || String(item.subject || '').toLocaleLowerCase('pt-BR').includes(buscaMateriasAtual));
     definirTexto('materiasResultado', pluralizar(visiveis.length, 'matéria'));
 
+    if(materias.length === 0 && todasMaterias.length) {
+        const area = window.KingEnemAreas?.AREAS[window.KingEnemAreas.current()]?.curto || 'esta área';
+        grid.innerHTML = `<div class="workspace-empty"><b aria-hidden="true">▦</b><strong>Nenhuma matéria em ${area}</strong><p>Crie uma matéria desta área ou ajuste a área de uma matéria existente em Editar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button></div>`;
+        return;
+    }
     if(materias.length === 0) {
         grid.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">▦</b><strong>Comece pela primeira matéria</strong><p>Crie uma matéria e depois adicione os tópicos que pretende estudar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">Adicionar matéria</button></div>';
         return; 

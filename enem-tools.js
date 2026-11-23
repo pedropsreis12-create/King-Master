@@ -1,5 +1,5 @@
 /* Ferramentas ENEM: conteúdos da prova, contagem regressiva, pesos por área,
-   simulado por área, desempenho por área e apoio à redação. Usa os dados já existentes. */
+   simulado por área, desempenho por área e temas de redação. Usa os dados já existentes. */
 (() => {
     'use strict';
     const Areas = () => window.KingEnemAreas;
@@ -234,14 +234,7 @@
         box.innerHTML = `<div class="enem-perf-head"><div><span class="workspace-kicker">DESEMPENHO POR ÁREA</span><h2>Onde você está na prova</h2></div></div><div class="enem-perf-grid">${cards}</div><div class="enem-worst"><h3>Assuntos que mais pedem atenção</h3>${lista}</div>`;
     }
 
-    /* ---------- Redação: competências e temas ---------- */
-    const COMPETENCIAS = [
-        ['Norma padrão', ['Revisei ortografia e acentuação', 'Concordância e regência estão certas', 'Pontuação ajuda a leitura']],
-        ['Tema e repertório', ['Abordei o tema completo, sem tangenciar', 'O texto é dissertativo-argumentativo', 'Usei repertório pertinente e ligado à discussão']],
-        ['Argumentação', ['A tese aparece clara na introdução', 'Cada argumento é desenvolvido e explicado', 'O texto segue um projeto, sem contradições']],
-        ['Coesão', ['Usei conectivos variados entre os parágrafos', 'Há conectivos dentro dos parágrafos', 'Evitei repetir palavras']],
-        ['Proposta de intervenção', ['Agente: quem vai fazer', 'Ação e meio/modo: o que e como', 'Finalidade e detalhamento', 'Respeita os direitos humanos']],
-    ];
+    /* ---------- Redação: temas das últimas edições ---------- */
     const TEMAS = [
         [2024, 'Desafios para a valorização da herança africana no Brasil'],
         [2023, 'Desafios para o enfrentamento da invisibilidade do trabalho de cuidado realizado pela mulher no Brasil'],
@@ -261,11 +254,8 @@
         const box = document.getElementById('enemWritingTools');
         if (!box || box.dataset.ready) return;
         box.dataset.ready = '1';
-        const checklist = COMPETENCIAS.map(([nome, itens], i) => `<fieldset class="enem-check-group"><legend><b>C${i + 1}</b> ${esc(nome)}</legend>${itens.map(item => `<label><input type="checkbox"> ${esc(item)}</label>`).join('')}</fieldset>`).join('');
         const temas = TEMAS.map(([ano, tema]) => `<li><span><b>${ano}</b> ${esc(tema)}</span><button type="button" class="cycle-btn" data-tema="${esc(tema)}">Treinar</button></li>`).join('');
-        box.innerHTML = `<details class="widget enem-writing-card" open><summary><span class="workspace-kicker">ANTES DE ENTREGAR</span><h2>Checklist das 5 competências</h2></summary><div class="enem-check-grid">${checklist}</div><button type="button" class="subjects-clear-link" data-reset>Limpar checklist</button></details>
-            <details class="widget enem-writing-card"><summary><span class="workspace-kicker">BANCO DE TEMAS</span><h2>Temas das últimas edições do ENEM</h2></summary><ul class="enem-theme-list">${temas}</ul></details>`;
-        box.querySelector('[data-reset]').addEventListener('click', () => box.querySelectorAll('.enem-check-grid input').forEach(input => { input.checked = false; }));
+        box.innerHTML = `<details class="widget enem-writing-card" open><summary><span class="workspace-kicker">BANCO DE TEMAS</span><h2>Temas das últimas edições do ENEM</h2></summary><ul class="enem-theme-list">${temas}</ul></details>`;
         box.querySelectorAll('[data-tema]').forEach(botao => botao.addEventListener('click', () => {
             window.abrirModalRedacao?.();
             setTimeout(() => { const campo = document.getElementById('redTheme'); if (campo) { campo.value = botao.dataset.tema; campo.dispatchEvent(new Event('input', { bubbles: true })); } }, 60);

@@ -234,11 +234,6 @@ html[data-visual] .enem-writing-card { padding: 16px 20px; }
 .enem-writing-card summary { cursor: pointer; list-style: none; }
 .enem-writing-card summary::-webkit-details-marker { display: none; }
 .enem-writing-card summary h2 { margin: 4px 0 0; font-size: 1.05rem; font-weight: 800; }
-.enem-check-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin: 14px 0 8px; }
-.enem-check-group { margin: 0; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 12px; }
-.enem-check-group legend { padding: 0 4px; font-weight: 700; font-size: .84rem; }
-.enem-check-group legend b { color: var(--accent-ink); }
-.enem-check-group label { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; font-size: .8rem; cursor: pointer; }
 .enem-theme-list { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; }
 .enem-theme-list li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 10px; background: var(--hover-bg); font-size: .86rem; }
 .enem-theme-list b { margin-right: 6px; color: var(--accent-ink); }

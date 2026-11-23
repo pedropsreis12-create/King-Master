@@ -847,6 +847,7 @@ function showSection(sectionId) {
     if(sectionId === 'notas') renderizarNotasRapidas();
     atualizarIndicadoresNavegacao();
     window.KingEnemAreas?.syncNav?.(sectionId);
+    window.dispatchEvent(new CustomEvent('king-master-section', { detail: sectionId }));
 }
 
 function atualizarIndicadoresNavegacao() {

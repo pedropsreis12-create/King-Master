@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261123-materias-v1';
+const CACHE_VERSION = 'king-master-20261123-tools-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -11,6 +11,8 @@ const APP_SHELL = [
     './schedule-planner.css',
     './script.js',
     './enem-areas.js',
+    './enem-tools.js',
+    './auto-backup.js',
     './auth-warmup.js',
     './topic-core.js',
     './review-trail-core.js',

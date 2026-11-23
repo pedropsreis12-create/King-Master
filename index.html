@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261123-materias-v1">
+    <link rel="stylesheet" href="enem-theme.css?v=20261123-tools-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -264,7 +264,8 @@
 
     <main id="mainContent" tabindex="-1">
         <section id="dashboard" class="content-section active">
-            <h1>Foco e Execução</h1>
+            <h1>Início</h1>
+            <section id="enemGoalCard" class="widget enem-goal-card" aria-label="Sua meta no ENEM"></section>
             <section id="studyDeadlinesToday" class="widget evolution-deadlines" hidden></section>
             
             <button type="button" class="widget dashboard-agenda-glance" onclick="showSection('agendamento')" aria-label="Abrir o Agendamento Diário">
@@ -410,6 +411,7 @@
                     <p>Veja o que importa agora, distribua seu esforço e reajuste a semana sem perder o controle.</p>
                 </div>
                 <div class="cycle-btn-group schedule-heading-actions">
+                    <button type="button" class="cycle-btn" onclick="KingEnemTools.abrirPesos()">Pesos das áreas</button>
                     <button type="button" class="cycle-btn" onclick="KingSchedule.openSettings()"><span aria-hidden="true">⚙</span> Planejar semana</button>
                     <button type="button" class="cycle-btn primary" onclick="KingSchedule.openBlock()"><span aria-hidden="true">＋</span> Novo bloco</button>
                 </div>
@@ -514,6 +516,7 @@
                     <p>Suas matérias organizadas pelas áreas da prova. Abra uma matéria para estudar os assuntos.</p>
                 </div>
                 <div class="cycle-btn-group">
+                    <button type="button" class="cycle-btn" onclick="KingEnemTools.abrirConteudos()">Carregar conteúdos do ENEM</button>
                     <button type="button" class="cycle-btn" onclick="KingSubjectLab.openSyllabus()"><span aria-hidden="true">✦</span> Ler edital com IA</button>
                     <button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button>
                 </div>
@@ -735,7 +738,7 @@
                     <h1>Simulados</h1>
                     <p>Compare resultados ao longo do tempo e transforme a área mais fraca em foco de revisão.</p>
                 </div>
-                <div class="mock-heading-actions"><button type="button" class="cycle-btn" onclick="KingMockExams.openSetup()">✦ Gerar simulado com IA</button><button class="cycle-btn primary" onclick="abrirModalSimulado()">+ Registrar simulado</button></div>
+                <div class="mock-heading-actions"><button type="button" class="cycle-btn" onclick="KingEnemTools.abrirSimuladoEnem()">Registrar simulado ENEM</button><button type="button" class="cycle-btn" onclick="KingMockExams.openSetup()">✦ Gerar simulado com IA</button><button class="cycle-btn primary" onclick="abrirModalSimulado()">+ Registrar simulado</button></div>
             </div>
             <div class="stats-grid performance-summary-grid">
                 <div class="stat-card">
@@ -777,6 +780,7 @@
                 </div>
                 <button class="cycle-btn primary" onclick="abrirModalRedacao()">+ Registrar redação</button>
             </div>
+            <div id="enemWritingTools" class="enem-writing-tools"></div>
             <div class="stats-grid writing-summary-grid">
                 <div class="stat-card"><div class="stat-label">Média Global</div><div class="stat-value" id="red-media" style="color: var(--text-main);">0</div></div>
                 <div class="stat-card"><div class="stat-label">Maior força</div><div class="stat-value" id="red-forte" style="color: #34c759;">-</div></div>
@@ -799,8 +803,8 @@
         <section id="historico" class="content-section">
             <div class="workspace-heading">
                 <div>
-                    <span class="workspace-kicker">ENTENDA SUA CONSTÂNCIA</span>
-                    <h1>Histórico</h1>
+                    <span class="workspace-kicker">SUA EVOLUÇÃO</span>
+                    <h1>Desempenho</h1>
                     <p>Encontre sessões, compare sua dedicação e veja quais matérias receberam mais tempo.</p>
                 </div>
                 <div style="display: flex; gap: 10px;">
@@ -808,6 +812,7 @@
                     <button class="cycle-btn btn-danger" id="btnStopHistory" onclick="encerrarSessaoDashboard()" style="display:none; align-items: center; gap: 8px;"><span style="font-size:1.2rem;">⏹</span> Encerrar Sessão</button>
                 </div>
             </div>
+            <section id="enemPerformance" class="widget enem-performance" aria-live="polite"></section>
             <section id="studyHeatmapHistory" class="widget evolution-heatmap" aria-label="Mapa de calor das últimas 26 semanas"></section>
             <section id="studyAnnualHistory" class="widget evolution-annual" aria-label="Histórico anual"></section>
             <div class="widget lifetime-panel">
@@ -1518,7 +1523,9 @@
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
     <script src="enem-areas.js?v=20261123-enem-v1"></script>
-    <script src="script.js?v=20261123-materias-v1"></script>
+    <script src="script.js?v=20261123-tools-v1"></script>
+    <script src="enem-tools.js?v=20261123-tools-v1"></script>
+    <script src="auto-backup.js?v=20261123-tools-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>

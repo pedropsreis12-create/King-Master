@@ -1,6 +1,5 @@
 /* Contraste confortável sem substituir a cor de destaque escolhida no perfil. */
-:root { --text-muted: #46505f; }
-html[data-theme="dark"] { --text-muted: #c2c9d3; }
+:root { --text-muted: #46505f; }
 input::placeholder,textarea::placeholder { color: color-mix(in srgb,var(--text-muted) 88%,transparent); opacity: 1; }
 :is(.workspace-kicker,.error-notebook-kicker,.revision-tags-label-row button,.revision-tag-chip,.custom-option.selected,.nav-xp-top strong,.schedule-settings-section-title > span) { color: var(--accent-ink); }
 :is(.cycle-btn.primary,.mode-btn.active,.btn-play,.onboarding-mark) { color: var(--accent-on-solid); }
@@ -19,16 +18,7 @@ input::placeholder,textarea::placeholder { color: color-mix(in srgb,var(--text-m
     .nav-reveal[aria-expanded="true"] :is(span,small) { opacity: 0; }
     .nav-reveal:focus-visible { outline: 2px solid var(--accent-color); outline-offset: -2px; }
 }
-/* O banner futurista é uma superfície escura, mesmo quando o restante do app é claro. */
-html[data-visual="futuristic"] #perfil[data-rank] .profile-hero { --banner-ink: #f8f5e9; --banner-soft: #dbe1e9; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-hero :is(.profile-next-level,.profile-xp-line,.profile-xp-note,.profile-evolution-caption,.profile-photo-hint,.rank-scene-heading span) { color: var(--banner-soft); text-shadow: 0 2px 6px #000c; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .profile-level-title { background: none; color: var(--banner-ink); -webkit-text-fill-color: var(--banner-ink); text-shadow: 0 2px 10px #000; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .profile-league-name { color: #ffe1a1; background: #0b141de6; border-color: #dbc38966; text-shadow: none; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .profile-xp-line { color: #fff; font-weight: 800; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-reference-strip span { color: #ecf0f7; background: #0b1527e6; border-color: #d8e3f34d; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-evolution-caption { background: #0b1527d9; border-color: #d8e3f34d; }
-html[data-visual="futuristic"] #perfil[data-rank] .profile-hero .rank-world-shade { background: linear-gradient(0deg,#040b16e8, #040b164d 55%,#040b1633); }
-html[data-visual="futuristic"] .military-coordinate { color: #d7e5be; opacity: .7; }
+/* O banner futurista é uma superfície escura{ --banner-ink: #f8f5e9; --banner-soft: #dbe1e9; }
 html[data-visual="classic"] #perfil[data-rank] .profile-level-title { background: none; color: var(--text-main); -webkit-text-fill-color: var(--text-main); }
 @media (prefers-reduced-motion: reduce) { html:not([data-motion-choice="full"]) body > nav { transition: none; } }
 
@@ -72,8 +62,7 @@ html.auth-pending,html.auth-pending body { overflow: hidden !important; }
 html[data-font-scale="large"] { font-size: 112.5%; } html[data-font-scale="xlarge"] { font-size: 125%; }
 html.high-contrast { --border-color: color-mix(in srgb,var(--text-main) 32%,transparent); --border-strong: color-mix(in srgb,var(--text-main) 52%,transparent); --text-muted: color-mix(in srgb,var(--text-main) 79%,var(--bg-body)); }
 /* Leitura assistida: melhora separação, ritmo e rastreio das linhas sem alterar os dados ou a cor escolhida. */
-html.dyslexia-friendly:not([data-theme="dark"]) { --bg-body: #f3efe5; --card-bg: #fffaf0; --hover-bg: #ece6d9; --text-main: #182033; --text-muted: #4b556b; }
-html.dyslexia-friendly[data-theme="dark"] { --bg-body: #151922; --card-bg: #1d222d; --hover-bg: #272d39; --text-main: #fff8e8; --text-muted: #c9c2b4; }
+html.dyslexia-friendly:not([data-theme="dark"]) { --bg-body: #f3efe5; --card-bg: #fffaf0; --hover-bg: #ece6d9; --text-main: #182033; --text-muted: #4b556b; }
 html.dyslexia-friendly body,
 html.dyslexia-friendly :is(button,input,textarea,select,option) { font-family: Verdana, Tahoma, Arial, sans-serif !important; }
 html.dyslexia-friendly body { letter-spacing: .018em; word-spacing: .09em; }
@@ -109,10 +98,8 @@ html.reduce-motion .auth-submit:hover:not(:disabled),html.reduce-motion .auth-hu
 .site-brand > span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }.site-brand strong { color: var(--text-main); font-size: .82rem; font-weight: 900; letter-spacing: .08em; }.site-brand small { margin-top: 4px; color: var(--text-muted); font-size: .43rem; font-weight: 850; letter-spacing: .18em; }
 #mainNavigation { scrollbar-width: none; -ms-overflow-style: none; border: 1px solid color-mix(in srgb,var(--border-color) 82%,var(--accent-color)); background-image: radial-gradient(circle at 50% -5%,rgba(var(--accent-rgb),.08),transparent 28%); }
 /* Navegação e ajustes precisam ocultar a página por trás, mesmo no visual futurista. */
-:root { --menu-surface: #f8faff; }
-html[data-theme="dark"] { --menu-surface: #1a1d24; }
-html[data-visual="classic"] { --menu-surface: #fff; }
-html[data-visual="classic"][data-theme="dark"] { --menu-surface: #1c1d20; }
+:root { --menu-surface: #f8faff; }
+html[data-visual="classic"] { --menu-surface: #fff; }
 #mainNavigation,.settings-panel { background-color: var(--menu-surface); backdrop-filter: none; -webkit-backdrop-filter: none; }
 #mainNavigation::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .nav-cluster { display: grid; gap: 4px; padding: 3px; border-radius: 17px; }

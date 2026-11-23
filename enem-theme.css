@@ -249,3 +249,7 @@ html[data-visual] .enem-writing-card { padding: 16px 20px; }
 .auto-backup-row strong { display: block; font-size: .8rem; }
 .auto-backup-row small { color: var(--text-muted); font-size: .7rem; }
 .auto-backup-empty { margin: 0; color: var(--text-muted); font-size: .78rem; }
+
+/* Perfil enxuto: identidade, nível, números e conquistas. Temporadas, ligas e placar ficam ocultos
+   (os dados continuam guardados). */
+#perfil :is(#kmProfileTabs, #perfil-classificacao, #perfil-temporada, #perfil-placar, #perfil-busca, .profile-multiplier-badge, .profile-league-name) { display: none !important; }

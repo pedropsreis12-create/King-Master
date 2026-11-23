@@ -10,8 +10,7 @@
 .autopilot-rhythm-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .autopilot-rhythm-area{display:grid;gap:2px;padding:10px;border-radius:11px;background:var(--hover-bg,#f6f8fb);color:var(--text-main,#1b2430)}
 .autopilot-rhythm-area span{font-size:.72rem;font-weight:800}.autopilot-rhythm-area b{font-size:1.05rem}.autopilot-rhythm-area small,.autopilot-rhythm-note{font-size:.7rem;color:var(--text-muted,#5e6876)}
-.autopilot-rhythm-area.is-slow{border:1px solid #d98958}.autopilot-rhythm-area.is-slow b{color:#a64e17}
-[data-theme="dark"] .autopilot-rhythm-area.is-slow b{color:#ffb47b}
+.autopilot-rhythm-area.is-slow{border:1px solid #d98958}.autopilot-rhythm-area.is-slow b{color:#a64e17}
 .autopilot-tasks{display:grid;gap:8px;list-style:none;margin:0;padding:0}
 .autopilot-task{display:grid;grid-template-columns:36px minmax(0,1fr) auto auto;align-items:center;gap:13px;padding:12px 14px;border:1px solid var(--border-strong,#d8dce5);border-radius:16px;background:var(--hover-bg,#f6f8fb)}
 .autopilot-step{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:color-mix(in srgb,var(--accent-color,#007aff) 12%,transparent);color:var(--accent-color,#007aff);font-size:.85rem;font-weight:900}
@@ -23,6 +22,5 @@
 .autopilot-task .cycle-btn{min-height:38px;padding:8px 14px}
 .autopilot-disclaimer{margin:13px 0 0;color:var(--text-muted,#5e6876);font-size:.74rem}
 .autopilot-empty{display:grid;justify-items:start;gap:9px;padding:17px;border-radius:16px;background:var(--hover-bg,#f6f8fb)}
-.autopilot-empty p{margin:0;color:var(--text-muted,#5e6876)}
-[data-theme="dark"] .autopilot-task.is-done .autopilot-step{background:#123826;color:#7cdf9e}
+.autopilot-empty p{margin:0;color:var(--text-muted,#5e6876)}
 @media(max-width:700px){.autopilot-panel{padding:17px;border-radius:19px}.autopilot-head{display:grid;gap:15px}.autopilot-budget{min-width:0}.autopilot-task{grid-template-columns:30px minmax(0,1fr) auto;gap:9px}.autopilot-step{width:29px;height:29px}.autopilot-task .cycle-btn{grid-column:2 / 4;justify-self:start}.autopilot-minutes{grid-column:3;grid-row:1}.autopilot-task-copy strong{white-space:normal}}

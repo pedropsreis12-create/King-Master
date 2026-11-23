@@ -2,22 +2,18 @@
 body::before,
 body::after,
 html[data-xp-rank] body::before,
-html[data-xp-rank] body::after,
-html[data-site-design="nebula"] body::before,
-html[data-site-design="nebula"] body::after {
+html[data-xp-rank] body::after{
     width: min(60vw, 850px);
     height: min(60vw, 850px);
     filter: none;
     will-change: transform;
 }
 body::before,
-html[data-xp-rank] body::before,
-html[data-site-design="nebula"] body::before {
+html[data-xp-rank] body::before{
     background: radial-gradient(circle, var(--accent-color) 0%, color-mix(in srgb, var(--accent-color) 42%, transparent) 38%, transparent 73%);
 }
 body::after,
-html[data-xp-rank] body::after,
-html[data-site-design="nebula"] body::after {
+html[data-xp-rank] body::after{
     background: radial-gradient(circle, var(--badge-purple) 0%, color-mix(in srgb, var(--badge-purple) 38%, transparent) 38%, transparent 73%);
 }
 

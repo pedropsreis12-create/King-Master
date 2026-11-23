@@ -19,12 +19,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0&display=block" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=20261026-streak-week-v1">
-    <link rel="stylesheet" href="rank-art.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="study-insights.css?v=20260911-adaptive-study-1">
     <link rel="stylesheet" href="usability.css?v=20261008-account-isolation-v1">
     <link rel="stylesheet" href="sidebar-icons.css?v=20260922-personal-v1">
-    <link rel="stylesheet" href="periodic-table.css?v=20261027-portal-fx-v3">
-    <link rel="stylesheet" href="personal-development.css?v=20261008-week-habits-v1">
     <link rel="stylesheet" href="subject-lab.css?v=20260922-subject-lab-v1">
     <link rel="stylesheet" href="domain-center.css?v=20260922-domain-clean-v1">
     <link rel="stylesheet" href="chapter-notebooks.css?v=20260922-chapter-browser-v2">
@@ -37,7 +34,6 @@
     <link rel="stylesheet" href="flashcards.css?v=20261002-evolution-v1">
     <link rel="stylesheet" href="subject-picker.css?v=20261002-v1">
     <link rel="stylesheet" href="mock-exams.css?v=20261002-v1">
-    <link rel="stylesheet" href="command-palette.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="adaptive-design.css?v=20260929-overhaul-v4">
     <link rel="stylesheet" href="profile-overhaul.css?v=20261008-account-isolation-v1">
     <link rel="stylesheet" href="agenda-workspace.css?v=20261004-agenda-v2">
@@ -148,7 +144,6 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Aprender</span>
                 <button type="button" class="menu-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span class="nav-item-icon" aria-hidden="true">▦</span><span class="nav-item-label"><strong>Matérias</strong><small>Conteúdo e domínio</small></span></button>
-                <button type="button" class="menu-btn" data-section="periodic-table" aria-controls="periodic-table" onclick="showSection('periodic-table')"><span class="nav-item-icon" aria-hidden="true">⚛</span><span class="nav-item-label"><strong>Tabela periódica</strong><small>Explore os elementos</small></span></button>
                 <button type="button" class="menu-btn" data-section="caderno-central" aria-controls="caderno-central" onclick="showSection('caderno-central')"><span class="nav-item-icon" aria-hidden="true">▣</span><span class="nav-item-label"><strong>Cadernos</strong><small>Biblioteca e anotações</small></span></button>
                 <div class="topic-nav-slot" id="topicNavSlot" hidden><button type="button" class="menu-btn topic-nav-button" data-section="topic-workspace" aria-controls="topic-workspace" onclick="showSection('topic-workspace')"><span class="nav-item-icon" aria-hidden="true">↳</span><span class="nav-item-label"><strong id="topicNavTitle">Assunto</strong><small id="topicNavSubject">Matéria</small></span></button><button type="button" class="topic-nav-close" onclick="fecharEspacoTopico()" aria-label="Fechar a aba do assunto" title="Fechar a aba do assunto">×</button></div>
                 <button type="button" class="menu-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span class="nav-item-icon" aria-hidden="true">↻</span><span class="nav-item-label"><strong>Caixa de Revisões</strong><small>Capture e retome depois</small></span><span class="nav-count" id="navReviewBadge" hidden>0</span></button>
@@ -162,13 +157,9 @@
                 <button type="button" class="menu-btn" data-section="redacao" aria-controls="redacao" onclick="showSection('redacao')"><span class="nav-item-icon" aria-hidden="true">✎</span><span class="nav-item-label"><strong>Redação</strong><small>Notas por competência</small></span></button>
                 <button type="button" class="menu-btn" data-section="historico" aria-controls="historico" onclick="showSection('historico')"><span class="nav-item-icon" aria-hidden="true">◴</span><span class="nav-item-label"><strong>Histórico</strong><small>Sessões e dedicação</small></span></button>
             </div>
-            <div class="nav-cluster">
-                <span class="nav-cluster-label">Desenvolvimento</span>
-                <button type="button" class="menu-btn" data-section="desenvolvimento" aria-controls="desenvolvimento" onclick="showSection('desenvolvimento')"><span class="nav-item-icon" aria-hidden="true">◇</span><span class="nav-item-label"><strong>Desenvolvimento Pessoal</strong><small>Seu espaço, suas prioridades</small></span></button>
-            </div>
-            <div class="nav-cluster nav-cluster-account">
+<div class="nav-cluster nav-cluster-account">
                 <span class="nav-cluster-label">Conta</span>
-                <button type="button" class="menu-btn" data-section="perfil" aria-controls="perfil" onclick="showSection('perfil')"><span class="nav-item-icon" aria-hidden="true">♙</span><span class="nav-item-label"><strong>Meu Perfil</strong><small>Patente e aparência</small></span></button>
+                <button type="button" class="menu-btn" data-section="perfil" aria-controls="perfil" onclick="showSection('perfil')"><span class="nav-item-icon" aria-hidden="true">♙</span><span class="nav-item-label"><strong>Meu Perfil</strong><small>Nível e conquistas</small></span></button>
             </div>
         </div>
         <div class="nav-tools">
@@ -497,19 +488,7 @@
             </div>
         </section>
 
-        <section id="desenvolvimento" class="content-section personal-development-section">
-            <div class="workspace-heading">
-                <div><span class="workspace-kicker">UM ESPAÇO SEU</span><h1>Desenvolvimento Pessoal</h1><p>Organize o que importa para você, em qualquer fase da vida. Sem áreas ou metas prontas.</p></div>
-                <button type="button" class="cycle-btn primary" onclick="KingPersonalDevelopment.openSpace()">+ Criar área</button>
-            </div>
-            <div class="personal-metrics" id="personalMetrics" aria-label="Resumo das suas áreas"></div>
-            <div class="personal-workspace">
-                <aside class="personal-spaces widget" aria-label="Suas áreas"><div class="personal-spaces-head"><div><span class="workspace-kicker">ORGANIZAÇÃO</span><h2>Minhas áreas</h2></div><button type="button" class="personal-add-icon" onclick="KingPersonalDevelopment.openSpace()" aria-label="Criar área">+</button></div><div id="personalSpaceList"></div></aside>
-                <div id="personalSpaceDetail" class="personal-space-detail" aria-live="polite"></div>
-            </div>
-        </section>
-
-        <section id="notas" class="content-section notes-section">
+<section id="notas" class="content-section notes-section">
             <div class="workspace-heading"><div><span class="workspace-kicker">ESPAÇO PARA SUAS IDEIAS</span><h1>Notas</h1><p>Crie um tópico para cada assunto seu e guarde quantas anotações quiser nele.</p></div></div>
             <div class="notes-workspace-layout">
                 <aside class="notes-topics widget" aria-label="Tópicos de notas">
@@ -525,32 +504,7 @@
             </div>
         </section>
 
-        <section id="periodic-table" class="content-section periodic-section periodic-neon" aria-hidden="true" aria-labelledby="periodicTitle">
-            <header class="periodic-hero">
-                <img class="periodic-hero-mask" src="assets/periodic-spider-mask.png" alt="" aria-hidden="true" decoding="async">
-                <span class="periodic-portal" aria-hidden="true"></span><img class="periodic-rick-character periodic-rick-character--rick" src="assets/periodic-rick.png" alt="" aria-hidden="true" decoding="async"><img class="periodic-rick-character periodic-rick-character--morty" src="assets/periodic-morty.webp" alt="" aria-hidden="true" decoding="async">
-                <div class="periodic-hero-copy"><span class="periodic-eyebrow">KING MASTER · LABORATÓRIO DE QUÍMICA</span><h1 id="periodicTitle">Tabela <em>periódica</em></h1><p>118 elementos para explorar. Toque em um deles para abrir seus dados.</p></div>
-                <img class="periodic-header-spider" src="assets/periodic-spider-web.png" alt="" aria-hidden="true" decoding="async">
-            </header>
-            <div class="periodic-explorer">
-                <div class="periodic-explorer-heading"><div><span class="periodic-section-kicker">EXPLORE OS ELEMENTOS</span><h2>Encontre. Toque. Descubra.</h2></div><span class="periodic-result-count" id="periodicResultCount" role="status">118 elementos</span></div>
-                <div class="periodic-toolbar">
-                    <div class="periodic-search-wrap"><label class="periodic-search"><span aria-hidden="true">⌕</span><input id="periodicSearch" type="search" autocomplete="off" placeholder="Buscar por nome, símbolo ou número" aria-label="Buscar elemento" aria-controls="periodicSuggestions" aria-expanded="false"></label><div class="periodic-suggestions" id="periodicSuggestions" role="listbox" aria-label="Resultados da busca" hidden></div></div>
-                    <button type="button" class="periodic-clear" id="periodicClear" hidden>Limpar filtros <span aria-hidden="true">×</span></button>
-                    <div class="periodic-skin-switch" role="group" aria-label="Visual da tabela"><button type="button" data-periodic-skin="spider" aria-pressed="true">Aranha</button><button type="button" data-periodic-skin="portal" aria-pressed="false">Portal</button></div>
-                </div>
-                <div class="periodic-legend-dock" id="periodicLegendDock"><div class="periodic-legend" id="periodicLegend" role="group" aria-label="Filtrar por família"></div></div>
-                <div class="periodic-detail-dock" id="periodicDetailDock"><section class="periodic-detail" id="periodicDetail" aria-live="polite" aria-label="Detalhes do elemento" hidden></section></div>
-                <div class="periodic-table-frame"><div class="periodic-table-topline"><span>PERÍODOS <span aria-hidden="true">↓</span> · GRUPOS <span aria-hidden="true">→</span></span><span class="periodic-table-scroll-hint">Deslize para explorar <span aria-hidden="true">↔</span></span></div>
-                    <img id="periodicSpiderHanging" class="periodic-spider-hanging" src="assets/periodic-spider-hanging.png" alt="" aria-hidden="true" decoding="async">
-                    <div class="periodic-table-scroll" id="periodicTableScroll" tabindex="0" aria-label="Tabela periódica; deslize horizontalmente para ver todos os grupos"><div class="periodic-grid" id="periodicGrid"></div></div>
-                </div>
-                <p class="periodic-mobile-hint">As cores identificam as famílias. Selecione um elemento para ver seus dados e percorra a tabela com as setas do teclado.</p>
-            </div>
-            <p class="periodic-credit">Dados dos elementos: <a href="https://pubchem.ncbi.nlm.nih.gov/ptable/" target="_blank" rel="noopener noreferrer">PubChem</a>.</p>
-        </section>
-
-        <!-- HUB DE MATÉRIAS -->
+<!-- HUB DE MATÉRIAS -->
         <section id="planejamento" class="content-section">
             <div class="workspace-heading">
                 <div>
@@ -892,11 +846,10 @@
             <div class="profile-heading">
                 <div>
                     <h1>Meu Perfil</h1>
-                    <p>Personalize sua identidade, escolha o visual conquistado e acompanhe sua evolução.</p>
+                    <p>Sua identidade e sua evolução rumo ao ENEM.</p>
                 </div>
                 <div class="profile-heading-actions">
-                    <button type="button" class="rank-mode-toggle" id="rankVisualModeToggle" aria-pressed="false" onclick="alternarModoPatente()"><span aria-hidden="true">▣</span> Modo Militar</button>
-                    <span class="profile-multiplier-badge" id="profileMultiplierBadge">1.0x • XP Base</span>
+<span class="profile-multiplier-badge" id="profileMultiplierBadge">1.0x • XP Base</span>
                 </div>
             </div>
 
@@ -937,33 +890,22 @@
 
             <div class="profile-overview-grid">
             <div class="profile-hero widget">
-                <div class="profile-rank-scene" aria-hidden="true">
-                    <strong id="profileRankEmblem">⌃</strong>
-                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-                </div>
-                <div class="profile-league-name" id="profileLeagueName">Liga Bronze</div>
+<div class="profile-league-name" id="profileLeagueName">Liga Bronze</div>
                 <div class="avatar-stage">
-                    <span class="rank-frame-emblem" id="profileFrameEmblem" aria-hidden="true">⌃</span>
-                    <div class="league-frame league-bronze" id="profileLeagueFrame">
+<div class="league-frame league-bronze" id="profileLeagueFrame">
                         <span class="league-orb orb-one"></span><span class="league-orb orb-two"></span><span class="league-orb orb-three"></span>
-                        <span class="rank-frame-detail detail-one" aria-hidden="true"></span>
-                        <span class="rank-frame-detail detail-two" aria-hidden="true"></span>
-                        <span class="rank-frame-detail detail-three" aria-hidden="true"></span>
                         <div class="avatar-core" aria-label="Foto de perfil do estudante">
                             <img id="profileAvatarImage" alt="Foto de perfil do estudante">
                             <span id="profileAvatarFallback">PR</span>
                         </div>
                     </div>
-                    <span class="rank-frame-tag" id="profileFrameTag">NÍVEL 1</span>
-                </div>
+</div>
                 <div class="profile-level-title" id="profileLevelTitle">Lvl 1 • Soldado do Foco</div>
                 <div class="profile-next-level" id="profileNextLevel">Próximo nível: 2.250 XP</div>
                 <div class="profile-xp-line"><span id="profileXpText">0 / 1.000.000 XP</span><span id="profileXpPercent">0%</span></div>
                 <div class="profile-xp-track"><span id="profileXpBar"></span></div>
                         <p class="profile-xp-note" id="profileXpNote">Progresso para o próximo nível</p>
-                <div class="profile-evolution-caption" id="profileEvolutionCaption">Soldado do Foco • A base da tropa nasce da disciplina diária</div>
-                <div class="profile-reference-strip" id="profileReferenceStrip" aria-label="Referências visuais deste título"></div>
-            </div>
+</div>
             <section class="profile-stats-panel" aria-labelledby="profileStatsTitle"><div class="profile-stats-heading"><span class="workspace-kicker">SEU PROGRESSO</span><h3 id="profileStatsTitle">Em números</h3><p>O que você já construiu até aqui.</p></div>
             <div class="profile-stats-grid">
                 <article class="profile-stat-card"><span class="profile-stat-icon">🔥</span><span class="profile-stat-value" id="profileStreak">0 dias</span><span class="profile-stat-label">Ofensiva atual</span></article>
@@ -1017,21 +959,7 @@
                 <button type="button" class="xp-lab-lock-again" onclick="bloquearLaboratorioXp()"><span aria-hidden="true">🔒</span> Fechar laboratório</button>
                 </div>
             </div>
-            <div class="frame-vault widget" aria-labelledby="frameVaultTitle">
-                <div class="frame-vault-heading">
-                    <div><span class="xp-test-kicker">PERSONALIZAÇÃO</span><h3 id="frameVaultTitle">Inventário de molduras</h3><p>Veja o que conquistou e equipe sua moldura favorita.</p></div>
-                    <div class="frame-vault-actions">
-                        <button type="button" class="cycle-btn" onclick="usarMolduraAutomatica()">Usar a atual</button>
-                        <button type="button" class="frame-vault-toggle" id="frameVaultToggle" aria-expanded="false" aria-controls="frameVaultBody" onclick="toggleFrameVault()"><span class="material-symbols-rounded" aria-hidden="true">inventory_2</span><span class="frame-vault-toggle-copy">Abrir inventário</span><span class="frame-vault-arrow" aria-hidden="true">⌄</span></button>
-                    </div>
-                </div>
-                <div class="frame-vault-body" id="frameVaultBody" hidden>
-                    <div class="frame-vault-progress"><span id="frameVaultCount">1 de 17 liberadas</span><small id="frameVaultMode">Carreira Militar</small></div>
-                    <div class="frame-vault-grid" id="frameVaultGrid" aria-live="polite"></div>
-                </div>
-            </div>
-
-        </section>
+</section>
 
         <!-- MODAIS -->
         <div class="modal-overlay" id="chapterSummaryModal" role="dialog" aria-modal="true" aria-labelledby="chapterSummaryTitle">
@@ -1161,12 +1089,7 @@
             </div>
         </div>
 
-        <div class="modal-overlay" id="personalSpaceModal" role="dialog" aria-modal="true" aria-labelledby="personalSpaceModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalSpaceModal')" aria-label="Fechar">×</button><span class="workspace-kicker">DO SEU JEITO</span><h2 id="personalSpaceModalTitle">Criar área</h2><p>Uma área pode ser sobre qualquer parte da sua vida.</p><form onsubmit="KingPersonalDevelopment.saveSpace(event)"><input type="hidden" id="personalSpaceId"><label>Nome da área<input class="cycle-input" id="personalSpaceName" maxlength="70" required placeholder="Ex.: Saúde, estudos, finanças, rotina…"></label><label>O que você quer acompanhar? <small>Opcional</small><textarea class="cycle-input" id="personalSpaceDescription" maxlength="280" rows="3" placeholder="Escreva com suas palavras; pode mudar depois."></textarea></label><label>Cor<span class="color-choice-control"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18h1.2a2.1 2.1 0 0 0 1.6-3.5 1.5 1.5 0 0 1 1.1-2.5H18A3 3 0 0 0 21 12a9 9 0 0 0-9-9Z"/><circle cx="7.5" cy="11" r=".8"/><circle cx="10" cy="7.5" r=".8"/><circle cx="15" cy="7.5" r=".8"/></svg><input type="color" id="personalSpaceColor" value="#3288ed" aria-label="Cor da área"></span></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalSpaceModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar área</button></div></form></div></div>
-        <div class="modal-overlay" id="personalItemModal" role="dialog" aria-modal="true" aria-labelledby="personalItemModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalItemModal')" aria-label="Fechar">×</button><span class="workspace-kicker">ACOMPANHAMENTO</span><h2 id="personalItemModalTitle">Adicionar acompanhamento</h2><p>Escolha quando o hábito realmente conta.</p><form onsubmit="KingPersonalDevelopment.saveItem(event)"><input type="hidden" id="personalItemId"><label>Tipo<select class="cycle-input" id="personalItemType" onchange="KingPersonalDevelopment.updateItemFields()"><option value="habit">Hábito</option><option value="goal">Meta numérica</option></select></label><label>Nome<input class="cycle-input" id="personalItemName" maxlength="90" required placeholder="O que você quer acompanhar?"></label><div id="personalHabitFields"><label>Frequência<select class="cycle-input" id="personalHabitFrequency" onchange="KingPersonalDevelopment.updateItemFields()"><option value="daily">Todos os dias</option><option value="weekdays">Dias escolhidos</option><option value="weekly">X vezes por semana</option></select></label><fieldset id="personalHabitWeekdays" class="personal-weekdays" hidden><legend>Dias que contam</legend><label><input type="checkbox" value="1">Seg</label><label><input type="checkbox" value="2">Ter</label><label><input type="checkbox" value="3">Qua</label><label><input type="checkbox" value="4">Qui</label><label><input type="checkbox" value="5">Sex</label><label><input type="checkbox" value="6">Sáb</label><label><input type="checkbox" value="0">Dom</label></fieldset><label id="personalHabitWeeklyTarget" hidden>Vezes por semana<input class="cycle-input" id="personalHabitTimes" type="number" min="1" max="7" step="1" value="1"></label></div><div id="personalGoalFields" class="personal-goal-fields" hidden><label>Alvo<input class="cycle-input" type="number" id="personalItemTarget" min="1" max="1000000" step="1" value="10"></label><label>Unidade <small>Opcional</small><input class="cycle-input" id="personalItemUnit" maxlength="24" placeholder="Ex.: livros, treinos, horas"></label></div><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalItemModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar</button></div></form></div></div>
-        <div class="modal-overlay" id="personalHabitEntryModal" role="dialog" aria-modal="true" aria-labelledby="personalHabitEntryTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalHabitEntryModal')" aria-label="Fechar">×</button><span class="workspace-kicker">HISTÓRICO DO HÁBITO</span><h2 id="personalHabitEntryTitle">Registrar dia</h2><form onsubmit="KingPersonalDevelopment.saveHabitEntry(event)"><input type="hidden" id="personalHabitEntrySpace"><input type="hidden" id="personalHabitEntryItem"><label>Data<input class="cycle-input" id="personalHabitEntryDate" type="date" required></label><label>Resultado<select class="cycle-input" id="personalHabitEntryStatus"><option value="done">✓ Cumpri</option><option value="missed">✕ Não cumpri</option><option value="skip">Pular com motivo</option><option value="clear">Remover registro</option></select></label><label>Motivo para pular <small>obrigatório se escolher pular</small><input class="cycle-input" id="personalHabitEntryReason" maxlength="160" placeholder="Ex.: doença ou imprevisto real"></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalHabitEntryModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar dia</button></div></form></div></div>
-        <div class="modal-overlay" id="personalNoteModal" role="dialog" aria-modal="true" aria-labelledby="personalNoteModalTitle"><div class="modal-box personal-modal"><button type="button" class="modal-close" onclick="fecharModal('personalNoteModal')" aria-label="Fechar">×</button><span class="workspace-kicker">REGISTRO LIVRE</span><h2 id="personalNoteModalTitle">Nova anotação</h2><p>Anote uma reflexão, conquista, dificuldade ou próximo passo.</p><form onsubmit="KingPersonalDevelopment.saveNote(event)"><input type="hidden" id="personalNoteId"><label>Anotação<textarea class="cycle-input" id="personalNoteText" maxlength="3000" rows="7" required placeholder="Escreva do seu jeito…"></textarea></label><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('personalNoteModal')">Cancelar</button><button type="submit" class="cycle-btn primary">Salvar anotação</button></div></form></div></div>
-
-        <div class="modal-overlay" id="agendamentoModal" role="dialog" aria-modal="true" aria-labelledby="agendamentoModalTitle">
+<div class="modal-overlay" id="agendamentoModal" role="dialog" aria-modal="true" aria-labelledby="agendamentoModalTitle">
             <div class="modal-box agenda-entry-modal">
                 <button type="button" class="modal-close" onclick="fecharModal('agendamentoModal')" aria-label="Fechar">×</button>
                 <div class="cycle-modal-title" id="agendamentoModalTitle">Novo Compromisso</div>
@@ -1576,8 +1499,6 @@
         </div>
     </div>
     <audio id="alarmAudio"></audio>
-    <script src="military-insignia.js?v=20260906-worlds-2"></script>
-    <script src="rank-art.js?v=20260907-save-1"></script>
     <script src="timer-recovery.js?v=20260916-session-safe-v1"></script>
     <script src="schedule-core.js?v=20261015-swap-copy-v1"></script>
     <script src="schedule-planner.js?v=20261002-evolution-v1"></script>
@@ -1593,17 +1514,13 @@
     <script src="notebook-core.js?v=20261006-v1"></script>
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
-    <script src="periodic-table-data.js?v=20261026-spider-v2"></script>
-    <script src="periodic-table-core.js?v=20261026-v1"></script>
     <script src="script.js?v=20261026-periodic-v1"></script>
-    <script src="periodic-table.js?v=20261027-portal-fx-v3"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
     <script src="sidebar-icons.js?v=20261026-periodic-v1"></script>
     <script src="schedule.js?v=20261015-bulk-select-v1"></script>
-    <script src="personal-development.js?v=20261008-week-habits-v2"></script>
     <script src="subject-lab.js?v=20261006-v1"></script>
     <script type="module" src="syllabus-pdf.js?v=20261004-agenda-timeout-v1"></script>
     <script src="study-insights.js?v=20260918-content-intelligence-v1"></script>
@@ -1617,7 +1534,6 @@
     <script src="rank-integration-v2.js?v=20260929-rank-v2-1"></script>
     <script src="accessibility-v2.js?v=20260929-overhaul-v4"></script>
     <script src="data-portability.js?v=20260929-overhaul-v4"></script>
-    <script src="command-palette.js?v=20260929-overhaul-v4"></script>
     <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
     <script src="profile-overhaul.js?v=20261015-search-v1"></script>
     <script src="cloud-state.js?v=20261008-account-isolation-v1"></script>

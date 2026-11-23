@@ -2,32 +2,20 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const [html, script, schedule, core, growth, subjectLab, cloud, icons] = await Promise.all([
+const [html, script, schedule, core, subjectLab, cloud, icons] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
   readFile(new URL('../script.js', import.meta.url), 'utf8'),
   readFile(new URL('../schedule.js', import.meta.url), 'utf8'),
   readFile(new URL('../schedule-core.js', import.meta.url), 'utf8'),
-  readFile(new URL('../personal-development.js', import.meta.url), 'utf8'),
   readFile(new URL('../subject-lab.js', import.meta.url), 'utf8'),
   readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8'),
   readFile(new URL('../sidebar-icons.js', import.meta.url), 'utf8')
 ]);
 
-test('personal development starts clean and supports custom areas, habits, goals and notes', () => {
-  assert.match(html, /data-section="desenvolvimento"/);
-  assert.match(html, /id="desenvolvimento"/);
+test('personal development area left the site, its saved data stays readable', () => {
+  assert.doesNotMatch(html, /data-section="desenvolvimento"/);
+  assert.doesNotMatch(html, /id="personalSpaceModal"/);
   assert.match(script, /personalDevelopment:\s*\{/);
-  assert.match(script, /spaces: \[\]/);
-  assert.match(growth, /function saveSpace\(event\)/);
-  assert.match(growth, /function toggleHabit\(spaceIndex, itemIndex\)/);
-  assert.match(growth, /function setGoal\(spaceIndex, itemIndex, value\)/);
-  assert.match(growth, /function saveNote\(event\)/);
-  assert.match(html, /id="personalSpaceModal"/);
-  assert.match(html, /id="personalItemModal"/);
-  assert.match(html, /id="personalNoteModal"/);
-  const panel = html.split('<section id="desenvolvimento"')[1].split('<!-- HUB DE MATÉRIAS -->')[0];
-  assert.doesNotMatch(panel, /Quatro decisões|Meta principal|Disciplina prática|Construir constância/);
-  assert.match(icons, /desenvolvimento:/);
 });
 
 test('schedule compares planned workload with real weekly capacity', () => {

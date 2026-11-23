@@ -169,7 +169,7 @@ appData.profileBio = appData.profileBio.trim().slice(0, 190);
 if (typeof appData.profilePhoto !== 'string') appData.profilePhoto = '';
 if (typeof appData.profileBanner !== 'string') appData.profileBanner = '';
 if (!appData.visualMode) appData.visualMode = 'futuristic';
-if (!['militar', 'aura'].includes(appData.rankVisualMode)) appData.rankVisualMode = 'militar';
+appData.rankVisualMode = 'militar';
 if (!appData.selectedFrames || typeof appData.selectedFrames !== 'object') appData.selectedFrames = { militar: '', aura: '' };
 if (typeof appData.selectedFrames.militar !== 'string') appData.selectedFrames.militar = '';
 if (typeof appData.selectedFrames.aura !== 'string') appData.selectedFrames.aura = '';
@@ -831,7 +831,6 @@ function showSection(sectionId) {
     
     if(sectionId === 'historico') renderizarHistorico();
     if(sectionId === 'planejamento') renderizarCiclo();
-    if(sectionId === 'periodic-table') window.KingPeriodic?.render?.();
     if(sectionId === 'topic-workspace') renderizarEspacoTopico();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
@@ -845,7 +844,6 @@ function showSection(sectionId) {
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
-    if(sectionId === 'desenvolvimento') window.KingPersonalDevelopment?.render?.();
     if(sectionId === 'notas') renderizarNotasRapidas();
     atualizarIndicadoresNavegacao();
 }
@@ -1314,23 +1312,23 @@ function nomeDoMultiplicador(dias) {
 }
 
 const PATENTES_MILITARES = [
-    { nivel: 1, xp: 0, titulo: 'Soldado do Foco', tema: 'soldado', simbolo: '⌃', legenda: 'A base da tropa nasce da disciplina diária', referencias: ['Uma Divisa', 'Boina Verde', 'Ordem Unida'] },
-    { nivel: 3, xp: 4500, titulo: 'Cabo da Constância', tema: 'cabo', simbolo: '⌃⌃', legenda: 'O primeiro comando nasce do exemplo', referencias: ['Duas Divisas', 'Braçal', 'Esquadrão'] },
-    { nivel: 6, xp: 9000, titulo: 'Terceiro-Sargento da Rotina', tema: 'terceiro-sargento', simbolo: '⌃⌃⌃', legenda: 'A rotina agora obedece ao seu comando', referencias: ['Três Divisas', 'Pelotão', 'Instrução'] },
-    { nivel: 9, xp: 15000, titulo: 'Segundo-Sargento da Tática', tema: 'segundo-sargento', simbolo: '⌃⌃⌃⌃', legenda: 'Tática e constância avançam em formação', referencias: ['Quatro Divisas', 'Quadro Tático', 'Coordenação'] },
-    { nivel: 12, xp: 25000, titulo: 'Primeiro-Sargento da Estratégia', tema: 'primeiro-sargento', simbolo: '≋⌃', legenda: 'Liderança transforma esforço em formação', referencias: ['Divisas de 1º Sargento', 'Liderança', 'Formação'] },
-    { nivel: 16, xp: 40000, titulo: 'Subtenente da Persistência', tema: 'subtenente', simbolo: '◇', legenda: 'Experiência, firmeza e presença em campo', referencias: ['Losango', 'Sabre', 'Companhia'] },
-    { nivel: 20, xp: 60000, titulo: 'Aspirante-a-Oficial', tema: 'aspirante', simbolo: '★', legenda: 'A estrela do oficialato começa a surgir', referencias: ['Estrela Singela', 'Academia Militar', 'Espadim'] },
-    { nivel: 24, xp: 85000, titulo: 'Segundo-Tenente da Execução', tema: 'segundo-tenente', simbolo: '★', legenda: 'Planejamento e ação marcham juntos', referencias: ['Uma Estrela', 'Mapa Tático', 'Pelotão'] },
-    { nivel: 28, xp: 115000, titulo: 'Primeiro-Tenente da Precisão', tema: 'primeiro-tenente', simbolo: '★★', legenda: 'Nenhum objetivo fica sem coordenadas', referencias: ['Duas Estrelas', 'Bússola', 'Operação'] },
-    { nivel: 32, xp: 155000, titulo: 'Capitão do Cronograma', tema: 'capitao', simbolo: '★★★', legenda: 'O tempo inteiro responde ao seu plano', referencias: ['Três Estrelas', 'Companhia', 'Carta de Comando'] },
-    { nivel: 37, xp: 210000, titulo: 'Major da Evolução', tema: 'major', simbolo: '★★✹', legenda: 'Visão de estado-maior sobre cada avanço', referencias: ['Duas Estrelas', 'Roseta', 'Estado-Maior'] },
-    { nivel: 42, xp: 280000, titulo: 'Tenente-Coronel da Operação', tema: 'tenente-coronel', simbolo: '★✹✹', legenda: 'Coordena grandes objetivos sem perder precisão', referencias: ['Estrela e Rosetas', 'Batalhão', 'Operações'] },
-    { nivel: 47, xp: 370000, titulo: 'Coronel da Excelência', tema: 'coronel', simbolo: '✹✹✹', legenda: 'Excelência deixa de ser meta e vira padrão', referencias: ['Três Rosetas', 'Regimento', 'Comando'] },
-    { nivel: 52, xp: 480000, titulo: 'General de Brigada do Saber', tema: 'general-brigada', simbolo: '✺★★', legenda: 'O generalato abre uma nova dimensão de comando', referencias: ['Brasão do Generalato', 'Duas Estrelas', 'Brigada'] },
-    { nivel: 58, xp: 610000, titulo: 'General de Divisão da Mestria', tema: 'general-divisao', simbolo: '✺★★★', legenda: 'Três estrelas dominam o campo inteiro', referencias: ['Brasão do Generalato', 'Três Estrelas', 'Divisão'] },
-    { nivel: 64, xp: 750000, titulo: 'General de Exército do Saber', tema: 'general-exercito', simbolo: '✺★★★★', legenda: 'Toda a estratégia converge para a vitória', referencias: ['Brasão do Generalato', 'Quatro Estrelas', 'Exército'] },
-    { nivel: 70, xp: 1000000, titulo: 'Marechal Supremo do ENEM', tema: 'marechal', simbolo: '✺★★★★★', legenda: 'O mais alto comando do conhecimento', referencias: ['Brasão do Generalato', 'Cinco Estrelas', 'Comando Supremo'] }
+    { nivel: 1, xp: 0, titulo: 'Vestibulando', tema: 'soldado', simbolo: '★', legenda: 'Todo caminho até a aprovação começa no primeiro bloco de estudo', referencias: [] },
+    { nivel: 3, xp: 4500, titulo: 'Constante', tema: 'cabo', simbolo: '★', legenda: 'Estudar todo dia virou parte da rotina', referencias: [] },
+    { nivel: 6, xp: 9000, titulo: 'Organizado', tema: 'terceiro-sargento', simbolo: '★', legenda: 'O plano da semana já guia seus estudos', referencias: [] },
+    { nivel: 9, xp: 15000, titulo: 'Resolvedor de Questões', tema: 'segundo-sargento', simbolo: '★', legenda: 'As questões viraram treino diário', referencias: [] },
+    { nivel: 12, xp: 25000, titulo: 'Revisor Estratégico', tema: 'primeiro-sargento', simbolo: '★', legenda: 'Revisar no tempo certo faz o conteúdo ficar', referencias: [] },
+    { nivel: 16, xp: 40000, titulo: 'Leitor de Enunciados', tema: 'subtenente', simbolo: '★', legenda: 'Os textos longos do ENEM já não assustam', referencias: [] },
+    { nivel: 20, xp: 60000, titulo: 'Caçador de Erros', tema: 'aspirante', simbolo: '★', legenda: 'Cada erro vira uma regra para não repetir', referencias: [] },
+    { nivel: 24, xp: 85000, titulo: 'Simulado em Dia', tema: 'segundo-tenente', simbolo: '★', legenda: 'Prova inteira, no tempo, sem perder o ritmo', referencias: [] },
+    { nivel: 28, xp: 115000, titulo: 'Redator Competente', tema: 'primeiro-tenente', simbolo: '★', legenda: 'As cinco competências da redação estão sob controle', referencias: [] },
+    { nivel: 32, xp: 155000, titulo: 'Dono do Cronograma', tema: 'capitao', simbolo: '★', legenda: 'O tempo inteiro responde ao seu plano', referencias: [] },
+    { nivel: 37, xp: 210000, titulo: 'Especialista TRI', tema: 'major', simbolo: '★', legenda: 'Acertar as fáceis primeiro já é estratégia', referencias: [] },
+    { nivel: 42, xp: 280000, titulo: 'Nota 700+', tema: 'tenente-coronel', simbolo: '★', legenda: 'O desempenho já disputa cursos concorridos', referencias: [] },
+    { nivel: 47, xp: 370000, titulo: 'Nota 800+', tema: 'coronel', simbolo: '★', legenda: 'Excelência deixou de ser meta e virou padrão', referencias: [] },
+    { nivel: 52, xp: 480000, titulo: 'Redação 900+', tema: 'general-brigada', simbolo: '★', legenda: 'A redação virou ponto forte', referencias: [] },
+    { nivel: 58, xp: 610000, titulo: 'Candidato de Elite', tema: 'general-divisao', simbolo: '★', legenda: 'Domínio das quatro áreas do conhecimento', referencias: [] },
+    { nivel: 64, xp: 750000, titulo: 'Lista de Aprovados', tema: 'general-exercito', simbolo: '★', legenda: 'Pronto para ver o nome na lista', referencias: [] },
+    { nivel: 70, xp: 1000000, titulo: 'Mestre do ENEM', tema: 'marechal', simbolo: '★', legenda: 'O nível máximo de preparação', referencias: [] }
 ];
 
 const TITULOS_AURA = [
@@ -1812,7 +1810,6 @@ function renderGamificacao(animar = false) {
         const elemento = document.getElementById(id);
         if (elemento) elemento.innerHTML = simboloDaMoldura(molduraVisual);
     }
-    window.KingRankArt?.render(document.querySelector('.profile-hero'), molduraVisual, appData.rankVisualMode);
     colocarTexto('profileFrameTag', `NÍVEL ${dados.nivel}`);
     colocarTexto('profileEvolutionCaption', `${molduraVisual.titulo} • ${molduraVisual.legenda}`);
     const referencias = document.getElementById('profileReferenceStrip');

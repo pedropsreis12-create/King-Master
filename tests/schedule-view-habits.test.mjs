@@ -6,7 +6,6 @@ await import('../habit-core.js');
 const habit = globalThis.KingHabitCore;
 const schedule = await readFile(new URL('../schedule.js', import.meta.url), 'utf8');
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
-const personal = await readFile(new URL('../personal-development.js', import.meta.url), 'utf8');
 
 test('o hábito percorre cumprido, não cumprido e neutro', () => {
     assert.equal(habit.nextStatus(''), 'done');
@@ -20,8 +19,6 @@ test('dias escolhidos determinam quais dos sete quadrados podem ser marcados', (
     assert.equal(habit.due(item, '2026-10-05'), true);
     assert.equal(habit.due(item, '2026-10-06'), false);
     assert.equal(habit.due(item, '2026-10-07'), true);
-    assert.match(personal, /Array\.from\(\{ length: 7 \}/);
-    assert.match(personal, /cycleHabitDay/);
 });
 
 test('cronograma tem modo fixo, carga por matéria, pausa editável e duplicação explícita', () => {

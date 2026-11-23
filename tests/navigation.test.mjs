@@ -48,7 +48,7 @@ test('discard confirmation stays above the session form that opened it', () => {
 test('sidebar keeps the approved coherent vector icon family', () => {
   assert.match(html, /sidebar-icons\.css\?v=20260922-personal-v1/);
   assert.match(html, /sidebar-icons\.js\?v=[^" ]+/);
-  for (const section of ['dashboard', 'agendamento', 'cronograma', 'planejamento', 'revisoes', 'caderno-erros', 'question-timer', 'simulados', 'redacao', 'historico', 'desenvolvimento', 'perfil', 'notes']) {
+  for (const section of ['dashboard', 'agendamento', 'cronograma', 'planejamento', 'revisoes', 'caderno-erros', 'question-timer', 'simulados', 'redacao', 'historico', 'perfil', 'notes']) {
     assert.match(sidebarIcons, new RegExp(`(?:'${section}'|${section}):`));
   }
   assert.match(sidebarIcons, /viewBox="0 0 24 24"/);
@@ -74,7 +74,7 @@ test('notes tab is hidden without destroying previously saved topics and annotat
 
 test('free color controls share a visible, accessible picker treatment', async () => {
   const notesCss = await readFile(new URL('../notes-workspace.css', import.meta.url), 'utf8');
-  for (const id of ['colorPicker', 'cycleColor', 'personalSpaceColor']) assert.match(html, new RegExp(`type="color" id="${id}"`));
+  for (const id of ['colorPicker', 'cycleColor']) assert.match(html, new RegExp(`type="color" id="${id}"`));
   assert.match(html, /class="color-choice-control"/);
   assert.match(notesCss, /\.color-choice-control:focus-within/);
   assert.match(notesCss, /\.subject-custom-color:focus-within/);

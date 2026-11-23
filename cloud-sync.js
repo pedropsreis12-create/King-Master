@@ -125,10 +125,10 @@ function setAuthMode(mode) {
     const authIntro = document.getElementById('authGateIntro');
     const authEyebrow = document.getElementById('authGateEyebrow');
     if (authEyebrow) authEyebrow.textContent = authMode === 'signup' ? 'Comece por aqui' : 'Bem-vindo de volta';
-    if (authTitle) authTitle.textContent = authMode === 'signup' ? 'Crie seu espaço' : 'Entre no seu espaço';
+    if (authTitle) authTitle.textContent = authMode === 'signup' ? 'Criar conta' : 'Entrar';
     if (authIntro) authIntro.textContent = authMode === 'signup'
-        ? 'Guarde sua preparação em um só lugar e continue de onde parou em qualquer dispositivo.'
-        : 'Seu plano, seus registros e suas revisões estão esperando por você.';
+        ? 'Leva menos de um minuto. Seus dados ficam salvos na sua conta.'
+        : 'Continue sua preparação para o ENEM.';
     document.querySelectorAll('[data-auth-mode]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.authMode === authMode)));
     if (authNameField) authNameField.hidden = authMode !== 'signup';
     if (authName) authName.required = authMode === 'signup';

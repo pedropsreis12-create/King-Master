@@ -17,7 +17,8 @@ const [html, cloud, script, usability, resetPage, resetScript, vite, resetEmail,
 
 test('student entry keeps the existing auth flow in a responsive branded shell', () => {
     assert.match(html, /class="auth-shell"/);
-    assert.match(html, /class="auth-showcase"/);
+    assert.match(html, /class="auth-brand"/);
+    assert.doesNotMatch(html, /class="auth-showcase"/);
     assert.match(html, /href="auth-refresh\.css/);
     assert.match(html, /id="authGateEyebrow"/);
     assert.match(cloud, /authMode === 'signup' \? 'Comece por aqui'/);

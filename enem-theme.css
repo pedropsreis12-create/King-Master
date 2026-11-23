@@ -1,0 +1,138 @@
+/* King Master ENEM — visual claro, sólido e leve.
+   Carregado por último: define os tokens finais e remove os efeitos caros
+   (vidro fosco, fundos desfocados animados) que travavam notebooks. */
+
+/* Fonte e tokens */
+html:root,
+html:root[data-visual],
+html:root[data-theme],
+html:root[data-site-design] {
+    --bg-body: #f3f5f9;
+    --card-bg: #ffffff;
+    --hover-bg: #f1f4f9;
+    --border-color: #e2e7ef;
+    --border-strong: #cdd5e1;
+    --text-main: #111827;
+    --text-muted: #556070;
+    --card-shadow: 0 1px 2px rgba(17, 24, 39, .05), 0 1px 3px rgba(17, 24, 39, .04);
+    --glass-blur: none;
+    --menu-surface: #ffffff;
+    --km-radius: 14px;
+    --km-radius-sm: 10px;
+    --km-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --km-sidebar: 268px;
+    color-scheme: light;
+}
+html:not([data-a11y-dyslexia="true"]) body,
+html:not([data-a11y-dyslexia="true"]) body :is(button, input, select, textarea, h1, h2, h3, h4, p, span, small, strong, label, a, li, dt, dd, td, th) {
+    font-family: var(--km-font);
+}
+
+/* Desempenho: nada de vidro fosco nem fundos desfocados animados. */
+*, *::before, *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html body::before, html body::after { display: none !important; animation: none !important; }
+body { background: var(--bg-body) !important; transition: none !important; }
+
+/* Superfícies */
+html[data-visual] :is(.widget, .stat-card, .disc-card, .agenda-card, .h-session-card, .profile-stat-card, .workspace-metric-strip > article) {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--card-shadow);
+    border-radius: var(--km-radius);
+}
+html[data-visual] .modal-box { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 18px; box-shadow: 0 20px 50px rgba(17, 24, 39, .18); }
+html[data-visual] .modal-overlay { background: rgba(17, 24, 39, .45); }
+
+/* Tipografia dos títulos */
+html[data-visual] .content-section > h1,
+html[data-visual] :is(.workspace-heading, .profile-heading) h1 { font-size: clamp(1.45rem, 1.1rem + 1vw, 1.9rem); font-weight: 800; letter-spacing: -.02em; color: var(--text-main); }
+html[data-visual] :is(.workspace-heading, .profile-heading) p { color: var(--text-muted); max-width: 62ch; }
+html[data-visual] .workspace-kicker { font-size: .68rem; font-weight: 700; letter-spacing: .08em; }
+
+/* Botões */
+html[data-visual] .cycle-btn { border-radius: var(--km-radius-sm); border: 1px solid var(--border-strong); background: #fff; color: var(--text-main); box-shadow: none; font-weight: 600; }
+html[data-visual] .cycle-btn:hover { background: var(--hover-bg); }
+html[data-visual] .cycle-btn.primary { background: var(--accent-color); border-color: transparent; color: var(--accent-on-solid, #fff); }
+html[data-visual] .cycle-btn.primary:hover { filter: brightness(.94); background: var(--accent-color); }
+html[data-visual] .cycle-input { border-radius: var(--km-radius-sm); border: 1px solid var(--border-strong); background: #fff; }
+html[data-visual] .cycle-input:focus { border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(var(--accent-rgb), .18); outline: none; }
+
+/* Barra lateral fixa no computador */
+@media (min-width: 1101px) {
+    html body > nav#mainNavigation {
+        position: fixed; inset: 0 auto 0 0; width: var(--km-sidebar); height: 100%; margin: 0;
+        transform: none; visibility: visible; transition: none;
+        border-radius: 0; border: 0; border-right: 1px solid var(--border-color);
+        background: var(--menu-surface); box-shadow: none; padding: 18px 12px 14px;
+    }
+    html body > main { padding-left: calc(var(--km-sidebar) + 40px) !important; padding-right: 40px; }
+    html body > .nav-reveal { display: none !important; }
+}
+
+/* Itens do menu */
+html[data-visual] #mainNavigation .site-brand { border: 0; background: transparent; box-shadow: none; padding: 4px 10px 14px; }
+html[data-visual] #mainNavigation .nav-cluster { gap: 2px; padding: 0; margin: 0 0 14px; border: 0; background: none; }
+html[data-visual] #mainNavigation .nav-cluster-label { padding: 0 12px 6px; font-size: .64rem; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #8a93a3; }
+html[data-visual] #mainNavigation .menu-btn {
+    position: relative; min-height: 0; padding: 8px 12px; gap: 10px; border: 0; border-radius: var(--km-radius-sm);
+    background: transparent; box-shadow: none; color: var(--text-main); transform: none;
+}
+html[data-visual] #mainNavigation .menu-btn:hover { background: var(--hover-bg); }
+html[data-visual] #mainNavigation .menu-btn.active { background: rgba(var(--accent-rgb), .13); color: var(--accent-ink); }
+html[data-visual] #mainNavigation .menu-btn.active::before { content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent-color); }
+html[data-visual] #mainNavigation .menu-btn .nav-item-label strong { font-size: .86rem; font-weight: 600; }
+html[data-visual] #mainNavigation .menu-btn .nav-item-label small { font-size: .7rem; color: var(--text-muted); }
+html[data-visual] #mainNavigation .menu-btn.active .nav-item-label strong { color: var(--accent-ink); font-weight: 700; }
+html[data-visual] #mainNavigation .nav-item-icon { width: 30px; height: 30px; border-radius: 8px; background: var(--hover-bg); color: var(--text-muted); box-shadow: none; border: 0; }
+html[data-visual] #mainNavigation .menu-btn.active .nav-item-icon { background: var(--accent-color) !important; color: #fff !important; }
+html[data-visual] #mainNavigation .menu-btn[data-enem-area="linguagens"] .nav-item-icon { color: #d9480f; }
+html[data-visual] #mainNavigation .menu-btn[data-enem-area="humanas"] .nav-item-icon { color: #9c36b5; }
+html[data-visual] #mainNavigation .menu-btn[data-enem-area="natureza"] .nav-item-icon { color: #2f9e44; }
+html[data-visual] #mainNavigation .menu-btn[data-enem-area="matematica"] .nav-item-icon { color: #1c7ed6; }
+html[data-visual] #mainNavigation .menu-btn.active[data-enem-area] .nav-item-icon { color: #fff; }
+html[data-visual] #mainNavigation .nav-xp-badge { border-radius: var(--km-radius-sm); background: var(--hover-bg); border: 1px solid var(--border-color); box-shadow: none; }
+
+/* Ajustes que não fazem parte do visual ENEM */
+.visual-mode-control, #themeToggleBtn, .km-design-settings { display: none !important; }
+
+/* Mobile */
+@media (max-width: 1100px) {
+    html[data-visual] .mobile-dock { background: #fff; border: 1px solid var(--border-color); box-shadow: 0 8px 24px rgba(17, 24, 39, .12); }
+    html[data-visual] .dock-btn.active { background: rgba(var(--accent-rgb), .1); color: var(--accent-ink); }
+    html[data-visual] body > nav#mainNavigation { background: #fff; }
+}
+
+/* Plano semanal: abas Cronograma / Compromissos */
+.plan-tabs { display: inline-flex; gap: 4px; padding: 4px; margin: 0 0 18px; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; }
+.plan-tabs button { padding: 8px 16px; border: 0; border-radius: 9px; background: transparent; color: var(--text-muted); font-weight: 600; font-size: .84rem; cursor: pointer; }
+.plan-tabs button:hover { color: var(--text-main); background: var(--hover-bg); }
+.plan-tabs button[aria-selected="true"] { background: var(--accent-color); color: #fff; }
+.plan-tabs button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+
+/* Áreas do ENEM */
+.enem-area-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 16px; }
+.enem-area-chips button { padding: 7px 14px; border: 1px solid var(--border-strong); border-radius: 999px; background: #fff; color: var(--text-main); font-weight: 600; font-size: .82rem; cursor: pointer; }
+.enem-area-chips button:hover { background: var(--hover-bg); }
+.enem-area-chips button[aria-pressed="true"] { background: var(--text-main); border-color: var(--text-main); color: #fff; }
+.enem-area-chips button:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+html[data-visual] .enem-area-banner { --area-color: var(--accent-color); display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr); gap: 20px; align-items: center; margin: 0 0 18px; padding: 20px 22px; border-left: 4px solid var(--area-color); }
+.enem-area-banner[hidden] { display: none !important; }
+.enem-area-banner .workspace-kicker { color: var(--area-color); }
+.enem-area-banner h2 { margin: 4px 0 6px; font-size: 1.15rem; font-weight: 800; letter-spacing: -.01em; }
+.enem-area-banner p { margin: 0; color: var(--text-muted); font-size: .86rem; }
+.enem-area-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.enem-area-stats div { padding: 10px 12px; border-radius: var(--km-radius-sm); background: var(--hover-bg); }
+.enem-area-stats dt { font-size: .68rem; color: var(--text-muted); }
+.enem-area-stats dd { margin: 2px 0 0; font-size: 1.1rem; font-weight: 800; color: var(--text-main); }
+@media (max-width: 900px) {
+    html[data-visual] .enem-area-banner { grid-template-columns: 1fr; }
+    .enem-area-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* Movimento: só transições curtas e úteis */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* Troca de tela instantânea: sem animação de entrada (ela pausava junto com a aba e escondia o conteúdo). */
+html[data-visual] .content-section { animation: none; }

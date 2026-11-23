@@ -1,9 +1,16 @@
-import * as pdfjs from './assets/pdfjs/pdf.min.mjs';
-
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('./assets/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
+// A biblioteca de PDF (cerca de 1,7 MB com o worker) só é baixada quando alguém envia um PDF.
+let pdfjsPromise = null;
+function loadPdfjs() {
+    pdfjsPromise ||= import('./assets/pdfjs/pdf.min.mjs').then(pdfjs => {
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('./assets/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
+        return pdfjs;
+    }).catch(error => { pdfjsPromise = null; throw error; });
+    return pdfjsPromise;
+}
 
 window.KingSyllabusPdf = {
     async extract(file) {
+        const pdfjs = await loadPdfjs();
         const bytes = new Uint8Array(await file.arrayBuffer());
         const task = pdfjs.getDocument({ data: bytes });
         const document = await task.promise;
@@ -25,6 +32,7 @@ window.KingSyllabusPdf = {
         return pages;
     },
     async extractAgenda(file) {
+        const pdfjs = await loadPdfjs();
         const pdfDocument = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
         const pages = [];
         let totalLength = 0;
@@ -55,6 +63,7 @@ window.KingSyllabusPdf = {
         return { text: pages.join('\n') };
     },
     async renderAgendaImages(file) {
+        const pdfjs = await loadPdfjs();
         const pdfDocument = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
         const images = [];
         try {

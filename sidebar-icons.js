@@ -14,13 +14,18 @@
         historico: '<path d="M4.5 7.5H9V3"/><path d="M5.2 7A8.5 8.5 0 1 1 3.5 12"/><path d="M12 7.5V12l3 2"/>',
         notas: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 3v18M11 8h6M11 12h6M11 16h4"/><path d="M3 7h2M3 12h2M3 17h2"/>',
         notes: '<rect x="4" y="3" width="16" height="18" rx="2.5"/><path d="M8 3v18M11 8h6M11 12h6M11 16h4"/><path d="M3 7h2M3 12h2M3 17h2"/>',
+        'area-linguagens': '<path d="M4 19 9 5h1.5l5 14"/><path d="M6 14h7.5"/><path d="M16 12.5c.6-1 1.6-1.5 2.7-1.5 1.5 0 2.3.9 2.3 2.4V19"/><path d="M21 15.5c-3.6 0-5 .7-5 2 0 1 .8 1.6 1.9 1.6 1.6 0 3.1-1.1 3.1-3.1"/>',
+        'area-humanas': '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.3 3.5 5.2 3.5 8.5s-1.1 6.2-3.5 8.5c-2.4-2.3-3.5-5.2-3.5-8.5S9.6 5.8 12 3.5Z"/>',
+        'area-natureza': '<path d="M9.5 3.5h5M10.5 3.5v5.2L5 18.2A1.6 1.6 0 0 0 6.4 20.5h11.2a1.6 1.6 0 0 0 1.4-2.3l-5.5-9.5V3.5"/><path d="M7.5 14h9"/>',
+        'area-matematica': '<path d="M17.5 5H7l5.5 7L7 19h10.5"/>',
         perfil: '<circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/>'
     };
 
     function applySidebarIcons() {
         document.querySelectorAll('.menu-btn[data-section], .menu-btn[data-action]').forEach(button => {
             const holder = button.querySelector('.nav-item-icon');
-            const drawing = icons[button.dataset.section || button.dataset.action];
+            const key = button.dataset.enemArea ? `area-${button.dataset.enemArea}` : (button.dataset.section || button.dataset.action);
+            const drawing = icons[key];
             if (holder && drawing) holder.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${drawing}</svg>`;
         });
 

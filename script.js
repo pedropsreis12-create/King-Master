@@ -230,8 +230,8 @@ if (!appData.reminder || typeof appData.reminder !== 'object') appData.reminder 
 appData.reminder = { ...defaultAppData.reminder, ...appData.reminder };
 if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
 
-if(appData.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
-document.documentElement.setAttribute('data-visual', appData.visualMode === 'classic' ? 'classic' : 'futuristic');
+document.documentElement.setAttribute('data-theme', 'light');
+document.documentElement.setAttribute('data-visual', 'classic');
 document.documentElement.setAttribute('data-rank-mode', appData.rankVisualMode);
 aplicarCorDoSistema(appData.themeColor || '#007aff');
 
@@ -943,7 +943,7 @@ function handleColorPicker(hex) {
 
 function toggleDarkMode() { 
     const html = document.documentElement; 
-    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); 
+    html.setAttribute('data-theme', 'light'); 
     appData.darkMode = html.getAttribute('data-theme') === 'dark'; 
     saveAppData(); 
     syncSettingsUI();
@@ -958,7 +958,7 @@ function syncVisualModeControl() {
 }
 
 function toggleVisualMode() {
-    appData.visualMode = appData.visualMode === 'classic' ? 'futuristic' : 'classic';
+    appData.visualMode = 'classic';
     document.documentElement.setAttribute('data-visual', appData.visualMode);
     saveAppData();
     syncVisualModeControl();
@@ -7043,12 +7043,14 @@ renderizarAtalhosXpTeste();
 mostrarFraseMotivacional();
 renderizarCiclo();
 restoreTimerSession();
-renderizarAgenda();
-renderizarAgendamento();
-renderizarRevisoes();
-renderizarCadernoErros();
-renderizarSimulados();
-renderizarRedacoes();
+(window.requestIdleCallback || (fn => setTimeout(fn, 200)))(() => {
+    renderizarAgenda();
+    renderizarAgendamento();
+    renderizarRevisoes();
+    renderizarCadernoErros();
+    renderizarSimulados();
+    renderizarRedacoes();
+}, { timeout: 1500 });
 atualizarIndicadoresNavegacao();
 const secaoInicial = sessionStorage.getItem('kingMasterActiveSection');
 try {

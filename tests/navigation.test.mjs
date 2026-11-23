@@ -56,9 +56,8 @@ test('sidebar keeps the approved coherent vector icon family', () => {
   assert.match(sidebarIconStyles, /\.nav-item-icon svg/);
 });
 
-test('sidebar and settings use an opaque surface in light and dark themes', () => {
+test('sidebar and settings use an opaque surface', () => {
   assert.match(usability, /--menu-surface: #f8faff/);
-  assert.match(usability, /data-theme="dark"\] \{ --menu-surface: #1a1d24/);
   assert.match(usability, /#mainNavigation,\.settings-panel \{ background-color: var\(--menu-surface\)/);
 });
 

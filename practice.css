@@ -20,6 +20,5 @@
 .practice-wrong-list{margin:0;padding-left:20px;line-height:1.5}.practice-actions,.practice-exit-dialog>div{display:flex;flex-wrap:wrap;gap:9px;margin-top:10px}
 .practice-loading,.practice-error{padding:30px 0;line-height:1.5}.practice-error{color:#b03535}
 .practice-exit-dialog{width:min(500px,calc(100vw - 24px))}.practice-exit-dialog h2{margin:0 0 9px}.practice-exit-dialog p{line-height:1.5}
-#practiceStatus{min-height:1.25em;color:var(--text-muted,#596677);font-size:.83rem}
-[data-theme="dark"] .practice-choice.correct{background:#143827;color:#8de1a5}[data-theme="dark"] .practice-choice.wrong{background:#431f24;color:#ffb3b3}
+#practiceStatus{min-height:1.25em;color:var(--text-muted,#596677);font-size:.83rem}
 @media(max-width:600px){.practice-dialog,.practice-exit-dialog{padding:17px;border-radius:18px}.practice-choice{font-size:.92rem}.practice-actions .cycle-btn{flex:1}}

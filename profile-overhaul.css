@@ -1622,18 +1622,9 @@
 }
 
 #perfil.km-profile-v2 .frame-vault-card.locked { opacity: .55; }
-
-/* Temas e contraste */
-html[data-theme="dark"] #perfil.km-profile-v2 {
-    --km-profile-shadow: 0 24px 68px rgba(0, 0, 0, .28);
-}
-
-html[data-theme="dark"] #perfil.km-profile-v2 .profile-heading-actions,
-html[data-theme="dark"] #perfil.km-profile-v2 .km-profile-nav { background: color-mix(in srgb, var(--card-bg) 92%, transparent); }
-
-html[data-theme="dark"] #perfil.km-profile-v2 .profile-identity-card,
-html[data-theme="dark"] #perfil.km-profile-v2 .profile-stats-panel,
-html[data-theme="dark"] #perfil.km-profile-v2 .km-achievements { box-shadow: var(--km-profile-shadow); }
+
+
+
 
 html[data-visual="classic"] #perfil.km-profile-v2::before,
 html[data-visual="classic"] #perfil.km-profile-v2 .km-achievements::before { display: none; }

@@ -4,7 +4,7 @@
 
     const STORAGE_KEY = 'king-master.appearance-v2';
     const STORAGE_VERSION = 2;
-    const DESIGNS = new Set(['original', 'nebula', 'editorial']);
+    const DESIGNS = new Set(['original']);
     const TEXT_SCALES = new Set(['normal', 'large', 'xlarge']);
     const root = document.documentElement;
     const originalThemeColor = document.querySelector('meta[name="theme-color"]')?.content || '#0f1720';
@@ -235,6 +235,7 @@
     }
 
     function ensureDesignSection(panel) {
+        return; // O visual ENEM é único; o seletor de design saiu dos ajustes.
         if (panel.querySelector('.km-design-settings')) return;
         const section = document.createElement('section');
         section.className = 'settings-group km-design-settings';

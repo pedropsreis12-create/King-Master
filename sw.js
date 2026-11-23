@@ -1,19 +1,16 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261027-periodic-portal-fx-v3';
+const CACHE_VERSION = 'king-master-20261123-enem-v1';
 const APP_SHELL = [
     './',
     './index.html',
     './privacidade.html',
     './manifest.webmanifest',
     './style.css',
-    './periodic-table.css',
     './usability.css',
     './schedule.css',
     './schedule-planner.css',
     './script.js',
-    './periodic-table-data.js',
-    './periodic-table-core.js',
-    './periodic-table.js',
+    './enem-areas.js',
     './auth-warmup.js',
     './topic-core.js',
     './review-trail-core.js',
@@ -56,25 +53,10 @@ const APP_SHELL = [
     './master-access.js',
     './adaptive-design.css',
     './profile-overhaul.css',
-    './command-palette.css',
-    './command-palette.js',
     './modal-accessibility.js',
     './data-portability.js',
     './assets/app-icon-192.png',
-    './assets/app-icon-512.png',
-    './assets/periodic-spider-hanging.png',
-    './assets/periodic-spider-web.png',
-    './assets/periodic-spider-mask.png',
-    './assets/periodic-rick.png',
-    './assets/periodic-morty.webp',
-    './assets/periodic-portal-vortex.png',
-    './assets/periodic-portal-gun.png',
-    './assets/periodic-portal-gun-sound.mp3',
-    './assets/periodic-portal-background.jpg',
-    './assets/periodic-spider-symbol.svg',
-    './assets/periodic-web-corner.svg',
-    './assets/periodic-bangers.ttf',
-    './assets/periodic-bangers-OFL.txt'
+    './assets/app-icon-512.png'
 ];
 
 self.addEventListener('install', event => {

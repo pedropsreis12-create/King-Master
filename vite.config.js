@@ -23,7 +23,7 @@ function staticSiteWorker() {
       await writeFile('dist/privacidade.html', privacyPage, 'utf8');
       files['/privacidade.html'] = { body: privacyPage, type: 'text/html; charset=utf-8' };
 
-      for (const name of ['script.js', 'periodic-table-data.js', 'periodic-table-core.js', 'periodic-table.js', 'topic-core.js', 'review-trail-core.js', 'notebook-core.js', 'notebook.js', 'caderno-library-core.js', 'caderno-library.js', 'study-evolution-core.js', 'study-evolution.js', 'autopilot-core.js', 'autopilot.js', 'practice-core.js', 'practice.js', 'agenda-workspace.js', 'schedule-core.js', 'schedule-planner.js', 'schedule.js', 'flashcards-core.js', 'flashcards.js', 'mock-exam-core.js', 'mock-exams.js', 'subject-picker.js', 'habit-core.js', 'academic-context.js', 'sidebar-icons.js', 'personal-development.js', 'subject-lab.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'rank-system-v2.js', 'rank-integration-v2.js', 'accessibility-v2.js', 'data-portability.js', 'command-palette.js', 'modal-accessibility.js', 'profile-overhaul.js', 'firebase-config.js', 'auth-warmup.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'rank-art.js', 'military-insignia.js', 'study-insights.js', 'sw.js']) {
+      for (const name of ['script.js', 'enem-areas.js', 'topic-core.js', 'review-trail-core.js', 'notebook-core.js', 'notebook.js', 'caderno-library-core.js', 'caderno-library.js', 'study-evolution-core.js', 'study-evolution.js', 'autopilot-core.js', 'autopilot.js', 'practice-core.js', 'practice.js', 'agenda-workspace.js', 'schedule-core.js', 'schedule-planner.js', 'schedule.js', 'flashcards-core.js', 'flashcards.js', 'mock-exam-core.js', 'mock-exams.js', 'subject-picker.js', 'habit-core.js', 'academic-context.js', 'sidebar-icons.js', 'subject-lab.js', 'timer-recovery.js', 'ai-assistant.js', 'productivity.js', 'rank-system-v2.js', 'rank-integration-v2.js', 'accessibility-v2.js', 'data-portability.js', 'modal-accessibility.js', 'profile-overhaul.js', 'firebase-config.js', 'auth-warmup.js', 'cloud-state.js', 'cloud-sync.js', 'password-reset.js', 'study-insights.js', 'sw.js']) {
         const body = await readFile(name, 'utf8');
         await writeFile(`dist/${name}`, body, 'utf8');
         files[`/${name}`] = { body, type: 'application/javascript; charset=utf-8' };
@@ -48,7 +48,7 @@ function staticSiteWorker() {
 
       // Cenários são referenciados pelo JS clássico, fora do grafo de imports.
       for (const name of await readdir('assets')) {
-        if (!/^rank-[a-z0-9-]+\.webp$/.test(name) && !/^app-icon-(192|512)\.png$/.test(name) && !/^periodic-(spider-(hanging|web|mask)\.png|spider-symbol\.svg|web-corner\.svg|rick\.png|morty\.webp|portal-background\.jpg|portal-vortex\.png|portal-gun\.png|portal-gun-sound\.mp3|bangers\.ttf|bangers-OFL\.txt)$/.test(name)) continue;
+        if (!/^app-icon-(192|512)\.png$/.test(name)) continue;
         const body = await readFile(`assets/${name}`);
         await writeFile(`dist/assets/${name}`, body);
         const type = name.endsWith('.png') ? 'image/png' : name.endsWith('.jpg') ? 'image/jpeg' : name.endsWith('.svg') ? 'image/svg+xml' : name.endsWith('.ttf') ? 'font/ttf' : name.endsWith('.mp3') ? 'audio/mpeg' : name.endsWith('.txt') ? 'text/plain; charset=utf-8' : 'image/webp';

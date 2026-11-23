@@ -62,7 +62,6 @@ test('a interface inclui seletor compartilhado, menu de deck e frequÃªncia do hÃ
     assert.match(html, /subject-picker\.js/);
     assert.match(html, /flashDeckSubjectsPicker/);
     assert.match(html, /flashDeckMenu/);
-    assert.match(html, /personalHabitFrequency/);
     assert.match(html, /quickNoteType/);
 });
 

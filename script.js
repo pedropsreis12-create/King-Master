@@ -169,7 +169,7 @@ appData.profileBio = appData.profileBio.trim().slice(0, 190);
 if (typeof appData.profilePhoto !== 'string') appData.profilePhoto = '';
 if (typeof appData.profileBanner !== 'string') appData.profileBanner = '';
 if (!appData.visualMode) appData.visualMode = 'futuristic';
-if (!['militar', 'aura'].includes(appData.rankVisualMode)) appData.rankVisualMode = 'militar';
+appData.rankVisualMode = 'militar';
 if (!appData.selectedFrames || typeof appData.selectedFrames !== 'object') appData.selectedFrames = { militar: '', aura: '' };
 if (typeof appData.selectedFrames.militar !== 'string') appData.selectedFrames.militar = '';
 if (typeof appData.selectedFrames.aura !== 'string') appData.selectedFrames.aura = '';
@@ -230,8 +230,8 @@ if (!appData.reminder || typeof appData.reminder !== 'object') appData.reminder 
 appData.reminder = { ...defaultAppData.reminder, ...appData.reminder };
 if (!Number.isFinite(Number(appData.lastModifiedAt))) appData.lastModifiedAt = 0;
 
-if(appData.darkMode) document.documentElement.setAttribute('data-theme', 'dark');
-document.documentElement.setAttribute('data-visual', appData.visualMode === 'classic' ? 'classic' : 'futuristic');
+document.documentElement.setAttribute('data-theme', 'light');
+document.documentElement.setAttribute('data-visual', 'classic');
 document.documentElement.setAttribute('data-rank-mode', appData.rankVisualMode);
 aplicarCorDoSistema(appData.themeColor || '#007aff');
 
@@ -804,7 +804,7 @@ function showSection(sectionId) {
     });
     let abaAtiva = null;
     document.querySelectorAll('.menu-btn[data-section]').forEach(b => {
-        const ativa = b.dataset.section === sectionId;
+        const ativa = b.dataset.section === sectionId && !b.dataset.enemArea;
         b.classList.toggle('active', ativa);
         if (ativa) {
             b.setAttribute('aria-current', 'page');
@@ -830,8 +830,7 @@ function showSection(sectionId) {
     window.scrollTo({ top: 0, behavior: 'auto' });
     
     if(sectionId === 'historico') renderizarHistorico();
-    if(sectionId === 'planejamento') renderizarCiclo();
-    if(sectionId === 'periodic-table') window.KingPeriodic?.render?.();
+    if(sectionId === 'planejamento') { renderizarCiclo(); window.KingEnemAreas?.renderBanner?.(); }
     if(sectionId === 'topic-workspace') renderizarEspacoTopico();
     if(sectionId === 'escola-provas') renderizarAgenda();
     if(sectionId === 'agendamento') renderizarAgendamento();
@@ -845,9 +844,9 @@ function showSection(sectionId) {
     if(sectionId === 'simulados') renderizarSimulados();
     if(sectionId === 'redacao') renderizarRedacoes();
     if(sectionId === 'perfil') renderGamificacao();
-    if(sectionId === 'desenvolvimento') window.KingPersonalDevelopment?.render?.();
     if(sectionId === 'notas') renderizarNotasRapidas();
     atualizarIndicadoresNavegacao();
+    window.KingEnemAreas?.syncNav?.(sectionId);
 }
 
 function atualizarIndicadoresNavegacao() {
@@ -944,7 +943,7 @@ function handleColorPicker(hex) {
 
 function toggleDarkMode() { 
     const html = document.documentElement; 
-    html.setAttribute('data-theme', html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); 
+    html.setAttribute('data-theme', 'light'); 
     appData.darkMode = html.getAttribute('data-theme') === 'dark'; 
     saveAppData(); 
     syncSettingsUI();
@@ -959,7 +958,7 @@ function syncVisualModeControl() {
 }
 
 function toggleVisualMode() {
-    appData.visualMode = appData.visualMode === 'classic' ? 'futuristic' : 'classic';
+    appData.visualMode = 'classic';
     document.documentElement.setAttribute('data-visual', appData.visualMode);
     saveAppData();
     syncVisualModeControl();
@@ -1314,23 +1313,23 @@ function nomeDoMultiplicador(dias) {
 }
 
 const PATENTES_MILITARES = [
-    { nivel: 1, xp: 0, titulo: 'Soldado do Foco', tema: 'soldado', simbolo: '⌃', legenda: 'A base da tropa nasce da disciplina diária', referencias: ['Uma Divisa', 'Boina Verde', 'Ordem Unida'] },
-    { nivel: 3, xp: 4500, titulo: 'Cabo da Constância', tema: 'cabo', simbolo: '⌃⌃', legenda: 'O primeiro comando nasce do exemplo', referencias: ['Duas Divisas', 'Braçal', 'Esquadrão'] },
-    { nivel: 6, xp: 9000, titulo: 'Terceiro-Sargento da Rotina', tema: 'terceiro-sargento', simbolo: '⌃⌃⌃', legenda: 'A rotina agora obedece ao seu comando', referencias: ['Três Divisas', 'Pelotão', 'Instrução'] },
-    { nivel: 9, xp: 15000, titulo: 'Segundo-Sargento da Tática', tema: 'segundo-sargento', simbolo: '⌃⌃⌃⌃', legenda: 'Tática e constância avançam em formação', referencias: ['Quatro Divisas', 'Quadro Tático', 'Coordenação'] },
-    { nivel: 12, xp: 25000, titulo: 'Primeiro-Sargento da Estratégia', tema: 'primeiro-sargento', simbolo: '≋⌃', legenda: 'Liderança transforma esforço em formação', referencias: ['Divisas de 1º Sargento', 'Liderança', 'Formação'] },
-    { nivel: 16, xp: 40000, titulo: 'Subtenente da Persistência', tema: 'subtenente', simbolo: '◇', legenda: 'Experiência, firmeza e presença em campo', referencias: ['Losango', 'Sabre', 'Companhia'] },
-    { nivel: 20, xp: 60000, titulo: 'Aspirante-a-Oficial', tema: 'aspirante', simbolo: '★', legenda: 'A estrela do oficialato começa a surgir', referencias: ['Estrela Singela', 'Academia Militar', 'Espadim'] },
-    { nivel: 24, xp: 85000, titulo: 'Segundo-Tenente da Execução', tema: 'segundo-tenente', simbolo: '★', legenda: 'Planejamento e ação marcham juntos', referencias: ['Uma Estrela', 'Mapa Tático', 'Pelotão'] },
-    { nivel: 28, xp: 115000, titulo: 'Primeiro-Tenente da Precisão', tema: 'primeiro-tenente', simbolo: '★★', legenda: 'Nenhum objetivo fica sem coordenadas', referencias: ['Duas Estrelas', 'Bússola', 'Operação'] },
-    { nivel: 32, xp: 155000, titulo: 'Capitão do Cronograma', tema: 'capitao', simbolo: '★★★', legenda: 'O tempo inteiro responde ao seu plano', referencias: ['Três Estrelas', 'Companhia', 'Carta de Comando'] },
-    { nivel: 37, xp: 210000, titulo: 'Major da Evolução', tema: 'major', simbolo: '★★✹', legenda: 'Visão de estado-maior sobre cada avanço', referencias: ['Duas Estrelas', 'Roseta', 'Estado-Maior'] },
-    { nivel: 42, xp: 280000, titulo: 'Tenente-Coronel da Operação', tema: 'tenente-coronel', simbolo: '★✹✹', legenda: 'Coordena grandes objetivos sem perder precisão', referencias: ['Estrela e Rosetas', 'Batalhão', 'Operações'] },
-    { nivel: 47, xp: 370000, titulo: 'Coronel da Excelência', tema: 'coronel', simbolo: '✹✹✹', legenda: 'Excelência deixa de ser meta e vira padrão', referencias: ['Três Rosetas', 'Regimento', 'Comando'] },
-    { nivel: 52, xp: 480000, titulo: 'General de Brigada do Saber', tema: 'general-brigada', simbolo: '✺★★', legenda: 'O generalato abre uma nova dimensão de comando', referencias: ['Brasão do Generalato', 'Duas Estrelas', 'Brigada'] },
-    { nivel: 58, xp: 610000, titulo: 'General de Divisão da Mestria', tema: 'general-divisao', simbolo: '✺★★★', legenda: 'Três estrelas dominam o campo inteiro', referencias: ['Brasão do Generalato', 'Três Estrelas', 'Divisão'] },
-    { nivel: 64, xp: 750000, titulo: 'General de Exército do Saber', tema: 'general-exercito', simbolo: '✺★★★★', legenda: 'Toda a estratégia converge para a vitória', referencias: ['Brasão do Generalato', 'Quatro Estrelas', 'Exército'] },
-    { nivel: 70, xp: 1000000, titulo: 'Marechal Supremo do ENEM', tema: 'marechal', simbolo: '✺★★★★★', legenda: 'O mais alto comando do conhecimento', referencias: ['Brasão do Generalato', 'Cinco Estrelas', 'Comando Supremo'] }
+    { nivel: 1, xp: 0, titulo: 'Vestibulando', tema: 'soldado', simbolo: '★', legenda: 'Todo caminho até a aprovação começa no primeiro bloco de estudo', referencias: [] },
+    { nivel: 3, xp: 4500, titulo: 'Constante', tema: 'cabo', simbolo: '★', legenda: 'Estudar todo dia virou parte da rotina', referencias: [] },
+    { nivel: 6, xp: 9000, titulo: 'Organizado', tema: 'terceiro-sargento', simbolo: '★', legenda: 'O plano da semana já guia seus estudos', referencias: [] },
+    { nivel: 9, xp: 15000, titulo: 'Resolvedor de Questões', tema: 'segundo-sargento', simbolo: '★', legenda: 'As questões viraram treino diário', referencias: [] },
+    { nivel: 12, xp: 25000, titulo: 'Revisor Estratégico', tema: 'primeiro-sargento', simbolo: '★', legenda: 'Revisar no tempo certo faz o conteúdo ficar', referencias: [] },
+    { nivel: 16, xp: 40000, titulo: 'Leitor de Enunciados', tema: 'subtenente', simbolo: '★', legenda: 'Os textos longos do ENEM já não assustam', referencias: [] },
+    { nivel: 20, xp: 60000, titulo: 'Caçador de Erros', tema: 'aspirante', simbolo: '★', legenda: 'Cada erro vira uma regra para não repetir', referencias: [] },
+    { nivel: 24, xp: 85000, titulo: 'Simulado em Dia', tema: 'segundo-tenente', simbolo: '★', legenda: 'Prova inteira, no tempo, sem perder o ritmo', referencias: [] },
+    { nivel: 28, xp: 115000, titulo: 'Redator Competente', tema: 'primeiro-tenente', simbolo: '★', legenda: 'As cinco competências da redação estão sob controle', referencias: [] },
+    { nivel: 32, xp: 155000, titulo: 'Dono do Cronograma', tema: 'capitao', simbolo: '★', legenda: 'O tempo inteiro responde ao seu plano', referencias: [] },
+    { nivel: 37, xp: 210000, titulo: 'Especialista TRI', tema: 'major', simbolo: '★', legenda: 'Acertar as fáceis primeiro já é estratégia', referencias: [] },
+    { nivel: 42, xp: 280000, titulo: 'Nota 700+', tema: 'tenente-coronel', simbolo: '★', legenda: 'O desempenho já disputa cursos concorridos', referencias: [] },
+    { nivel: 47, xp: 370000, titulo: 'Nota 800+', tema: 'coronel', simbolo: '★', legenda: 'Excelência deixou de ser meta e virou padrão', referencias: [] },
+    { nivel: 52, xp: 480000, titulo: 'Redação 900+', tema: 'general-brigada', simbolo: '★', legenda: 'A redação virou ponto forte', referencias: [] },
+    { nivel: 58, xp: 610000, titulo: 'Candidato de Elite', tema: 'general-divisao', simbolo: '★', legenda: 'Domínio das quatro áreas do conhecimento', referencias: [] },
+    { nivel: 64, xp: 750000, titulo: 'Lista de Aprovados', tema: 'general-exercito', simbolo: '★', legenda: 'Pronto para ver o nome na lista', referencias: [] },
+    { nivel: 70, xp: 1000000, titulo: 'Mestre do ENEM', tema: 'marechal', simbolo: '★', legenda: 'O nível máximo de preparação', referencias: [] }
 ];
 
 const TITULOS_AURA = [
@@ -1812,7 +1811,6 @@ function renderGamificacao(animar = false) {
         const elemento = document.getElementById(id);
         if (elemento) elemento.innerHTML = simboloDaMoldura(molduraVisual);
     }
-    window.KingRankArt?.render(document.querySelector('.profile-hero'), molduraVisual, appData.rankVisualMode);
     colocarTexto('profileFrameTag', `NÍVEL ${dados.nivel}`);
     colocarTexto('profileEvolutionCaption', `${molduraVisual.titulo} • ${molduraVisual.legenda}`);
     const referencias = document.getElementById('profileReferenceStrip');
@@ -2891,7 +2889,11 @@ window.addEventListener('pageshow', () => {
 document.addEventListener('visibilitychange', () => {
     if (!timerPersistenceReady) return;
     tickTimer();
-    if (document.hidden) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
+    // Cada alteração já é salva na hora; ao trocar de aba só o cronômetro em andamento precisa de um envio completo.
+    if (document.hidden) {
+        if (isRunning) { try { saveAppData(); } catch { persistTimerCheckpoint(); } }
+        else persistTimerCheckpoint();
+    }
 });
 
 function prepararAudioAlarme() {
@@ -3103,6 +3105,7 @@ function abrirModalCiclo() {
     document.getElementById('cycleSaveButton').textContent = 'Criar matéria';
     document.getElementById('cycleSaveHint').textContent = 'Somente o nome é obrigatório.';
     document.getElementById('cycleEditId').value = "";
+    const campoAreaNova = document.getElementById('cycleArea'); if (campoAreaNova) campoAreaNova.value = window.KingEnemAreas?.current?.() || '';
     document.getElementById('cycleColor').value = '#007aff';
     document.getElementById('cycleIcon').value = '●';
     document.getElementById('cyclePriority').value = '2';
@@ -3133,6 +3136,7 @@ function editarMateriaCiclo(id) {
     document.getElementById('cycleSaveHint').textContent = 'Seu histórico e seus tópicos atuais serão preservados.';
     document.getElementById('cycleEditId').value = mat.id;
     document.getElementById('cycleSubject').value = mat.subject;
+    const campoArea = document.getElementById('cycleArea'); if (campoArea) campoArea.value = mat.area || '';
     document.getElementById('cycleColor').value = mat.color || '#007aff';
     document.getElementById('cycleIcon').value = mat.schedule?.icon || '●';
     document.getElementById('cyclePriority').value = String(mat.schedule?.priority || 2);
@@ -3155,6 +3159,7 @@ function salvarMateriaCiclo(e) {
     const idEdit = document.getElementById('cycleEditId').value;
     const color = document.getElementById('cycleColor').value || '#007aff';
     const subject = document.getElementById('cycleSubject').value.trim();
+    const area = ['linguagens', 'humanas', 'natureza', 'matematica', 'outra'].includes(document.getElementById('cycleArea')?.value) ? document.getElementById('cycleArea').value : '';
     const schedule = { icon: document.getElementById('cycleIcon').value || '●', priority: Math.min(3, Math.max(1, Number(document.getElementById('cyclePriority').value) || 2)), weeklyBlocks: Math.min(30, Math.max(0, Number(document.getElementById('cycleWeeklyBlocks').value) || 0)), consecutive: document.getElementById('cycleConsecutive').checked };
     const novosTopicos = normalizarListaTopicosMateria(document.getElementById('cycleInitialTopics').value);
     let quantidadeTopicosAdicionados = novosTopicos.length;
@@ -3173,15 +3178,15 @@ function salvarMateriaCiclo(e) {
                 .map(item => ({ id: window.KingTopicCore.makeId('assunto'), ...item, concluido: false }));
             quantidadeTopicosAdicionados = adicionados.length;
             const nomeAnterior = appData.cycleItems[idx].subject;
-            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, schedule, topicos: [...atuais, ...adicionados] };
+            appData.cycleItems[idx] = { ...appData.cycleItems[idx], color, subject, area, schedule, topicos: [...atuais, ...adicionados] };
             if (normalizarRevisaoTexto(nomeAnterior) !== normalizarRevisaoTexto(subject)) renomearMateriaNosRegistros(nomeAnterior, subject);
         } 
     } else { 
-        const novaMateria = { id: Date.now(), color, subject, schedule, targetMin: 0, executedMin: 0, temas: [], topicos: [], questoes: 0, acertos: 0, erros: 0 };
+        const novaMateria = { id: Date.now(), color, subject, area, schedule, targetMin: 0, executedMin: 0, temas: [], topicos: [], questoes: 0, acertos: 0, erros: 0 };
         novaMateria.topicos = novosTopicos.map(valor => ({ id: window.KingTopicCore.makeId('assunto'), ...window.KingTopicCore.parseTopicInput(novaMateria, valor), concluido: false }));
         appData.cycleItems.push(novaMateria);
     }
-    saveAppData(); renderizarCiclo(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
+    saveAppData(); renderizarCiclo(); window.KingEnemAreas?.renderBanner?.(); renderizarRevisoes(); window.KingSchedule?.render(); fecharModal('cycleModal');
     showToast(quantidadeTopicosAdicionados ? `📚 Matéria salva com ${quantidadeTopicosAdicionados} ${quantidadeTopicosAdicionados === 1 ? 'tópico' : 'tópicos'}!` : '📚 Matéria salva!');
 }
 
@@ -3219,7 +3224,8 @@ function renderizarCiclo() {
     const grid = document.getElementById('disciplinasGrid');
     if(!grid) return;
 
-    const materias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
+    const todasMaterias = Array.isArray(appData.cycleItems) ? appData.cycleItems : [];
+    const materias = window.KingEnemAreas ? todasMaterias.filter(window.KingEnemAreas.matches) : todasMaterias;
     const topicos = materias.flatMap(item => Array.isArray(item.topicos) ? item.topicos : []);
     const dominados = topicos.filter(item => obterNivelDominioTopico(item) === 3).length;
     const definirTexto = (id, texto) => { const elemento = document.getElementById(id); if (elemento) elemento.textContent = texto; };
@@ -3231,6 +3237,11 @@ function renderizarCiclo() {
     const visiveis = materias.filter(item => !buscaMateriasAtual || String(item.subject || '').toLocaleLowerCase('pt-BR').includes(buscaMateriasAtual));
     definirTexto('materiasResultado', pluralizar(visiveis.length, 'matéria'));
 
+    if(materias.length === 0 && todasMaterias.length) {
+        const area = window.KingEnemAreas?.AREAS[window.KingEnemAreas.current()]?.curto || 'esta área';
+        grid.innerHTML = `<div class="workspace-empty"><b aria-hidden="true">▦</b><strong>Nenhuma matéria em ${area}</strong><p>Crie uma matéria desta área ou ajuste a área de uma matéria existente em Editar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">+ Nova matéria</button></div>`;
+        return;
+    }
     if(materias.length === 0) {
         grid.innerHTML = '<div class="workspace-empty"><b aria-hidden="true">▦</b><strong>Comece pela primeira matéria</strong><p>Crie uma matéria e depois adicione os tópicos que pretende estudar.</p><button type="button" class="cycle-btn primary" onclick="abrirModalCiclo()">Adicionar matéria</button></div>';
         return; 
@@ -7036,12 +7047,14 @@ renderizarAtalhosXpTeste();
 mostrarFraseMotivacional();
 renderizarCiclo();
 restoreTimerSession();
-renderizarAgenda();
-renderizarAgendamento();
-renderizarRevisoes();
-renderizarCadernoErros();
-renderizarSimulados();
-renderizarRedacoes();
+(window.requestIdleCallback || (fn => setTimeout(fn, 200)))(() => {
+    renderizarAgenda();
+    renderizarAgendamento();
+    renderizarRevisoes();
+    renderizarCadernoErros();
+    renderizarSimulados();
+    renderizarRedacoes();
+}, { timeout: 1500 });
 atualizarIndicadoresNavegacao();
 const secaoInicial = sessionStorage.getItem('kingMasterActiveSection');
 try {

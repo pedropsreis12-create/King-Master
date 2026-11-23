@@ -17,7 +17,7 @@ const ROTAS_IA = {
     revisoes: 'revisoes', revisao: 'revisoes', flashcards: 'flashcards', cartoes: 'flashcards',
     simulados: 'simulados', simulado: 'simulados',
     redacoes: 'redacao', redacao: 'redacao', historico: 'historico', perfil: 'perfil',
-    desenvolvimento: 'desenvolvimento', disciplina: 'desenvolvimento', habitos: 'desenvolvimento'
+    cronograma: 'cronograma', semana: 'cronograma', habitos: 'cronograma'
 };
 
 function normalizarIa(texto = '') {

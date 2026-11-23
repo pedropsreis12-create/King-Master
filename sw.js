@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261123-final-v1';
+const CACHE_VERSION = 'king-master-20261123-metas-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -12,6 +12,7 @@ const APP_SHELL = [
     './script.js',
     './enem-areas.js',
     './enem-tools.js',
+    './metas.js',
     './auto-backup.js',
     './auth-warmup.js',
     './topic-core.js',

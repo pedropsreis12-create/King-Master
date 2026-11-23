@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261123-final-v1">
+    <link rel="stylesheet" href="enem-theme.css?v=20261123-metas-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -139,7 +139,7 @@
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Agora</span>
                 <button type="button" class="menu-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span class="nav-item-icon" aria-hidden="true">⌂</span><span class="nav-item-label"><strong>Início</strong><small>Foco do dia</small></span></button>
-                <button type="button" class="menu-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span class="nav-item-icon" aria-hidden="true">▤</span><span class="nav-item-label"><strong>Plano semanal</strong><small>Cronograma e compromissos</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
+                <button type="button" class="menu-btn" data-section="metas" aria-controls="metas" onclick="showSection('metas')"><span class="nav-item-icon" aria-hidden="true">◎</span><span class="nav-item-label"><strong>Metas</strong><small>Metas, cronograma e provas</small></span><span class="nav-count" id="navAgendaBadge" hidden>0</span></button>
             </div>
             <div class="nav-cluster">
                 <span class="nav-cluster-label">Áreas do ENEM</span>
@@ -192,7 +192,7 @@
     <div class="mobile-dock" id="mobileDock" role="navigation" aria-label="Atalhos principais">
         <button type="button" class="dock-btn active" data-section="dashboard" aria-controls="dashboard" aria-current="page" onclick="showSection('dashboard')"><span aria-hidden="true">⌂</span><small>Início</small></button>
         <button type="button" class="dock-btn" data-section="planejamento" aria-controls="planejamento" onclick="showSection('planejamento')"><span aria-hidden="true">▦</span><small>Matérias</small></button>
-        <button type="button" class="dock-btn" data-section="cronograma" aria-controls="cronograma" onclick="showSection('cronograma')"><span aria-hidden="true">▤</span><small>Plano</small></button>
+        <button type="button" class="dock-btn" data-section="metas" aria-controls="metas" onclick="showSection('metas')"><span aria-hidden="true">◎</span><small>Metas</small></button>
         <button type="button" class="dock-btn" data-section="revisoes" aria-controls="revisoes" onclick="showSection('revisoes')"><span aria-hidden="true">↻</span><small>Revisar</small></button>
         <button type="button" class="dock-btn dock-more" id="dockMoreButton" aria-controls="mainNavigation" aria-expanded="false" onclick="toggleMobileNav()"><span aria-hidden="true">•••</span><small>Mais</small></button>
     </div>
@@ -402,11 +402,27 @@
         </section>
 
         <!-- CRONOGRAMA SEMANAL -->
+        <section id="metas" class="content-section metas-section">
+            <div class="plan-tabs" role="tablist" aria-label="Metas e semana"><button type="button" role="tab" data-plan-tab="metas" aria-selected="true" onclick="showSection('metas')">Metas</button><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="false" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="false" onclick="showSection('agendamento')">Compromissos e provas</button></div>
+            <div class="workspace-heading">
+                <div>
+                    <span class="workspace-kicker">METAS E SEMANA</span>
+                    <h1>Metas</h1>
+                    <p>Defina o que quer alcançar e acompanhe o progresso. As metas automáticas usam o que você registra no site.</p>
+                </div>
+                <div class="cycle-btn-group"><button type="button" class="cycle-btn primary" onclick="KingMetas.abrirEditor()">+ Nova meta</button></div>
+            </div>
+            <section class="widget metas-countdown" id="metasEnemCountdown" aria-label="Contagem para o ENEM"></section>
+            <div class="metas-toolbar"><div class="enem-area-chips" role="group" aria-label="Filtrar metas"><button type="button" data-metas-filtro="ativas" aria-pressed="true">Em andamento</button><button type="button" data-metas-filtro="encerradas" aria-pressed="false">Cumpridas e encerradas</button><button type="button" data-metas-filtro="todas" aria-pressed="false">Todas</button></div><span class="workspace-result-count" id="metasResumo" aria-live="polite"></span></div>
+            <div id="metasLista" class="metas-lista" aria-live="polite"></div>
+            <div class="metas-suggestions"><span class="workspace-kicker">SUGESTÕES RÁPIDAS</span><div class="enem-presets" id="metasSugestoes"></div></div>
+        </section>
+
         <section id="cronograma" class="content-section schedule-section">
-            <div class="plan-tabs" role="tablist" aria-label="Plano semanal"><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="true" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="false" onclick="showSection('agendamento')">Compromissos e provas</button></div>
+            <div class="plan-tabs" role="tablist" aria-label="Metas e semana"><button type="button" role="tab" data-plan-tab="metas" aria-selected="false" onclick="showSection('metas')">Metas</button><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="true" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="false" onclick="showSection('agendamento')">Compromissos e provas</button></div>
             <div class="workspace-heading schedule-heading">
                 <div>
-                    <span class="workspace-kicker">PLANO SEMANAL</span>
+                    <span class="workspace-kicker">METAS E SEMANA</span>
                     <h1>Cronograma</h1>
                     <p>Veja o que importa agora, distribua seu esforço e reajuste a semana sem perder o controle.</p>
                 </div>
@@ -585,10 +601,10 @@
 
         <!-- SEÇÕES INALTERADAS OU COM PEQUENOS AJUSTES -->
         <section id="agendamento" class="content-section">
-            <div class="plan-tabs" role="tablist" aria-label="Plano semanal"><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="false" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="true" onclick="showSection('agendamento')">Compromissos e provas</button></div>
+            <div class="plan-tabs" role="tablist" aria-label="Metas e semana"><button type="button" role="tab" data-plan-tab="metas" aria-selected="false" onclick="showSection('metas')">Metas</button><button type="button" role="tab" data-plan-tab="cronograma" aria-selected="false" onclick="showSection('cronograma')">Cronograma</button><button type="button" role="tab" data-plan-tab="agendamento" aria-selected="true" onclick="showSection('agendamento')">Compromissos e provas</button></div>
             <div class="workspace-heading">
                 <div>
-                    <span class="workspace-kicker">PLANO SEMANAL</span>
+                    <span class="workspace-kicker">METAS E SEMANA</span>
                     <h1>Compromissos e provas</h1>
                     <p>Veja o que vence hoje, o que vem depois e o que já foi concluído.</p>
                 </div>
@@ -1522,15 +1538,16 @@
     <script src="notebook-core.js?v=20261006-v1"></script>
     <script src="caderno-library-core.js?v=20261007-v1"></script>
     <script src="study-evolution-core.js?v=20261006-v1"></script>
-    <script src="enem-areas.js?v=20261123-enem-v1"></script>
-    <script src="script.js?v=20261123-tools-v1"></script>
-    <script src="enem-tools.js?v=20261123-tools-v1"></script>
+    <script src="enem-areas.js?v=20261123-metas-v1"></script>
+    <script src="script.js?v=20261123-metas-v1"></script>
+    <script src="enem-tools.js?v=20261123-metas-v1"></script>
+    <script src="metas.js?v=20261123-metas-v1"></script>
     <script src="auto-backup.js?v=20261123-tools-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
     <script src="caderno-library.js?v=20261007-v2"></script>
     <script src="study-evolution.js?v=20261006-v1"></script>
     <script src="agenda-workspace.js?v=20261004-agenda-timeout-v1"></script>
-    <script src="sidebar-icons.js?v=20261123-enem-v1"></script>
+    <script src="sidebar-icons.js?v=20261123-metas-v1"></script>
     <script src="schedule.js?v=20261015-bulk-select-v1"></script>
     <script src="subject-lab.js?v=20261006-v1"></script>
     <script type="module" src="syllabus-pdf.js?v=20261123-enem-v1"></script>

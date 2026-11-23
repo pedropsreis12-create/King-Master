@@ -106,3 +106,24 @@ test('agenda fica dentro do plano semanal', () => {
   assert.match(html, /data-plan-tab="agendamento"/);
   assert.match(html, /data-plan-tab="cronograma"/);
 });
+
+test('metas automáticas medem horas e questões no período e marcam a meta como cumprida', async () => {
+  const vm = await import('node:vm');
+  const source = await readFile(new URL('../metas.js', import.meta.url), 'utf8');
+  const hoje = new Date(); const iso = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+  const scope = {
+    window: {}, document: { readyState: 'complete', addEventListener() {}, querySelector: () => null, querySelectorAll: () => [], getElementById: () => null },
+    appData: { metas: [], historyItems: [{ dataISO: iso, tempoSegundos: 7200, questoes: 30, acertos: 21, erros: 9 }, { dataISO: '2020-01-01', tempoSegundos: 99999 }], simuladosItems: [], redacaoItems: [{ date: iso }], cycleItems: [] },
+    Date, Math, Number, String, Map, Array, Object, JSON,
+  };
+  scope.window.addEventListener = () => {};
+  vm.runInNewContext(`${source}; this.K = window.KingMetas;`, scope);
+  const { progresso, situacao, ENEM_PREVISTO } = scope.K;
+  assert.equal(progresso({ tipo: 'auto', metrica: 'horas', alvo: 4, periodo: 'semana', repetir: true }).atual, 2);
+  assert.equal(progresso({ tipo: 'auto', metrica: 'questoes', alvo: 30, periodo: 'mes', repetir: true }).pct, 100);
+  assert.equal(progresso({ tipo: 'auto', metrica: 'acerto', alvo: 70, periodo: 'hoje', repetir: true }).atual, 70);
+  assert.equal(situacao({ tipo: 'auto', metrica: 'redacoes', alvo: 1, periodo: 'semana', repetir: true }), 'cumprida');
+  assert.equal(situacao({ tipo: 'check', feito: false, periodo: 'data', prazo: '2020-01-01', inicio: '2019-12-01', subtarefas: [] }), 'expirada');
+  assert.equal(progresso({ tipo: 'check', subtarefas: [{ feito: true }, { feito: false }] }).pct, 50);
+  assert.equal(ENEM_PREVISTO.oficial, false);
+});

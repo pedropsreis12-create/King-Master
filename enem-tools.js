@@ -107,13 +107,15 @@
         const plano = data().studentPlan || {};
         const hoje = hojeIso();
         const datas = [plano.examDate, plano.examDate2].filter(valor => /^\d{4}-\d{2}-\d{2}$/.test(valor || '') && valor >= hoje).sort();
-        const prova = datas[0];
+        const previsto = window.KingMetas?.ENEM_PREVISTO;
+        const prova = datas[0] || (previsto && previsto.dia1 >= hoje ? previsto.dia1 : undefined);
+        const ehPrevisao = !datas[0] && Boolean(prova);
         const dias = prova ? Math.round((new Date(`${prova}T12:00:00`) - new Date(`${hoje}T12:00:00`)) / 86400000) : null;
         const prazo = (data().prazos || []).filter(item => item.data && item.data >= hoje && !item.concluido).sort((a, b) => a.data.localeCompare(b.data))[0];
         const dataBr = iso => new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replaceAll('.', '');
         const contagem = dias === null
             ? '<div class="enem-goal-count is-empty"><strong>—</strong><span>Defina a data da prova</span></div>'
-            : `<div class="enem-goal-count"><strong>${dias}</strong><span>${dias === 1 ? 'dia' : 'dias'} até a prova</span><small>${esc(dataBr(prova))}</small></div>`;
+            : `<div class="enem-goal-count"><strong>${dias}</strong><span>${dias === 1 ? 'dia' : 'dias'} até a prova</span><small>${esc(dataBr(prova))}${ehPrevisao ? ' · previsão' : ''}</small></div>`;
         const meta = [
             ['Curso desejado', plano.course || 'Não definido'],
             ['Nota que você busca', plano.target || 'Não definida'],

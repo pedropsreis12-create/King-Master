@@ -253,3 +253,7 @@ html[data-visual] .enem-writing-card { padding: 16px 20px; }
 /* Perfil enxuto: identidade, nível, números e conquistas. Temporadas, ligas e placar ficam ocultos
    (os dados continuam guardados). */
 #perfil :is(#kmProfileTabs, #perfil-classificacao, #perfil-temporada, #perfil-placar, #perfil-busca, .profile-multiplier-badge, .profile-league-name) { display: none !important; }
+
+/* Celular: o aviso de semana vazia não fica cortado dentro da grade rolável */
+.schedule-week-matrix:has(> .schedule-matrix-empty) { min-width: 0 !important; width: 100% !important; }
+.schedule-matrix-empty { min-width: 0 !important; width: 100% !important; text-align: center; }

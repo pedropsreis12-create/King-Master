@@ -3267,8 +3267,9 @@ function cartaoMateriaHtml(i) {
     const acertos = Math.max(0, Number(i.acertos) || 0), erros = Math.max(0, Number(i.erros) || 0);
     const questoes = acertos + erros;
     const taxa = questoes ? `${Math.round(acertos / questoes * 100)}%` : '—';
-    const icone = escaparRevisaoHtml(i.schedule?.icon && i.schedule.icon !== '●' ? i.schedule.icon : (i.subject || '?').trim().charAt(0).toLocaleUpperCase('pt-BR'));
-    const area = window.KingEnemAreas?.AREAS[window.KingEnemAreas.areaOf(i)]?.curto || 'Outra';
+    const areaId = window.KingEnemAreas?.areaOf(i) || '';
+    const icone = window.KingSubjectIcons?.paraMateria(i.subject, areaId) || escaparRevisaoHtml(i.schedule?.icon && i.schedule.icon !== '●' ? i.schedule.icon : (i.subject || '?').trim().charAt(0).toLocaleUpperCase('pt-BR'));
+    const area = window.KingEnemAreas?.AREAS[areaId]?.curto || 'Outra';
     const acao = topicos.length
         ? `<button type="button" class="subject-card-open" onclick="alternarAbasHub('dominio');abrirCadernosMateria(${materiaId})">Estudar assuntos <span aria-hidden="true">→</span></button>`
         : `<button type="button" class="subject-card-open is-empty" onclick="editarMateriaCiclo(${materiaId})">Adicionar assuntos <span aria-hidden="true">+</span></button>`;
@@ -3292,18 +3293,61 @@ function cartaoMateriaHtml(i) {
     </article>`;
 }
 
+// Redação não é uma matéria do ciclo, mas aparece na grade, junto de Linguagens, com os números das redações registradas.
+function cartaoRedacaoHtml() {
+    const itens = Array.isArray(appData.redacaoItems) ? appData.redacaoItems : [];
+    const nota = item => ['c1', 'c2', 'c3', 'c4', 'c5'].reduce((total, chave) => total + (Number(item[chave]) || 0), 0);
+    const corrigidas = itens.filter(item => item.status === 'corrected' && nota(item) > 0);
+    const media = corrigidas.length ? Math.round(corrigidas.reduce((total, item) => total + nota(item), 0) / corrigidas.length) : 0;
+    const melhor = corrigidas.reduce((maior, item) => Math.max(maior, nota(item)), 0);
+    const progresso = Math.min(100, Math.round(media / 10));
+    const cor = '#c2255c';
+    const icone = window.KingSubjectIcons?.svg('redacao') || '✎';
+    const acao = itens.length
+        ? `<button type="button" class="subject-card-open" onclick="showSection('redacao')">Abrir redações <span aria-hidden="true">→</span></button>`
+        : `<button type="button" class="subject-card-open is-empty" onclick="showSection('redacao')">Escrever a primeira <span aria-hidden="true">+</span></button>`;
+    return `<article class="subject-card subject-card-redacao" style="--subject-color:${cor}">
+        <header class="subject-card-head">
+            <span class="subject-card-icon" aria-hidden="true">${icone}</span>
+            <div class="subject-card-title"><h3>Redação</h3><span>Linguagens · ${pluralizar(itens.length, 'redação', 'redações')}</span></div>
+        </header>
+        <div class="subject-card-progress" aria-label="Média ${media} de 1000">
+            <div class="subject-card-progress-label"><span>Média</span><strong>${corrigidas.length ? media : '—'}</strong></div>
+            <div class="subject-card-bar"><span style="width:${progresso}%"></span></div>
+            <small>${corrigidas.length ? `de 1000, em ${pluralizar(corrigidas.length, 'redação corrigida', 'redações corrigidas')}` : 'Nenhuma redação corrigida ainda'}</small>
+        </div>
+        <dl class="subject-card-stats">
+            <div><dt>Escritas</dt><dd>${itens.length}</dd></div>
+            <div><dt>Corrigidas</dt><dd>${corrigidas.length}</dd></div>
+            <div><dt>Melhor</dt><dd>${melhor || '—'}</dd></div>
+        </dl>
+        ${acao}
+    </article>`;
+}
+
+function deveMostrarCartaoRedacao(materias) {
+    const norm = valor => String(valor || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR');
+    const todas = Array.isArray(appData.cycleItems) ? appData.cycleItems : materias;
+    if (todas.some(item => /redac/.test(norm(item.subject)))) return false;
+    const area = window.KingEnemAreas?.current?.() || '';
+    if (area && area !== 'linguagens') return false;
+    return !buscaMateriasAtual || norm('redação').includes(norm(buscaMateriasAtual));
+}
+
 function renderizarGradeMaterias(materias) {
     const Areas = window.KingEnemAreas;
-    if (!Areas || Areas.current()) return `<div class="subject-card-grid">${materias.map(cartaoMateriaHtml).join('')}</div>`;
+    const redacao = deveMostrarCartaoRedacao(materias) ? cartaoRedacaoHtml() : '';
+    if (!Areas || Areas.current()) return `<div class="subject-card-grid">${materias.map(cartaoMateriaHtml).join('')}${redacao}</div>`;
     const ordem = ['linguagens', 'humanas', 'natureza', 'matematica', 'outra'];
     return ordem.map(id => {
         const doGrupo = materias.filter(item => Areas.areaOf(item) === id);
-        if (!doGrupo.length) return '';
+        const extra = id === 'linguagens' ? redacao : '';
+        if (!doGrupo.length && !extra) return '';
         const area = Areas.AREAS[id];
         const titulo = area ? area.nome : 'Outras matérias';
         const cor = area ? area.cor : '#64748b';
         const abrir = area ? `<button type="button" class="subject-group-open" onclick="KingEnemAreas.set('${id}')">Ver área <span aria-hidden="true">→</span></button>` : '';
-        return `<section class="subject-group" style="--area-color:${cor}" aria-label="${titulo}"><header class="subject-group-head"><h2>${titulo}</h2><span>${pluralizar(doGrupo.length, 'matéria')}</span>${abrir}</header><div class="subject-card-grid">${doGrupo.map(cartaoMateriaHtml).join('')}</div></section>`;
+        return `<section class="subject-group" style="--area-color:${cor}" aria-label="${titulo}"><header class="subject-group-head"><h2>${titulo}</h2><span>${pluralizar(doGrupo.length + (extra ? 1 : 0), 'matéria')}</span>${abrir}</header><div class="subject-card-grid">${doGrupo.map(cartaoMateriaHtml).join('')}${extra}</div></section>`;
     }).join('');
 }
 

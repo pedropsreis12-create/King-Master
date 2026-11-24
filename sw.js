@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261123-abas-v1';
+const CACHE_VERSION = 'king-master-20261124-icones-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -11,6 +11,7 @@ const APP_SHELL = [
     './schedule-planner.css',
     './script.js',
     './enem-areas.js',
+    './subject-icons.js',
     './enem-tools.js',
     './metas.js',
     './temas-redacao.js',

@@ -2338,13 +2338,16 @@ function registrarSessao(segundos, detalhes = null) {
         nome = materia.subject; cor = materia.color;
         materia.executedMin = (materia.executedMin || 0) + (segundos / 60);
     } else if (String(activeSubjId) === 'mixed') { nome = 'Revisão geral / questões mistas'; cor = '#607d8b'; }
+    else if (String(activeSubjId) === ID_REDACAO) { nome = 'Redação'; cor = COR_REDACAO; }
     else cor = ['#34c759', '#007aff', '#ff9500', '#ff3b30', '#af52de'][Math.floor(Math.random() * 5)];
 
     const vinculoPorId = materia && window.KingTopicCore?.findById(appData, detalhes?.topicId);
     const topicoExistente = vinculoPorId && materia && vinculoPorId.subject.id === materia.id ? vinculoPorId.topic
         : (materia ? (window.KingTopicCore?.findByName(appData, materia.id, detalhes?.assunto)?.topic
             || materia.topicos?.find(item => normalizarRevisaoTexto(item.nome) === normalizarRevisaoTexto(detalhes?.assunto))) : null);
-    const assunto = String(activeSubjId) === 'mixed' ? '' : String(topicoExistente?.nome || detalhes?.assunto || '').trim();
+    const assunto = String(activeSubjId) === 'mixed' ? ''
+        : String(activeSubjId) === ID_REDACAO ? String(detalhes?.redacao?.theme || detalhes?.assunto || '').trim()
+        : String(topicoExistente?.nome || detalhes?.assunto || '').trim();
     const comentario = String(detalhes?.comentario || '').trim();
     const atividade = ['estudo', 'simulado', 'redacao'].includes(detalhes?.atividade) ? detalhes.atividade : 'estudo';
     tipo = { estudo: 'Estudo', simulado: 'Simulado', redacao: 'Redação' }[atividade];
@@ -2461,11 +2464,16 @@ function atualizarTopicosRegistroSessao() {
             .map(item => `<option value="${escaparRevisaoHtml(item.id)}">${escaparRevisaoHtml(item.nome)}</option>`).join('');
     }
     document.getElementById('sessionThemeField').hidden = !materia;
-    document.getElementById('sessionTopicField').hidden = select.value === 'mixed';
-    document.getElementById('sessionTopic').required = select.value !== 'mixed';
+    const semAssunto = select.value === 'mixed' || select.value === ID_REDACAO;
+    document.getElementById('sessionTopicField').hidden = semAssunto;
+    document.getElementById('sessionTopic').required = !semAssunto;
     const autoReview = document.getElementById('sessionAutoReview');
-    if (select.value === 'mixed') autoReview.checked = false;
-    autoReview.disabled = select.value === 'mixed';
+    if (semAssunto) autoReview.checked = false;
+    autoReview.disabled = semAssunto;
+    if (select.value === ID_REDACAO && mudouMateria) {
+        const radioRedacao = document.querySelector('input[name="sessionKind"][value="redacao"]');
+        if (radioRedacao && !radioRedacao.checked) { radioRedacao.checked = true; atualizarTipoRegistroSessao(); }
+    }
     atualizarRevisaoRegistroSessao();
     const topicos = (materia?.topicos || []).filter(topico => !tema.value || topico.temaId === tema.value);
     datalist.innerHTML = topicos.map(topico => `<option value="${escaparRevisaoHtml(topico.nome)}"></option>`).join('');
@@ -2536,15 +2544,16 @@ function abrirRegistroSessaoPendente() {
     form.reset();
     document.getElementById('sessionCompleteTime').textContent = formatHistoryTime(pendente.seconds);
     const select = document.getElementById('sessionSubject');
-    select.innerHTML = '<option value="">Sem matéria</option><option value="mixed">Revisão geral / questões mistas</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('');
-    select.value = appData.cycleItems.some(item => String(item.id) === String(pendente.subjectId)) ? String(pendente.subjectId) : '';
+    select.innerHTML = '<option value="">Sem matéria</option><option value="mixed">Revisão geral / questões mistas</option>' + appData.cycleItems.map(item => `<option value="${item.id}">${escaparRevisaoHtml(item.subject)}</option>`).join('')
+        + (temMateriaRedacao() ? '' : `<option value="${ID_REDACAO}">Redação</option>`);
+    select.value = [...select.options].some(option => option.value && option.value === String(pendente.subjectId)) ? String(pendente.subjectId) : '';
     const rascunho = pendente.draft || {};
     if (rascunho.subjectId != null && [...select.options].some(option => String(option.value) === String(rascunho.subjectId))) select.value = String(rascunho.subjectId);
     const bloco = appData.studySchedule?.weeks?.[pendente.scheduleWeekKey]?.blocks?.find(item => String(item.id) === String(pendente.scheduleBlockId));
     document.getElementById('sessionTopic').value = rascunho.assunto || pendente.topic || bloco?.topic || '';
     document.getElementById('sessionTopicId').value = rascunho.topicId || '';
     document.getElementById('sessionNotes').value = rascunho.comentario || '';
-    const tipo = ['estudo', 'simulado', 'redacao'].includes(rascunho.atividade) ? rascunho.atividade : 'estudo';
+    const tipo = ['estudo', 'simulado', 'redacao'].includes(rascunho.atividade) ? rascunho.atividade : select.value === ID_REDACAO ? 'redacao' : 'estudo';
     const radio = document.querySelector(`input[name="sessionKind"][value="${tipo}"]`);
     if (radio) radio.checked = true;
     document.getElementById('sessionAutoReview').checked = rascunho.autoReview ?? (appData.studyLogging.autoReview !== false);
@@ -2714,10 +2723,10 @@ function salvarRegistroSessao(event) {
     const assunto = document.getElementById('sessionTopic').value.trim();
     const comentario = document.getElementById('sessionNotes').value.trim();
     const subjectId = document.getElementById('sessionSubject').value;
-    if (!assunto && subjectId !== 'mixed') return showToast('Informe o assunto estudado. O resumo é opcional.', true);
+    if (!assunto && subjectId !== 'mixed' && subjectId !== ID_REDACAO) return showToast('Informe o assunto estudado. O resumo é opcional.', true);
     const detalhes = { subjectId, assunto, temaId: document.getElementById('sessionTheme').value,
         topicId: document.getElementById('sessionTopicId').value, comentario, atividade,
-        autoReview: subjectId !== 'mixed' && document.getElementById('sessionAutoReview').checked,
+        autoReview: subjectId !== 'mixed' && subjectId !== ID_REDACAO && document.getElementById('sessionAutoReview').checked,
         reviewDelayDays: Number(document.getElementById('sessionReviewDelay').value) || 1 };
     if (atividade === 'estudo') {
         const questoes = Math.max(0, Number(document.getElementById('sessionStudyQuestions').value) || 0);
@@ -2986,6 +2995,12 @@ function setMode(mode) {
     saveAppData();
 }
 
+const ID_REDACAO = 'redacao';
+const COR_REDACAO = '#c2255c';
+function temMateriaRedacao() {
+    return appData.cycleItems.some(item => /redac/.test(String(item.subject || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()));
+}
+
 function atualizarSeletorDeMaterias() {
     const opts = document.getElementById('customOptions'), trig = document.querySelector('#customSelectTrigger span'), hid = document.getElementById('activeSubjectSelect');
     if(!opts || !trig || !hid) return;
@@ -2997,6 +3012,7 @@ function atualizarSeletorDeMaterias() {
     if(appData.cycleItems.length > 0) { 
         htmlOpts += appData.cycleItems.map(i => `<div class="custom-option ${hid.value == i.id ? 'selected' : ''}" data-value="${escaparRevisaoHtml(i.id)}"><span class="color-dot" style="background:${corSegura(i.color)};"></span>${escaparRevisaoHtml(i.subject)}</div>`).join('');
     }
+    if (!temMateriaRedacao()) htmlOpts += `<div class="custom-option ${hid.value === ID_REDACAO ? 'selected' : ''}" data-value="${ID_REDACAO}"><span class="color-dot" style="background:${COR_REDACAO};"></span>Redação</div>`;
     
     opts.innerHTML = htmlOpts;
     
@@ -3013,6 +3029,7 @@ function atualizarSeletorDeMaterias() {
     if(hid.value) { 
         const sel = appData.cycleItems.find(i => i.id == hid.value); 
         if(sel) trig.innerHTML = `<span class="color-dot" style="background:${corSegura(sel.color)};"></span>${escaparRevisaoHtml(sel.subject)}`;
+        else if (hid.value === ID_REDACAO) trig.innerHTML = `<span class="color-dot" style="background:${COR_REDACAO};"></span>Redação`;
     } else {
         trig.innerHTML = `<span class="color-dot" style="background:#515154;"></span>Sem matéria`;
     }

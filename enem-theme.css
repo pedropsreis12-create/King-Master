@@ -338,3 +338,7 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 #redacao .redacao-tabs { margin: 0 0 18px; }
 #redacao[data-red-view="redacoes"] #enemWritingTools { display: none; }
 #redacao[data-red-view="temas"] > :not(.workspace-heading):not(.redacao-tabs):not(#enemWritingTools) { display: none !important; }
+
+/* Ícones próprios das matérias */
+.subject-card-icon .subject-icon-svg { width: 22px; height: 22px; }
+.subject-card-redacao { border-top-style: solid; }

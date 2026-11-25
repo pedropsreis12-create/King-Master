@@ -3,33 +3,36 @@
    Cada tema pode ganhar uma imagem criada pela IA, guardada na nuvem da conta. */
 (() => {
     'use strict';
-    // Temas reais do ENEM e de vestibulares (temas-provas.js).
-    const PROVAS = () => window.KingTemasProvas?.PROVAS || [];
-    const BANCAS = () => window.KingTemasProvas?.BANCAS || ['ENEM'];
+    const OFICIAIS = [
+        [2024, 'Desafios para a valorização da herança africana no Brasil', 'Cultura'],
+        [2023, 'Desafios para o enfrentamento da invisibilidade do trabalho de cuidado realizado pela mulher no Brasil', 'Trabalho'],
+        [2022, 'Desafios para a valorização de comunidades e povos tradicionais no Brasil', 'Cultura'],
+        [2021, 'Invisibilidade e registro civil: garantia de acesso à cidadania no Brasil', 'Cidadania'],
+        [2020, 'O estigma associado às doenças mentais na sociedade brasileira', 'Saúde'],
+        [2019, 'Democratização do acesso ao cinema no Brasil', 'Cultura'],
+        [2018, 'Manipulação do comportamento do usuário pelo controle de dados na internet', 'Tecnologia'],
+        [2017, 'Desafios para a formação educacional de surdos no Brasil', 'Educação'],
+        [2016, 'Caminhos para combater a intolerância religiosa no Brasil', 'Cidadania'],
+        [2015, 'A persistência da violência contra a mulher na sociedade brasileira', 'Segurança'],
+        [2014, 'Publicidade infantil em questão no Brasil', 'Cidadania'],
+        [2013, 'Efeitos da implantação da Lei Seca no Brasil', 'Segurança'],
+    ];
     const EIXOS = ['Educação', 'Saúde', 'Meio ambiente', 'Tecnologia', 'Cidadania', 'Cultura', 'Trabalho', 'Segurança', 'Desigualdade', 'Mobilidade'];
     const NIVEIS = { facil: 'Fácil', medio: 'Médio', dificil: 'Difícil' };
     const NIVEL_AJUDA = {
         facil: 'Problemas concretos e do dia a dia, fáceis de argumentar com repertório comum.',
-        medio: 'No padrão da prova escolhida.',
+        medio: 'No padrão das provas do ENEM.',
         dificil: 'Temas mais abstratos ou pouco debatidos, que pedem repertório e recorte precisos.',
         variado: 'Uma mistura de fácil, médio e difícil.',
     };
     const MAX_GERAR = 20;
-    const BANCA_AJUDA = {
-        ENEM: 'Dissertativo-argumentativo sobre um problema social brasileiro, com proposta de intervenção.',
-        FUVEST: 'Dissertação sobre uma questão mais filosófica ou abstrata, muitas vezes em forma de pergunta.',
-        UNICAMP: 'Um tema com um gênero e uma situação de escrita definidos (carta, manifesto, discurso…).',
-        UNESP: 'Pergunta polêmica para você defender um ponto de vista em texto dissertativo.',
-        UERJ: 'Pergunta reflexiva, geralmente ligada a uma obra literária ou a um dilema moral.',
-        Variado: 'Uma mistura dos estilos do ENEM e dos vestibulares.',
-    };
-    // Exemplos reais da mesma prova: servem de referência de estilo para a IA (few-shot).
-    function exemplosDaBanca(b) {
-        const lista = (window.KingTemasProvas?.PROVAS || []).filter(t => b === 'Variado' || t.banca === b);
-        return lista.slice(0, 12).map(t => `${t.banca} ${t.ano}: ${t.titulo}${t.genero ? ` (gênero: ${t.genero})` : ''}`);
-    }
 
     // Fotos (Openverse ou Pexels): palavras de busca em inglês (o acervo responde melhor assim).
+    const BUSCA_OFICIAL = {
+        2024: 'afro brazilian culture', 2023: 'caregiver elderly', 2022: 'indigenous brazil', 2021: 'identity documents',
+        2020: 'mental health', 2019: 'movie theater', 2018: 'person using smartphone', 2017: 'sign language',
+        2016: 'religious diversity', 2015: 'women solidarity', 2014: 'children watching tv', 2013: 'sobriety checkpoint',
+    };
     const BUSCA_EIXO = {
         'Educação': 'students classroom brazil', 'Saúde': 'public health clinic', 'Meio ambiente': 'nature environment brazil',
         'Tecnologia': 'people using technology', 'Cidadania': 'community people city', 'Cultura': 'brazilian culture festival',
@@ -65,9 +68,7 @@
     const dados = () => (typeof appData !== 'undefined' ? appData : {});
     const toast = (msg, erro) => window.showToast?.(msg, erro);
     const semente = texto => [...String(texto)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-    let filtro = 'afazer', eixoFiltro = '', provaFiltro = '', busca = '', gerando = null;
-    const POR_PAGINA = 24;
-    let limite = POR_PAGINA;
+    let filtro = 'afazer', eixoFiltro = '', busca = '', gerando = null;
     const imagens = new Map(); // temaId -> dataUrl | 'carregando' | 'erro'
     const criando = new Set();
     let filaImagens = Promise.resolve();
@@ -96,7 +97,7 @@
     const chavePexels = () => String(dados().pexelsKey || '').trim();
 
     function consultaFoto(tema) {
-        return String(tema.busca || BUSCA_EIXO[tema.eixo] || 'students writing essay').slice(0, 80);
+        return String(tema.busca || BUSCA_OFICIAL[tema.ano] || BUSCA_EIXO[tema.eixo] || 'students writing essay').slice(0, 80);
     }
 
     // Openverse (WordPress): fotos com licença livre do Flickr e da Wikimedia, sem chave.
@@ -191,7 +192,6 @@
         (async () => {
             for (const tema of faltam) {
                 tentadosAuto.add(tema.id);
-                await new Promise(resolve => setTimeout(resolve, 700));
                 try { await buscarFoto(tema, { silencioso: true }); }
                 catch (error) {
                     if (error?.semResultado) continue; // tema sem foto: segue para o próximo
@@ -199,8 +199,6 @@
                 }
             }
             autoRodando = false;
-            // Enquanto rodava, a lista pode ter mudado (filtro, "mostrar mais"): confere de novo.
-            if (!autoParado && document.querySelector('#redacao.active[data-red-view="temas"]')) render();
         })();
     }
 
@@ -258,7 +256,8 @@
         const proprios = banco();
         const chaves = new Set(proprios.map(t => norm(t.titulo)));
         const escondidos = new Set(ocultos());
-        const oficiais = PROVAS().filter(t => !chaves.has(norm(t.titulo)) && !escondidos.has(t.id)).map(t => ({ ...t, origem: 'prova' }));
+        const oficiais = OFICIAIS.filter(([ano, titulo]) => !chaves.has(norm(titulo)) && !escondidos.has(`enem-${ano}`))
+            .map(([ano, titulo, eixo]) => ({ id: `enem-${ano}`, titulo, eixo, origem: 'enem', ano }));
         return [...proprios, ...oficiais];
     }
 
@@ -294,7 +293,7 @@
             const trocando = buscandoFoto.has(tema.id);
             const licenca = foto.licenca ? ` · <a href="${esc(urlSegura(foto.licencaUrl, 'https://creativecommons.org/licenses/'))}" target="_blank" rel="noopener">${esc(foto.licenca)}</a>` : '';
             return `<img class="tema-photo" src="${esc(foto.src)}" alt="${esc(foto.alt || '')}" loading="lazy" referrerpolicy="no-referrer" data-foto-img="${esc(tema.id)}">
-                <span class="tema-photo-info" tabindex="0" aria-label="Crédito da foto">i</span><span class="tema-photo-credit">Foto: <a href="${esc(urlSegura(foto.autorUrl, '#'))}" target="_blank" rel="noopener">${esc(foto.autor)}</a>${licenca} / <a href="${esc(urlSegura(foto.pagina, '#'))}" target="_blank" rel="noopener">${esc(foto.fonte || 'Pexels')}</a></span>
+                <span class="tema-photo-credit">Foto: <a href="${esc(urlSegura(foto.autorUrl, '#'))}" target="_blank" rel="noopener">${esc(foto.autor)}</a>${licenca} / <a href="${esc(urlSegura(foto.pagina, '#'))}" target="_blank" rel="noopener">${esc(foto.fonte || 'Pexels')}</a></span>
                 ${trocando ? `<span class="tema-card-ai is-busy">${CAMERA}<span>Buscando…</span></span>` : `<button type="button" class="tema-card-ai is-icon" data-trocar-foto="${esc(tema.id)}" aria-label="Trocar a foto" title="Trocar a foto">↻</button>`}`;
         }
         const imagem = imagens.get(tema.id);
@@ -310,7 +309,7 @@
 
     function cartao(tema) {
         const red = redacaoDoTema(tema);
-        const selo = tema.origem === 'prova' ? `${esc(tema.banca)} ${esc(tema.ano)}${tema.edicao === '2' ? ' · meio do ano' : ''}` : tema.banca ? `IA · estilo ${esc(tema.banca)}` : 'Gerado por IA';
+        const selo = tema.origem === 'enem' ? `ENEM ${esc(tema.ano)}` : 'Gerado por IA';
         const nota = red && red.status === 'corrected' && notaTotal(red) ? ` · nota ${notaTotal(red)}` : red && red.status !== 'corrected' ? ' · aguardando correção' : '';
         const rodape = red
             ? `<span class="tema-card-done">✓ Concluído${red.date ? ` em ${esc(dataBr(red.date))}` : ''}${nota}</span><button type="button" class="tema-card-again" data-escrever="${esc(tema.id)}">Escrever de novo</button>`
@@ -318,8 +317,8 @@
         const apagar = red ? '' : `<button type="button" class="tema-card-remove" data-apagar-tema="${esc(tema.id)}" aria-label="Excluir o tema ${esc(tema.titulo)}" title="Excluir tema">×</button>`;
         const nivel = NIVEIS[tema.nivel] ? `<span class="tema-chip nivel-${esc(tema.nivel)}">${NIVEIS[tema.nivel]}</span>` : '';
         return `<li class="tema-card${red ? ' is-done' : ''}" data-tema-card="${esc(tema.id)}">
-            <div class="tema-card-art">${arteDoCartao(tema)}<span class="tema-card-badge${tema.origem === 'prova' ? '' : ' is-ia'}">${selo}</span>${apagar}</div>
-            <div class="tema-card-body"><div class="tema-card-chips">${tema.eixo ? `<span class="tema-chip">${esc(tema.eixo)}</span>` : ''}${nivel}${tema.genero ? `<span class="tema-chip is-genero">${esc(tema.genero)}</span>` : ''}</div>
+            <div class="tema-card-art">${arteDoCartao(tema)}<span class="tema-card-badge${tema.origem === 'enem' ? '' : ' is-ia'}">${selo}</span>${apagar}</div>
+            <div class="tema-card-body"><div class="tema-card-chips">${tema.eixo ? `<span class="tema-chip">${esc(tema.eixo)}</span>` : ''}${nivel}</div>
                 <h3>${esc(tema.titulo)}</h3>${tema.recorte ? `<p>${esc(tema.recorte)}</p>` : ''}<div class="tema-card-foot">${rodape}</div></div>
         </li>`;
     }
@@ -330,8 +329,6 @@
             if (filtro === 'afazer' && feito) return false;
             if (filtro === 'concluidos' && !feito) return false;
             if (eixoFiltro && norm(t.eixo) !== norm(eixoFiltro)) return false;
-            if (provaFiltro === 'ia' && t.origem === 'prova') return false;
-            if (provaFiltro && provaFiltro !== 'ia' && !(t.origem === 'prova' && t.banca === provaFiltro)) return false;
             if (busca && !norm(t.titulo).includes(norm(busca))) return false;
             return true;
         });
@@ -350,14 +347,12 @@
                     <div class="tema-bank-actions"><button type="button" class="cycle-btn primary" data-gerar-temas>✦ Gerar temas com IA</button><button type="button" class="cycle-btn" data-red-tab="redacoes">Minhas redações</button></div></header>
                 <div class="tema-bank-progress"><p id="temaBankCount"></p><div class="tema-progress"><span id="temaBankBar"></span></div></div>
                 <div class="tema-toolbar"><div class="enem-area-chips" role="group" aria-label="Filtrar temas"><button type="button" data-tema-filtro="afazer">A fazer</button><button type="button" data-tema-filtro="concluidos">Concluídos</button><button type="button" data-tema-filtro="todos">Todos</button></div>
-                    <select class="cycle-input" data-tema-prova aria-label="Filtrar por prova"><option value="">Todas as provas</option>${BANCAS().map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join('')}<option value="ia">Gerados por IA</option></select>
                     <select class="cycle-input" data-tema-eixo aria-label="Filtrar por eixo"><option value="">Todos os eixos</option>${EIXOS.map(e => `<option>${esc(e)}</option>`).join('')}</select>
                     <input type="search" class="cycle-input" data-tema-busca placeholder="Buscar tema" aria-label="Buscar tema">
                     <button type="button" class="tema-photos-btn" data-fotos-todos hidden>${CAMERA}<span>Colocar fotos</span></button>
                     <button type="button" class="tema-clear" data-limpar-afazer hidden>Excluir os temas a fazer</button></div>
                 <ul class="tema-grid" id="temaBankList" aria-live="polite"></ul>
-                <button type="button" class="cycle-btn tema-more" id="temaBankMore" data-mais-temas hidden>Mostrar mais temas</button>
-                <div class="tema-bank-foot"><p class="tema-restore" id="temaRestore" hidden><button type="button" data-restaurar-enem>Mostrar de novo os temas de provas que você excluiu</button></p>
+                <div class="tema-bank-foot"><p class="tema-restore" id="temaRestore" hidden><button type="button" data-restaurar-enem>Mostrar de novo os temas oficiais do ENEM que você excluiu</button></p>
                     <button type="button" class="tema-config-pexels" data-config-pexels>${CAMERA}<span>Fotos dos temas</span></button></div>
             </section>`;
         }
@@ -374,13 +369,9 @@
         limpar.textContent = `Excluir ${visiveis.length === 1 ? 'o tema' : `os ${visiveis.length} temas`} a fazer`;
         document.getElementById('temaRestore').hidden = !ocultos().length;
         const ul = document.getElementById('temaBankList');
-        const pagina = visiveis.slice(0, limite);
-        ul.innerHTML = pagina.length ? pagina.map(cartao).join('') : `<li class="tema-empty">${filtro === 'concluidos' ? 'Nenhum tema concluído ainda. Escreva sobre um tema e registre a redação.' : 'Nenhum tema aqui. Gere novos temas com a IA.'}</li>`;
-        const mais = document.getElementById('temaBankMore');
-        mais.hidden = visiveis.length <= limite;
-        mais.textContent = `Mostrar mais temas (${visiveis.length - pagina.length} restantes)`;
-        carregarImagens(pagina);
-        colocarFotosAutomaticamente(pagina);
+        ul.innerHTML = visiveis.length ? visiveis.map(cartao).join('') : `<li class="tema-empty">${filtro === 'concluidos' ? 'Nenhum tema concluído ainda. Escreva sobre um tema e registre a redação.' : 'Nenhum tema aqui. Gere novos temas com a IA.'}</li>`;
+        carregarImagens(visiveis);
+        colocarFotosAutomaticamente(visiveis);
     }
 
     function atualizarCartao(id) {
@@ -476,7 +467,7 @@
         const ids = new Set(lista.map(t => t.id));
         const mapa = mapaImagens();
         for (const tema of lista) {
-            if (tema.origem === 'prova') { if (!ocultos().includes(tema.id)) ocultos().push(tema.id); }
+            if (tema.origem === 'enem') { if (!ocultos().includes(tema.id)) ocultos().push(tema.id); }
             if (mapa[tema.id]) { window.kingCloud?.deleteReviewImage?.(mapa[tema.id])?.catch?.(() => {}); delete mapa[tema.id]; }
             delete mapaFotos()[tema.id];
             imagens.delete(tema.id);
@@ -494,13 +485,11 @@
         overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-labelledby', 'temaGenTitle');
         overlay.innerHTML = `<div class="modal-box tema-gen">
             <button type="button" class="modal-close" data-close aria-label="Fechar">×</button>
-            <header class="tema-gen-head"><span class="tema-gen-mark" aria-hidden="true">${BRILHO}</span><div><h2 id="temaGenTitle">Gerar temas com IA</h2><p>Temas originais no estilo do ENEM e dos vestibulares, sem repetir os que você já tem. Você revisa antes de adicionar.</p></div></header>
+            <header class="tema-gen-head"><span class="tema-gen-mark" aria-hidden="true">${BRILHO}</span><div><h2 id="temaGenTitle">Gerar temas com IA</h2><p>Temas originais no estilo do ENEM, sem repetir os que você já tem. Você revisa antes de adicionar.</p></div></header>
             <div class="tema-gen-body" data-etapa="config">
                 <section class="tema-gen-field"><div class="tema-gen-label"><strong id="temaQtdLabel">Quantidade</strong><small>de 1 a ${MAX_GERAR} por vez</small></div>
                     <div class="tema-qtd-row"><button type="button" data-qtd-step="-1" aria-label="Menos um tema">−</button><input type="number" class="cycle-input" data-qtd min="1" max="${MAX_GERAR}" value="10" inputmode="numeric" aria-labelledby="temaQtdLabel"><button type="button" data-qtd-step="1" aria-label="Mais um tema">+</button>
                     <input type="range" data-qtd-range min="1" max="${MAX_GERAR}" value="10" aria-label="Quantidade de temas"></div></section>
-                <section class="tema-gen-field"><div class="tema-gen-label"><strong>Estilo de prova</strong><small data-banca-ajuda>${BANCA_AJUDA.ENEM}</small></div>
-                    <div class="tema-gen-chips" role="radiogroup" aria-label="Estilo de prova">${[...BANCAS(), 'Variado'].map(b => `<button type="button" class="tema-gen-chip" role="radio" data-banca="${esc(b)}" aria-checked="${b === 'ENEM'}" aria-pressed="${b === 'ENEM'}">${esc(b)}</button>`).join('')}</div></section>
                 <section class="tema-gen-field"><div class="tema-gen-label"><strong>Eixos</strong><small>Aleatório sorteia eixos variados</small></div>
                     <div class="tema-gen-chips" role="group" aria-label="Eixos dos temas"><button type="button" class="tema-gen-chip is-random" data-eixo="" aria-pressed="true">${DADO}<span>Aleatório</span></button>${EIXOS.map(e => `<button type="button" class="tema-gen-chip" data-eixo="${esc(e)}" aria-pressed="false">${esc(e)}</button>`).join('')}</div></section>
                 <section class="tema-gen-field"><div class="tema-gen-label"><strong>Nível de dificuldade</strong><small data-nivel-ajuda>${NIVEL_AJUDA.medio}</small></div>
@@ -521,7 +510,6 @@
         const faixa = overlay.querySelector('[data-qtd-range]');
         let candidatos = null;
         let nivel = 'medio';
-        let banca = 'ENEM';
         let modoImagem = 'foto';
         const AJUDA_IMAGEM = {
             foto: () => chavePexels() ? 'Fotos reais e gratuitas do Pexels, com crédito ao fotógrafo.' : 'Fotos livres do Openverse, com crédito ao autor. Sem chave.',
@@ -551,13 +539,6 @@
                     chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true'));
                     aleatorio.setAttribute('aria-pressed', String(!eixosEscolhidos().length));
                 }
-                return;
-            }
-            const estilo = event.target.closest('[data-banca]');
-            if (estilo) {
-                banca = estilo.dataset.banca;
-                overlay.querySelectorAll('[data-banca]').forEach(b => { const ativo = b === estilo; b.setAttribute('aria-checked', String(ativo)); b.setAttribute('aria-pressed', String(ativo)); });
-                overlay.querySelector('[data-banca-ajuda]').textContent = BANCA_AJUDA[banca] || '';
                 return;
             }
             const opcao = event.target.closest('[data-nivel]');
@@ -592,8 +573,6 @@
                     const novo = { id: `tema-${agora.toString(36)}-${i}`, titulo: t.titulo, eixo: EIXOS.find(e => norm(e) === norm(t.eixo)) || t.eixo, recorte: t.recorte, origem: 'ia', criadoEm: agora };
                     if (NIVEIS[t.nivel]) novo.nivel = t.nivel;
                     if (t.busca) novo.busca = String(t.busca).slice(0, 80);
-                    if (BANCAS().includes(t.banca)) novo.banca = t.banca;
-                    if (t.genero) novo.genero = String(t.genero).slice(0, 40);
                     if (modoImagem === 'nenhuma') novo.semImagem = true;
                     if (modoImagem === 'ia') novo.imagemIa = true;
                     return novo;
@@ -621,7 +600,7 @@
                 if (!window.kingGemini?.generateEssayThemes) throw new Error('A IA não está disponível agora. Entre na sua conta e tente de novo.');
                 gerando = new AbortController();
                 const existentes = new Set(todos().map(t => norm(t.titulo)));
-                const lista = await window.kingGemini.generateEssayThemes({ count: quantidade(), eixos: eixosEscolhidos(), nivel, banca, exemplos: exemplosDaBanca(banca), avoid: todos().map(t => t.titulo), signal: gerando.signal });
+                const lista = await window.kingGemini.generateEssayThemes({ count: quantidade(), eixos: eixosEscolhidos(), nivel, avoid: todos().map(t => t.titulo), signal: gerando.signal });
                 const novos = [];
                 for (const t of lista) { const k = norm(t.titulo); if (!existentes.has(k)) { existentes.add(k); novos.push(t); } }
                 if (!novos.length) throw new Error('A IA não trouxe temas novos. Tente de novo ou escolha outros eixos.');
@@ -654,8 +633,7 @@
         const alvo = event.target.closest('button');
         if (alvo?.dataset.redTab) { mostrarAba(alvo.dataset.redTab); return; }
         if (!alvo || !alvo.closest('#enemWritingTools')) return;
-        if (alvo.dataset.temaFiltro) { filtro = alvo.dataset.temaFiltro; limite = POR_PAGINA; render(); }
-        else if (alvo.hasAttribute('data-mais-temas')) { limite += POR_PAGINA; render(); }
+        if (alvo.dataset.temaFiltro) { filtro = alvo.dataset.temaFiltro; render(); }
         else if (alvo.dataset.escrever) escrever(alvo.dataset.escrever);
         else if (alvo.dataset.imagemTema) { const tema = todos().find(t => t.id === alvo.dataset.imagemTema); if (tema) criarImagem(tema).catch(() => {}); }
         else if (alvo.dataset.fotoTema) {
@@ -670,7 +648,7 @@
         else if (alvo.hasAttribute('data-gerar-temas')) abrirGerador();
         else if (alvo.dataset.apagarTema) {
             const tema = todos().find(t => t.id === alvo.dataset.apagarTema);
-            if (tema && window.confirm(`Excluir o tema "${tema.titulo}"?${tema.origem === 'prova' ? ' Você pode mostrar os temas de provas de novo no fim da lista.' : ''}`)) excluirTemas([tema]);
+            if (tema && window.confirm(`Excluir o tema "${tema.titulo}"?${tema.origem === 'enem' ? ' Você pode mostrar os temas oficiais de novo no fim da lista.' : ''}`)) excluirTemas([tema]);
         } else if (alvo.hasAttribute('data-limpar-afazer')) {
             const lista = visiveisAgora().filter(t => !redacaoDoTema(t));
             if (lista.length && window.confirm(`Excluir ${lista.length === 1 ? 'o tema' : `os ${lista.length} temas`} a fazer${eixoFiltro || busca ? ' que aparecem com este filtro' : ''}? Temas concluídos e suas redações continuam salvos.`)) excluirTemas(lista);
@@ -680,7 +658,7 @@
         }
     });
     document.addEventListener('input', event => {
-        if (event.target.matches?.('#enemWritingTools [data-tema-busca]')) { busca = event.target.value; limite = POR_PAGINA; render(); }
+        if (event.target.matches?.('#enemWritingTools [data-tema-busca]')) { busca = event.target.value; render(); }
     });
     // Foto que deixou de existir na origem: troca por outra, uma vez por tema em cada visita.
     const fotosQuebradas = new Set();
@@ -692,8 +670,7 @@
         if (tema) buscarFoto(tema, { trocar: true, silencioso: true }).catch(() => {});
     }, true);
     document.addEventListener('change', event => {
-        if (event.target.matches?.('#enemWritingTools [data-tema-eixo]')) { eixoFiltro = event.target.value; limite = POR_PAGINA; render(); }
-        if (event.target.matches?.('#enemWritingTools [data-tema-prova]')) { provaFiltro = event.target.value; limite = POR_PAGINA; render(); }
+        if (event.target.matches?.('#enemWritingTools [data-tema-eixo]')) { eixoFiltro = event.target.value; render(); }
     });
     // Ao entrar na Redação, a tela abre nas redações; os temas só aparecem na aba própria.
     window.addEventListener('king-master-section', event => { if (event.detail === 'redacao') mostrarAba('redacoes'); });

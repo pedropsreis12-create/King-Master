@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261125-vestibulares-v2';
+const CACHE_VERSION = 'king-master-20261125-fotos-v5';
 const APP_SHELL = [
     './',
     './index.html',
@@ -15,7 +15,6 @@ const APP_SHELL = [
     './enem-tools.js',
     './metas.js',
     './profile-enem.js',
-    './temas-provas.js',
     './temas-redacao.js',
     './auto-backup.js',
     './account-reset.js',

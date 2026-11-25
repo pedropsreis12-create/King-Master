@@ -561,14 +561,3 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 .tema-gen-details summary { cursor: pointer; font-size: .84rem; font-weight: 700; color: var(--text-main); }
 .tema-gen-details p { margin: 10px 0; color: var(--text-muted); font-size: .8rem; line-height: 1.45; }
 .tema-gen-head p a, .tema-gen-details p a { color: var(--accent-color); font-weight: 700; }
-
-/* Crédito da foto escondido atrás de um ⓘ (a licença pede o crédito, mas ele não precisa ocupar a foto) */
-#redacao .tema-photo-credit { opacity: 0; pointer-events: none; transition: opacity .15s; }
-#redacao .tema-photo-info { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: rgba(255, 255, 255, .9); color: #374151; font: 700 italic .74rem/1 Georgia, serif; cursor: help; box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
-#redacao .tema-photo-info:hover + .tema-photo-credit, #redacao .tema-photo-info:focus + .tema-photo-credit, #redacao .tema-photo-credit:hover { opacity: 1; pointer-events: auto; }
-#redacao .tema-photo-credit { padding-right: 36px; }
-#redacao .tema-photo-info:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
-#redacao .tema-chip.is-genero { background: #f3e8ff; color: #6d28d9; }
-#redacao .tema-more { display: block; margin: 18px auto 0; }
-#redacao .tema-more[hidden] { display: none; }
-#redacao .tema-toolbar select[data-tema-prova] { min-width: 150px; }

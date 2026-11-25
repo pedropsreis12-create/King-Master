@@ -4,7 +4,7 @@
     const MANTER = ['accountUid', 'profileName', 'profileBio', 'profilePhoto', 'profileBanner', 'themeColor', 'themeColorRgb',
         'darkMode', 'visualMode', 'rankVisualMode', 'accessibility', 'studyLogging', 'aiSettings', 'reminder', 'studentPlan',
         'dailyGoalMinutes', 'onboardingCompleted', 'subjectModules', 'subjectContentModules', 'revisaoTags', 'agendaCategories',
-        'quickNotes', 'quickNoteBooks', 'selectedFrames', 'temasOcultos', 'temasImagens', 'temasFotos', 'pexelsKey'];
+        'quickNotes', 'quickNoteBooks', 'selectedFrames', 'temasOcultos', 'temasImagens', 'temasFotos', 'pexelsKey', 'pexelsAuto'];
     const copia = value => JSON.parse(JSON.stringify(value));
 
     function zerarAssunto(topico) {

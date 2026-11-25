@@ -27,12 +27,11 @@
     };
     const MAX_GERAR = 20;
 
-    // Fotos do Pexels: palavras de busca em inglês (o acervo responde melhor assim).
+    // Fotos (Openverse ou Pexels): palavras de busca em inglês (o acervo responde melhor assim).
     const BUSCA_OFICIAL = {
-        2024: 'afro brazilian culture celebration', 2023: 'woman caring for elderly family', 2022: 'indigenous community brazil',
-        2021: 'family documents identity card', 2020: 'mental health support conversation', 2019: 'cinema audience movie theater',
-        2018: 'smartphone social media privacy', 2017: 'sign language classroom', 2016: 'religious diversity people',
-        2015: 'women solidarity support group', 2014: 'child watching television', 2013: 'traffic police checkpoint night',
+        2024: 'afro brazilian culture', 2023: 'caregiver elderly', 2022: 'indigenous brazil', 2021: 'identity documents',
+        2020: 'mental health', 2019: 'movie theater', 2018: 'person using smartphone', 2017: 'sign language',
+        2016: 'religious diversity', 2015: 'women solidarity', 2014: 'children watching tv', 2013: 'sobriety checkpoint',
     };
     const BUSCA_EIXO = {
         'Educação': 'students classroom brazil', 'Saúde': 'public health clinic', 'Meio ambiente': 'nature environment brazil',
@@ -41,6 +40,7 @@
         'Mobilidade': 'public transport city traffic',
     };
     const PEXELS = 'https://api.pexels.com/v1/search';
+    const OPENVERSE = 'https://api.openverse.org/v1/images/';
     const resultadosFoto = new Map(); // consulta -> fotos
     const buscandoFoto = new Set();
 
@@ -100,6 +100,30 @@
         return String(tema.busca || BUSCA_OFICIAL[tema.ano] || BUSCA_EIXO[tema.eixo] || 'students writing essay').slice(0, 80);
     }
 
+    // Openverse (WordPress): fotos com licença livre do Flickr e da Wikimedia, sem chave.
+    const LICENCAS = { by: 'CC BY', 'by-sa': 'CC BY-SA', 'by-nc': 'CC BY-NC', 'by-nd': 'CC BY-ND', 'by-nc-sa': 'CC BY-NC-SA', 'by-nc-nd': 'CC BY-NC-ND', cc0: 'CC0', pdm: 'Domínio público' };
+    const urlSegura = (url, reserva = '') => /^https:\/\/[^\s"'<>]+$/.test(String(url || '')) ? String(url) : reserva;
+    async function pesquisarOpenverse(consulta) {
+        const chave = `ov:${consulta}`;
+        if (resultadosFoto.has(chave)) return resultadosFoto.get(chave);
+        const resposta = await fetch(`${OPENVERSE}?q=${encodeURIComponent(consulta)}&aspect_ratio=wide&page_size=20&mature=false`);
+        if (resposta.status === 429) throw new Error('O banco de fotos pediu uma pausa: muitas buscas hoje. Tente de novo mais tarde.');
+        if (!resposta.ok) throw new Error('O banco de fotos não respondeu agora. Tente de novo.');
+        const corpo = await resposta.json();
+        const fotos = (Array.isArray(corpo?.results) ? corpo.results : [])
+            .filter(f => urlSegura(f?.url) && Number(f.width) >= 640 && !/\.(svg|gif)(\?|$)/i.test(f.url))
+            .map(f => ({
+                id: `ov-${f.id}`, src: f.url, autor: String(f.creator || 'Autor desconhecido').slice(0, 80),
+                autorUrl: urlSegura(f.creator_url, urlSegura(f.foreign_landing_url, 'https://openverse.org')),
+                pagina: urlSegura(f.foreign_landing_url, 'https://openverse.org'), alt: String(f.title || '').slice(0, 160),
+                licenca: LICENCAS[f.license] || 'CC', licencaUrl: urlSegura(f.license_url, 'https://creativecommons.org/licenses/'),
+                fonte: f.source === 'wikimedia' ? 'Wikimedia' : f.source === 'flickr' ? 'Flickr' : 'Openverse',
+            }));
+        resultadosFoto.set(chave, fotos);
+        return fotos;
+    }
+    const pesquisarFotos = consulta => chavePexels() ? pesquisarPexels(consulta) : pesquisarOpenverse(consulta);
+
     async function pesquisarPexels(consulta, chave = chavePexels()) {
         if (resultadosFoto.has(consulta)) return resultadosFoto.get(consulta);
         const resposta = await fetch(`${PEXELS}?query=${encodeURIComponent(consulta)}&orientation=landscape&per_page=20`, { headers: { Authorization: chave } });
@@ -119,17 +143,20 @@
     // Escolhe uma foto que nenhum outro tema esteja usando; "trocar" pula para a próxima.
     async function buscarFoto(tema, { trocar = false, silencioso = false } = {}) {
         if (buscandoFoto.has(tema.id)) return false;
-        if (!chavePexels()) { if (!silencioso) abrirChavePexels(() => buscarFoto(tema, { trocar })); return false; }
         buscandoFoto.add(tema.id);
         atualizarCartao(tema.id);
         try {
-            const fotos = await pesquisarPexels(consultaFoto(tema));
+            // Se a busca principal não achar nada, tenta buscas mais simples antes de desistir.
+            const principal = consultaFoto(tema);
+            const consultas = [...new Set([principal, principal.split(' ').slice(0, 2).join(' '), BUSCA_EIXO[tema.eixo], 'brazil people'].filter(Boolean))];
+            let fotos = [];
+            for (const consulta of consultas) { fotos = await pesquisarFotos(consulta); if (fotos.length) break; }
             const mapa = mapaFotos();
             const emUso = new Set(Object.entries(mapa).filter(([id]) => id !== tema.id).map(([, f]) => f?.id));
             const atual = mapa[tema.id]?.id;
             const livres = fotos.filter(f => !emUso.has(f.id));
             const lista = livres.length ? livres : fotos;
-            if (!lista.length) throw new Error('O Pexels não achou fotos para este tema.');
+            if (!lista.length) throw Object.assign(new Error('Não achei fotos para este tema.'), { semResultado: true });
             const inicio = trocar && atual ? (lista.findIndex(f => f.id === atual) + 1) % lista.length : 0;
             mapa[tema.id] = lista[inicio];
             window.saveAppData?.();
@@ -147,17 +174,17 @@
         let feitas = 0;
         for (const tema of temas) {
             try { if (await buscarFoto(tema, { silencioso: true })) feitas += 1; }
-            catch (error) { toast(`${feitas ? `${feitas} ${feitas === 1 ? 'foto colocada' : 'fotos colocadas'}. ` : ''}${error?.message || 'Não foi possível buscar as fotos.'}`, true); return; }
+            catch (error) { if (error?.semResultado) continue; toast(`${feitas ? `${feitas} ${feitas === 1 ? 'foto colocada' : 'fotos colocadas'}. ` : ''}${error?.message || 'Não foi possível buscar as fotos.'}`, true); return; }
         }
         if (feitas) toast(`📷 ${feitas} ${feitas === 1 ? 'foto colocada' : 'fotos colocadas'} nos temas.`);
     }
 
-    // Automático: com a chave salva, todo tema sem imagem ganha uma foto quando aparece na lista.
+    // Automático: todo tema sem imagem ganha uma foto quando aparece na lista.
     const autoFotosLigado = () => dados().pexelsAuto !== false;
     const tentadosAuto = new Set();
     let autoRodando = false, autoParado = false;
     function colocarFotosAutomaticamente(lista) {
-        if (autoRodando || autoParado || !chavePexels() || !autoFotosLigado()) return;
+        if (autoRodando || autoParado || !autoFotosLigado()) return;
         const faltam = lista.filter(t => !t.semImagem && !t.imagemIa && !mapaFotos()[t.id] && !mapaImagens()[t.id]
             && !tentadosAuto.has(t.id) && !buscandoFoto.has(t.id) && !criando.has(t.id));
         if (!faltam.length) return;
@@ -166,7 +193,10 @@
             for (const tema of faltam) {
                 tentadosAuto.add(tema.id);
                 try { await buscarFoto(tema, { silencioso: true }); }
-                catch (error) { autoParado = true; console.warn('Fotos automáticas pausadas.', error?.message || error); break; }
+                catch (error) {
+                    if (error?.semResultado) continue; // tema sem foto: segue para o próximo
+                    autoParado = true; console.warn('Fotos automáticas pausadas.', error?.message || error); break;
+                }
             }
             autoRodando = false;
         })();
@@ -180,14 +210,15 @@
         overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-labelledby', 'pexelsKeyTitle');
         overlay.innerHTML = `<div class="modal-box tema-gen tema-gen-small">
             <button type="button" class="modal-close" data-close aria-label="Fechar">×</button>
-            <header class="tema-gen-head"><span class="tema-gen-mark is-photo" aria-hidden="true">${CAMERA}</span><div><h2 id="pexelsKeyTitle">Fotos do Pexels</h2><p>O Pexels é um banco de fotos gratuito. Para o site buscar as fotos, cole a sua chave de acesso. Ela fica salva na sua conta.</p></div></header>
+            <header class="tema-gen-head"><span class="tema-gen-mark is-photo" aria-hidden="true">${CAMERA}</span><div><h2 id="pexelsKeyTitle">Fotos dos temas</h2><p>As fotos vêm do <a href="https://openverse.org" target="_blank" rel="noopener">Openverse</a>, um banco de fotos livres do Flickr e da Wikimedia. Não precisa de conta nem de chave. Cada cartão mostra o autor e a licença.</p></div></header>
             <div class="tema-gen-body">
-                <ol class="pexels-steps"><li>Abra <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a> e entre ou crie uma conta grátis.</li><li>Clique em <b>Your API Key</b>, preencha o pedido (pode escrever "site de estudos para o ENEM") e copie a chave.</li><li>Cole a chave abaixo.</li></ol>
-                <label class="cycle-form-group"><span class="cycle-label">Chave do Pexels</span><input type="text" class="cycle-input" data-pexels-key autocomplete="off" spellcheck="false" placeholder="Cole aqui a chave" value="${esc(chavePexels())}"></label>
                 <label class="tema-gen-toggle"><input type="checkbox" data-pexels-auto ${autoFotosLigado() ? 'checked' : ''}><span class="tema-gen-switch" aria-hidden="true"></span><span><strong>Colocar fotos automaticamente</strong><small>Todo tema sem imagem ganha uma foto sozinho, inclusive os novos.</small></span></label>
+                <details class="tema-gen-details"${chavePexels() ? ' open' : ''}><summary>Tenho uma chave do Pexels (opcional)</summary>
+                    <p>Com uma chave do <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">Pexels</a>, as fotos passam a vir de lá. Deixe em branco para usar o Openverse.</p>
+                    <label class="cycle-form-group"><span class="cycle-label">Chave do Pexels</span><input type="text" class="cycle-input" data-pexels-key autocomplete="off" spellcheck="false" placeholder="Opcional" value="${esc(chavePexels())}"></label></details>
             </div>
             <p class="tema-gen-status" data-status role="status"></p>
-            <footer class="tema-gen-foot">${chavePexels() ? '<button type="button" class="cycle-btn tema-gen-remove-key" data-remover>Remover chave</button>' : ''}<button type="button" class="cycle-btn" data-close>Cancelar</button><button type="button" class="cycle-btn primary" data-salvar>Salvar chave</button></footer>
+            <footer class="tema-gen-foot"><button type="button" class="cycle-btn" data-close>Cancelar</button><button type="button" class="cycle-btn primary" data-salvar>Salvar</button></footer>
         </div>`;
         document.body.append(overlay);
         const fechar = () => overlay.remove();
@@ -195,29 +226,30 @@
         overlay.addEventListener('keydown', event => { if (event.key === 'Escape') fechar(); });
         overlay.addEventListener('click', async event => {
             if (event.target === overlay || event.target.closest('[data-close]')) return fechar();
-            if (event.target.closest('[data-remover]')) { delete dados().pexelsKey; window.saveAppData?.(); fechar(); toast('Chave do Pexels removida.'); render(); return; }
             const salvar = event.target.closest('[data-salvar]');
             if (!salvar) return;
             const chave = overlay.querySelector('[data-pexels-key]').value.trim();
-            if (chave.length < 20) { status.textContent = 'Essa chave parece incompleta.'; return; }
-            salvar.disabled = true; status.textContent = 'Conferindo a chave…';
+            if (chave && chave.length < 20) { status.textContent = 'Essa chave do Pexels parece incompleta.'; return; }
+            salvar.disabled = true;
             try {
+                if (chave && chave !== chavePexels()) {
+                    status.textContent = 'Conferindo a chave do Pexels…';
+                    await pesquisarPexels('students', chave);
+                }
                 resultadosFoto.clear();
-                await pesquisarPexels('students', chave);
-                resultadosFoto.clear();
-                dados().pexelsKey = chave;
+                if (chave) dados().pexelsKey = chave; else delete dados().pexelsKey;
                 dados().pexelsAuto = overlay.querySelector('[data-pexels-auto]').checked;
                 autoParado = false; tentadosAuto.clear();
                 window.saveAppData?.();
                 fechar();
-                toast('📷 Chave do Pexels salva.');
+                toast('📷 Preferências de fotos salvas.');
                 render();
                 depois?.();
             } catch (error) {
                 status.textContent = error?.message || 'Não foi possível conferir a chave.';
             } finally { salvar.disabled = false; }
         });
-        requestAnimationFrame(() => { overlay.classList.add('active'); overlay.querySelector('[data-pexels-key]').focus(); });
+        requestAnimationFrame(() => { overlay.classList.add('active'); overlay.querySelector('[data-pexels-auto]').focus(); });
     }
 
     function todos() {
@@ -257,10 +289,11 @@
 
     function arteDoCartao(tema) {
         const foto = mapaFotos()[tema.id];
-        if (foto?.src && /^https:\/\/images\.pexels\.com\//.test(foto.src)) {
+        if (foto?.src && urlSegura(foto.src)) {
             const trocando = buscandoFoto.has(tema.id);
-            return `<img class="tema-photo" src="${esc(foto.src)}" alt="${esc(foto.alt || '')}" loading="lazy" referrerpolicy="no-referrer">
-                <span class="tema-photo-credit">Foto: <a href="${esc(foto.autorUrl)}" target="_blank" rel="noopener">${esc(foto.autor)}</a> / <a href="${esc(foto.pagina)}" target="_blank" rel="noopener">Pexels</a></span>
+            const licenca = foto.licenca ? ` · <a href="${esc(urlSegura(foto.licencaUrl, 'https://creativecommons.org/licenses/'))}" target="_blank" rel="noopener">${esc(foto.licenca)}</a>` : '';
+            return `<img class="tema-photo" src="${esc(foto.src)}" alt="${esc(foto.alt || '')}" loading="lazy" referrerpolicy="no-referrer" data-foto-img="${esc(tema.id)}">
+                <span class="tema-photo-credit">Foto: <a href="${esc(urlSegura(foto.autorUrl, '#'))}" target="_blank" rel="noopener">${esc(foto.autor)}</a>${licenca} / <a href="${esc(urlSegura(foto.pagina, '#'))}" target="_blank" rel="noopener">${esc(foto.fonte || 'Pexels')}</a></span>
                 ${trocando ? `<span class="tema-card-ai is-busy">${CAMERA}<span>Buscando…</span></span>` : `<button type="button" class="tema-card-ai is-icon" data-trocar-foto="${esc(tema.id)}" aria-label="Trocar a foto" title="Trocar a foto">↻</button>`}`;
         }
         const imagem = imagens.get(tema.id);
@@ -320,7 +353,7 @@
                     <button type="button" class="tema-clear" data-limpar-afazer hidden>Excluir os temas a fazer</button></div>
                 <ul class="tema-grid" id="temaBankList" aria-live="polite"></ul>
                 <div class="tema-bank-foot"><p class="tema-restore" id="temaRestore" hidden><button type="button" data-restaurar-enem>Mostrar de novo os temas oficiais do ENEM que você excluiu</button></p>
-                    <button type="button" class="tema-config-pexels" data-config-pexels>${CAMERA}<span>Fotos do Pexels</span></button></div>
+                    <button type="button" class="tema-config-pexels" data-config-pexels>${CAMERA}<span>Fotos dos temas</span></button></div>
             </section>`;
         }
         document.getElementById('temaBankCount').textContent = `${lista.length} ${lista.length === 1 ? 'tema' : 'temas'} · ${concluidos} ${concluidos === 1 ? 'concluído' : 'concluídos'}`;
@@ -462,7 +495,7 @@
                 <section class="tema-gen-field"><div class="tema-gen-label"><strong>Nível de dificuldade</strong><small data-nivel-ajuda>${NIVEL_AJUDA.medio}</small></div>
                     <div class="tema-gen-segment" role="radiogroup" aria-label="Nível de dificuldade">${[['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil'], ['variado', 'Aleatório']].map(([v, r]) => `<button type="button" role="radio" data-nivel="${v}" aria-checked="${v === 'medio'}">${r}</button>`).join('')}</div></section>
                 <section class="tema-gen-field"><div class="tema-gen-label"><strong>Imagem dos cartões</strong><small data-imagem-ajuda></small></div>
-                    <div class="tema-gen-segment is-three" role="radiogroup" aria-label="Imagem dos cartões">${[['foto', 'Foto do Pexels'], ['ia', 'Imagem com IA'], ['nenhuma', 'Sem imagem']].map(([v, r]) => `<button type="button" role="radio" data-imagem-modo="${v}" aria-checked="${v === 'foto'}">${r}</button>`).join('')}</div>
+                    <div class="tema-gen-segment is-three" role="radiogroup" aria-label="Imagem dos cartões">${[['foto', 'Foto real'], ['ia', 'Imagem com IA'], ['nenhuma', 'Sem imagem']].map(([v, r]) => `<button type="button" role="radio" data-imagem-modo="${v}" aria-checked="${v === 'foto'}">${r}</button>`).join('')}</div>
                     <button type="button" class="tema-gen-keylink" data-config-pexels-gen hidden>${CAMERA}<span>Configurar a chave do Pexels</span></button></section>
             </div>
             <div class="tema-gen-body" data-etapa="revisao" hidden><p class="tema-gen-hint" data-revisao-texto></p><ul class="tema-gen-preview" data-preview></ul></div>
@@ -479,14 +512,14 @@
         let nivel = 'medio';
         let modoImagem = 'foto';
         const AJUDA_IMAGEM = {
-            foto: () => chavePexels() ? 'Fotos reais e gratuitas do Pexels, com crédito ao fotógrafo.' : 'Fotos gratuitas do Pexels. Falta configurar a sua chave.',
+            foto: () => chavePexels() ? 'Fotos reais e gratuitas do Pexels, com crédito ao fotógrafo.' : 'Fotos livres do Openverse, com crédito ao autor. Sem chave.',
             ia: () => 'O Gemini cria uma imagem para cada tema. Exige o plano Blaze no Firebase.',
             nenhuma: () => 'Os cartões ficam com a ilustração do eixo.',
         };
         const atualizarImagem = () => {
             overlay.querySelectorAll('[data-imagem-modo]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.imagemModo === modoImagem)));
             overlay.querySelector('[data-imagem-ajuda]').textContent = AJUDA_IMAGEM[modoImagem]();
-            overlay.querySelector('[data-config-pexels-gen]').hidden = modoImagem !== 'foto' || Boolean(chavePexels());
+            overlay.querySelector('[data-config-pexels-gen]').hidden = true;
         };
         atualizarImagem();
         const quantidade = () => Math.max(1, Math.min(MAX_GERAR, Math.round(Number(qtd.value) || 1)));
@@ -553,12 +586,11 @@
                 if (campoEixo) campoEixo.value = '';
                 if (campoBusca) campoBusca.value = '';
                 render();
-                const extra = modoImagem === 'ia' ? ' Criando as imagens…' : modoImagem === 'foto' && chavePexels() ? ' Buscando as fotos…' : '';
+                const extra = modoImagem === 'ia' ? ' Criando as imagens…' : modoImagem === 'foto' ? ' Buscando as fotos…' : '';
                 toast(`✦ ${novos.length} ${novos.length === 1 ? 'tema adicionado' : 'temas adicionados'} ao banco.${extra}`);
                 if (modoImagem === 'ia') criarImagensEmFila(novos);
                 else if (modoImagem === 'foto') {
-                    if (!chavePexels()) abrirChavePexels(() => { if (!autoFotosLigado()) buscarFotosEmFila(novos); });
-                    else if (!autoFotosLigado()) buscarFotosEmFila(novos); // ligado, o render já coloca as fotos
+                    if (!autoFotosLigado()) buscarFotosEmFila(novos); // ligado, o render já coloca as fotos
                 }
                 return;
             }
@@ -611,7 +643,7 @@
         else if (alvo.dataset.trocarFoto) { const tema = todos().find(t => t.id === alvo.dataset.trocarFoto); if (tema) buscarFoto(tema, { trocar: true }).catch(() => {}); }
         else if (alvo.hasAttribute('data-fotos-todos')) {
             const lista = visiveisAgora().filter(t => !mapaFotos()[t.id] && !mapaImagens()[t.id]);
-            if (chavePexels()) buscarFotosEmFila(lista); else abrirChavePexels(() => buscarFotosEmFila(lista));
+            buscarFotosEmFila(lista);
         } else if (alvo.hasAttribute('data-config-pexels')) abrirChavePexels();
         else if (alvo.hasAttribute('data-gerar-temas')) abrirGerador();
         else if (alvo.dataset.apagarTema) {
@@ -628,6 +660,15 @@
     document.addEventListener('input', event => {
         if (event.target.matches?.('#enemWritingTools [data-tema-busca]')) { busca = event.target.value; render(); }
     });
+    // Foto que deixou de existir na origem: troca por outra, uma vez por tema em cada visita.
+    const fotosQuebradas = new Set();
+    document.addEventListener('error', event => {
+        const id = event.target?.dataset?.fotoImg;
+        if (!id || fotosQuebradas.has(id)) return;
+        fotosQuebradas.add(id);
+        const tema = todos().find(t => t.id === id);
+        if (tema) buscarFoto(tema, { trocar: true, silencioso: true }).catch(() => {});
+    }, true);
     document.addEventListener('change', event => {
         if (event.target.matches?.('#enemWritingTools [data-tema-eixo]')) { eixoFiltro = event.target.value; render(); }
     });

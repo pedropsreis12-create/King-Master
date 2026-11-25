@@ -557,3 +557,7 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 .tema-gen-foot .tema-gen-remove-key { margin-right: auto; color: #c92a2a; }
 @media (max-width: 760px) { #redacao .tema-card-ai.is-icon { opacity: 1; } }
 @media (max-width: 520px) { .tema-gen-segment.is-three { grid-template-columns: 1fr; } }
+.tema-gen-details { border: 1px solid var(--border-color); border-radius: 12px; padding: 10px 14px; }
+.tema-gen-details summary { cursor: pointer; font-size: .84rem; font-weight: 700; color: var(--text-main); }
+.tema-gen-details p { margin: 10px 0; color: var(--text-muted); font-size: .8rem; line-height: 1.45; }
+.tema-gen-head p a, .tema-gen-details p a { color: var(--accent-color); font-weight: 700; }

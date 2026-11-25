@@ -572,3 +572,10 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 #redacao .tema-more { display: block; margin: 18px auto 0; }
 #redacao .tema-more[hidden] { display: none; }
 #redacao .tema-toolbar select[data-tema-prova] { min-width: 150px; }
+
+/* Logo minimalista: K branco num quadrado azul */
+.km-logo rect { fill: #2563eb !important; stroke: none !important; }
+.km-logo .km-k { fill: none !important; stroke: #fff !important; stroke-width: 4 !important; stroke-linecap: round; stroke-linejoin: round; }
+#mainNavigation .site-brand-mark.km-logo { width: 36px; height: 36px; }
+#mainNavigation .site-brand strong { font-size: .95rem; font-weight: 800; letter-spacing: -.01em; }
+#mainNavigation .site-brand small { margin-top: 3px; font-size: .58rem; font-weight: 700; letter-spacing: .16em; color: var(--text-muted); }

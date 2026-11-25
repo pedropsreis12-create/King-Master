@@ -427,11 +427,15 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         generationConfig: {
             maxOutputTokens: 4000,
             responseMimeType: 'application/json',
-            responseSchema: S.object({ properties: { temas: S.array({ items: S.object({ properties: { titulo: S.string(), eixo: S.string(), recorte: S.string() } }) }) } }),
+            responseSchema: S.object({ properties: { temas: S.array({ items: S.object({ properties: { titulo: S.string(), eixo: S.string(), recorte: S.string(), nivel: S.string() } }) }) } }),
             thinkingConfig: { thinkingLevel: aiSdk.ThinkingLevel.MINIMAL || aiSdk.ThinkingLevel.LOW }
         },
-        systemInstruction: 'Você cria propostas ORIGINAIS de tema de redação dissertativo-argumentativa no formato do ENEM, em português do Brasil. Cada título segue o estilo do ENEM (por exemplo: "Desafios para...", "Caminhos para combater...", "O impacto de... na sociedade brasileira") e trata de um problema social brasileiro que admite proposta de intervenção. Não repita temas já aplicados no ENEM nem os temas que o aluno já tem. Não cite dados, leis ou números. O campo recorte explica em uma frase o problema central a discutir. O campo eixo é uma única palavra entre: Educação, Saúde, Meio ambiente, Tecnologia, Cidadania, Cultura, Trabalho, Segurança, Desigualdade, Mobilidade. Responda exclusivamente JSON com temas:[{titulo,eixo,recorte}].'
+        systemInstruction: 'Você cria propostas ORIGINAIS de tema de redação dissertativo-argumentativa no formato do ENEM, em português do Brasil. Cada título segue o estilo do ENEM (por exemplo: "Desafios para...", "Caminhos para combater...", "O impacto de... na sociedade brasileira") e trata de um problema social brasileiro que admite proposta de intervenção. Não repita temas já aplicados no ENEM nem os temas que o aluno já tem. Não cite dados, leis ou números. O campo recorte explica em uma frase o problema central a discutir. O campo eixo é uma única palavra entre: Educação, Saúde, Meio ambiente, Tecnologia, Cidadania, Cultura, Trabalho, Segurança, Desigualdade, Mobilidade. O campo nivel é "facil", "medio" ou "dificil": fácil é um problema concreto e familiar, que se discute com repertório comum; médio é o padrão do ENEM; difícil é um problema mais abstrato ou pouco debatido, com recorte específico, que exige repertório sociocultural elaborado. Responda exclusivamente JSON com temas:[{titulo,eixo,recorte,nivel}].'
     }, { timeout: 45000 });
+    const MODALIDADE_IMAGEM = aiSdk.ResponseModality?.IMAGE || 'IMAGE';
+    const modelosImagem = ['gemini-3.1-flash-lite-image', 'gemini-3.1-flash-image'].map(model => aiSdk.getGenerativeModel(firebaseAI, {
+        model, generationConfig: { responseModalities: [MODALIDADE_IMAGEM] }
+    }, { timeout: 90000 }));
     const modeloDiagnosticoErro = aiSdk.getGenerativeModel(firebaseAI, {
         model: 'gemini-3.5-flash-lite',
         generationConfig: {
@@ -584,16 +588,44 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             const count = Math.max(1, Math.min(20, Number(payload.count) || 10));
             const eixos = (Array.isArray(payload.eixos) ? payload.eixos : []).map(value => String(value).trim().slice(0, 30)).filter(Boolean).slice(0, 10);
             const avoid = (Array.isArray(payload.avoid) ? payload.avoid : []).map(value => String(value).trim().slice(0, 160)).filter(Boolean).slice(-120);
-            const prompt = `Crie ${count} temas de redação diferentes entre si. ${eixos.length ? `Use apenas estes eixos: ${JSON.stringify(eixos)}.` : 'Varie os eixos.'} Não repita nem reformule estes temas que o aluno já tem: ${JSON.stringify(avoid)}.`;
+            const niveis = { facil: 'fácil', medio: 'médio', dificil: 'difícil' };
+            const nivel = niveis[payload.nivel] ? payload.nivel : 'variado';
+            const pedidoNivel = nivel === 'variado' ? 'Misture os níveis fácil, médio e difícil.' : `Todos no nível ${niveis[nivel]} (nivel "${nivel}").`;
+            const prompt = `Crie ${count} temas de redação diferentes entre si. ${eixos.length ? `Use apenas estes eixos: ${JSON.stringify(eixos)}.` : 'Sorteie eixos variados.'} ${pedidoNivel} Não repita nem reformule estes temas que o aluno já tem: ${JSON.stringify(avoid)}.`;
             const result = await modeloTemasRedacao.generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] }, { signal: payload.signal, timeout: 45000 });
             let parsed;
             try { parsed = JSON.parse(String((await result.response).text() || '')); }
             catch { throw new Error('A IA não retornou temas legíveis. Tente novamente.'); }
             return (Array.isArray(parsed?.temas) ? parsed.temas : []).map(item => ({
-                titulo: String(item?.titulo || '').replace(/s+/g, ' ').trim().slice(0, 160),
+                titulo: String(item?.titulo || '').replace(/\s+/g, ' ').trim().slice(0, 160),
                 eixo: String(item?.eixo || '').trim().slice(0, 30),
-                recorte: String(item?.recorte || '').replace(/s+/g, ' ').trim().slice(0, 240)
+                recorte: String(item?.recorte || '').replace(/\s+/g, ' ').trim().slice(0, 240),
+                nivel: niveis[item?.nivel] ? item.nivel : (nivel === 'variado' ? 'medio' : nivel)
             })).filter(item => item.titulo.length >= 12).slice(0, count);
+        },
+        async generateThemeImage(payload = {}) {
+            if (!await appCheckReady) await appCheckSdk.getToken(appCheck, false);
+            const titulo = String(payload.titulo || '').trim().slice(0, 160);
+            if (!titulo) throw new Error('Tema sem título.');
+            const recorte = String(payload.recorte || '').trim().slice(0, 240);
+            const prompt = `Crie uma ilustração editorial horizontal, em formato paisagem, moderna e acolhedora, em estilo flat com leve textura e cores harmoniosas, para ilustrar o tema de redação "${titulo}".${recorte ? ` Foco: ${recorte}.` : ''} Mostre pessoas e situações do Brasil de forma respeitosa e diversa, sem estereótipos e sem violência explícita. Não escreva nenhum texto, letra, número, logotipo ou marca d'água na imagem.`;
+            let ultimoErro = null;
+            for (const modelo of modelosImagem) {
+                try {
+                    const result = await modelo.generateContent(prompt, { signal: payload.signal, timeout: 90000 });
+                    const parte = result.response.inlineDataParts?.()?.find(item => item?.inlineData?.data)?.inlineData;
+                    if (parte?.data) return { mimeType: parte.mimeType || 'image/png', data: parte.data };
+                    ultimoErro = new Error('A IA não devolveu uma imagem para este tema.');
+                } catch (error) {
+                    if (error?.name === 'AbortError') throw error;
+                    ultimoErro = error;
+                }
+            }
+            const texto = String(ultimoErro?.message || '');
+            if (/billing|blaze|pay-as-you-go|plan|quota|exhausted|429|403|permission/i.test(texto)) {
+                throw new Error('A geração de imagens não está liberada no projeto do Firebase (exige o plano Blaze) ou a cota acabou.');
+            }
+            throw new Error(texto && texto.length < 160 ? texto : 'Não foi possível criar a imagem agora.');
         },
         async summarizeText(payload = {}) {
             if (!await appCheckReady) await appCheckSdk.getToken(appCheck, false);

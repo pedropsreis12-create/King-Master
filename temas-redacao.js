@@ -1,5 +1,6 @@
 /* Banco de temas de redação: temas oficiais do ENEM + temas gerados pela IA.
-   Um tema fica concluído quando existe uma redação registrada com o mesmo tema. */
+   Um tema fica concluído quando existe uma redação registrada com o mesmo tema.
+   Cada tema pode ganhar uma imagem criada pela IA, guardada na nuvem da conta. */
 (() => {
     'use strict';
     const OFICIAIS = [
@@ -17,6 +18,16 @@
         [2013, 'Efeitos da implantação da Lei Seca no Brasil', 'Segurança'],
     ];
     const EIXOS = ['Educação', 'Saúde', 'Meio ambiente', 'Tecnologia', 'Cidadania', 'Cultura', 'Trabalho', 'Segurança', 'Desigualdade', 'Mobilidade'];
+    const NIVEIS = { facil: 'Fácil', medio: 'Médio', dificil: 'Difícil' };
+    const NIVEL_AJUDA = {
+        facil: 'Problemas concretos e do dia a dia, fáceis de argumentar com repertório comum.',
+        medio: 'No padrão das provas do ENEM.',
+        dificil: 'Temas mais abstratos ou pouco debatidos, que pedem repertório e recorte precisos.',
+        variado: 'Uma mistura de fácil, médio e difícil.',
+    };
+    const MAX_GERAR = 20;
+
+    // Ilustração de reserva (sem IA): degradê, formas e um ícone do eixo, variando pelo título.
     const ARTE = {
         'Educação': { cores: ['#4c6ef5', '#22b8cf'], icone: '<path d="M4 9.5 12 5l8 4.5-8 4.5z"/><path d="M7.5 11.5v4c1.2 1.4 2.7 2 4.5 2s3.3-.6 4.5-2v-4M20 9.5v5"/>' },
         'Saúde': { cores: ['#e03131', '#f783ac'], icone: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/><path d="M8.5 12h2l1-2 1.5 4 1-2h1.5"/>' },
@@ -30,43 +41,42 @@
         'Mobilidade': { cores: ['#0b7285', '#66d9e8'], icone: '<rect x="5" y="4" width="14" height="13" rx="3"/><path d="M5 11h14M8 20l1.5-3M16 20l-1.5-3"/><circle cx="8.5" cy="14" r=".8"/><circle cx="15.5" cy="14" r=".8"/>' },
     };
     const ARTE_PADRAO = { cores: ['#5c7cfa', '#cc5de8'], icone: '<path d="m4 17-.5 3.5L7 20l11-11-3-3z"/><path d="m13.5 7.5 3 3"/>' };
-    const semente = texto => [...String(texto)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
-
-    function ilustracao(tema) {
-        const arte = ARTE[tema.eixo] || ARTE_PADRAO;
-        const h = semente(tema.titulo);
-        const [a, b] = arte.cores;
-        const id = `g${h.toString(36)}`;
-        const bolhas = [0, 1, 2, 3].map(i => {
-            const x = (h >> (i * 5)) % 320, y = (h >> (i * 3 + 2)) % 150, r = 24 + ((h >> (i * 4)) % 46);
-            return `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${(0.07 + i * 0.03).toFixed(2)}"/>`;
-        }).join('');
-        const giro = (h % 50) - 25;
-        return `<svg class="tema-art" viewBox="0 0 320 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
-            <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
-            <rect width="320" height="150" fill="url(#${id})"/>${bolhas}
-            <path d="M-20 ${110 + (h % 25)} C 80 ${70 + (h % 40)}, 200 ${150 - (h % 30)}, 340 ${95 + (h % 30)} L340 170 L-20 170 Z" fill="#fff" opacity=".12"/>
-            <g transform="translate(212 34) rotate(${giro} 40 40) scale(3.4)" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".92">${arte.icone}</g>
-        </svg>`;
-    }
+    const LAPIS = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 17-.5 3.5L7 20l11-11-3-3z"/><path d="m13.5 7.5 3 3"/></svg>';
+    const BRILHO = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 3.5c.6 3.9 2.6 5.9 6.5 6.5-3.9.6-5.9 2.6-6.5 6.5-.6-3.9-2.6-5.9-6.5-6.5 3.9-.6 5.9-2.6 6.5-6.5z"/><path d="M18.5 15.5c.3 1.6 1 2.3 2.5 2.5-1.5.3-2.2 1-2.5 2.5-.3-1.5-1-2.2-2.5-2.5 1.5-.2 2.2-.9 2.5-2.5z"/></svg>';
+    const DADO = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="16" rx="3.5"/><circle cx="9" cy="9" r="1.1"/><circle cx="15" cy="9" r="1.1"/><circle cx="12" cy="12" r="1.1"/><circle cx="9" cy="15" r="1.1"/><circle cx="15" cy="15" r="1.1"/></svg>';
 
     const esc = texto => String(texto ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const norm = texto => String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLocaleLowerCase('pt-BR').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
     const dados = () => (typeof appData !== 'undefined' ? appData : {});
     const toast = (msg, erro) => window.showToast?.(msg, erro);
+    const semente = texto => [...String(texto)].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
     let filtro = 'afazer', eixoFiltro = '', busca = '', gerando = null;
-    const MAX_GERAR = 20;
+    const imagens = new Map(); // temaId -> dataUrl | 'carregando' | 'erro'
+    const criando = new Set();
+    let filaImagens = Promise.resolve();
 
     function banco() {
         const d = dados();
         if (!Array.isArray(d.temasRedacao)) d.temasRedacao = [];
         return d.temasRedacao;
     }
+    function ocultos() {
+        const d = dados();
+        if (!Array.isArray(d.temasOcultos)) d.temasOcultos = [];
+        return d.temasOcultos;
+    }
+    function mapaImagens() {
+        const d = dados();
+        if (!d.temasImagens || typeof d.temasImagens !== 'object' || Array.isArray(d.temasImagens)) d.temasImagens = {};
+        return d.temasImagens;
+    }
 
     function todos() {
         const proprios = banco();
         const chaves = new Set(proprios.map(t => norm(t.titulo)));
-        const oficiais = OFICIAIS.filter(([, titulo]) => !chaves.has(norm(titulo))).map(([ano, titulo, eixo]) => ({ id: `enem-${ano}`, titulo, eixo, origem: 'enem', ano }));
+        const escondidos = new Set(ocultos());
+        const oficiais = OFICIAIS.filter(([ano, titulo]) => !chaves.has(norm(titulo)) && !escondidos.has(`enem-${ano}`))
+            .map(([ano, titulo, eixo]) => ({ id: `enem-${ano}`, titulo, eixo, origem: 'enem', ano }));
         return [...proprios, ...oficiais];
     }
 
@@ -79,19 +89,59 @@
     const notaTotal = r => ['c1', 'c2', 'c3', 'c4', 'c5'].reduce((t, k) => t + (Number(r[k]) || 0), 0);
     const dataBr = iso => iso ? new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }).replaceAll('.', '') : '';
 
-    const LAPIS = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 17-.5 3.5L7 20l11-11-3-3z"/><path d="m13.5 7.5 3 3"/></svg>';
+    function ilustracao(tema) {
+        const arte = ARTE[tema.eixo] || ARTE_PADRAO;
+        const h = semente(tema.titulo);
+        const [a, b] = arte.cores;
+        const id = `g${h.toString(36)}`;
+        const bolhas = [0, 1, 2, 3].map(i => {
+            const x = (h >> (i * 5)) % 320, y = (h >> (i * 3 + 2)) % 150, r = 24 + ((h >> (i * 4)) % 46);
+            return `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" opacity="${(0.07 + i * 0.03).toFixed(2)}"/>`;
+        }).join('');
+        return `<svg class="tema-art" viewBox="0 0 320 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+            <defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
+            <rect width="320" height="150" fill="url(#${id})"/>${bolhas}
+            <path d="M-20 ${110 + (h % 25)} C 80 ${70 + (h % 40)}, 200 ${150 - (h % 30)}, 340 ${95 + (h % 30)} L340 170 L-20 170 Z" fill="#fff" opacity=".12"/>
+            <g transform="translate(212 34) rotate(${(h % 50) - 25} 40 40) scale(3.4)" fill="none" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" opacity=".92">${arte.icone}</g>
+        </svg>`;
+    }
+
+    function arteDoCartao(tema) {
+        const imagem = imagens.get(tema.id);
+        if (imagem && imagem.startsWith('data:image/')) return `<img class="tema-photo" src="${imagem}" alt="" loading="lazy">`;
+        const ocupada = criando.has(tema.id) || imagem === 'carregando';
+        const temImagemSalva = Boolean(mapaImagens()[tema.id]);
+        const botao = ocupada
+            ? `<span class="tema-card-ai is-busy">${BRILHO}<span>${criando.has(tema.id) ? 'Criando imagem…' : 'Carregando…'}</span></span>`
+            : temImagemSalva && imagem !== 'erro' ? '' : `<button type="button" class="tema-card-ai" data-imagem-tema="${esc(tema.id)}">${BRILHO}<span>Imagem com IA</span></button>`;
+        return ilustracao(tema) + botao;
+    }
+
     function cartao(tema) {
         const red = redacaoDoTema(tema);
-        const selo = tema.origem === 'enem' ? `ENEM ${esc(tema.ano)}` : '✦ IA';
+        const selo = tema.origem === 'enem' ? `ENEM ${esc(tema.ano)}` : 'Gerado por IA';
         const nota = red && red.status === 'corrected' && notaTotal(red) ? ` · nota ${notaTotal(red)}` : red && red.status !== 'corrected' ? ' · aguardando correção' : '';
         const rodape = red
             ? `<span class="tema-card-done">✓ Concluído${red.date ? ` em ${esc(dataBr(red.date))}` : ''}${nota}</span><button type="button" class="tema-card-again" data-escrever="${esc(tema.id)}">Escrever de novo</button>`
             : `<button type="button" class="tema-card-write" data-escrever="${esc(tema.id)}">${LAPIS}<span>Escrever sobre este tema</span><b aria-hidden="true">→</b></button>`;
-        const apagar = tema.origem === 'enem' ? '' : `<button type="button" class="tema-card-remove" data-apagar-tema="${esc(tema.id)}" aria-label="Remover tema" title="Remover tema">×</button>`;
-        return `<li class="tema-card${red ? ' is-done' : ''}">
-            <div class="tema-card-art">${ilustracao(tema)}<span class="tema-card-badge${tema.origem === 'enem' ? '' : ' is-ia'}">${selo}</span>${tema.eixo ? `<span class="tema-card-eixo">${esc(tema.eixo)}</span>` : ''}${apagar}</div>
-            <div class="tema-card-body"><h3>${esc(tema.titulo)}</h3>${tema.recorte ? `<p>${esc(tema.recorte)}</p>` : ''}<div class="tema-card-foot">${rodape}</div></div>
+        const apagar = red ? '' : `<button type="button" class="tema-card-remove" data-apagar-tema="${esc(tema.id)}" aria-label="Excluir o tema ${esc(tema.titulo)}" title="Excluir tema">×</button>`;
+        const nivel = NIVEIS[tema.nivel] ? `<span class="tema-chip nivel-${esc(tema.nivel)}">${NIVEIS[tema.nivel]}</span>` : '';
+        return `<li class="tema-card${red ? ' is-done' : ''}" data-tema-card="${esc(tema.id)}">
+            <div class="tema-card-art">${arteDoCartao(tema)}<span class="tema-card-badge${tema.origem === 'enem' ? '' : ' is-ia'}">${selo}</span>${apagar}</div>
+            <div class="tema-card-body"><div class="tema-card-chips">${tema.eixo ? `<span class="tema-chip">${esc(tema.eixo)}</span>` : ''}${nivel}</div>
+                <h3>${esc(tema.titulo)}</h3>${tema.recorte ? `<p>${esc(tema.recorte)}</p>` : ''}<div class="tema-card-foot">${rodape}</div></div>
         </li>`;
+    }
+
+    function visiveisAgora() {
+        return todos().filter(t => {
+            const feito = Boolean(redacaoDoTema(t));
+            if (filtro === 'afazer' && feito) return false;
+            if (filtro === 'concluidos' && !feito) return false;
+            if (eixoFiltro && norm(t.eixo) !== norm(eixoFiltro)) return false;
+            if (busca && !norm(t.titulo).includes(norm(busca))) return false;
+            return true;
+        });
     }
 
     function render() {
@@ -100,32 +150,110 @@
         const lista = todos();
         const concluidos = lista.filter(t => redacaoDoTema(t)).length;
         if (!box.dataset.ready) {
-            box.dataset.ready = '1';
-            box.innerHTML = `<section class="tema-bank" aria-labelledby="temaBankTitle">
-                <header class="tema-bank-hero"><span class="tema-bank-mark" aria-hidden="true">${LAPIS}</span><div><h2 id="temaBankTitle">Qual tema você vai escrever hoje?</h2>
-                    <p>Escolha uma proposta, escreva sua dissertação-argumentativa e registre a redação. O tema fica concluído na hora.</p>
-                    <div class="tema-bank-actions"><button type="button" class="tema-bank-btn primary" data-gerar-temas>✦ Gerar temas com IA</button><button type="button" class="tema-bank-btn" data-red-tab="redacoes">↺ Minhas redações</button></div></div></header>
-                <p class="tema-bank-count" id="temaBankCount"></p>
-                <div class="tema-progress"><span id="temaBankBar"></span></div>
+            box.dataset.ready = '2';
+            box.innerHTML = `<section class="widget tema-bank" aria-labelledby="temaBankTitle">
+                <header class="tema-bank-hero"><span class="tema-bank-mark" aria-hidden="true">${LAPIS}</span><div class="tema-bank-hero-copy"><span class="workspace-kicker">BANCO DE TEMAS</span><h2 id="temaBankTitle">Qual tema você vai escrever hoje?</h2>
+                    <p>Escolha uma proposta, escreva sua dissertação-argumentativa e registre a redação. O tema fica concluído na hora.</p></div>
+                    <div class="tema-bank-actions"><button type="button" class="cycle-btn primary" data-gerar-temas>✦ Gerar temas com IA</button><button type="button" class="cycle-btn" data-red-tab="redacoes">Minhas redações</button></div></header>
+                <div class="tema-bank-progress"><p id="temaBankCount"></p><div class="tema-progress"><span id="temaBankBar"></span></div></div>
                 <div class="tema-toolbar"><div class="enem-area-chips" role="group" aria-label="Filtrar temas"><button type="button" data-tema-filtro="afazer">A fazer</button><button type="button" data-tema-filtro="concluidos">Concluídos</button><button type="button" data-tema-filtro="todos">Todos</button></div>
                     <select class="cycle-input" data-tema-eixo aria-label="Filtrar por eixo"><option value="">Todos os eixos</option>${EIXOS.map(e => `<option>${esc(e)}</option>`).join('')}</select>
-                    <input type="search" class="cycle-input" data-tema-busca placeholder="Buscar tema" aria-label="Buscar tema"></div>
+                    <input type="search" class="cycle-input" data-tema-busca placeholder="Buscar tema" aria-label="Buscar tema">
+                    <button type="button" class="tema-clear" data-limpar-afazer hidden>Excluir os temas a fazer</button></div>
                 <ul class="tema-grid" id="temaBankList" aria-live="polite"></ul>
+                <p class="tema-restore" id="temaRestore" hidden><button type="button" data-restaurar-enem>Mostrar de novo os temas oficiais do ENEM que você excluiu</button></p>
             </section>`;
         }
-        document.getElementById('temaBankCount').textContent = `${lista.length} ${lista.length === 1 ? 'tema' : 'temas'} · ${concluidos} ${concluidos === 1 ? 'concluído' : 'concluídos'}. Um tema fica concluído quando você registra uma redação com ele.`;
+        document.getElementById('temaBankCount').textContent = `${lista.length} ${lista.length === 1 ? 'tema' : 'temas'} · ${concluidos} ${concluidos === 1 ? 'concluído' : 'concluídos'}`;
         document.getElementById('temaBankBar').style.width = `${lista.length ? Math.round(concluidos / lista.length * 100) : 0}%`;
         box.querySelectorAll('[data-tema-filtro]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.temaFiltro === filtro)));
-        const visiveis = lista.filter(t => {
-            const feito = Boolean(redacaoDoTema(t));
-            if (filtro === 'afazer' && feito) return false;
-            if (filtro === 'concluidos' && !feito) return false;
-            if (eixoFiltro && norm(t.eixo) !== norm(eixoFiltro)) return false;
-            if (busca && !norm(t.titulo).includes(norm(busca))) return false;
-            return true;
-        });
+        const visiveis = visiveisAgora();
+        const limpar = box.querySelector('[data-limpar-afazer]');
+        limpar.hidden = filtro !== 'afazer' || !visiveis.length;
+        limpar.textContent = `Excluir ${visiveis.length === 1 ? 'o tema' : `os ${visiveis.length} temas`} a fazer`;
+        document.getElementById('temaRestore').hidden = !ocultos().length;
         const ul = document.getElementById('temaBankList');
         ul.innerHTML = visiveis.length ? visiveis.map(cartao).join('') : `<li class="tema-empty">${filtro === 'concluidos' ? 'Nenhum tema concluído ainda. Escreva sobre um tema e registre a redação.' : 'Nenhum tema aqui. Gere novos temas com a IA.'}</li>`;
+        carregarImagens(visiveis);
+    }
+
+    function atualizarCartao(id) {
+        const li = document.querySelector(`#temaBankList [data-tema-card="${CSS.escape(id)}"]`);
+        const tema = todos().find(t => t.id === id);
+        if (li && tema) li.outerHTML = cartao(tema);
+    }
+
+    // Imagens salvas na nuvem: carrega as dos temas visíveis, uma vez por sessão.
+    function carregarImagens(lista) {
+        const mapa = mapaImagens();
+        for (const tema of lista) {
+            const docId = mapa[tema.id];
+            if (!docId || imagens.has(tema.id) || !window.kingCloud?.getReviewImage) continue;
+            imagens.set(tema.id, 'carregando');
+            window.kingCloud.getReviewImage(docId)
+                .then(img => imagens.set(tema.id, img.dataUrl))
+                .catch(() => imagens.set(tema.id, 'erro'))
+                .finally(() => atualizarCartao(tema.id));
+        }
+    }
+
+    function comprimir(base64, mimeType) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const largura = 768, altura = 384;
+                const canvas = document.createElement('canvas');
+                canvas.width = largura; canvas.height = altura;
+                const ctx = canvas.getContext('2d');
+                const escala = Math.max(largura / img.width, altura / img.height);
+                const w = img.width * escala, h = img.height * escala;
+                ctx.drawImage(img, (largura - w) / 2, (altura - h) / 2, w, h);
+                let url = canvas.toDataURL('image/webp', 0.82);
+                if (!url.startsWith('data:image/webp')) url = canvas.toDataURL('image/jpeg', 0.82);
+                resolve({ dataUrl: url, width: largura, height: altura, type: url.slice(5, url.indexOf(';')) });
+            };
+            img.onerror = () => reject(new Error('A imagem criada pela IA não pôde ser lida.'));
+            img.src = `data:${mimeType};base64,${base64}`;
+        });
+    }
+
+    async function criarImagem(tema, { silencioso = false } = {}) {
+        if (criando.has(tema.id)) return false;
+        criando.add(tema.id);
+        atualizarCartao(tema.id);
+        try {
+            await window.kingGeminiReady;
+            if (!window.kingGemini?.generateThemeImage) throw new Error('A IA não está disponível agora. Entre na sua conta e tente de novo.');
+            const bruta = await window.kingGemini.generateThemeImage({ titulo: tema.titulo, recorte: tema.recorte || '' });
+            const img = await comprimir(bruta.data, bruta.mimeType);
+            const docId = `tema-${String(tema.id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 70)}`;
+            if (window.kingCloud?.saveReviewImage) {
+                await window.kingCloud.saveReviewImage({ id: docId, reviewId: 'banco-temas', name: tema.titulo.slice(0, 100), type: img.type, width: img.width, height: img.height, dataUrl: img.dataUrl });
+                mapaImagens()[tema.id] = docId;
+                window.saveAppData?.();
+            }
+            imagens.set(tema.id, img.dataUrl);
+            return true;
+        } catch (error) {
+            if (!silencioso) toast(error?.message || 'Não foi possível criar a imagem agora.', true);
+            throw error;
+        } finally {
+            criando.delete(tema.id);
+            atualizarCartao(tema.id);
+        }
+    }
+
+    function criarImagensEmFila(temas) {
+        let feitas = 0, parou = false;
+        filaImagens = filaImagens.then(async () => {
+            for (const tema of temas) {
+                if (parou) break;
+                try { await criarImagem(tema, { silencioso: true }); feitas += 1; }
+                catch (error) { parou = true; toast(`${feitas ? `${feitas} ${feitas === 1 ? 'imagem criada' : 'imagens criadas'}. ` : ''}${error?.message || 'Não foi possível criar as imagens.'}`, true); }
+            }
+            if (!parou && feitas) toast(`✦ ${feitas} ${feitas === 1 ? 'imagem criada' : 'imagens criadas'} para os temas.`);
+        });
+        return filaImagens;
     }
 
     function escrever(id) {
@@ -138,48 +266,110 @@
         }, 60);
     }
 
+    function excluirTemas(lista) {
+        const ids = new Set(lista.map(t => t.id));
+        const mapa = mapaImagens();
+        for (const tema of lista) {
+            if (tema.origem === 'enem') { if (!ocultos().includes(tema.id)) ocultos().push(tema.id); }
+            if (mapa[tema.id]) { window.kingCloud?.deleteReviewImage?.(mapa[tema.id])?.catch?.(() => {}); delete mapa[tema.id]; }
+            imagens.delete(tema.id);
+        }
+        dados().temasRedacao = banco().filter(t => !ids.has(t.id));
+        window.saveAppData?.();
+        render();
+    }
+
     function abrirGerador() {
         document.getElementById('temaGenModal')?.remove();
         const overlay = document.createElement('div');
-        overlay.className = 'modal-overlay enem-tool-modal';
+        overlay.className = 'modal-overlay tema-gen-overlay';
         overlay.id = 'temaGenModal';
         overlay.setAttribute('role', 'dialog'); overlay.setAttribute('aria-modal', 'true'); overlay.setAttribute('aria-labelledby', 'temaGenTitle');
-        overlay.innerHTML = `<div class="modal-box"><button type="button" class="modal-close" data-close aria-label="Fechar">×</button>
-            <span class="workspace-kicker">BANCO DE TEMAS</span><h2 id="temaGenTitle">Gerar temas com IA</h2>
-            <p class="enem-tool-intro">A IA cria temas originais no estilo do ENEM, sem repetir os que você já tem. Você revisa antes de adicionar.</p>
-            <div class="cycle-form-group tema-qtd" data-qtd-box><span class="cycle-label" id="temaQtdLabel">Quantos temas (até ${MAX_GERAR})</span>
-                <div class="tema-qtd-row"><button type="button" data-qtd-step="-1" aria-label="Menos um tema">−</button><input type="number" class="cycle-input" data-qtd min="1" max="${MAX_GERAR}" value="10" inputmode="numeric" aria-labelledby="temaQtdLabel"><button type="button" data-qtd-step="1" aria-label="Mais um tema">+</button>
-                <input type="range" data-qtd-range min="1" max="${MAX_GERAR}" value="10" aria-label="Quantidade de temas"></div></div>
-            <fieldset class="tema-eixos"><legend>Eixos (deixe vazio para variar)</legend>${EIXOS.map(e => `<label><input type="checkbox" value="${esc(e)}"> ${esc(e)}</label>`).join('')}</fieldset>
-            <div data-preview></div>
-            <p class="enem-tool-intro" data-status role="status"></p>
-            <div class="enem-tool-actions"><button type="button" class="cycle-btn" data-close>Cancelar</button><button type="button" class="cycle-btn primary" data-go>Gerar temas</button></div></div>`;
+        overlay.innerHTML = `<div class="modal-box tema-gen">
+            <button type="button" class="modal-close" data-close aria-label="Fechar">×</button>
+            <header class="tema-gen-head"><span class="tema-gen-mark" aria-hidden="true">${BRILHO}</span><div><h2 id="temaGenTitle">Gerar temas com IA</h2><p>Temas originais no estilo do ENEM, sem repetir os que você já tem. Você revisa antes de adicionar.</p></div></header>
+            <div class="tema-gen-body" data-etapa="config">
+                <section class="tema-gen-field"><div class="tema-gen-label"><strong id="temaQtdLabel">Quantidade</strong><small>de 1 a ${MAX_GERAR} por vez</small></div>
+                    <div class="tema-qtd-row"><button type="button" data-qtd-step="-1" aria-label="Menos um tema">−</button><input type="number" class="cycle-input" data-qtd min="1" max="${MAX_GERAR}" value="10" inputmode="numeric" aria-labelledby="temaQtdLabel"><button type="button" data-qtd-step="1" aria-label="Mais um tema">+</button>
+                    <input type="range" data-qtd-range min="1" max="${MAX_GERAR}" value="10" aria-label="Quantidade de temas"></div></section>
+                <section class="tema-gen-field"><div class="tema-gen-label"><strong>Eixos</strong><small>Aleatório sorteia eixos variados</small></div>
+                    <div class="tema-gen-chips" role="group" aria-label="Eixos dos temas"><button type="button" class="tema-gen-chip is-random" data-eixo="" aria-pressed="true">${DADO}<span>Aleatório</span></button>${EIXOS.map(e => `<button type="button" class="tema-gen-chip" data-eixo="${esc(e)}" aria-pressed="false">${esc(e)}</button>`).join('')}</div></section>
+                <section class="tema-gen-field"><div class="tema-gen-label"><strong>Nível de dificuldade</strong><small data-nivel-ajuda>${NIVEL_AJUDA.medio}</small></div>
+                    <div class="tema-gen-segment" role="radiogroup" aria-label="Nível de dificuldade">${[['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil'], ['variado', 'Aleatório']].map(([v, r]) => `<button type="button" role="radio" data-nivel="${v}" aria-checked="${v === 'medio'}">${r}</button>`).join('')}</div></section>
+                <label class="tema-gen-toggle"><input type="checkbox" data-com-imagem checked><span class="tema-gen-switch" aria-hidden="true"></span><span><strong>Criar uma imagem com IA para cada tema</strong><small>As imagens aparecem nos cartões alguns segundos depois. Exige o plano Blaze no Firebase.</small></span></label>
+            </div>
+            <div class="tema-gen-body" data-etapa="revisao" hidden><p class="tema-gen-hint" data-revisao-texto></p><ul class="tema-gen-preview" data-preview></ul></div>
+            <p class="tema-gen-status" data-status role="status"></p>
+            <footer class="tema-gen-foot"><button type="button" class="cycle-btn" data-close>Cancelar</button><button type="button" class="cycle-btn primary" data-go>Gerar 10 temas</button></footer>
+        </div>`;
         document.body.append(overlay);
         const fechar = () => { gerando?.abort(); gerando = null; overlay.remove(); };
-        overlay.addEventListener('click', event => { if (event.target === overlay || event.target.closest('[data-close]')) fechar(); });
-        overlay.addEventListener('keydown', event => { if (event.key === 'Escape') fechar(); });
-        const qtd = overlay.querySelector('[data-qtd]');
-        const faixa = overlay.querySelector('[data-qtd-range]');
-        const quantidade = () => Math.max(1, Math.min(MAX_GERAR, Math.round(Number(qtd.value) || 1)));
-        const sincronizar = valor => { const v = Math.max(1, Math.min(MAX_GERAR, Math.round(Number(valor) || 1))); qtd.value = v; faixa.value = v; botao.textContent = candidatos ? botao.textContent : `Gerar ${v} ${v === 1 ? 'tema' : 'temas'}`; };
-        overlay.addEventListener('click', event => { const passo = event.target.closest('[data-qtd-step]'); if (passo) sincronizar(quantidade() + Number(passo.dataset.qtdStep)); });
-        faixa.addEventListener('input', () => sincronizar(faixa.value));
-        qtd.addEventListener('change', () => sincronizar(qtd.value));
-        qtd.addEventListener('input', () => { if (qtd.value !== '') faixa.value = quantidade(); });
         const botao = overlay.querySelector('[data-go]');
         const status = overlay.querySelector('[data-status]');
+        const qtd = overlay.querySelector('[data-qtd]');
+        const faixa = overlay.querySelector('[data-qtd-range]');
         let candidatos = null;
+        let nivel = 'medio';
+        const quantidade = () => Math.max(1, Math.min(MAX_GERAR, Math.round(Number(qtd.value) || 1)));
+        const textoBotao = () => { const v = quantidade(); botao.textContent = `Gerar ${v} ${v === 1 ? 'tema' : 'temas'}`; };
+        const sincronizar = valor => { const v = Math.max(1, Math.min(MAX_GERAR, Math.round(Number(valor) || 1))); qtd.value = v; faixa.value = v; if (!candidatos) textoBotao(); };
+        const eixosEscolhidos = () => [...overlay.querySelectorAll('[data-eixo]:not(.is-random)[aria-pressed="true"]')].map(b => b.dataset.eixo);
+
+        overlay.addEventListener('click', event => {
+            if (event.target === overlay || event.target.closest('[data-close]')) return fechar();
+            const passo = event.target.closest('[data-qtd-step]');
+            if (passo) return sincronizar(quantidade() + Number(passo.dataset.qtdStep));
+            const chip = event.target.closest('[data-eixo]');
+            if (chip) {
+                const aleatorio = overlay.querySelector('.tema-gen-chip.is-random');
+                if (chip === aleatorio) overlay.querySelectorAll('[data-eixo]').forEach(b => b.setAttribute('aria-pressed', String(b === aleatorio)));
+                else {
+                    chip.setAttribute('aria-pressed', String(chip.getAttribute('aria-pressed') !== 'true'));
+                    aleatorio.setAttribute('aria-pressed', String(!eixosEscolhidos().length));
+                }
+                return;
+            }
+            const opcao = event.target.closest('[data-nivel]');
+            if (opcao) {
+                nivel = opcao.dataset.nivel;
+                overlay.querySelectorAll('[data-nivel]').forEach(b => b.setAttribute('aria-checked', String(b === opcao)));
+                overlay.querySelector('[data-nivel-ajuda]').textContent = NIVEL_AJUDA[nivel];
+            }
+        });
+        overlay.addEventListener('keydown', event => { if (event.key === 'Escape') fechar(); });
+        faixa.addEventListener('input', () => sincronizar(faixa.value));
+        qtd.addEventListener('change', () => sincronizar(qtd.value));
+        qtd.addEventListener('input', () => { if (qtd.value !== '') { faixa.value = quantidade(); textoBotao(); } });
+        overlay.addEventListener('change', event => {
+            if (event.target.matches('[data-candidato]')) {
+                const n = overlay.querySelectorAll('[data-candidato]:checked').length;
+                botao.textContent = `Adicionar ${n} ${n === 1 ? 'tema' : 'temas'}`;
+                botao.disabled = !n;
+            }
+        });
+
         botao.addEventListener('click', async () => {
             if (candidatos) {
                 const escolhidos = [...overlay.querySelectorAll('[data-candidato]:checked')].map(i => candidatos[Number(i.dataset.candidato)]);
                 if (!escolhidos.length) return toast('Marque ao menos um tema.', true);
+                const comImagem = overlay.querySelector('[data-com-imagem]').checked;
                 const agora = Date.now();
-                banco().push(...escolhidos.map((t, i) => ({ id: `tema-${agora.toString(36)}-${i}`, titulo: t.titulo, eixo: EIXOS.find(e => norm(e) === norm(t.eixo)) || t.eixo, recorte: t.recorte, origem: 'ia', criadoEm: agora })));
+                const novos = escolhidos.map((t, i) => {
+                    const novo = { id: `tema-${agora.toString(36)}-${i}`, titulo: t.titulo, eixo: EIXOS.find(e => norm(e) === norm(t.eixo)) || t.eixo, recorte: t.recorte, origem: 'ia', criadoEm: agora };
+                    if (NIVEIS[t.nivel]) novo.nivel = t.nivel;
+                    return novo;
+                });
+                banco().unshift(...novos);
                 window.saveAppData?.();
                 fechar();
-                filtro = 'afazer';
+                filtro = 'afazer'; eixoFiltro = ''; busca = '';
+                const box = document.getElementById('enemWritingTools');
+                const campoEixo = box?.querySelector('[data-tema-eixo]'), campoBusca = box?.querySelector('[data-tema-busca]');
+                if (campoEixo) campoEixo.value = '';
+                if (campoBusca) campoBusca.value = '';
                 render();
-                toast(`✦ ${escolhidos.length} temas adicionados ao banco.`);
+                toast(`✦ ${novos.length} ${novos.length === 1 ? 'tema adicionado' : 'temas adicionados'} ao banco.${comImagem ? ' Criando as imagens…' : ''}`);
+                if (comImagem) criarImagensEmFila(novos);
                 return;
             }
             botao.disabled = true; status.textContent = `Gerando ${quantidade()} ${quantidade() === 1 ? 'tema' : 'temas'}…`;
@@ -188,26 +378,23 @@
                 if (!window.kingGemini?.generateEssayThemes) throw new Error('A IA não está disponível agora. Entre na sua conta e tente de novo.');
                 gerando = new AbortController();
                 const existentes = new Set(todos().map(t => norm(t.titulo)));
-                const lista = await window.kingGemini.generateEssayThemes({
-                    count: quantidade(),
-                    eixos: [...overlay.querySelectorAll('.tema-eixos input:checked')].map(i => i.value),
-                    avoid: todos().map(t => t.titulo), signal: gerando.signal,
-                });
-                candidatos = [];
-                for (const t of lista) { const k = norm(t.titulo); if (!existentes.has(k)) { existentes.add(k); candidatos.push(t); } }
-                if (!candidatos.length) throw new Error('A IA não trouxe temas novos. Tente de novo ou escolha outros eixos.');
-                overlay.querySelector('.tema-eixos').hidden = true;
-                overlay.querySelector('[data-qtd-box]').hidden = true;
-                overlay.querySelector('[data-preview]').innerHTML = `<ul class="tema-preview">${candidatos.map((t, i) => `<li><label><input type="checkbox" data-candidato="${i}" checked><span><strong>${esc(t.titulo)}</strong><small>${esc(t.eixo)}${t.recorte ? ` · ${esc(t.recorte)}` : ''}</small></span></label></li>`).join('')}</ul>`;
-                status.textContent = `${candidatos.length} temas novos. Desmarque os que não quiser.`;
-                botao.textContent = 'Adicionar ao banco';
+                const lista = await window.kingGemini.generateEssayThemes({ count: quantidade(), eixos: eixosEscolhidos(), nivel, avoid: todos().map(t => t.titulo), signal: gerando.signal });
+                const novos = [];
+                for (const t of lista) { const k = norm(t.titulo); if (!existentes.has(k)) { existentes.add(k); novos.push(t); } }
+                if (!novos.length) throw new Error('A IA não trouxe temas novos. Tente de novo ou escolha outros eixos.');
+                candidatos = novos;
+                overlay.querySelector('[data-etapa="config"]').hidden = true;
+                overlay.querySelector('[data-etapa="revisao"]').hidden = false;
+                overlay.querySelector('[data-revisao-texto]').textContent = `${candidatos.length} ${candidatos.length === 1 ? 'tema novo' : 'temas novos'}. Desmarque os que não quiser.`;
+                overlay.querySelector('[data-preview]').innerHTML = candidatos.map((t, i) => `<li><label><input type="checkbox" data-candidato="${i}" checked><span class="tema-gen-item"><span class="tema-card-chips">${t.eixo ? `<span class="tema-chip">${esc(t.eixo)}</span>` : ''}${NIVEIS[t.nivel] ? `<span class="tema-chip nivel-${esc(t.nivel)}">${NIVEIS[t.nivel]}</span>` : ''}</span><strong>${esc(t.titulo)}</strong>${t.recorte ? `<small>${esc(t.recorte)}</small>` : ''}</span></label></li>`).join('');
+                status.textContent = '';
+                botao.textContent = `Adicionar ${candidatos.length} ${candidatos.length === 1 ? 'tema' : 'temas'}`;
             } catch (error) {
                 if (error?.name !== 'AbortError') status.textContent = error?.message || 'Não foi possível gerar os temas agora.';
             } finally {
                 botao.disabled = false; gerando = null;
             }
         });
-        sincronizar(10);
         requestAnimationFrame(() => overlay.classList.add('active'));
     }
 
@@ -216,7 +403,7 @@
         if (!secao) return;
         const temas = aba === 'temas';
         secao.dataset.redView = temas ? 'temas' : 'redacoes';
-        secao.querySelectorAll('[data-red-tab]').forEach(botao => botao.setAttribute('aria-selected', String(botao.dataset.redTab === secao.dataset.redView)));
+        secao.querySelectorAll('.redacao-tabs [data-red-tab]').forEach(botao => botao.setAttribute('aria-selected', String(botao.dataset.redTab === secao.dataset.redView)));
         if (temas) render();
     }
 
@@ -226,13 +413,17 @@
         if (!alvo || !alvo.closest('#enemWritingTools')) return;
         if (alvo.dataset.temaFiltro) { filtro = alvo.dataset.temaFiltro; render(); }
         else if (alvo.dataset.escrever) escrever(alvo.dataset.escrever);
+        else if (alvo.dataset.imagemTema) { const tema = todos().find(t => t.id === alvo.dataset.imagemTema); if (tema) criarImagem(tema).catch(() => {}); }
         else if (alvo.hasAttribute('data-gerar-temas')) abrirGerador();
         else if (alvo.dataset.apagarTema) {
-            const tema = banco().find(t => t.id === alvo.dataset.apagarTema);
-            if (tema && window.confirm(`Remover o tema "${tema.titulo}" do banco? Suas redações continuam salvas.`)) {
-                dados().temasRedacao = banco().filter(t => t.id !== tema.id);
-                window.saveAppData?.(); render();
-            }
+            const tema = todos().find(t => t.id === alvo.dataset.apagarTema);
+            if (tema && window.confirm(`Excluir o tema "${tema.titulo}"?${tema.origem === 'enem' ? ' Você pode mostrar os temas oficiais de novo no fim da lista.' : ''}`)) excluirTemas([tema]);
+        } else if (alvo.hasAttribute('data-limpar-afazer')) {
+            const lista = visiveisAgora().filter(t => !redacaoDoTema(t));
+            if (lista.length && window.confirm(`Excluir ${lista.length === 1 ? 'o tema' : `os ${lista.length} temas`} a fazer${eixoFiltro || busca ? ' que aparecem com este filtro' : ''}? Temas concluídos e suas redações continuam salvos.`)) excluirTemas(lista);
+        } else if (alvo.hasAttribute('data-restaurar-enem')) {
+            dados().temasOcultos = [];
+            window.saveAppData?.(); render();
         }
     });
     document.addEventListener('input', event => {
@@ -247,5 +438,5 @@
     const inicial = () => mostrarAba('redacoes');
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', inicial, { once: true }); else setTimeout(inicial, 0);
 
-    window.KingTemasRedacao = Object.freeze({ render, todos, redacaoDoTema, abrirGerador, mostrarAba });
+    window.KingTemasRedacao = Object.freeze({ render, todos, redacaoDoTema, abrirGerador, mostrarAba, criarImagem });
 })();

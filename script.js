@@ -637,6 +637,16 @@ window.kingMasterCloudBridge = {
     }
 };
 
+// Zerar progresso (Ajustes): para o cronômetro e grava a versão zerada, que segue para a nuvem como qualquer outra alteração.
+window.KingAccountReset = {
+    ...(window.KingAccountReset || {}),
+    aplicar: () => {
+        clearInterval(timerInterval); isRunning = false; currentMode = 'estudo'; currentSeconds = 0;
+        appData = window.KingAccountReset.zerarProgresso(appData, defaultAppData);
+        localStorage.removeItem(window.KingTimerRecovery.KEY);
+        saveAppData();
+    }
+};
 function fecharMenuMovel() {
     const menu = document.getElementById('mainNavigation');
     const botao = document.getElementById('mobileNavToggle');

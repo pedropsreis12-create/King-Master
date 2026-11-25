@@ -1438,6 +1438,12 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             }
         },
         signOut: signOutSafely,
+        flushNow: async () => {
+            clearTimeout(uploadTimer); uploadTimer = null;
+            if (uploadInFlight) await uploadInFlight.catch(() => {});
+            runUpload();
+            if (uploadInFlight) await uploadInFlight;
+        },
         syncNow: () => currentUser ? reconcile(currentUser) : startSignIn(googleProvider, 'do Google').catch(error => updateCloudUi('error', null, describeAuthError(error))),
         saveErrorImage,
         getErrorImage,

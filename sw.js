@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261125-sync-v1';
+const CACHE_VERSION = 'king-master-20261125-zerar-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -16,6 +16,7 @@ const APP_SHELL = [
     './metas.js',
     './temas-redacao.js',
     './auto-backup.js',
+    './account-reset.js',
     './auth-warmup.js',
     './topic-core.js',
     './review-trail-core.js',

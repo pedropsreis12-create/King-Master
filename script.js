@@ -607,6 +607,7 @@ function excluirNotaRapida(id) {
 
 window.kingMasterCloudBridge = {
     exportData: () => JSON.parse(JSON.stringify(appData)),
+    timerRunning: () => Boolean(isRunning),
     resetForAccount: (profileName, accountUid) => {
         const fresh = { ...defaultAppData, accountUid: String(accountUid || ''), profileName: String(profileName || 'Estudante').trim().slice(0, 32) || 'Estudante', lastModifiedAt: Date.now() };
         localStorage.setItem('qg_pedro_data', JSON.stringify(fresh));

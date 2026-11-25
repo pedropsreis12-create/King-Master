@@ -6,7 +6,7 @@ import { readFile } from 'node:fs/promises';
 const syncSource = await readFile(new URL('../cloud-sync.js', import.meta.url), 'utf8');
 const stateSource = await readFile(new URL('../cloud-state.js', import.meta.url), 'utf8');
 
-async function start({ savedUid = '', remote = null, localAccountUid = '' } = {}) {
+async function start({ savedUid = '', remote = null, localAccountUid = '', localData = null } = {}) {
     const result = { resets: [], imports: [], writes: [], unlocked: false };
     const user = { uid: 'new-user', email: 'new@example.com', displayName: 'Nova pessoa' };
     const auth = { currentUser: null };
@@ -43,7 +43,7 @@ async function start({ savedUid = '', remote = null, localAccountUid = '' } = {}
         KING_MASTER_FIREBASE_CONFIG: { apiKey: 'fixture', authDomain: 'fixture', projectId: 'fixture', appId: 'fixture' },
         location: { hostname: 'example.com', search: '', reload() {} },
         kingMasterCloudBridge: {
-            exportData: () => ({ accountUid: localAccountUid, profileName: 'Outra pessoa', lastModifiedAt: 100 }),
+            exportData: () => JSON.parse(JSON.stringify(localData || { accountUid: localAccountUid, profileName: 'Outra pessoa', lastModifiedAt: 100 })),
             resetForAccount: (...args) => result.resets.push(args),
             importData: (...args) => result.imports.push(args)
         },
@@ -101,4 +101,20 @@ test('only an already recognized owner can upload local data', async () => {
     assert.equal(result.writes[0].ownerUid, 'new-user');
     assert.equal(result.writes[0].data.accountUid, 'new-user');
     assert.equal(result.resets.length, 0);
+});
+
+test('um aparelho com registros ainda não enviados junta com a nuvem mais nova em vez de perdê-los', async () => {
+    const result = await start({ savedUid: 'new-user', localData: {
+        accountUid: 'new-user', lastModifiedAt: 100, historyItems: [{ id: 1 }, { id: 2, materia: 'Feito no notebook' }]
+    }, remote: {
+        ownerUid: 'new-user', cloudRevision: 2, data: { accountUid: 'new-user', lastModifiedAt: 50, historyItems: [{ id: 1 }, { id: 3, materia: 'Feito no celular' }] }
+    } });
+    await result.enter();
+    assert.equal(result.writes.length, 1);
+    assert.equal(result.writes[0].cloudRevision, 3);
+    const ids = Array.from(result.writes[0].data.historyItems, item => item.id).sort();
+    assert.deepEqual(ids, [1, 2, 3]);
+    assert.equal(result.imports.length, 1);
+    assert.deepEqual(Array.from(result.imports[0][0].historyItems, item => item.id).sort(), [1, 2, 3]);
+    assert.equal(result.unlocked, false);
 });

@@ -862,15 +862,43 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
     const userDocument = user => firestoreSdk.doc(db, 'users', user.uid);
     const localSnapshot = () => window.kingMasterCloudBridge?.exportData?.() || null;
     const readIdentity = () => window.KingCloudState.parseIdentity(localStorage);
+    // Última versão que este aparelho e a nuvem tinham em comum. Serve para juntar edições
+    // feitas em dois aparelhos sem descartar nenhuma delas.
+    const syncBase = (() => {
+        let aberto = null;
+        const abrir = () => aberto ||= new Promise((resolve, reject) => {
+            const pedido = indexedDB.open('king-master-sync', 1);
+            pedido.onupgradeneeded = () => pedido.result.createObjectStore('base');
+            pedido.onsuccess = () => resolve(pedido.result);
+            pedido.onerror = () => reject(pedido.error);
+        });
+        const usar = (modo, acao) => abrir().then(banco => new Promise((resolve, reject) => {
+            const transacao = banco.transaction('base', modo);
+            const pedido = acao(transacao.objectStore('base'));
+            transacao.oncomplete = () => resolve(pedido?.result);
+            transacao.onerror = () => reject(transacao.error);
+        }));
+        return {
+            get: uid => usar('readonly', loja => loja.get(uid)).catch(() => undefined),
+            set: (uid, data, revision) => usar('readwrite', loja => loja.put({ revision, data, savedAt: Date.now() }, uid)).catch(() => {})
+        };
+    })();
+    const localHasUnsyncedChanges = () => {
+        const identity = readIdentity();
+        return Number(localSnapshot()?.lastModifiedAt || 0) > Number(identity?.lastLocalRevision || 0);
+    };
     const rememberIdentity = (user, cloudRevision, lastLocalRevision) => {
         localStorage.setItem(window.KingCloudState.IDENTITY_KEY, JSON.stringify(window.KingCloudState.identity(user.uid, cloudRevision, lastLocalRevision, clientId)));
     };
 
-    function downloadRemote(user, remoteData, cloudRevision, epoch = sessionEpoch) {
+    async function downloadRemote(user, remoteData, cloudRevision, epoch = sessionEpoch) {
         if (epoch !== sessionEpoch || currentUser?.uid !== user.uid) return;
         if (!remoteData || typeof remoteData !== 'object') throw new Error('O arquivo da nuvem está incompleto.');
         if (remoteData.accountUid && remoteData.accountUid !== user.uid) throw new Error('O arquivo da nuvem pertence a outra conta.');
         applyingRemote = true;
+        clearTimeout(uploadTimer); uploadTimer = null;
+        await syncBase.set(user.uid, remoteData, cloudRevision);
+        if (epoch !== sessionEpoch || currentUser?.uid !== user.uid) { applyingRemote = false; return; }
         rememberIdentity(user, cloudRevision, Number(remoteData.lastModifiedAt || 0));
         updateCloudUi('syncing', user, 'Baixando seu progresso mais recente…');
         setAuthFeedback('Recuperando seus dados neste dispositivo…', 'success');
@@ -884,6 +912,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         if (data.accountUid && data.accountUid !== user.uid) throw new Error('Os dados locais pertencem a outra conta.');
         updateCloudUi('syncing', user, explicit ? 'Enviando os dados deste dispositivo…' : 'Salvando alterações…');
         const reference = userDocument(user);
+        const base = await syncBase.get(user.uid);
         const outcome = await firestoreSdk.runTransaction(db, async transaction => {
             const snapshot = await transaction.get(reference);
             const remote = snapshot.exists() ? snapshot.data() : null;
@@ -893,7 +922,15 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             const remoteRevision = Number(remote?.cloudRevision || 0);
             const identity = readIdentity();
             if (remote?.data && identity?.uid === user.uid && remoteRevision > Number(identity.cloudRevision || 0)) {
-                return { remote: remote.data, revision: remoteRevision };
+                const localChanged = Number(data.lastModifiedAt || 0) > Number(identity.lastLocalRevision || 0);
+                if (!localChanged) return { remote: remote.data, revision: remoteRevision };
+                const merged = { ...window.KingCloudState.mergeData(base?.data, data, remote.data), accountUid: user.uid };
+                const mergedRevision = remoteRevision + 1;
+                transaction.set(reference, {
+                    ownerUid: user.uid, ownerEmail: user.email || '', cloudRevision: mergedRevision,
+                    sourceClientId: clientId, updatedAtMs: Date.now(), updatedAt: firestoreSdk.serverTimestamp(), data: merged
+                }, { merge: true });
+                return { remote: merged, revision: mergedRevision, merged: true };
             }
             const nextRevision = remoteRevision + 1;
             transaction.set(reference, {
@@ -903,8 +940,12 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             return { revision: nextRevision };
         });
         if (outcome.stale || epoch !== sessionEpoch || currentUser?.uid !== user.uid) return;
-        if (outcome.remote) return downloadRemote(user, outcome.remote, outcome.revision, epoch);
+        if (outcome.remote) {
+            if (outcome.merged) window.showToast?.('☁ Juntamos o que você registrou aqui com o que veio de outro aparelho.');
+            return downloadRemote(user, outcome.remote, outcome.revision, epoch);
+        }
         rememberIdentity(user, outcome.revision, Number(data.lastModifiedAt || 0));
+        syncBase.set(user.uid, { ...data, accountUid: user.uid }, outcome.revision);
         updateCloudUi('signed-in', user, 'Salvamento automático ativo.');
         return outcome.revision;
     }
@@ -930,10 +971,15 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
             window.kingMasterCloudBridge?.resetForAccount?.(user.displayName || user.email?.split('@')[0] || 'Estudante', user.uid);
             return 'reloading';
         }
-        if (decision === 'download') { downloadRemote(user, remote?.data, remoteRevision, epoch); return 'reloading'; }
+        if (decision === 'download') { await downloadRemote(user, remote?.data, remoteRevision, epoch); return 'reloading'; }
         accountReadyUid = user.uid;
-        if (decision === 'upload') await uploadLocal(user, true, epoch);
-        else updateCloudUi('signed-in', user, 'Todos os dados estão sincronizados.');
+        if (decision === 'merge' || decision === 'upload') {
+            await uploadLocal(user, true, epoch);
+            if (applyingRemote) return 'reloading';
+        } else {
+            updateCloudUi('signed-in', user, 'Todos os dados estão sincronizados.');
+            if (!(await syncBase.get(user.uid)) && local) syncBase.set(user.uid, local, remoteRevision);
+        }
         return epoch === sessionEpoch ? 'ready' : 'stale';
     }
 
@@ -949,7 +995,11 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                 if (revision > Number(identity?.cloudRevision || 0)) rememberIdentity(user, revision, Number(localSnapshot()?.lastModifiedAt || 0));
                 return;
             }
-            if (remote.data && revision > Number(identity?.cloudRevision || 0)) downloadRemote(user, remote.data, revision);
+            if (!remote.data || revision <= Number(identity?.cloudRevision || 0)) return;
+            // Com o cronômetro rodando, salva o tempo atual antes, para que ele entre na junção e não se perca.
+            if (window.kingMasterCloudBridge?.timerRunning?.()) { try { window.saveAppData?.(); } catch {} }
+            if (uploadTimer || uploadInFlight || localHasUnsyncedChanges()) { flushUpload(true); return; }
+            downloadRemote(user, remote.data, revision).catch(error => console.warn('Falha ao aplicar a versão da nuvem.', error?.message || error));
         }, () => { if (currentUser?.uid === user.uid) updateCloudUi('error', user, 'A atualização em tempo real parou. Confira a conexão e entre novamente se necessário.'); });
     }
 
@@ -1044,19 +1094,29 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         await imageRequest(() => firestoreSdk.deleteDoc(reviewImageDocument(imageId)));
     }
 
+    function runUpload() {
+        const user = currentUser;
+        if (!user || accountReadyUid !== user.uid || applyingRemote || signingOut) return;
+        if (uploadInFlight) { uploadInFlight.finally(() => { if (!uploadTimer) runUpload(); }); return; }
+        const upload = uploadLocal(user);
+        uploadInFlight = upload;
+        upload.catch(() => { if (currentUser?.uid === user.uid) updateCloudUi('error', user, 'Não foi possível sincronizar agora. Seus dados locais permanecem neste dispositivo.'); })
+            .finally(() => { if (uploadInFlight === upload) uploadInFlight = null; });
+    }
+    function flushUpload(force = false) {
+        if (!uploadTimer && !force) return;
+        clearTimeout(uploadTimer); uploadTimer = null;
+        runUpload();
+    }
     window.addEventListener('king-master-data-changed', () => {
         if (!currentUser || accountReadyUid !== currentUser.uid || applyingRemote || signingOut) return;
         clearTimeout(uploadTimer);
-        uploadTimer = setTimeout(() => {
-            uploadTimer = null;
-            const user = currentUser;
-            if (!user || accountReadyUid !== user.uid) return;
-            const upload = uploadLocal(user);
-            uploadInFlight = upload;
-            upload.catch(() => { if (currentUser?.uid === user.uid) updateCloudUi('error', user, 'Não foi possível sincronizar agora. Seus dados locais permanecem neste dispositivo.'); })
-                .finally(() => { if (uploadInFlight === upload) uploadInFlight = null; });
-        }, 1400);
+        uploadTimer = setTimeout(() => { uploadTimer = null; runUpload(); }, 1400);
     });
+    document.addEventListener?.('visibilitychange', () => { if (document.visibilityState === 'hidden') flushUpload(); });
+    window.addEventListener('pagehide', () => flushUpload());
+    // Ao voltar a ficar online, envia o que foi registrado sem internet.
+    window.addEventListener('online', () => { if (currentUser && accountReadyUid === currentUser.uid && localHasUnsyncedChanges()) flushUpload(true); });
 
     async function signOutSafely() {
         if (signingOut || !currentUser) return;

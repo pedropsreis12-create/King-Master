@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261124-icones-v1">
+    <link rel="stylesheet" href="enem-theme.css?v=20261125-perfil-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -1001,22 +1001,21 @@
                     <div class="subject-editor-layout">
                         <div class="subject-editor-fields">
                             <section class="subject-editor-section">
-                                <div class="subject-editor-section-title"><span>01</span><div><strong>Identidade</strong><small>Como esta matéria vai aparecer no seu painel.</small></div></div>
-                                <div class="cycle-form-group">
+                                                                <div class="cycle-form-group">
                                     <label class="cycle-label" for="cycleSubject">Nome da matéria</label>
-                                    <input type="text" id="cycleSubject" class="cycle-input" required autocomplete="off" maxlength="50" placeholder="Ex.: a matéria que você está estudando" oninput="atualizarPreviewMateria()">
+                                    <input type="text" id="cycleSubject" class="cycle-input" required autocomplete="off" maxlength="50" placeholder="Ex.: Biologia" oninput="atualizarPreviewMateria()">
                                 </div>
                                 <div class="cycle-form-group">
                                     <label class="cycle-label" for="cycleArea">Área do ENEM</label>
-                                    <select id="cycleArea" class="cycle-input"><option value="">Descobrir pelo nome</option><option value="linguagens">Linguagens</option><option value="humanas">Ciências Humanas</option><option value="natureza">Ciências da Natureza</option><option value="matematica">Matemática</option><option value="outra">Outra / Redação</option></select>
+                                    <select id="cycleArea" class="cycle-input" onchange="atualizarPreviewMateria()"><option value="">Descobrir pelo nome</option><option value="linguagens">Linguagens</option><option value="humanas">Ciências Humanas</option><option value="natureza">Ciências da Natureza</option><option value="matematica">Matemática</option><option value="outra">Outra / Redação</option></select>
                                 </div>
-                                <div class="cycle-form-group subject-icon-field">
+                                <div class="cycle-form-group subject-icon-field" hidden>
                                     <label class="cycle-label" for="cycleIcon">Símbolo da matéria</label>
                                     <select id="cycleIcon" class="cycle-input" onchange="atualizarPreviewMateria()"><option value="●">● Essencial</option><option value="∑">∑ Exatas</option><option value="✦">✦ Destaque</option><option value="⌘">⌘ Tecnologia</option><option value="◈">◈ Ciências</option><option value="✎">✎ Linguagens</option><option value="◎">◎ Humanas</option><option value="⚗">⚗ Laboratório</option></select>
                                     <small class="field-help">O método usado será registrado em cada sessão, não na matéria.</small>
                                 </div>
                                 <fieldset class="subject-color-fieldset">
-                                    <legend class="cycle-label">Cor de identificação</legend>
+                                    <legend class="cycle-label">Cor</legend>
                                     <div class="color-preset-group">
                                         <button type="button" class="color-preset" data-color="#007aff" style="--preset-color:#007aff" onclick="selecionarCorPreset(this, '#007aff')" aria-label="Azul"></button>
                                         <button type="button" class="color-preset" data-color="#5e5ce6" style="--preset-color:#5e5ce6" onclick="selecionarCorPreset(this, '#5e5ce6')" aria-label="Índigo"></button>
@@ -1031,7 +1030,7 @@
                             </section>
 
                             <details class="subject-editor-disclosure" id="cyclePlanDetails">
-                                <summary><span class="subject-editor-section-title"><span>02</span><span><strong>Plano semanal <em>opcional</em></strong><small id="cyclePlanSummary">Fora da organização automática</small></span></span><b aria-hidden="true">⌄</b></summary>
+                                <summary><span class="subject-editor-section-title"><span><strong>Cronograma <em>opcional</em></strong><small id="cyclePlanSummary">Fora da organização automática</small></span></span><b aria-hidden="true">⌄</b></summary>
                                 <div class="subject-editor-disclosure-body">
                                     <div class="form-grid two subject-plan-grid">
                                         <div class="cycle-form-group">
@@ -1054,18 +1053,18 @@
                             </details>
 
                             <details class="subject-editor-disclosure" id="cycleTopicsDetails">
-                                <summary><span class="subject-editor-section-title"><span>03</span><span><strong>Primeiros tópicos <em>opcional</em></strong><small id="cycleTopicSummary">Você também pode adicioná-los depois</small></span></span><b aria-hidden="true">⌄</b></summary>
+                                <summary><span class="subject-editor-section-title"><span><strong>Assuntos <em>opcional</em></strong><small id="cycleTopicSummary">Você também pode adicioná-los depois</small></span></span><b aria-hidden="true">⌄</b></summary>
                                 <div class="subject-editor-disclosure-body">
                                     <div class="cycle-form-group subject-topics-field">
-                                        <label class="cycle-label" for="cycleInitialTopics">Um tópico por linha</label>
-                                        <textarea id="cycleInitialTopics" class="cycle-input" rows="5" maxlength="1600" placeholder="Escreva os conteúdos que deseja estudar" oninput="atualizarContagemTopicosMateria()"></textarea>
+                                        <label class="cycle-label" for="cycleInitialTopics">Um assunto por linha</label>
+                                        <textarea id="cycleInitialTopics" class="cycle-input" rows="5" maxlength="1600" placeholder="Ex.: Ecologia&#10;Genética&#10;Citologia" oninput="atualizarContagemTopicosMateria()"></textarea>
                                         <div class="subject-field-footer"><small class="field-help" id="cycleTopicsHelp">Tópicos repetidos serão ignorados.</small><strong id="cycleTopicCount" aria-live="polite">0 tópicos</strong></div>
                                     </div>
                                 </div>
                             </details>
                         </div>
 
-                        <aside class="subject-live-preview" id="cycleLivePreview" style="--subject-preview:#007aff" aria-live="polite">
+                        <aside class="subject-live-preview" id="cycleLivePreview" hidden style="--subject-preview:#007aff" aria-live="polite">
                             <span class="subject-preview-kicker">PRÉVIA NO PAINEL</span>
                             <div class="subject-preview-card">
                                 <span class="subject-preview-glow" aria-hidden="true"></span>
@@ -1078,7 +1077,7 @@
                             <div class="subject-preview-tip"><span aria-hidden="true">✦</span><p><strong>Você mantém o controle</strong>A matéria pode existir sem entrar no cronograma.</p></div>
                         </aside>
                     </div>
-                    <footer class="subject-editor-footer"><p id="cycleSaveHint">Somente o nome é obrigatório.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('cycleModal')">Cancelar</button><button type="submit" class="cycle-btn primary" id="cycleSaveButton">Criar matéria</button></div></footer>
+                    <footer class="subject-editor-footer"><p id="cycleSaveHint">Só o nome é obrigatório.</p><div class="cycle-modal-actions"><button type="button" class="cycle-btn" onclick="fecharModal('cycleModal')">Cancelar</button><button type="submit" class="cycle-btn primary" id="cycleSaveButton">Criar matéria</button></div></footer>
                 </form>
             </div>
         </div>
@@ -1528,9 +1527,11 @@
     <script src="study-evolution-core.js?v=20261006-v1"></script>
     <script src="enem-areas.js?v=20261123-metas-v1"></script>
     <script src="subject-icons.js?v=20261124-icones-v1"></script>
-    <script src="script.js?v=20261125-sync-v1"></script>
+    <script src="account-reset.js?v=20261125-zerar-v1"></script>
+    <script src="script.js?v=20261125-materia-v1"></script>
     <script src="enem-tools.js?v=20261123-temas-v1"></script>
     <script src="metas.js?v=20261123-metas-v1"></script>
+    <script src="profile-enem.js?v=20261125-perfil-v1"></script>
     <script src="temas-redacao.js?v=20261123-abas-v1"></script>
     <script src="auto-backup.js?v=20261123-tools-v1"></script>
     <script src="notebook.js?v=20261006-v2"></script>
@@ -1555,7 +1556,7 @@
     <script src="modal-accessibility.js?v=20260929-overhaul-v4"></script>
     <script src="profile-overhaul.js?v=20261015-search-v1"></script>
     <script src="cloud-state.js?v=20261125-sync-v1"></script>
-    <script type="module" src="cloud-sync.js?v=20261125-sync-v1"></script>
+    <script type="module" src="cloud-sync.js?v=20261125-zerar-v1"></script>
     <script type="module" src="public-ranking.js?v=20261008-public-ranking-v3"></script>
     <script type="module" src="master-access.js?v=20261008-v1"></script>
 </body>

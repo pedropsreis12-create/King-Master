@@ -130,15 +130,18 @@ test('metas automáticas medem horas e questões no período e marcam a meta com
 
 test('banco de temas marca o tema como concluído quando há redação com o mesmo tema', async () => {
   const vm = await import('node:vm');
+  const provas = await readFile(new URL('../temas-provas.js', import.meta.url), 'utf8');
   const source = await readFile(new URL('../temas-redacao.js', import.meta.url), 'utf8');
   const scope = {
     window: { addEventListener() {} }, document: { readyState: 'complete', addEventListener() {}, querySelector: () => null, getElementById: () => null },
     appData: { temasRedacao: [{ id: 't1', titulo: 'Desafios para ampliar a leitura entre jovens no Brasil', origem: 'ia' }], redacaoItems: [{ theme: 'desafios para ampliar a leitura entre jovens no Brasil.', date: '2026-11-20' }] },
     setTimeout, Date, Number, String, Set, Array, Object,
   };
-  vm.runInNewContext(`${source}; this.T = window.KingTemasRedacao;`, scope);
+  vm.runInNewContext(`${provas}; ${source}; this.T = window.KingTemasRedacao;`, scope);
   const todos = scope.T.todos();
-  assert.ok(todos.length >= 13);
+  assert.ok(todos.length >= 90);
+  for (const banca of ['ENEM', 'FUVEST', 'UNICAMP', 'UNESP', 'UERJ']) assert.ok(todos.some(t => t.origem === 'prova' && t.banca === banca), banca);
+  assert.ok(todos.some(t => t.id === 'enem-2024'), 'temas do ENEM mantêm o id antigo');
   assert.ok(scope.T.redacaoDoTema(todos.find(t => t.id === 't1')));
-  assert.equal(scope.T.redacaoDoTema(todos.find(t => t.origem === 'enem')), null);
+  assert.equal(scope.T.redacaoDoTema(todos.find(t => t.origem === 'prova')), null);
 });

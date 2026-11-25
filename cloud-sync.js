@@ -581,7 +581,7 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         },
         async generateEssayThemes(payload = {}) {
             if (!await appCheckReady) await appCheckSdk.getToken(appCheck, false);
-            const count = Math.max(1, Math.min(30, Number(payload.count) || 15));
+            const count = Math.max(1, Math.min(20, Number(payload.count) || 10));
             const eixos = (Array.isArray(payload.eixos) ? payload.eixos : []).map(value => String(value).trim().slice(0, 30)).filter(Boolean).slice(0, 10);
             const avoid = (Array.isArray(payload.avoid) ? payload.avoid : []).map(value => String(value).trim().slice(0, 160)).filter(Boolean).slice(-120);
             const prompt = `Crie ${count} temas de redação diferentes entre si. ${eixos.length ? `Use apenas estes eixos: ${JSON.stringify(eixos)}.` : 'Varie os eixos.'} Não repita nem reformule estes temas que o aluno já tem: ${JSON.stringify(avoid)}.`;

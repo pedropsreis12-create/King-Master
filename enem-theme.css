@@ -433,3 +433,56 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 }
 @media (max-width: 900px) { #perfil.km-profile-v2 .profile-stats-panel .profile-stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; grid-template-rows: none !important; gap: 10px; } #perfil.km-profile-v2 .profile-stats-panel .profile-stat-card { min-height: 0 !important; } }
 @media (max-width: 600px) { #perfil.km-profile-v2 .km-identity-signals { display: flex; flex-wrap: wrap; gap: 6px; } #perfil.km-profile-v2 .km-identity-signals span { width: auto !important; } }
+
+/* Banco de temas em cartões, num painel escuro */
+#redacao .tema-bank { padding: clamp(18px, 3vw, 32px); border: 0; border-radius: 22px; background: radial-gradient(900px 380px at 10% -20%, rgba(124, 92, 255, .28), transparent 60%), #171a33; color: #eef0ff; box-shadow: 0 18px 50px rgba(17, 20, 45, .25); }
+#redacao .tema-bank-hero { display: flex; align-items: flex-start; gap: 20px; }
+#redacao .tema-bank-mark { flex: none; display: grid; place-items: center; width: 68px; height: 68px; border-radius: 22px; background: linear-gradient(135deg, #7c5cff, #4dabf7); box-shadow: 0 12px 30px rgba(124, 92, 255, .45); }
+#redacao .tema-bank-mark svg { width: 34px; height: 34px; fill: none; stroke: #fff; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#redacao .tema-bank-hero h2 { margin: 2px 0 8px; color: #fff; font-size: clamp(1.4rem, 2.6vw, 2.1rem); font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+#redacao .tema-bank-hero p { margin: 0; max-width: 620px; color: #b9bddb; font-size: .95rem; line-height: 1.55; }
+#redacao .tema-bank-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+#redacao .tema-bank-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .22); border-radius: 99px; background: transparent; color: #fff; font: 600 .86rem/1 inherit; cursor: pointer; }
+#redacao .tema-bank-btn.primary { border-color: transparent; background: rgba(124, 92, 255, .28); color: #d9d1ff; }
+#redacao .tema-bank-btn:hover { background: rgba(255, 255, 255, .1); }
+#redacao .tema-bank-btn.primary:hover { background: rgba(124, 92, 255, .42); }
+#redacao .tema-bank-count { margin: 22px 0 10px; color: #9ea3c7; font-size: .82rem; }
+#redacao .tema-bank .tema-progress { margin: 0 0 16px; background: rgba(255, 255, 255, .1); }
+#redacao .tema-bank .tema-progress span { background: linear-gradient(90deg, #51cf66, #94d82d); }
+#redacao .tema-bank .tema-toolbar { margin-bottom: 18px; }
+#redacao .tema-bank .enem-area-chips button { border-color: rgba(255, 255, 255, .18); background: transparent; color: #c9cce6; }
+#redacao .tema-bank .enem-area-chips button[aria-pressed="true"] { border-color: transparent; background: #7c5cff; color: #fff; }
+#redacao .tema-bank .tema-toolbar .cycle-input { border-color: rgba(255, 255, 255, .16); background: rgba(255, 255, 255, .06); color: #fff; }
+#redacao .tema-bank .tema-toolbar .cycle-input::placeholder { color: #8f94b8; }
+#redacao .tema-bank .tema-toolbar select option { color: #111827; }
+#redacao .tema-grid { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 18px; }
+#redacao .tema-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255, 255, 255, .08); border-radius: 18px; background: #232748; transition: transform .15s, border-color .15s; }
+#redacao .tema-card:hover { transform: translateY(-2px); border-color: rgba(124, 92, 255, .5); }
+#redacao .tema-card-art { position: relative; aspect-ratio: 2 / 1; overflow: hidden; }
+#redacao .tema-art { display: block; width: 100%; height: 100%; }
+#redacao .tema-card-badge { position: absolute; top: 12px; left: 12px; padding: 4px 10px; border-radius: 99px; background: rgba(17, 20, 45, .78); color: #fff; font: 800 .72rem/1.2 ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: .02em; }
+#redacao .tema-card-badge.is-ia { background: rgba(124, 92, 255, .9); font-family: inherit; }
+#redacao .tema-card-eixo { position: absolute; left: 12px; bottom: 10px; padding: 3px 9px; border-radius: 99px; background: rgba(255, 255, 255, .88); color: #1f2340; font-size: .68rem; font-weight: 700; }
+#redacao .tema-card-remove { position: absolute; top: 8px; right: 8px; width: 30px; height: 30px; border: 0; border-radius: 50%; background: rgba(17, 20, 45, .6); color: #fff; font-size: 1rem; cursor: pointer; opacity: 0; transition: opacity .15s; }
+#redacao .tema-card:hover .tema-card-remove, #redacao .tema-card-remove:focus-visible { opacity: 1; }
+#redacao .tema-card-body { display: flex; flex: 1; flex-direction: column; gap: 8px; padding: 16px 18px 16px; }
+#redacao .tema-card-body h3 { margin: 0; color: #fff; font-size: 1.02rem; font-weight: 700; line-height: 1.35; text-transform: none; letter-spacing: 0; }
+#redacao .tema-card-body p { margin: 0; color: #a7abcc; font-size: .8rem; line-height: 1.45; }
+#redacao .tema-card-foot { margin-top: auto; padding-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+#redacao .tema-card-write { display: inline-flex; align-items: center; gap: 8px; padding: 4px 0; border: 0; background: none; color: #a99bff; font: 600 .88rem/1.2 inherit; cursor: pointer; }
+#redacao .tema-card-write svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#redacao .tema-card-write b { transition: transform .15s; }
+#redacao .tema-card-write:hover { color: #c9bfff; }
+#redacao .tema-card-write:hover b { transform: translateX(3px); }
+#redacao .tema-card-done { color: #69db7c; font-size: .82rem; font-weight: 700; }
+#redacao .tema-card-again { padding: 0; border: 0; background: none; color: #9ea3c7; font: 600 .78rem/1.2 inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+#redacao .tema-card.is-done .tema-card-art { filter: saturate(.55); }
+#redacao .tema-bank .tema-empty { grid-column: 1 / -1; padding: 30px; color: #a7abcc; text-align: center; }
+#redacao .tema-bank :is(button, input, select):focus-visible { outline: 2px solid #a99bff; outline-offset: 2px; }
+@media (max-width: 640px) { #redacao .tema-bank-hero { flex-direction: column; gap: 14px; } #redacao .tema-bank-mark { width: 52px; height: 52px; border-radius: 16px; } #redacao .tema-card-remove { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #redacao .tema-card, #redacao .tema-card-write b { transition: none; } }
+/* Gerador: quantidade de 1 a 20 */
+.tema-qtd-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tema-qtd-row button { width: 38px; height: 38px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--card-bg); color: var(--text-main); font-size: 1.1rem; cursor: pointer; }
+.tema-qtd-row input[type="number"] { width: 72px; text-align: center; font-weight: 700; }
+.tema-qtd-row input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--accent-color); }

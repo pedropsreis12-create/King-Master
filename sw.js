@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261125-desfaz-v1';
+const CACHE_VERSION = 'king-master-20261125-questoes-v2';
 const APP_SHELL = [
     './',
     './index.html',
@@ -37,6 +37,8 @@ const APP_SHELL = [
     './question-pace-core.js',
     './question-pace.js',
     './question-pace.css',
+    './questoes-banco.js',
+    './questoes-banco.css',
     './error-ai.css',
     './schedule-core.js',
     './schedule-planner.js',

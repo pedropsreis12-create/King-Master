@@ -427,10 +427,10 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
         generationConfig: {
             maxOutputTokens: 4000,
             responseMimeType: 'application/json',
-            responseSchema: S.object({ properties: { temas: S.array({ items: S.object({ properties: { titulo: S.string(), eixo: S.string(), recorte: S.string(), nivel: S.string() } }) }) } }),
+            responseSchema: S.object({ properties: { temas: S.array({ items: S.object({ properties: { titulo: S.string(), eixo: S.string(), recorte: S.string(), nivel: S.string(), busca: S.string() } }) }) } }),
             thinkingConfig: { thinkingLevel: aiSdk.ThinkingLevel.MINIMAL || aiSdk.ThinkingLevel.LOW }
         },
-        systemInstruction: 'Você cria propostas ORIGINAIS de tema de redação dissertativo-argumentativa no formato do ENEM, em português do Brasil. Cada título segue o estilo do ENEM (por exemplo: "Desafios para...", "Caminhos para combater...", "O impacto de... na sociedade brasileira") e trata de um problema social brasileiro que admite proposta de intervenção. Não repita temas já aplicados no ENEM nem os temas que o aluno já tem. Não cite dados, leis ou números. O campo recorte explica em uma frase o problema central a discutir. O campo eixo é uma única palavra entre: Educação, Saúde, Meio ambiente, Tecnologia, Cidadania, Cultura, Trabalho, Segurança, Desigualdade, Mobilidade. O campo nivel é "facil", "medio" ou "dificil": fácil é um problema concreto e familiar, que se discute com repertório comum; médio é o padrão do ENEM; difícil é um problema mais abstrato ou pouco debatido, com recorte específico, que exige repertório sociocultural elaborado. Responda exclusivamente JSON com temas:[{titulo,eixo,recorte,nivel}].'
+        systemInstruction: 'Você cria propostas ORIGINAIS de tema de redação dissertativo-argumentativa no formato do ENEM, em português do Brasil. Cada título segue o estilo do ENEM (por exemplo: "Desafios para...", "Caminhos para combater...", "O impacto de... na sociedade brasileira") e trata de um problema social brasileiro que admite proposta de intervenção. Não repita temas já aplicados no ENEM nem os temas que o aluno já tem. Não cite dados, leis ou números. O campo recorte explica em uma frase o problema central a discutir. O campo eixo é uma única palavra entre: Educação, Saúde, Meio ambiente, Tecnologia, Cidadania, Cultura, Trabalho, Segurança, Desigualdade, Mobilidade. O campo nivel é "facil", "medio" ou "dificil": fácil é um problema concreto e familiar, que se discute com repertório comum; médio é o padrão do ENEM; difícil é um problema mais abstrato ou pouco debatido, com recorte específico, que exige repertório sociocultural elaborado. O campo busca tem de 2 a 5 palavras em inglês para procurar uma foto ilustrativa em um banco de imagens: descreva pessoas, lugares ou objetos concretos e respeitosos ligados ao tema, sem violência, sem nomes próprios e sem palavras abstratas. Responda exclusivamente JSON com temas:[{titulo,eixo,recorte,nivel,busca}].'
     }, { timeout: 45000 });
     const MODALIDADE_IMAGEM = aiSdk.ResponseModality?.IMAGE || 'IMAGE';
     const modelosImagem = ['gemini-3.1-flash-lite-image', 'gemini-3.1-flash-image'].map(model => aiSdk.getGenerativeModel(firebaseAI, {
@@ -600,7 +600,8 @@ Formate com parágrafos curtos, listas e negrito quando ajudam. Use títulos cur
                 titulo: String(item?.titulo || '').replace(/\s+/g, ' ').trim().slice(0, 160),
                 eixo: String(item?.eixo || '').trim().slice(0, 30),
                 recorte: String(item?.recorte || '').replace(/\s+/g, ' ').trim().slice(0, 240),
-                nivel: niveis[item?.nivel] ? item.nivel : (nivel === 'variado' ? 'medio' : nivel)
+                nivel: niveis[item?.nivel] ? item.nivel : (nivel === 'variado' ? 'medio' : nivel),
+                busca: String(item?.busca || '').replace(/[^\p{L}\p{N} -]+/gu, ' ').replace(/\s+/g, ' ').trim().slice(0, 80)
             })).filter(item => item.titulo.length >= 12).slice(0, count);
         },
         async generateThemeImage(payload = {}) {

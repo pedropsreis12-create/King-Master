@@ -532,3 +532,28 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 .tema-qtd-row button { width: 38px; height: 38px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--card-bg); color: var(--text-main); font-size: 1.1rem; cursor: pointer; }
 .tema-qtd-row input[type="number"] { width: 72px; text-align: center; font-weight: 700; }
 .tema-qtd-row input[type="range"] { flex: 1; min-width: 140px; accent-color: var(--accent-color); }
+
+/* Fotos do Pexels no banco de temas */
+#redacao .tema-photo-credit { position: absolute; left: 0; right: 0; bottom: 0; padding: 18px 10px 6px; background: linear-gradient(transparent, rgba(0, 0, 0, .55)); color: rgba(255, 255, 255, .92); font-size: .66rem; line-height: 1.2; }
+#redacao .tema-photo-credit a { color: #fff; text-decoration: underline; text-underline-offset: 2px; }
+#redacao .tema-card-ai.is-icon { width: 30px; height: 30px; padding: 0; justify-content: center; font-size: 1rem; bottom: auto; top: 46px; right: 8px; color: #374151; opacity: 0; transition: opacity .15s; }
+#redacao .tema-card:hover .tema-card-ai.is-icon, #redacao .tema-card-ai.is-icon:focus-visible { opacity: 1; }
+#redacao .tema-card-ai svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#redacao .tema-photos-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 99px; background: var(--card-bg); color: var(--text-main); font: 600 .8rem/1 inherit; cursor: pointer; }
+#redacao .tema-photos-btn svg, #redacao .tema-config-pexels svg, .tema-gen-keylink svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#redacao .tema-photos-btn:hover { border-color: var(--accent-color); color: var(--accent-color); }
+#redacao .tema-bank-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 16px; }
+#redacao .tema-bank-foot .tema-restore { margin: 0; }
+#redacao .tema-config-pexels { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 4px 0; border: 0; background: none; color: var(--text-muted); font: 600 .78rem/1.2 inherit; cursor: pointer; }
+#redacao .tema-config-pexels:hover { color: var(--text-main); }
+.tema-gen-segment.is-three { grid-template-columns: repeat(3, 1fr); }
+.tema-gen-keylink { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; padding: 4px 0; border: 0; background: none; color: var(--accent-color); font: 700 .8rem/1.2 inherit; cursor: pointer; }
+.tema-gen-keylink[hidden] { display: none; }
+.tema-gen-mark.is-photo { background: color-mix(in srgb, var(--accent-color) 12%, #fff); color: var(--accent-color); }
+.tema-gen-mark.is-photo svg { fill: none; stroke: currentColor; stroke-width: 1.8; }
+.tema-gen-small { width: min(520px, calc(100vw - 28px)); }
+.pexels-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--text-main); font-size: .86rem; line-height: 1.5; }
+.pexels-steps a { color: var(--accent-color); font-weight: 700; }
+.tema-gen-foot .tema-gen-remove-key { margin-right: auto; color: #c92a2a; }
+@media (max-width: 760px) { #redacao .tema-card-ai.is-icon { opacity: 1; } }
+@media (max-width: 520px) { .tema-gen-segment.is-three { grid-template-columns: 1fr; } }

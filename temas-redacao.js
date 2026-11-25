@@ -152,6 +152,26 @@
         if (feitas) toast(`📷 ${feitas} ${feitas === 1 ? 'foto colocada' : 'fotos colocadas'} nos temas.`);
     }
 
+    // Automático: com a chave salva, todo tema sem imagem ganha uma foto quando aparece na lista.
+    const autoFotosLigado = () => dados().pexelsAuto !== false;
+    const tentadosAuto = new Set();
+    let autoRodando = false, autoParado = false;
+    function colocarFotosAutomaticamente(lista) {
+        if (autoRodando || autoParado || !chavePexels() || !autoFotosLigado()) return;
+        const faltam = lista.filter(t => !t.semImagem && !t.imagemIa && !mapaFotos()[t.id] && !mapaImagens()[t.id]
+            && !tentadosAuto.has(t.id) && !buscandoFoto.has(t.id) && !criando.has(t.id));
+        if (!faltam.length) return;
+        autoRodando = true;
+        (async () => {
+            for (const tema of faltam) {
+                tentadosAuto.add(tema.id);
+                try { await buscarFoto(tema, { silencioso: true }); }
+                catch (error) { autoParado = true; console.warn('Fotos automáticas pausadas.', error?.message || error); break; }
+            }
+            autoRodando = false;
+        })();
+    }
+
     function abrirChavePexels(depois) {
         document.getElementById('pexelsKeyModal')?.remove();
         const overlay = document.createElement('div');
@@ -164,6 +184,7 @@
             <div class="tema-gen-body">
                 <ol class="pexels-steps"><li>Abra <a href="https://www.pexels.com/api/" target="_blank" rel="noopener">pexels.com/api</a> e entre ou crie uma conta grátis.</li><li>Clique em <b>Your API Key</b>, preencha o pedido (pode escrever "site de estudos para o ENEM") e copie a chave.</li><li>Cole a chave abaixo.</li></ol>
                 <label class="cycle-form-group"><span class="cycle-label">Chave do Pexels</span><input type="text" class="cycle-input" data-pexels-key autocomplete="off" spellcheck="false" placeholder="Cole aqui a chave" value="${esc(chavePexels())}"></label>
+                <label class="tema-gen-toggle"><input type="checkbox" data-pexels-auto ${autoFotosLigado() ? 'checked' : ''}><span class="tema-gen-switch" aria-hidden="true"></span><span><strong>Colocar fotos automaticamente</strong><small>Todo tema sem imagem ganha uma foto sozinho, inclusive os novos.</small></span></label>
             </div>
             <p class="tema-gen-status" data-status role="status"></p>
             <footer class="tema-gen-foot">${chavePexels() ? '<button type="button" class="cycle-btn tema-gen-remove-key" data-remover>Remover chave</button>' : ''}<button type="button" class="cycle-btn" data-close>Cancelar</button><button type="button" class="cycle-btn primary" data-salvar>Salvar chave</button></footer>
@@ -185,6 +206,8 @@
                 await pesquisarPexels('students', chave);
                 resultadosFoto.clear();
                 dados().pexelsKey = chave;
+                dados().pexelsAuto = overlay.querySelector('[data-pexels-auto]').checked;
+                autoParado = false; tentadosAuto.clear();
                 window.saveAppData?.();
                 fechar();
                 toast('📷 Chave do Pexels salva.');
@@ -315,6 +338,7 @@
         const ul = document.getElementById('temaBankList');
         ul.innerHTML = visiveis.length ? visiveis.map(cartao).join('') : `<li class="tema-empty">${filtro === 'concluidos' ? 'Nenhum tema concluído ainda. Escreva sobre um tema e registre a redação.' : 'Nenhum tema aqui. Gere novos temas com a IA.'}</li>`;
         carregarImagens(visiveis);
+        colocarFotosAutomaticamente(visiveis);
     }
 
     function atualizarCartao(id) {
@@ -516,6 +540,8 @@
                     const novo = { id: `tema-${agora.toString(36)}-${i}`, titulo: t.titulo, eixo: EIXOS.find(e => norm(e) === norm(t.eixo)) || t.eixo, recorte: t.recorte, origem: 'ia', criadoEm: agora };
                     if (NIVEIS[t.nivel]) novo.nivel = t.nivel;
                     if (t.busca) novo.busca = String(t.busca).slice(0, 80);
+                    if (modoImagem === 'nenhuma') novo.semImagem = true;
+                    if (modoImagem === 'ia') novo.imagemIa = true;
                     return novo;
                 });
                 banco().unshift(...novos);
@@ -531,8 +557,8 @@
                 toast(`✦ ${novos.length} ${novos.length === 1 ? 'tema adicionado' : 'temas adicionados'} ao banco.${extra}`);
                 if (modoImagem === 'ia') criarImagensEmFila(novos);
                 else if (modoImagem === 'foto') {
-                    if (chavePexels()) buscarFotosEmFila(novos);
-                    else abrirChavePexels(() => buscarFotosEmFila(novos));
+                    if (!chavePexels()) abrirChavePexels(() => { if (!autoFotosLigado()) buscarFotosEmFila(novos); });
+                    else if (!autoFotosLigado()) buscarFotosEmFila(novos); // ligado, o render já coloca as fotos
                 }
                 return;
             }
@@ -578,7 +604,10 @@
         if (alvo.dataset.temaFiltro) { filtro = alvo.dataset.temaFiltro; render(); }
         else if (alvo.dataset.escrever) escrever(alvo.dataset.escrever);
         else if (alvo.dataset.imagemTema) { const tema = todos().find(t => t.id === alvo.dataset.imagemTema); if (tema) criarImagem(tema).catch(() => {}); }
-        else if (alvo.dataset.fotoTema) { const tema = todos().find(t => t.id === alvo.dataset.fotoTema); if (tema) buscarFoto(tema).catch(() => {}); }
+        else if (alvo.dataset.fotoTema) {
+            const tema = todos().find(t => t.id === alvo.dataset.fotoTema);
+            if (tema) { delete tema.semImagem; delete tema.imagemIa; buscarFoto(tema).catch(() => {}); }
+        }
         else if (alvo.dataset.trocarFoto) { const tema = todos().find(t => t.id === alvo.dataset.trocarFoto); if (tema) buscarFoto(tema, { trocar: true }).catch(() => {}); }
         else if (alvo.hasAttribute('data-fotos-todos')) {
             const lista = visiveisAgora().filter(t => !mapaFotos()[t.id] && !mapaImagens()[t.id]);

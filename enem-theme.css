@@ -350,3 +350,21 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 .account-reset-row input { flex: 1 1 160px; min-height: 40px; padding: 0 12px; border: 1px solid var(--border-color); border-radius: 10px; font: inherit; letter-spacing: .08em; text-transform: uppercase; }
 .account-reset-row .cycle-btn.danger { background: #c92a2a; border-color: #c92a2a; color: #fff; }
 .account-reset-row .cycle-btn.danger:hover:not(:disabled) { filter: brightness(.92); }
+
+/* Cadastro de matéria enxuto: uma coluna, sem prévia lateral nem símbolo manual */
+#cycleModal .subject-editor-modal { width: min(560px, calc(100vw - 32px)); max-width: 560px; border-radius: 20px; }
+#cycleModal .subject-editor-heading { padding: 22px 60px 18px 24px; background: none; }
+#cycleModal .subject-editor-heading-mark { width: 44px; height: 44px; border-radius: 12px; box-shadow: none; font-size: 1.1rem; }
+#cycleModal .subject-editor-heading-mark .subject-icon-svg { width: 24px; height: 24px; }
+#cycleModal #cycleModalKicker:empty { display: none; }
+#cycleModal .subject-editor-heading .cycle-modal-title { margin: 0 0 2px; font-size: 1.3rem; }
+#cycleModal .subject-editor-heading p { font-size: .8rem; }
+#cycleModal .subject-editor-layout { display: block; padding: 20px 24px 8px; }
+#cycleModal .subject-editor-section { padding: 0; border: 0; background: none; box-shadow: none; }
+#cycleModal .subject-editor-section .cycle-form-group { margin-bottom: 14px; }
+#cycleModal [hidden] { display: none !important; }
+#cycleModal .subject-editor-disclosure { margin-top: 10px; border-radius: 12px; }
+#cycleModal .subject-editor-disclosure summary .subject-editor-section-title > span:first-child { width: auto; height: auto; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: none; border-radius: 0; }
+#cycleModal .subject-editor-section-title strong { font-size: .88rem; }
+#cycleModal .subject-editor-section-title small { font-size: .74rem; }
+#cycleModal .subject-editor-footer { padding: 14px 24px 18px; }

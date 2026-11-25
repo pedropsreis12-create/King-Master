@@ -3112,7 +3112,13 @@ function atualizarPreviewMateria() {
     const preview = document.getElementById('cycleLivePreview');
     if (preview) preview.style.setProperty('--subject-preview', cor);
     const mark = document.getElementById('cyclePreviewMark');
-    if (mark) { mark.textContent = icone; mark.style.color = cor; mark.style.borderColor = `${cor}55`; mark.style.background = `${cor}18`; }
+    if (mark) {
+        // O ícone vem do nome da matéria, como na grade de matérias.
+        const area = document.getElementById('cycleArea')?.value || window.KingEnemAreas?.areaOf?.({ subject: nome }) || '';
+        const svg = window.KingSubjectIcons?.paraMateria(nome === 'Nova matéria' ? '' : nome, area);
+        if (svg) mark.innerHTML = svg; else mark.textContent = nome === 'Nova matéria' ? '+' : nome.charAt(0).toLocaleUpperCase('pt-BR');
+        mark.style.color = cor; mark.style.borderColor = `${cor}55`; mark.style.background = `${cor}18`;
+    }
     const valores = { cyclePreviewIcon: icone, cyclePreviewName: nome, cyclePreviewStatus: blocos ? 'No cronograma semanal' : 'Organização manual', cyclePreviewPriority: `Prioridade ${nomesPrioridade[prioridade]}`, cyclePreviewLoad: carga.detalhe, cyclePlanSummary: carga.resumo };
     Object.entries(valores).forEach(([id, valor]) => { const el = document.getElementById(id); if (el) el.textContent = valor; });
 }
@@ -3128,9 +3134,9 @@ function abrirModalCiclo() {
     const form = document.getElementById('formAddCycle');
     if (!modal || !form) return showToast('Não foi possível abrir o cadastro de matéria.', true);
     form.reset();
-    document.getElementById('cycleModalKicker').textContent = 'NOVA ÁREA DE ESTUDO';
+    document.getElementById('cycleModalKicker').textContent = '';
     document.getElementById('cycleModalTitle').textContent = 'Adicionar matéria';
-    document.getElementById('cycleModalSubtitle').textContent = 'Comece pelo essencial. A organização semanal e os tópicos são opcionais.';
+    document.getElementById('cycleModalSubtitle').textContent = 'Dê um nome. O resto é opcional.';
     document.getElementById('cycleSaveButton').textContent = 'Criar matéria';
     document.getElementById('cycleSaveHint').textContent = 'Somente o nome é obrigatório.';
     document.getElementById('cycleEditId').value = "";
@@ -3158,9 +3164,9 @@ function editarMateriaCiclo(id) {
     const form = document.getElementById('formAddCycle');
     if (!form) return;
     form.reset();
-    document.getElementById('cycleModalKicker').textContent = 'AJUSTAR ÁREA DE ESTUDO';
+    document.getElementById('cycleModalKicker').textContent = '';
     document.getElementById('cycleModalTitle').textContent = 'Editar matéria';
-    document.getElementById('cycleModalSubtitle').textContent = 'Atualize a identidade ou acrescente novos tópicos sem perder seu progresso.';
+    document.getElementById('cycleModalSubtitle').textContent = 'Seu progresso e seus assuntos continuam.';
     document.getElementById('cycleSaveButton').textContent = 'Salvar alterações';
     document.getElementById('cycleSaveHint').textContent = 'Seu histórico e seus tópicos atuais serão preservados.';
     document.getElementById('cycleEditId').value = mat.id;

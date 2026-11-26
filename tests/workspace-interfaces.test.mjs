@@ -182,7 +182,7 @@ test('deleting a subject removes its linked study records instead of creating a 
 
 test('navigation uses a compact brand and hides its scrollbar without disabling scrolling', () => {
   assert.match(html, /class="site-brand"/);
-  assert.match(html, /class="site-brand-mark"/);
+  assert.match(html, /class="site-brand-mark[ "]/);
   assert.match(usability, /#mainNavigation \{ scrollbar-width: none/);
   assert.match(usability, /#mainNavigation::-webkit-scrollbar \{ display: none/);
 });

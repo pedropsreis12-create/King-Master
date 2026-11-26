@@ -53,8 +53,8 @@ test('integração publica os arquivos e usa o ícone do site na IA', async () =
     assert.match(html, /flashcards-core\.js/);
     assert.match(html, /flashcards\.js/);
     assert.match(vite, /'flashcards-core\.js', 'flashcards\.js'/);
-    assert.match(html, /class="ai-qg-launcher-orb"[^>]*><img src="assets\/app-icon-192\.png"/);
-    assert.match(html, /class="ai-qg-avatar"[^>]*><img src="assets\/app-icon-192\.png"/);
+    assert.match(html, /class="ai-qg-launcher-orb"[^>]*><img src="assets\/app-icon-192\.png(\?v=[^"]*)?"/);
+    assert.match(html, /class="ai-qg-avatar"[^>]*><img src="assets\/app-icon-192\.png(\?v=[^"]*)?"/);
 });
 
 test('a interface oferece quantidade personalizada, busca e confirmação antes de salvar IA', async () => {

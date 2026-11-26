@@ -561,3 +561,9 @@ html[data-visual] .tema-bank { padding: 20px 22px; }
 .tema-gen-details summary { cursor: pointer; font-size: .84rem; font-weight: 700; color: var(--text-main); }
 .tema-gen-details p { margin: 10px 0; color: var(--text-muted); font-size: .8rem; line-height: 1.45; }
 .tema-gen-head p a, .tema-gen-details p a { color: var(--accent-color); font-weight: 700; }
+
+/* Logo: coroa branca num quadrado em degradê de roxo para azul */
+.site-brand-mark.km-logo { width: 36px; height: 36px; border-radius: 10px; }
+.auth-brand-logo.km-logo { width: 40px; height: 40px; border-radius: 11px; }
+#mainNavigation .site-brand strong { font-size: .95rem; font-weight: 800; letter-spacing: -.01em; }
+#mainNavigation .site-brand small { margin-top: 3px; font-size: .58rem; font-weight: 700; letter-spacing: .16em; color: var(--text-muted); }

@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261126-banco-v5';
+const CACHE_VERSION = 'king-master-20261126-historico-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -17,6 +17,7 @@ const APP_SHELL = [
     './profile-enem.js',
     './temas-redacao.js',
     './auto-backup.js',
+    './timer-olho.js',
     './account-reset.js',
     './auth-warmup.js',
     './topic-core.js',

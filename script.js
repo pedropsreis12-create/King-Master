@@ -1019,6 +1019,27 @@ function descontarSessoesDosTotais(sessoes = []) {
     return removido;
 }
 
+// Devolve ao histórico sessões apagadas por engano, somando de novo o tempo nos totais (o contrário de descontarSessoesDosTotais).
+function devolverSessoesAoHistorico(sessoes = []) {
+    const existentes = new Set(appData.historyItems.map(item => String(item.id)));
+    const novas = sessoes.filter(item => item && item.id !== undefined && !existentes.has(String(item.id)));
+    if (!novas.length) return 0;
+    novas.forEach(item => {
+        appData.historyItems.push(item);
+        const segundos = Math.max(0, Number(item.tempoSegundos) || 0);
+        appData.totalStudySeconds = Math.max(0, Number(appData.totalStudySeconds || 0)) + segundos;
+        const data = dataISOParaLocal(dataHistoricoISO(item));
+        if (!data || getMonday(data) !== appData.lastWeekStart) return;
+        const indice = data.getDay() === 0 ? 6 : data.getDay() - 1;
+        appData.weeklyChart[indice] = Math.max(0, Number(appData.weeklyChart[indice] || 0)) + segundos;
+    });
+    appData.historyItems.sort((a, b) => String(dataHistoricoISO(a)).localeCompare(String(dataHistoricoISO(b))) || (Number(a.id) || 0) - (Number(b.id) || 0));
+    saveAppData();
+    try { renderizarHistorico(); } catch { /* a tela se atualiza na próxima visita */ }
+    return novas.length;
+}
+window.devolverSessoesAoHistorico = devolverSessoesAoHistorico;
+
 function renomearMateriaNosRegistros(nomeAnterior, nomeNovo) {
     const antiga = normalizarRevisaoTexto(nomeAnterior);
     if (!antiga || antiga === normalizarRevisaoTexto(nomeNovo)) return;
@@ -1229,6 +1250,7 @@ function reconciliarHistoricoComMateriasAtuais() {
         return materia;
     });
     const materiasAtuais = new Set(appData.cycleItems.map(item => normalizarRevisaoTexto(item.subject)).filter(Boolean));
+    const idsAtuais = new Set(appData.cycleItems.map(item => String(item.id)));
     const semMateria = new Set(['estudo livre', 'livre', 'sem materia', 'sem matéria']);
     const removidas = [];
     let normalizadas = 0;
@@ -1241,6 +1263,10 @@ function reconciliarHistoricoComMateriasAtuais() {
             return true;
         }
         if (materiasAtuais.has(chave)) return true;
+        // Só sai do histórico o registro ligado a uma matéria que foi excluída.
+        // Registros sem matéria do ciclo (Redação, revisão geral, banco de questões, simulados) ficam.
+        const vinculo = String(item?.subjectId ?? '');
+        if (!vinculo || vinculo === 'mixed' || vinculo === 'redacao' || idsAtuais.has(vinculo)) return true;
         removidas.push(item);
         return false;
     });
@@ -2167,7 +2193,8 @@ function updateProgress() {
     
     if (isRunning) {
         const icone = currentMode === 'estudo' ? '⏱️' : '☕';
-        document.title = `${icone} ${formatHistoryTime(currentSeconds)} - King Master`;
+        // Com o tempo escondido, a aba do navegador também não mostra quanto falta.
+        document.title = (typeof window !== "undefined" && window.kingTempoEscondido === true) ? `${icone} ${currentMode === 'estudo' ? 'Estudando' : 'Descansando'} - King Master` : `${icone} ${formatHistoryTime(currentSeconds)} - King Master`;
     } else {
         document.title = "King Master";
     }

@@ -139,8 +139,50 @@
         renderPanel();
     }
 
+    // Uma vez por aparelho: devolve ao histórico as sessões sem matéria do ciclo (Redação, revisão geral,
+    // banco de questões) que uma limpeza antiga apagava ao abrir o site. Procura nas cópias dos últimos 14 dias.
+    const CHAVE_RECUPERACAO = 'km_recuperacao_historico_v1';
+    const SEM_MATERIA = new Set(['sem materia', 'estudo livre', 'livre', '']);
+    const normalizar = v => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+    function sessoesApagadas(copias, atual) {
+        const presentes = new Set((atual.historyItems || []).map(item => String(item?.id)));
+        const materias = new Set((atual.cycleItems || []).map(item => normalizar(item.subject)));
+        const achadas = new Map();
+        for (const copia of copias) for (const item of copia?.data?.historyItems || []) {
+            const id = String(item?.id ?? '');
+            if (!id || presentes.has(id) || achadas.has(id)) continue;
+            const nome = normalizar(item.materia);
+            // Assinatura da limpeza antiga: sem matéria do ciclo vinculada e com nome que não é matéria cadastrada.
+            if (String(item.subjectId || '') || SEM_MATERIA.has(nome) || materias.has(nome)) continue;
+            achadas.set(id, item);
+        }
+        return [...achadas.values()];
+    }
+    async function recuperarSessoes() {
+        const atual = currentData();
+        if (!atual || typeof window.devolverSessoesAoHistorico !== 'function') return;
+        const chave = `${CHAVE_RECUPERACAO}:${atual.accountUid || ''}`;
+        try { if (localStorage.getItem(chave)) return; } catch { return; }
+        const copias = (await all()).filter(item => item.account === String(atual.accountUid || ''));
+        const perdidas = sessoesApagadas(copias, atual);
+        const devolvidas = perdidas.length ? window.devolverSessoesAoHistorico(perdidas) : 0;
+        try { localStorage.setItem(chave, String(Date.now())); } catch { /* tenta de novo na próxima visita */ }
+        if (devolvidas) {
+            const segundos = perdidas.reduce((t, item) => t + (Number(item.tempoSegundos) || 0), 0);
+            const h = Math.floor(segundos / 3600), m = Math.round((segundos % 3600) / 60);
+            window.showToast?.(`Recuperei ${devolvidas} sessão${devolvidas === 1 ? '' : 'ões'} (${h ? `${h} h ` : ''}${m} min) que tinham sumido do histórico.`);
+        }
+    }
+    let recuperacaoAgendada = false;
+    function agendarRecuperacao() {
+        if (recuperacaoAgendada) return;
+        recuperacaoAgendada = true;
+        setTimeout(() => recuperarSessoes().catch(() => {}), 4000);
+    }
+
     window.addEventListener('king-master-data-changed', schedule);
     window.addEventListener('king-master-auth-ready', schedule);
+    window.addEventListener('king-master-auth-ready', agendarRecuperacao);
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true }); else mount();
-    window.KingAutoBackup = Object.freeze({ snapshot, list, restore, render: renderPanel });
+    window.KingAutoBackup = Object.freeze({ snapshot, list, restore, render: renderPanel, sessoesApagadas, recuperarSessoes });
 })();

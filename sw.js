@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261126-banco-lista-v3';
+const CACHE_VERSION = 'king-master-20261126-banco-v5';
 const APP_SHELL = [
     './',
     './index.html',
@@ -37,6 +37,7 @@ const APP_SHELL = [
     './question-pace-core.js',
     './question-pace.js',
     './question-pace.css',
+    './questoes-assuntos.js',
     './questoes-banco.js',
     './questoes-banco.css',
     './error-ai.css',

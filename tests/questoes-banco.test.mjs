@@ -3,89 +3,113 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source = fs.readFileSync(new URL('../questoes-banco.js', import.meta.url), 'utf8');
-const icones = fs.readFileSync(new URL('../subject-icons.js', import.meta.url), 'utf8');
-const scope = { window: { addEventListener() {} }, document: { readyState: 'complete', addEventListener() {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] }, setTimeout, clearTimeout, Date, Math, Number, String, Array, Object, JSON, RegExp, Set, Map };
-vm.runInNewContext(`${icones}; ${source}; this.B = window.KingQuestoesBanco;`, scope);
-const B = scope.B;
+const ler = nome => fs.readFileSync(new URL(`../${nome}`, import.meta.url), 'utf8');
+const scope = { window: { addEventListener() {} }, document: { readyState: 'complete', addEventListener() {}, getElementById: () => null, querySelector: () => null, querySelectorAll: () => [] }, localStorage: { getItem: () => null, setItem() {} }, setTimeout, clearTimeout, Date, Math, Number, String, Array, Object, JSON, RegExp, Set, Map, Promise };
+vm.runInNewContext(`${ler('subject-icons.js')}; ${ler('questoes-assuntos.js')}; ${ler('questoes-banco.js')}; this.B = window.KingQuestoesBanco; this.A = window.KingQuestoesAssuntos;`, scope);
+const { A, B } = scope;
+const lista = v => Array.from(v);
 
-const alternativas = ['A', 'B', 'C', 'D', 'E'].map(letter => ({ letter, text: `alt ${letter}`, file: null }));
-const exemplo = {
-    year: 2022, index: 91, discipline: 'ciencias-natureza', language: null,
-    context: 'O DNA da célula sofre mutação e o gene alterado passa aos descendentes por herança. **Importante** com *ênfase*.\n\n![](https://enem.dev/2022/questions/91/a.png)\n\n<script>alert(1)</script>',
-    files: ['https://enem.dev/2022/questions/91/a.png', 'https://enem.dev/2022/questions/91/b.png'], correctAlternative: 'C', alternativesIntroduction: 'Assinale:', alternatives: alternativas,
-};
-
-test('converte uma questão real do ENEM, com disciplina, assunto e figuras', () => {
-    const q = B.normalizarEnem(exemplo);
-    assert.equal(q.id, 'enem-2022-91');
-    assert.equal(q.area, 'natureza');
-    assert.equal(q.disc, 'biologia');
-    assert.equal(q.assunto, 'genetica');
-    assert.equal(q.correta, 2);
-    assert.equal(q.temImagem, true);
-    assert.deepEqual(Array.from(q.arquivos), ['https://enem.dev/2022/questions/91/b.png'], 'a figura que já está no texto não se repete');
-    assert.equal(B.normalizarEnem({ ...exemplo, alternatives: [] }), null);
-    assert.equal(B.normalizarEnem({ ...exemplo, discipline: 'outra' }), null);
+test('a árvore de assuntos separa temas e subtemas e classifica textos e tags', () => {
+    assert.ok(Object.keys(A.DISCIPLINAS).length >= 16);
+    const subs = Object.values(A.DISCIPLINAS).flatMap(d => Object.values(d.temas).flatMap(t => Object.keys(t.subs)));
+    assert.ok(subs.length >= 150, `só ${subs.length} subtemas`);
+    assert.equal(A.subtema('historia', 'História do Brasil ; Império ; Segundo Reinado ; Sociedade'), 'imperio.segundoreinado');
+    assert.equal(A.subtema('historia', 'História Geral ; Idade Média ; Alta Idade Média'), 'medieval.');
+    assert.equal(A.subtema('historia', 'História do Brasil ; Período Colonial (1530-1822) ; Revoltas'), 'colonia.revoltas');
+    assert.equal(A.subtema('geografia', 'Brasil ; Sociedade ; Urbanização - Brasil ; Urbanização'), 'humana.urbanizacao');
+    assert.equal(A.subtema('biologia', 'O DNA sofre mutação e o gene alterado passa aos descendentes'), 'genetica.dna');
+    assert.equal(A.subtema('quimica', 'A pilha de zinco e cobre: oxidação e redução no eletrodo'), 'fisicoquimica.eletroquimica');
+    assert.equal(A.disciplina('Um carro com velocidade constante sofre força de atrito', ['fisica', 'quimica', 'biologia']).disc, 'fisica');
+    assert.equal(A.nomeSub('historia', 'imperio.segundoreinado'), 'Segundo Reinado');
 });
 
-test('classifica física, matemática e língua estrangeira', () => {
-    const fisica = B.normalizarEnem({ ...exemplo, index: 100, context: 'Um carro com velocidade constante sofre uma força de atrito e sua aceleração muda.', files: [] });
-    assert.equal(fisica.disc, 'fisica'); assert.equal(fisica.assunto, 'mecanica');
-    const geo = B.normalizarEnem({ ...exemplo, index: 140, discipline: 'matematica', context: 'Um cilindro e um cubo têm o mesmo volume. Qual a área da base?', files: [] });
-    assert.equal(geo.disc, 'geometria');
-    const ingles = B.normalizarEnem({ ...exemplo, index: 2, discipline: 'linguagens', language: 'ingles', context: 'Read the text.', files: [] });
-    assert.equal(ingles.disc, 'idiomas'); assert.equal(ingles.id, 'enem-2022-2-ingles');
+test('converte as três fontes para o formato do cartão', () => {
+    const enem = B.normalizarEnem({ year: 2022, index: 91, context: 'Texto ![](https://enem.dev/2022/questions/91/a.png)', files: ['https://enem.dev/2022/questions/91/a.png', 'https://enem.dev/2022/questions/91/b.png'],
+        correctAlternative: 'C', alternativesIntroduction: 'Assinale:', alternatives: ['A', 'B', 'C', 'D', 'E'].map(letter => ({ letter, text: `alt ${letter}`, file: null })) });
+    assert.equal(enem.correta, 2);
+    assert.deepEqual(lista(enem.imagens), ['https://enem.dev/2022/questions/91/b.png']);
+    const base = { question: 'Pergunta?', titulo: 'UECE 2° Fase 2012 - Questão', alternatives: { A: 'um', B: 'dois', C: 'três', D: 'quatro', E: 'Nenhuma das anteriores' } };
+    const quatro = B.normalizarVestibular({ ...base, answer: 'B' });
+    assert.equal(quatro.alternativas.length, 4, 'tira o E artificial');
+    assert.equal(quatro.correta, 1);
+    assert.equal(quatro.rotulo, 'UECE 2° Fase 2012');
+    assert.equal(B.normalizarVestibular({ ...base, answer: 'E' }).alternativas.length, 5, 'mantém o E quando é a resposta');
+    const bluex = B.normalizarBluex({ id: 'USP_2023_81', question: 'Joana comprou', alternatives: ['a) 1', 'b) 2', 'c) 3', 'd) 4', 'e) 5'], answer: 'D', associated_images: ['iVBORw0KGgo='] });
+    assert.equal(bluex.rotulo, 'FUVEST 2023');
+    assert.equal(bluex.alternativas[0].texto, '1');
+    assert.match(bluex.imagens[0], /^data:image\/png;base64,/);
+    assert.equal(B.normalizarBluex({ id: 'X_1', question: 'q', alternatives: ['a) 1'], answer: 'A' }), null);
 });
 
-test('o texto da questão é escapado e só aceita imagens do enem.dev', () => {
-    const html = B.markdown(exemplo.context + '\n\n![](https://malicioso.com/x.png)');
-    assert.match(html, /<strong>Importante<\/strong>/);
-    assert.match(html, /<em>ênfase<\/em>/);
-    assert.match(html, /<img src="https:\/\/enem\.dev\/2022\/questions\/91\/a\.png"/);
+test('o texto é escapado e as linhas quebradas viram parágrafos', () => {
+    const html = B.textoPlano('Drones vêm sendo\nutilizados por empresas.\nNovo parágrafo <script>x</script>\n01) item um\n02) item dois');
+    assert.match(html, /<p>Drones vêm sendo utilizados por empresas\.<\/p>/);
     assert.doesNotMatch(html, /<script>/);
-    assert.doesNotMatch(html, /malicioso/);
-    assert.doesNotMatch(B.textoIa('- <b>oi</b>\ntexto'), /<b>/);
+    assert.match(html, /<p>01\) item um<\/p><p>02\) item dois<\/p>/);
+    assert.doesNotMatch(B.markdown('![](https://malicioso.com/x.png)'), /malicioso/);
 });
 
-test('filtros profundos: disciplina, assunto, anos, dia, imagem e situação', () => {
-    const bio = B.normalizarEnem(exemplo);
-    const fis = B.normalizarEnem({ ...exemplo, year: 2015, index: 100, context: 'Um carro com velocidade constante sofre força de atrito e aceleração.', files: [] });
-    const mat = B.normalizarEnem({ ...exemplo, year: 2019, index: 150, discipline: 'matematica', context: 'A porcentagem de desconto e os juros do produto.', files: [] });
-    const base = { disc: [], assuntos: [], ids: [], ordem: 'recentes' };
-    const ids = (f, b) => Array.from(B.filtrar([bio, fis, mat], { ...base, ...f }, b), q => q.id);
-    assert.deepEqual(ids({ disc: ['biologia'] }), ['enem-2022-91']);
-    assert.deepEqual(ids({ disc: ['biologia', 'fisica'], assuntos: ['fisica.mecanica'] }), ['enem-2022-91', 'enem-2015-100'], 'assunto marcado só restringe a própria disciplina');
-    assert.deepEqual(ids({ anoDe: '2016', anoAte: '2020' }), ['enem-2019-150']);
-    assert.deepEqual(ids({ dia: '1' }), []);
-    assert.deepEqual(ids({ imagem: 'com' }), ['enem-2022-91']);
-    assert.deepEqual(ids({ busca: 'juros' }), ['enem-2019-150']);
-    const b = { respondidas: { 'enem-2015-100': { ok: false, em: 1 }, 'enem-2019-150': { ok: true, em: 2 } }, salvas: { 'enem-2022-91': 3 } };
-    assert.deepEqual(ids({ situacao: 'errei' }, b), ['enem-2015-100']);
-    assert.deepEqual(ids({ situacao: 'nao' }, b), ['enem-2022-91']);
-    assert.deepEqual(ids({ situacao: 'salvas' }, b), ['enem-2022-91']);
-    assert.deepEqual(ids({ ids: ['enem-2019-150'], disc: ['biologia'] }), ['enem-2019-150'], 'abrir uma questão ignora os outros filtros');
+const E = (id, fonte, disc, sub, ano, extra = {}) => ({ id, fonte, ref: id, disc, sub, ano, dif: 0, prova: fonte === 'enem' ? 'ENEM' : 'UECE', img: false, ...extra });
+const entradas = [
+    E('enem-2015-1', 'enem', 'historia', 'imperio.segundoreinado', 2015),
+    E('enem-2009-5', 'enem', 'historia', 'colonia.revoltas', 2009, { img: true }),
+    E('vest-1', 'vest', 'historia', 'medieval.', 2012, { dif: 3 }),
+    E('vest-2', 'vest', 'geografia', 'humana.urbanizacao', 2018, { prova: 'EsPCEx', dif: 1 }),
+    E('bluex-3', 'bluex', 'historia', 'imperio.abolicao', 2020, { prova: 'FUVEST' }),
+];
+const ids = (f, b) => lista(B.filtrar(entradas, { discs: [], temas: [], subs: [], origens: [], ids: [], ordem: 'antigas', ...f }, b)).map(e => e.id);
+
+test('filtros por tema, subtema, origem, prova, anos, dificuldade e situação', () => {
+    assert.deepEqual(ids({}), ['enem-2009-5', 'vest-1', 'enem-2015-1', 'vest-2', 'bluex-3'], 'começa pelo ENEM de 2009');
+    assert.equal(ids({ ordem: 'recentes' })[0], 'bluex-3');
+    assert.deepEqual(ids({ ordem: 'enem' }), ['enem-2009-5', 'enem-2015-1', 'vest-1', 'vest-2', 'bluex-3'], 'padrão: ENEM a partir de 2009, depois as outras provas');
+    assert.deepEqual(ids({ discs: ['geografia'] }), ['vest-2']);
+    assert.deepEqual(ids({ temas: ['historia.imperio'] }), ['enem-2015-1', 'vest-2', 'bluex-3'], 'tema marcado só restringe a própria disciplina');
+    assert.deepEqual(ids({ subs: ['historia.imperio.abolicao'], discs: ['historia'] }), ['bluex-3']);
+    assert.deepEqual(ids({ temas: ['historia.medieval'], discs: ['historia'] }), ['vest-1'], 'questão marcada só no tema entra no tema');
+    assert.deepEqual(ids({ origens: ['militar'] }), ['vest-2']);
+    assert.deepEqual(ids({ origens: ['enem', 'militar'] }), ['enem-2009-5', 'enem-2015-1', 'vest-2']);
+    assert.deepEqual(ids({ prova: 'FUVEST' }), ['bluex-3']);
+    assert.deepEqual(ids({ anoDe: '2013', anoAte: '2019' }), ['enem-2015-1', 'vest-2']);
+    assert.deepEqual(ids({ dif: '3' }), ['vest-1']);
+    assert.deepEqual(ids({ imagem: 'com' }), ['enem-2009-5']);
+    const b = { respondidas: { 'vest-1': { ok: false, em: 1 }, 'bluex-3': { ok: true, em: 2 } }, salvas: { 'vest-2': 3 } };
+    assert.deepEqual(ids({ situacao: 'errei' }, b), ['vest-1']);
+    assert.deepEqual(ids({ situacao: 'salvas' }, b), ['vest-2']);
+    assert.deepEqual(ids({ situacao: 'nao' }, b), ['enem-2009-5', 'enem-2015-1', 'vest-2']);
+    assert.deepEqual(ids({ ids: ['vest-2'], discs: ['historia'] }), ['vest-2'], 'abrir uma questão ignora os outros filtros');
+    const c = B.contarAssuntos(entradas);
+    assert.equal(c['historia.imperio'], 2);
+    assert.equal(c['historia.imperio.abolicao'], 1);
+    assert.equal(c['historia.medieval'], 1);
 });
 
 test('matérias do aluno viram disciplinas do banco', () => {
-    assert.deepEqual(Array.from(B.discDaMateria({ subject: 'Matemática' })), ['matematica', 'geometria', 'estatistica']);
-    assert.deepEqual(Array.from(B.discDaMateria({ subject: 'Biologia' })), ['biologia']);
-    assert.deepEqual(Array.from(B.discDaMateria({ subject: 'Redação' })), []);
+    assert.deepEqual(lista(B.discDaMateria({ subject: 'Matemática' })), ['matematica', 'geometria', 'estatistica']);
+    assert.deepEqual(lista(B.discDaMateria({ subject: 'Inglês' })), ['ingles']);
+    assert.deepEqual(lista(B.discDaMateria({ subject: 'Biologia' })), ['biologia']);
+    assert.deepEqual(lista(B.discDaMateria({ subject: 'Redação' })), []);
 });
 
-test('o id diz de qual prova buscar a questão', () => {
-    assert.deepEqual({ ...B.origemDoId('enem-2020-140') }, { ano: 2020, numero: 140, lingua: '' });
-    assert.equal(B.origemDoId('enem-2018-3-espanhol').lingua, 'espanhol');
-    assert.equal(B.origemDoId('ia-abc-1'), null);
-});
-
-test('desempenho por disciplina e assuntos para reforçar', () => {
-    const r = B.desempenho({
-        a: { ok: true, em: 1, d: 'biologia', s: 'genetica' }, b: { ok: false, em: 2, d: 'biologia', s: 'genetica' },
-        c: { ok: false, em: 3, d: 'biologia', s: 'genetica' }, d: { ok: true, em: 4, d: 'fisica', s: 'optica' },
-    });
-    assert.equal(r.porDisc.biologia.total, 3);
+test('desempenho por disciplina e subtemas para reforçar', () => {
+    const r = B.desempenho({ a: { ok: true, d: 'biologia', s: 'genetica.dna' }, b: { ok: false, d: 'biologia', s: 'genetica.dna' }, c: { ok: false, d: 'biologia', s: 'genetica.dna' }, d: { ok: true, d: 'idiomas', s: '' } });
     assert.equal(r.porDisc.biologia.erradas, 2);
-    assert.equal(r.fracos[0].chave, 'biologia.genetica');
-    assert.equal(r.fracos[0].pct, 33);
+    assert.equal(r.porDisc.outras.total, 1);
+    assert.equal(r.fracos[0].chave, 'biologia.genetica.dna');
+});
+
+test('o índice publicado tem as matérias e entradas bem formadas', () => {
+    const pasta = new URL('../dados/questoes/', import.meta.url);
+    const resumo = JSON.parse(fs.readFileSync(new URL('resumo.json', pasta), 'utf8'));
+    for (const d of ['historia', 'geografia', 'biologia', 'matematica', 'portugues', 'fisica', 'quimica', 'ingles']) assert.ok(resumo.total[d] > 50, `${d}: ${resumo.total[d]}`);
+    for (const [disc, total] of Object.entries(resumo.total)) {
+        assert.ok(A.DISCIPLINAS[disc], disc);
+        const { provas, q } = JSON.parse(fs.readFileSync(new URL(`${disc}.json`, pasta), 'utf8'));
+        assert.equal(q.length, total);
+        for (const [fonte, ref, sub, dif, p, ano, img] of q.slice(0, 400)) {
+            assert.ok([0, 1, 2].includes(fonte));
+            assert.ok(ref !== undefined && provas[p] && (ano === 0 || ano >= 2000) && [0, 1].includes(img) && [0, 1, 2, 3].includes(dif), JSON.stringify([fonte, ref, sub, dif, p, ano, img]));
+            if (sub) assert.ok(A.DISCIPLINAS[disc].temas[sub.split('.')[0]], `${disc} ${sub}`);
+        }
+    }
 });

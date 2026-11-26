@@ -1,5 +1,5 @@
 const APP_URL = new URL('./', self.location).href;
-const CACHE_VERSION = 'king-master-20261125-questoes-v2';
+const CACHE_VERSION = 'king-master-20261126-logo-v1';
 const APP_SHELL = [
     './',
     './index.html',
@@ -65,7 +65,9 @@ const APP_SHELL = [
     './modal-accessibility.js',
     './data-portability.js',
     './assets/app-icon-192.png',
-    './assets/app-icon-512.png'
+    './assets/app-icon-512.png',
+    './assets/favicon.svg',
+    './assets/logo.svg'
 ];
 
 self.addEventListener('install', event => {

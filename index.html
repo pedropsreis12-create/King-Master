@@ -8,8 +8,9 @@
     <title>King Master · Preparação para o ENEM</title>
     <meta name="theme-color" content="#ffffff">
     <meta name="description" content="King Master — seu painel pessoal de estudos para o ENEM.">
-    <link rel="icon" href="assets/app-icon-192.png" type="image/png">
-    <link rel="apple-touch-icon" href="assets/app-icon-192.png">
+    <link rel="icon" href="assets/favicon.svg?v=20261126-logo-v1" type="image/svg+xml">
+    <link rel="icon" href="assets/app-icon-192.png?v=20261126-logo-v1" type="image/png" sizes="192x192">
+    <link rel="apple-touch-icon" href="assets/app-icon-192.png?v=20261126-logo-v1">
     <link rel="manifest" href="manifest.webmanifest?v=20260907-account-6">
     <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     <script src="firebase-config.js?v=20260831-firebase"></script>
@@ -46,7 +47,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261125-desfaz-v1">
+    <link rel="stylesheet" href="enem-theme.css?v=20261126-logo-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -64,7 +65,7 @@
     <section class="auth-gate" id="authGate" aria-labelledby="authGateTitle">
         <div class="auth-shell">
 <div class="auth-gate-card" id="authGateCard">
-            <div class="auth-brand"><svg class="auth-brand-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="4" width="40" height="40" rx="14"></rect><path d="M12 17l6 4 6-9 6 9 6-4-2 9H14z"></path><path d="M14 29v5l10 4 10-4v-5l-10 4z"></path></svg><span>King Master</span></div>
+            <div class="auth-brand"><img class="auth-brand-logo km-logo" src="assets/logo.svg?v=20261126-logo-v1" alt="" width="36" height="36"><span>King Master</span></div>
             <div class="auth-primary" id="authPrimary">
             <div class="auth-gate-copy"><p id="authGateEyebrow">Bem-vindo de volta</p><h1 id="authGateTitle">Entrar</h1><span id="authGateIntro">Continue sua preparação para o ENEM.</span></div>
             <div class="auth-provider-grid">
@@ -115,12 +116,8 @@
     <button id="navReveal" class="nav-reveal" aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir menu lateral"><span aria-hidden="true">›</span><small>MENU</small></button>
     <nav id="mainNavigation" aria-label="Navegação principal">
         <button type="button" class="site-brand" onclick="showSection('dashboard')" aria-label="Ir para Hoje">
-            <svg class="site-brand-mark" viewBox="0 0 48 48" role="img" aria-label="Marca do King Master">
-                <rect x="4" y="4" width="40" height="40" rx="14"></rect>
-                <path d="M12 17l6 4 6-9 6 9 6-4-2 9H14z"></path>
-                <path d="M14 29v5l10 4 10-4v-5l-10 4z"></path>
-            </svg>
-            <span><strong>KM</strong><small>ESTUDOS</small></span>
+            <img class="site-brand-mark km-logo" src="assets/logo.svg?v=20261126-logo-v1" alt="" width="36" height="36">
+            <span><strong>King Master</strong><small>ENEM</small></span>
         </button>
         <button class="mobile-nav-toggle" id="mobileNavToggle" type="button" aria-expanded="false" aria-label="Abrir menu de navegação" onclick="toggleMobileNav()"><span aria-hidden="true">☰</span><strong>Menu</strong></button>
         <div class="nav-tabs" aria-label="Áreas do King Master">
@@ -1431,13 +1428,13 @@
     </main>
 
     <button class="ai-qg-launcher" id="aiQgLauncher" type="button" aria-controls="aiQgPanel" aria-expanded="false" onclick="toggleIaQg()">
-        <span class="ai-qg-launcher-orb" aria-hidden="true"><img src="assets/app-icon-192.png" alt=""></span>
+        <span class="ai-qg-launcher-orb" aria-hidden="true"><img src="assets/app-icon-192.png?v=20261126-logo-v1" alt=""></span>
         <span><strong>Gemini do QG</strong><small>Inteligência conectada</small></span>
     </button>
 
     <aside class="ai-qg-panel" id="aiQgPanel" aria-label="IA do QG" aria-hidden="true">
         <header class="ai-qg-header">
-            <div class="ai-qg-avatar" aria-hidden="true"><img src="assets/app-icon-192.png" alt=""></div>
+            <div class="ai-qg-avatar" aria-hidden="true"><img src="assets/app-icon-192.png?v=20261126-logo-v1" alt=""></div>
             <div><strong>Gemini do QG</strong><small><i></i> Conversa, analisa e age no King Master</small></div>
             <button type="button" aria-label="Fechar IA do QG" onclick="toggleIaQg(false)">×</button>
         </header>

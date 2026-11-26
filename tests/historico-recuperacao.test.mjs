@@ -44,3 +44,28 @@ test('a recuperação acha nas cópias só as sessões apagadas pela limpeza ant
     const achadas = Array.from(ctx.B.sessoesApagadas(copias, atual)).map(i => i.id);
     assert.deepEqual(achadas, [11], 'não devolve sessões apagadas de propósito (com matéria, sem matéria) nem repete');
 });
+
+test('o botão de olho esconde e mostra o tempo, e lembra a escolha', () => {
+    const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+    assert.match(html, /id="timerEyeBtn"[^>]*onclick="alternarTempoEscondido\(\)"/);
+    assert.match(html, /<script src="timer-olho\.js/);
+    const guardado = {};
+    const classes = new Set();
+    const hero = { classList: { toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) } };
+    const botao = { attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, title: '' };
+    const ctx = {
+        localStorage: { getItem: k => guardado[k] ?? null, setItem: (k, v) => { guardado[k] = v; } },
+        document: { readyState: 'complete', getElementById: id => id === 'timeDisplay' ? { closest: () => hero } : id === 'timerEyeBtn' ? botao : null },
+    };
+    ctx.window = ctx;
+    vm.runInNewContext(fs.readFileSync(new URL('../timer-olho.js', import.meta.url), 'utf8'), ctx);
+    assert.equal(ctx.kingTempoEscondido, false);
+    ctx.alternarTempoEscondido();
+    assert.equal(ctx.kingTempoEscondido, true);
+    assert.ok(classes.has('is-time-hidden'));
+    assert.equal(botao.attrs['aria-pressed'], 'true');
+    assert.equal(guardado.km_timer_oculto, '1');
+    ctx.alternarTempoEscondido();
+    assert.ok(!classes.has('is-time-hidden'));
+    assert.equal(guardado.km_timer_oculto, '0');
+});

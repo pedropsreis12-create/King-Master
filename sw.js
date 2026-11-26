@@ -17,6 +17,7 @@ const APP_SHELL = [
     './profile-enem.js',
     './temas-redacao.js',
     './auto-backup.js',
+    './timer-olho.js',
     './account-reset.js',
     './auth-warmup.js',
     './topic-core.js',

@@ -47,7 +47,7 @@
     <link rel="stylesheet" href="topic-hierarchy.css?v=20261006-v3">
     <link rel="stylesheet" href="caderno-library.css?v=20261007-v2">
     <link rel="stylesheet" href="effects-performance.css?v=20261008-v2">
-    <link rel="stylesheet" href="enem-theme.css?v=20261126-logo-v1">
+    <link rel="stylesheet" href="enem-theme.css?v=20261126-historico-v1">
     <style>
         .disciplinas-grid { align-items: start !important; }
 
@@ -316,7 +316,12 @@
                         </svg>
                         <div style="position: absolute; display: flex; flex-direction: column; align-items: center;">
                             <div class="timer-display-large" id="timeDisplay">00:00:00</div>
+                            <div class="timer-hidden-label" id="timerHiddenLabel" aria-live="polite"><strong>Tempo escondido</strong><span>Foque no estudo, não no relógio</span></div>
                         </div>
+                        <button type="button" class="timer-eye-btn" id="timerEyeBtn" aria-pressed="false" aria-label="Esconder o tempo" title="Esconder o tempo" onclick="alternarTempoEscondido()">
+                            <svg class="timer-eye-open" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                            <svg class="timer-eye-closed" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3l18 18"/><path d="M10.6 5.1A10.8 10.8 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.2 4.1M6.6 6.6C3.9 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+                        </button>
                     </div>
                     <div id="timerGoalActions" class="timer-goal-actions" aria-live="polite">
                         <span>Meta atingida — o tempo continua contando.</span>
@@ -1527,6 +1532,7 @@
     <script src="subject-icons.js?v=20261124-icones-v1"></script>
     <script src="account-reset.js?v=20261125-fotos-v2"></script>
     <script src="script.js?v=20261126-historico-v1"></script>
+    <script src="timer-olho.js?v=20261126-historico-v1"></script>
     <script src="enem-tools.js?v=20261123-temas-v1"></script>
     <script src="metas.js?v=20261123-metas-v1"></script>
     <script src="profile-enem.js?v=20261125-perfil-v1"></script>

@@ -2193,7 +2193,8 @@ function updateProgress() {
     
     if (isRunning) {
         const icone = currentMode === 'estudo' ? '⏱️' : '☕';
-        document.title = `${icone} ${formatHistoryTime(currentSeconds)} - King Master`;
+        // Com o tempo escondido, a aba do navegador também não mostra quanto falta.
+        document.title = (typeof window !== "undefined" && window.kingTempoEscondido === true) ? `${icone} ${currentMode === 'estudo' ? 'Estudando' : 'Descansando'} - King Master` : `${icone} ${formatHistoryTime(currentSeconds)} - King Master`;
     } else {
         document.title = "King Master";
     }
